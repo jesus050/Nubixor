@@ -1,4 +1,5 @@
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:4100' : '';
 
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
@@ -46,7 +47,7 @@ function setServiceState(dot, result, state, message) {
 }
 
 async function getJson(url, options = {}) {
-  const response = await fetch(url, {
+  const response = await fetch(`${API_BASE_URL}${url}`, {
     headers: { Accept: 'application/json', ...options.headers },
   });
   const body = await response.json();

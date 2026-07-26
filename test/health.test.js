@@ -17,6 +17,14 @@ test('GET /styles.css sirve los estilos locales', async () => {
   assert.match(response.text, /--color-ink/);
 });
 
+test('la interfaz abierta como archivo puede consultar la API en local', async () => {
+  const response = await request(createApp())
+    .get('/api/health')
+    .set('Origin', 'null')
+    .expect(200);
+  assert.ok(['null', '*'].includes(response.headers['access-control-allow-origin']));
+});
+
 test('GET /api/health funciona sin consultar dependencias', async () => {
   const failIfCalled = async () => {
     throw new Error('No debe ejecutarse');

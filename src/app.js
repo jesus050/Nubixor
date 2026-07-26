@@ -18,7 +18,10 @@ function corsOptions() {
   if (config.corsOrigins.includes('*')) return {};
   return {
     origin(origin, callback) {
-      if (!origin || config.corsOrigins.includes(origin)) return callback(null, true);
+      const localFileAllowed = origin === 'null' && config.nodeEnv !== 'production';
+      if (!origin || localFileAllowed || config.corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
       const error = new Error('Origen no permitido por CORS.');
       error.status = 403;
       error.code = 'CORS_ORIGIN_DENIED';

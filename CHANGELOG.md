@@ -10,6 +10,8 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Resumen con cantidades consultadas desde las APIs reales.
 - Estado en vivo de API, PostgreSQL y Redis.
 - Navegación móvil, búsqueda de módulos, estados de carga y mensajes de error.
+- Compatibilidad al abrir `public/index.html` directamente mediante `file://`
+  durante el desarrollo local.
 
 ## [0.1.1] - 2026-07-26
 
