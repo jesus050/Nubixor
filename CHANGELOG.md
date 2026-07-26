@@ -6,6 +6,17 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Módulo separado de Compras con pestañas de órdenes/recepciones y proveedores.
+- Directorio de proveedores con documento, contacto, plazo de pago, obligación
+  de facturar y condición de facturador electrónico.
+- Órdenes de compra numeradas con sucursal, fechas, referencia, productos,
+  costos, impuestos y totales calculados.
+- Recepciones parciales o totales por bodega, impidiendo recibir más unidades
+  de las ordenadas.
+- Entradas de inventario y kardex transaccionales por cada recepción, con
+  actualización del costo promedio del producto y auditoría.
+- Indicadores de órdenes abiertas, unidades pendientes, valor recibido en el
+  mes y proveedores activos.
 - Centro de Inventario unificado con valoración al costo, unidades disponibles,
   reservas, saldos bajos y movimientos del mes.
 - Listado de existencias por producto y bodega con fotografía, búsqueda,

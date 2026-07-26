@@ -96,6 +96,31 @@ curl -X POST http://localhost:4100/api/inventory/transfers \
  -d '{"productId":"PRODUCT_ID","sourceWarehouseId":"ORIGIN_ID","destinationWarehouseId":"DESTINATION_ID","quantity":5,"reason":"Reposición de punto de venta"}'
 ```
 
+## Compras y recepción
+
+El espacio operativo está disponible en `/#compras`. El flujo recomendado es:
+
+1. Registrar el proveedor y sus condiciones.
+2. Emitir una orden con productos, cantidades y costos.
+3. Seleccionar la orden cuando llegue mercancía.
+4. Registrar una recepción parcial o total en la bodega de la sucursal.
+5. Consultar la entrada en Inventario y en el kardex.
+
+```bash
+curl http://localhost:4100/api/purchases/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/purchases/suppliers \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/purchases \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+La creación de una orden usa `POST /api/purchases`; la recepción utiliza
+`POST /api/purchases/:id/receipts`. Una recepción genera movimientos
+`PURCHASE`, incrementa el saldo de la bodega y recalcula el costo promedio.
+
 ## Conteos físicos programados
 
 ```bash

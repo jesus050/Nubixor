@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-6">
-    <script src="./app.js?v=20260726-6" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-7">
+    <script src="./app.js?v=20260726-7" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -41,6 +41,10 @@
           </a>
           <a class="nav-item" href="#productos" data-view-link="productos">
             <span aria-hidden="true">P</span> Catálogo
+          </a>
+          <p class="nav-label">Abastecimiento</p>
+          <a class="nav-item" href="#compras" data-view-link="compras">
+            <span aria-hidden="true">OC</span> Compras
           </a>
           <p class="nav-label">Ventas</p>
           <a class="nav-item" href="#caja" data-view-link="caja">
@@ -104,6 +108,7 @@
           <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
           <a href="#inventario" data-view-link="inventario">Inventario</a>
           <a href="#productos" data-view-link="productos">Catálogo</a>
+          <a href="#compras" data-view-link="compras">Compras</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
@@ -704,6 +709,139 @@
             </div>
           </section>
 
+          <section class="section purchases-section app-view" id="compras" data-view="compras" aria-labelledby="purchasesTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Abastecimiento y recepción</p>
+                <h2 id="purchasesTitle">Compras</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="newSupplierButton" type="button">
+                  Registrar proveedor
+                </button>
+                <button class="purchase-order-button" id="newPurchaseButton" type="button">
+                  <span aria-hidden="true">＋</span>
+                  <span><small>Solicitar mercancía</small>Nueva orden</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="purchase-kpi-grid">
+              <article class="purchase-kpi featured">
+                <span>Órdenes abiertas</span>
+                <strong id="purchaseOpenOrders">0</strong>
+                <small>Esperando mercancía</small>
+              </article>
+              <article class="purchase-kpi">
+                <span>Unidades pendientes</span>
+                <strong id="purchasePendingUnits">0</strong>
+                <small>Por recibir en bodega</small>
+              </article>
+              <article class="purchase-kpi cyan">
+                <span>Recibido este mes</span>
+                <strong id="purchaseReceivedMonth">$0</strong>
+                <small>Valor antes de impuestos</small>
+              </article>
+              <article class="purchase-kpi">
+                <span>Proveedores activos</span>
+                <strong id="purchaseSupplierCount">0</strong>
+                <small>Directorio comercial</small>
+              </article>
+            </div>
+
+            <div class="purchase-tabs" role="tablist" aria-label="Áreas de compras">
+              <button class="active" type="button" role="tab" data-purchase-tab="orders" aria-selected="true">
+                Órdenes y recepciones
+              </button>
+              <button type="button" role="tab" data-purchase-tab="suppliers" aria-selected="false">
+                Proveedores
+              </button>
+            </div>
+
+            <div class="purchase-panel" data-purchase-panel="orders">
+              <div class="purchase-workspace">
+                <aside class="purchase-list-panel">
+                  <div class="purchase-panel-heading">
+                    <div><p class="eyebrow">Documentos</p><h3>Órdenes de compra</h3></div>
+                    <button class="sync-link" id="reloadPurchasesButton" type="button">Actualizar</button>
+                  </div>
+                  <label class="field-search purchase-search">
+                    <span aria-hidden="true">⌕</span>
+                    <span class="sr-only">Buscar órdenes de compra</span>
+                    <input id="purchaseSearch" type="search" placeholder="Número, proveedor o sucursal">
+                  </label>
+                  <div class="purchase-order-list" id="purchaseOrderList"></div>
+                  <div class="data-state compact-state" id="purchaseDataState">
+                    <span class="data-state-symbol" aria-hidden="true">OC</span>
+                    <strong>Consultando órdenes</strong>
+                    <p>Estamos leyendo el abastecimiento de la empresa activa.</p>
+                  </div>
+                </aside>
+
+                <div class="purchase-detail-panel">
+                  <div class="purchase-detail-empty" id="purchaseDetailEmpty">
+                    <span aria-hidden="true">↙</span>
+                    <strong>Selecciona una orden</strong>
+                    <p>Consulta productos, cantidades pendientes y recepciones registradas.</p>
+                  </div>
+                  <div id="purchaseDetailContent" hidden>
+                    <div class="purchase-detail-heading">
+                      <div>
+                        <p class="eyebrow" id="purchaseDetailNumber">Orden</p>
+                        <h3 id="purchaseDetailSupplier">—</h3>
+                        <span id="purchaseDetailBranch">—</span>
+                      </div>
+                      <span class="purchase-status" id="purchaseDetailStatus">Ordenada</span>
+                    </div>
+                    <div class="purchase-detail-summary">
+                      <div><span>Emisión</span><strong id="purchaseDetailIssue">—</strong></div>
+                      <div><span>Entrega esperada</span><strong id="purchaseDetailExpected">—</strong></div>
+                      <div><span>Total orden</span><strong id="purchaseDetailTotal">$0</strong></div>
+                      <div><span>Progreso</span><strong id="purchaseDetailProgress">0 de 0</strong></div>
+                    </div>
+                    <div class="purchase-progress-track"><span id="purchaseProgressBar"></span></div>
+                    <div class="purchase-detail-actions">
+                      <div>
+                        <strong>Productos solicitados</strong>
+                        <small id="purchasePendingLabel">Sin productos pendientes</small>
+                      </div>
+                      <button class="receive-purchase-button" id="receivePurchaseButton" type="button">
+                        <span aria-hidden="true">↓</span> Recibir mercancía
+                      </button>
+                    </div>
+                    <div class="purchase-item-list" id="purchaseItemList"></div>
+                    <div class="purchase-receipt-block">
+                      <div class="purchase-panel-heading">
+                        <div><p class="eyebrow">Trazabilidad</p><h3>Recepciones</h3></div>
+                        <span id="purchaseReceiptCount">0</span>
+                      </div>
+                      <div class="purchase-receipt-list" id="purchaseReceiptList"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="purchase-panel" data-purchase-panel="suppliers" hidden>
+              <div class="supplier-toolbar">
+                <div>
+                  <p class="eyebrow">Directorio de abastecimiento</p>
+                  <h3>Proveedores registrados</h3>
+                  <p>Condiciones comerciales y datos de contacto por empresa.</p>
+                </div>
+                <button class="primary-button compact" id="supplierPanelCreateButton" type="button">
+                  Agregar proveedor <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+              <div class="supplier-grid" id="supplierGrid"></div>
+              <div class="data-state" id="supplierDataState">
+                <span class="data-state-symbol" aria-hidden="true">PV</span>
+                <strong>Sin proveedores</strong>
+                <p>Registra el primero para emitir órdenes de compra.</p>
+              </div>
+            </div>
+          </section>
+
           <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
@@ -1035,14 +1173,20 @@
                 <div class="module-symbol blue" aria-hidden="true">PV</div>
                 <h3>Proveedores</h3>
                 <p>Terceros, obligación de facturar y documentos de soporte.</p>
-                <span class="module-state build">Modelo preparado</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#compras">Abrir proveedores <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="compras recepción costos proveedores documentos">
                 <span class="module-number">07</span>
                 <div class="module-symbol amber" aria-hidden="true">CO</div>
                 <h3>Compras</h3>
                 <p>Documentos de compra y recepción preparados para crecer por etapas.</p>
-                <span class="module-state ready">API base</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#compras">Abrir compras <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="inventario entradas transferencias ajustes movimientos saldos">
                 <span class="module-number">08</span>
@@ -1167,6 +1311,180 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="supplierDialog" aria-labelledby="supplierDialogTitle">
+      <form class="company-form" id="supplierForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Directorio comercial</p>
+            <h2 id="supplierDialogTitle">Registrar proveedor</h2>
+          </div>
+          <button class="icon-button" id="closeSupplierDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Define los datos de contacto y sus condiciones tributarias para emitir órdenes correctamente.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Nombre o razón social <b>*</b></span>
+            <input name="name" type="text" maxlength="160" required placeholder="Ej. Distribuciones Andinas S.A.S.">
+          </label>
+          <label class="form-field">
+            <span>NIT o documento</span>
+            <input name="taxId" type="text" maxlength="40" placeholder="Ej. 900123456-7">
+          </label>
+          <label class="form-field">
+            <span>Correo de compras</span>
+            <input name="email" type="email" maxlength="160" placeholder="pedidos@proveedor.com">
+          </label>
+          <label class="form-field">
+            <span>Teléfono</span>
+            <input name="phone" type="tel" maxlength="40" placeholder="Ej. 300 000 0000">
+          </label>
+          <label class="form-field">
+            <span>Plazo de pago</span>
+            <select name="paymentTermsDays">
+              <option value="0">Contado</option>
+              <option value="15">15 días</option>
+              <option value="30">30 días</option>
+              <option value="45">45 días</option>
+              <option value="60">60 días</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Dirección</span>
+            <input name="address" type="text" maxlength="240" placeholder="Dirección comercial">
+          </label>
+        </div>
+        <div class="supplier-checks">
+          <label><input name="obligatedToInvoice" type="checkbox"> Obligado a facturar</label>
+          <label><input name="electronicInvoicer" type="checkbox"> Facturador electrónico</label>
+        </div>
+        <p class="form-error" id="supplierFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelSupplierButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveSupplierButton" type="submit">Registrar proveedor</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog purchase-dialog" id="purchaseDialog" aria-labelledby="purchaseDialogTitle">
+      <form class="company-form" id="purchaseForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Solicitud de abastecimiento</p>
+            <h2 id="purchaseDialogTitle">Nueva orden de compra</h2>
+          </div>
+          <button class="icon-button" id="closePurchaseDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Proveedor <b>*</b></span>
+            <select id="purchaseSupplierId" name="supplierId" required>
+              <option value="">Selecciona un proveedor</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Sucursal solicitante <b>*</b></span>
+            <select id="purchaseBranchId" name="branchId" required>
+              <option value="">Selecciona una sucursal</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Fecha de emisión <b>*</b></span>
+            <input id="purchaseIssueDate" name="issueDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Entrega esperada</span>
+            <input id="purchaseExpectedDate" name="expectedDate" type="date">
+          </label>
+          <label class="form-field">
+            <span>Documento</span>
+            <select name="documentType">
+              <option value="PURCHASE_ORDER">Orden de compra</option>
+              <option value="INVOICE">Factura del proveedor</option>
+              <option value="SUPPORT_DOCUMENT">Documento soporte</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Referencia del proveedor</span>
+            <input name="documentNumber" type="text" maxlength="80" placeholder="Cotización o factura">
+          </label>
+        </div>
+        <div class="purchase-item-editor">
+          <div class="purchase-item-editor-heading">
+            <div><strong>Productos solicitados</strong><small>Costo e impuesto estimados.</small></div>
+            <button class="secondary-button" id="addPurchaseItemButton" type="button">Agregar producto</button>
+          </div>
+          <div id="purchaseItemRows"></div>
+          <template id="purchaseItemTemplate">
+            <div class="purchase-form-item">
+              <label class="form-field purchase-form-product">
+                <span>Producto <b>*</b></span>
+                <select data-purchase-item="productId" required></select>
+              </label>
+              <label class="form-field">
+                <span>Cantidad</span>
+                <input data-purchase-item="quantity" type="number" min="0.0001" step="0.0001" value="1" required>
+              </label>
+              <label class="form-field">
+                <span>Costo unitario</span>
+                <input data-purchase-item="unitCost" type="number" min="0" step="0.01" required placeholder="0">
+              </label>
+              <label class="form-field">
+                <span>Impuesto %</span>
+                <input data-purchase-item="taxRate" type="number" min="0" max="100" step="0.01" value="0">
+              </label>
+              <button class="purchase-remove-item" data-remove-purchase-item type="button" aria-label="Eliminar producto">×</button>
+            </div>
+          </template>
+          <div class="purchase-draft-total">
+            <span>Total estimado</span>
+            <strong id="purchaseDraftTotal">$0</strong>
+          </div>
+        </div>
+        <label class="form-field">
+          <span>Notas o condiciones</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Condiciones de entrega, contacto o instrucciones"></textarea>
+        </label>
+        <p class="form-error" id="purchaseFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPurchaseButton" type="button">Volver sin emitir</button>
+          <button class="primary-button compact" id="savePurchaseButton" type="submit">Emitir orden de compra</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="receiptPurchaseDialog" aria-labelledby="receiptPurchaseDialogTitle">
+      <form class="company-form" id="receiptPurchaseForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Entrada controlada</p>
+            <h2 id="receiptPurchaseDialogTitle">Recibir mercancía</h2>
+          </div>
+          <button class="icon-button" id="closeReceiptPurchaseDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Orden <strong id="receiptPurchaseNumber">—</strong>. Registra únicamente las cantidades que llegaron físicamente.
+        </p>
+        <label class="form-field">
+          <span>Bodega de destino <b>*</b></span>
+          <select id="receiptWarehouseId" name="warehouseId" required>
+            <option value="">Selecciona una bodega</option>
+          </select>
+        </label>
+        <div class="receipt-purchase-items" id="receiptPurchaseItems"></div>
+        <label class="form-field">
+          <span>Observaciones de la recepción</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Estado, guía de transporte o novedades"></textarea>
+        </label>
+        <p class="form-error" id="receiptPurchaseFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelReceiptPurchaseButton" type="button">Volver sin recibir</button>
+          <button class="primary-button compact" id="saveReceiptPurchaseButton" type="submit">Confirmar entrada a inventario</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="adjustmentDialog" aria-labelledby="adjustmentDialogTitle">
       <form class="company-form" id="adjustmentForm">

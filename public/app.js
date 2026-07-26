@@ -197,6 +197,64 @@ const elements = {
   closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
   cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
   saveProductImageButton: document.querySelector('#saveProductImageButton'),
+  purchaseOpenOrders: document.querySelector('#purchaseOpenOrders'),
+  purchasePendingUnits: document.querySelector('#purchasePendingUnits'),
+  purchaseReceivedMonth: document.querySelector('#purchaseReceivedMonth'),
+  purchaseSupplierCount: document.querySelector('#purchaseSupplierCount'),
+  reloadPurchasesButton: document.querySelector('#reloadPurchasesButton'),
+  purchaseSearch: document.querySelector('#purchaseSearch'),
+  purchaseOrderList: document.querySelector('#purchaseOrderList'),
+  purchaseDataState: document.querySelector('#purchaseDataState'),
+  purchaseDetailEmpty: document.querySelector('#purchaseDetailEmpty'),
+  purchaseDetailContent: document.querySelector('#purchaseDetailContent'),
+  purchaseDetailNumber: document.querySelector('#purchaseDetailNumber'),
+  purchaseDetailSupplier: document.querySelector('#purchaseDetailSupplier'),
+  purchaseDetailBranch: document.querySelector('#purchaseDetailBranch'),
+  purchaseDetailStatus: document.querySelector('#purchaseDetailStatus'),
+  purchaseDetailIssue: document.querySelector('#purchaseDetailIssue'),
+  purchaseDetailExpected: document.querySelector('#purchaseDetailExpected'),
+  purchaseDetailTotal: document.querySelector('#purchaseDetailTotal'),
+  purchaseDetailProgress: document.querySelector('#purchaseDetailProgress'),
+  purchaseProgressBar: document.querySelector('#purchaseProgressBar'),
+  purchasePendingLabel: document.querySelector('#purchasePendingLabel'),
+  purchaseItemList: document.querySelector('#purchaseItemList'),
+  purchaseReceiptCount: document.querySelector('#purchaseReceiptCount'),
+  purchaseReceiptList: document.querySelector('#purchaseReceiptList'),
+  receivePurchaseButton: document.querySelector('#receivePurchaseButton'),
+  newSupplierButton: document.querySelector('#newSupplierButton'),
+  supplierPanelCreateButton: document.querySelector('#supplierPanelCreateButton'),
+  newPurchaseButton: document.querySelector('#newPurchaseButton'),
+  supplierGrid: document.querySelector('#supplierGrid'),
+  supplierDataState: document.querySelector('#supplierDataState'),
+  supplierDialog: document.querySelector('#supplierDialog'),
+  supplierForm: document.querySelector('#supplierForm'),
+  supplierFormError: document.querySelector('#supplierFormError'),
+  closeSupplierDialog: document.querySelector('#closeSupplierDialog'),
+  cancelSupplierButton: document.querySelector('#cancelSupplierButton'),
+  saveSupplierButton: document.querySelector('#saveSupplierButton'),
+  purchaseDialog: document.querySelector('#purchaseDialog'),
+  purchaseForm: document.querySelector('#purchaseForm'),
+  purchaseFormError: document.querySelector('#purchaseFormError'),
+  purchaseSupplierId: document.querySelector('#purchaseSupplierId'),
+  purchaseBranchId: document.querySelector('#purchaseBranchId'),
+  purchaseIssueDate: document.querySelector('#purchaseIssueDate'),
+  purchaseExpectedDate: document.querySelector('#purchaseExpectedDate'),
+  purchaseItemRows: document.querySelector('#purchaseItemRows'),
+  purchaseItemTemplate: document.querySelector('#purchaseItemTemplate'),
+  purchaseDraftTotal: document.querySelector('#purchaseDraftTotal'),
+  addPurchaseItemButton: document.querySelector('#addPurchaseItemButton'),
+  closePurchaseDialog: document.querySelector('#closePurchaseDialog'),
+  cancelPurchaseButton: document.querySelector('#cancelPurchaseButton'),
+  savePurchaseButton: document.querySelector('#savePurchaseButton'),
+  receiptPurchaseDialog: document.querySelector('#receiptPurchaseDialog'),
+  receiptPurchaseForm: document.querySelector('#receiptPurchaseForm'),
+  receiptPurchaseFormError: document.querySelector('#receiptPurchaseFormError'),
+  receiptPurchaseNumber: document.querySelector('#receiptPurchaseNumber'),
+  receiptWarehouseId: document.querySelector('#receiptWarehouseId'),
+  receiptPurchaseItems: document.querySelector('#receiptPurchaseItems'),
+  closeReceiptPurchaseDialog: document.querySelector('#closeReceiptPurchaseDialog'),
+  cancelReceiptPurchaseButton: document.querySelector('#cancelReceiptPurchaseButton'),
+  saveReceiptPurchaseButton: document.querySelector('#saveReceiptPurchaseButton'),
   cashStatus: document.querySelector('#cashStatus'),
   cashRegisterName: document.querySelector('#cashRegisterName'),
   cashBranchName: document.querySelector('#cashBranchName'),
@@ -320,6 +378,9 @@ let selectedPhysicalCount = null;
 let inventorySummary = {};
 let inventoryBalances = [];
 let inventoryMovements = [];
+let suppliers = [];
+let purchases = [];
+let selectedPurchase = null;
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -1704,6 +1765,557 @@ async function submitPayment(event) {
   }
 }
 
+const purchaseStatusLabels = {
+  DRAFT: 'Borrador',
+  ORDERED: 'Ordenada',
+  PARTIAL: 'Recepción parcial',
+  RECEIVED: 'Recibida',
+  CANCELLED: 'Cancelada',
+};
+
+function setPurchaseSummary(summary = {}) {
+  elements.purchaseOpenOrders.textContent = String(summary.open_orders || 0);
+  elements.purchasePendingUnits.textContent = formatQuantity(summary.pending_units || 0);
+  elements.purchaseReceivedMonth.textContent =
+    formatCurrency(summary.received_value_month || 0);
+  elements.purchaseSupplierCount.textContent = String(summary.active_suppliers || 0);
+}
+
+function showPurchasesError(message) {
+  purchases = [];
+  suppliers = [];
+  selectedPurchase = null;
+  setPurchaseSummary();
+  elements.purchaseOrderList.replaceChildren();
+  elements.supplierGrid.replaceChildren();
+  elements.purchaseDataState.hidden = false;
+  elements.purchaseDataState.classList.add('error');
+  elements.purchaseDataState.querySelector('strong').textContent =
+    'No pudimos consultar las compras';
+  elements.purchaseDataState.querySelector('p').textContent = message;
+  elements.supplierDataState.hidden = false;
+  elements.purchaseDetailContent.hidden = true;
+  elements.purchaseDetailEmpty.hidden = false;
+}
+
+function renderSuppliers() {
+  elements.supplierGrid.replaceChildren();
+  elements.supplierDataState.hidden = suppliers.length > 0;
+  for (const supplier of suppliers) {
+    const card = document.createElement('article');
+    card.className = 'supplier-card';
+    const top = document.createElement('div');
+    const symbol = document.createElement('span');
+    symbol.textContent = supplier.name.slice(0, 1).toLocaleUpperCase('es');
+    const status = document.createElement('span');
+    status.className = `table-status ${supplier.active ? 'active' : 'inactive'}`;
+    status.textContent = supplier.active ? 'Activo' : 'Inactivo';
+    top.append(symbol, status);
+    const name = document.createElement('h4');
+    name.textContent = supplier.name;
+    const document = document.createElement('p');
+    document.textContent = supplier.tax_id || 'Documento no registrado';
+    const details = document.createElement('div');
+    details.className = 'supplier-card-details';
+    const contact = document.createElement('span');
+    contact.textContent = supplier.email || supplier.phone || 'Sin contacto';
+    const terms = document.createElement('span');
+    terms.textContent = Number(supplier.payment_terms_days)
+      ? `${supplier.payment_terms_days} días de plazo`
+      : 'Pago de contado';
+    details.append(contact, terms);
+    const flags = document.createElement('small');
+    flags.textContent = [
+      supplier.obligated_to_invoice ? 'Obligado a facturar' : null,
+      supplier.electronic_invoicer ? 'Factura electrónica' : null,
+    ].filter(Boolean).join(' · ') || 'Condición tributaria pendiente';
+    card.append(top, name, document, details, flags);
+    elements.supplierGrid.append(card);
+  }
+}
+
+function purchaseStatusMeta(status) {
+  return {
+    label: purchaseStatusLabels[status] || status,
+    className: status.toLocaleLowerCase('es'),
+  };
+}
+
+function renderPurchaseOrders() {
+  const search = normalizeSearch(elements.purchaseSearch.value.trim());
+  const filtered = purchases.filter((purchase) => !search || normalizeSearch([
+    purchase.order_number,
+    purchase.document_number,
+    purchase.supplier_name,
+    purchase.branch_name,
+  ].filter(Boolean).join(' ')).includes(search));
+  elements.purchaseOrderList.replaceChildren();
+  elements.purchaseDataState.hidden = filtered.length > 0;
+  elements.purchaseDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.purchaseDataState.querySelector('strong').textContent =
+      search ? 'No encontramos órdenes' : 'Aún no hay órdenes';
+    elements.purchaseDataState.querySelector('p').textContent =
+      search
+        ? 'Prueba con otro número, proveedor o sucursal.'
+        : 'Emite la primera orden para organizar el abastecimiento.';
+    return;
+  }
+  for (const purchase of filtered) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'purchase-order-card';
+    if (selectedPurchase?.id === purchase.id) button.classList.add('selected');
+    const top = document.createElement('div');
+    const number = document.createElement('strong');
+    number.textContent = purchase.order_number;
+    const meta = purchaseStatusMeta(purchase.status);
+    const status = document.createElement('span');
+    status.className = `purchase-status ${meta.className}`;
+    status.textContent = meta.label;
+    top.append(number, status);
+    const supplier = document.createElement('span');
+    supplier.className = 'purchase-order-supplier';
+    supplier.textContent = purchase.supplier_name;
+    const branch = document.createElement('small');
+    branch.textContent = `${purchase.branch_name} · ${formatShortDate(purchase.issue_date)}`;
+    const progress = document.createElement('div');
+    progress.className = 'purchase-order-progress';
+    const units = document.createElement('span');
+    units.textContent =
+      `${formatQuantity(purchase.received_units)} de ${formatQuantity(purchase.ordered_units)} recibidas`;
+    const total = document.createElement('strong');
+    total.textContent = formatCurrency(purchase.total);
+    progress.append(units, total);
+    button.append(top, supplier, branch, progress);
+    button.addEventListener('click', () => loadPurchaseDetail(purchase.id));
+    elements.purchaseOrderList.append(button);
+  }
+}
+
+function renderPurchaseDetail(purchase) {
+  selectedPurchase = purchase;
+  elements.purchaseDetailEmpty.hidden = true;
+  elements.purchaseDetailContent.hidden = false;
+  elements.purchaseDetailNumber.textContent = purchase.order_number;
+  elements.purchaseDetailSupplier.textContent = purchase.supplier_name;
+  elements.purchaseDetailBranch.textContent =
+    `${purchase.branch_name} · ${purchase.branch_code}`;
+  const status = purchaseStatusMeta(purchase.status);
+  elements.purchaseDetailStatus.textContent = status.label;
+  elements.purchaseDetailStatus.className = `purchase-status ${status.className}`;
+  elements.purchaseDetailIssue.textContent = formatShortDate(purchase.issue_date);
+  elements.purchaseDetailExpected.textContent =
+    purchase.expected_date ? formatShortDate(purchase.expected_date) : 'Sin fecha';
+  elements.purchaseDetailTotal.textContent = formatCurrency(purchase.total);
+  const ordered = purchase.items.reduce(
+    (total, item) => total + Number(item.ordered_quantity),
+    0,
+  );
+  const received = purchase.items.reduce(
+    (total, item) => total + Number(item.received_quantity),
+    0,
+  );
+  const pending = ordered - received;
+  elements.purchaseDetailProgress.textContent =
+    `${formatQuantity(received)} de ${formatQuantity(ordered)}`;
+  elements.purchaseProgressBar.style.width =
+    `${ordered ? Math.min((received / ordered) * 100, 100) : 0}%`;
+  elements.purchasePendingLabel.textContent = pending
+    ? `${formatQuantity(pending)} unidades pendientes`
+    : 'Orden recibida completamente';
+  elements.receivePurchaseButton.hidden =
+    !['ORDERED', 'PARTIAL'].includes(purchase.status);
+
+  elements.purchaseItemList.replaceChildren();
+  for (const item of purchase.items) {
+    const card = document.createElement('article');
+    card.className = 'purchase-item-card';
+    const visual = document.createElement('div');
+    visual.className = 'purchase-product-visual';
+    if (item.image_url) {
+      const image = document.createElement('img');
+      image.src = resolvePublicAsset(item.image_url);
+      image.alt = item.image_alt || item.product_name;
+      visual.append(image);
+    } else {
+      visual.textContent = item.product_name.slice(0, 1).toLocaleUpperCase('es');
+    }
+    const identity = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = item.product_name;
+    const sku = document.createElement('small');
+    sku.textContent = `${item.sku} · ${formatCurrency(item.unit_cost)} c/u`;
+    identity.append(name, sku);
+    const quantities = document.createElement('div');
+    quantities.className = 'purchase-item-quantities';
+    const orderedBlock = document.createElement('span');
+    orderedBlock.innerHTML =
+      `Pedido <strong>${formatQuantity(item.ordered_quantity)}</strong>`;
+    const receivedBlock = document.createElement('span');
+    receivedBlock.innerHTML =
+      `Recibido <strong>${formatQuantity(item.received_quantity)}</strong>`;
+    const pendingBlock = document.createElement('span');
+    pendingBlock.innerHTML =
+      `Pendiente <strong>${formatQuantity(Number(item.ordered_quantity) - Number(item.received_quantity))}</strong>`;
+    quantities.append(orderedBlock, receivedBlock, pendingBlock);
+    const amount = document.createElement('strong');
+    amount.className = 'purchase-item-amount';
+    amount.textContent = formatCurrency(item.line_total);
+    card.append(visual, identity, quantities, amount);
+    elements.purchaseItemList.append(card);
+  }
+
+  elements.purchaseReceiptCount.textContent = String(purchase.receipts.length);
+  elements.purchaseReceiptList.replaceChildren();
+  if (!purchase.receipts.length) {
+    const empty = document.createElement('p');
+    empty.className = 'purchase-receipt-empty';
+    empty.textContent = 'La mercancía todavía no ha ingresado a una bodega.';
+    elements.purchaseReceiptList.append(empty);
+  }
+  for (const receipt of purchase.receipts) {
+    const item = document.createElement('article');
+    const symbol = document.createElement('span');
+    symbol.textContent = '↓';
+    const copy = document.createElement('div');
+    const number = document.createElement('strong');
+    number.textContent = receipt.receipt_number;
+    const meta = document.createElement('small');
+    meta.textContent =
+      `${receipt.warehouse_name} · ${formatShortDate(receipt.received_at)}`;
+    copy.append(number, meta);
+    const value = document.createElement('div');
+    const units = document.createElement('strong');
+    units.textContent = `${formatQuantity(receipt.received_units)} und.`;
+    const amount = document.createElement('small');
+    amount.textContent = formatCurrency(receipt.received_value);
+    value.append(units, amount);
+    item.append(symbol, copy, value);
+    elements.purchaseReceiptList.append(item);
+  }
+  renderPurchaseOrders();
+}
+
+async function loadPurchaseDetail(purchaseId) {
+  try {
+    const detail = await getJson(`/api/purchases/${purchaseId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderPurchaseDetail(detail);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadPurchases() {
+  if (!activeTenantId) {
+    showPurchasesError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, supplierResult, purchaseResult] = await Promise.all([
+      getJson('/api/purchases/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/purchases/suppliers', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/purchases', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    suppliers = supplierResult;
+    purchases = purchaseResult;
+    setPurchaseSummary(summary);
+    renderSuppliers();
+    renderPurchaseOrders();
+    if (selectedPurchase) {
+      const exists = purchases.some((purchase) => purchase.id === selectedPurchase.id);
+      if (exists) await loadPurchaseDetail(selectedPurchase.id);
+      else {
+        selectedPurchase = null;
+        elements.purchaseDetailContent.hidden = true;
+        elements.purchaseDetailEmpty.hidden = false;
+      }
+    }
+    elements.newPurchaseButton.disabled =
+      !suppliers.some((supplier) => supplier.active) ||
+      !products.length ||
+      !branches.length;
+    return purchaseResult;
+  } catch (error) {
+    showPurchasesError(error.message);
+    throw error;
+  }
+}
+
+function showPurchasePanel(panelName) {
+  document.querySelectorAll('[data-purchase-tab]').forEach((button) => {
+    const active = button.dataset.purchaseTab === panelName;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-purchase-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.purchasePanel !== panelName;
+  });
+}
+
+function openSupplierDialog() {
+  elements.supplierForm.reset();
+  elements.supplierFormError.hidden = true;
+  elements.supplierDialog.showModal();
+  elements.supplierForm.elements.name.focus();
+}
+
+function closeSupplierDialog() {
+  elements.supplierDialog.close();
+}
+
+async function submitSupplier(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.supplierForm);
+  const payload = Object.fromEntries(formData);
+  payload.obligatedToInvoice = formData.has('obligatedToInvoice');
+  payload.electronicInvoicer = formData.has('electronicInvoicer');
+  elements.supplierFormError.hidden = true;
+  elements.saveSupplierButton.disabled = true;
+  elements.saveSupplierButton.textContent = 'Registrando…';
+  try {
+    await getJson('/api/purchases/suppliers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(payload),
+    });
+    closeSupplierDialog();
+    await loadPurchases();
+    showPurchasePanel('suppliers');
+    showToast('Proveedor agregado al directorio.');
+  } catch (error) {
+    elements.supplierFormError.textContent = error.message;
+    elements.supplierFormError.hidden = false;
+  } finally {
+    elements.saveSupplierButton.disabled = false;
+    elements.saveSupplierButton.textContent = 'Registrar proveedor';
+  }
+}
+
+function updatePurchaseDraftTotal() {
+  const total = [...elements.purchaseItemRows.querySelectorAll('.purchase-form-item')]
+    .reduce((sum, row) => {
+      const quantity = Number(row.querySelector('[data-purchase-item="quantity"]').value) || 0;
+      const unitCost = Number(row.querySelector('[data-purchase-item="unitCost"]').value) || 0;
+      const taxRate = Number(row.querySelector('[data-purchase-item="taxRate"]').value) || 0;
+      return sum + (quantity * unitCost * (1 + taxRate / 100));
+    }, 0);
+  elements.purchaseDraftTotal.textContent = formatCurrency(total);
+}
+
+function addPurchaseItemRow() {
+  const fragment = elements.purchaseItemTemplate.content.cloneNode(true);
+  const row = fragment.querySelector('.purchase-form-item');
+  const select = row.querySelector('[data-purchase-item="productId"]');
+  select.append(new Option('Selecciona un producto', ''));
+  for (const product of products) {
+    select.append(new Option(`${product.name} · ${product.sku}`, product.id));
+  }
+  select.addEventListener('change', () => {
+    const product = products.find((item) => item.id === select.value);
+    if (product) {
+      row.querySelector('[data-purchase-item="unitCost"]').value =
+        Number(product.cost || 0);
+      row.querySelector('[data-purchase-item="taxRate"]').value =
+        Number(product.tax_rate || 0);
+    }
+    updatePurchaseDraftTotal();
+  });
+  row.querySelectorAll('input').forEach((input) =>
+    input.addEventListener('input', updatePurchaseDraftTotal));
+  row.querySelector('[data-remove-purchase-item]').addEventListener('click', () => {
+    if (elements.purchaseItemRows.children.length > 1) row.remove();
+    updatePurchaseDraftTotal();
+  });
+  elements.purchaseItemRows.append(fragment);
+}
+
+function openPurchaseDialog() {
+  if (!suppliers.some((supplier) => supplier.active)) {
+    showToast('Registra un proveedor antes de crear una orden.');
+    showPurchasePanel('suppliers');
+    return;
+  }
+  if (!products.length || !branches.length) {
+    showToast('Necesitas productos y una sucursal para crear la orden.');
+    return;
+  }
+  elements.purchaseForm.reset();
+  elements.purchaseFormError.hidden = true;
+  fillInventorySelect(
+    elements.purchaseSupplierId,
+    'Selecciona un proveedor',
+    suppliers.filter((supplier) => supplier.active),
+    (supplier) => `${supplier.name}${supplier.tax_id ? ` · ${supplier.tax_id}` : ''}`,
+  );
+  fillInventorySelect(
+    elements.purchaseBranchId,
+    'Selecciona una sucursal',
+    branches.filter((branch) => branch.active),
+    (branch) => `${branch.name} · ${branch.code}`,
+  );
+  elements.purchaseIssueDate.value = isoDate();
+  const expected = new Date();
+  expected.setDate(expected.getDate() + 7);
+  elements.purchaseExpectedDate.value = expected.toISOString().slice(0, 10);
+  elements.purchaseItemRows.replaceChildren();
+  addPurchaseItemRow();
+  updatePurchaseDraftTotal();
+  elements.purchaseDialog.showModal();
+  elements.purchaseSupplierId.focus();
+}
+
+function closePurchaseDialog() {
+  elements.purchaseDialog.close();
+}
+
+function collectPurchaseItems() {
+  return [...elements.purchaseItemRows.querySelectorAll('.purchase-form-item')]
+    .map((row) => ({
+      productId: row.querySelector('[data-purchase-item="productId"]').value,
+      quantity: row.querySelector('[data-purchase-item="quantity"]').value,
+      unitCost: row.querySelector('[data-purchase-item="unitCost"]').value,
+      taxRate: row.querySelector('[data-purchase-item="taxRate"]').value,
+    }));
+}
+
+async function submitPurchase(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.purchaseForm);
+  elements.purchaseFormError.hidden = true;
+  elements.savePurchaseButton.disabled = true;
+  elements.savePurchaseButton.textContent = 'Emitiendo orden…';
+  try {
+    const purchase = await getJson('/api/purchases', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        ...Object.fromEntries(formData),
+        items: collectPurchaseItems(),
+      }),
+    });
+    closePurchaseDialog();
+    await loadPurchases();
+    await loadPurchaseDetail(purchase.id);
+    showPurchasePanel('orders');
+    showToast(`${purchase.order_number} emitida correctamente.`);
+  } catch (error) {
+    elements.purchaseFormError.textContent = error.message;
+    elements.purchaseFormError.hidden = false;
+  } finally {
+    elements.savePurchaseButton.disabled = false;
+    elements.savePurchaseButton.textContent = 'Emitir orden de compra';
+  }
+}
+
+function openReceiptPurchaseDialog() {
+  if (!selectedPurchase) return;
+  elements.receiptPurchaseForm.reset();
+  elements.receiptPurchaseFormError.hidden = true;
+  elements.receiptPurchaseNumber.textContent = selectedPurchase.order_number;
+  const eligibleWarehouses = warehouses.filter((warehouse) =>
+    warehouse.active && warehouse.branch_id === selectedPurchase.branch_id);
+  fillInventorySelect(
+    elements.receiptWarehouseId,
+    'Selecciona una bodega',
+    eligibleWarehouses,
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+  );
+  elements.receiptPurchaseItems.replaceChildren();
+  for (const item of selectedPurchase.items) {
+    const pending =
+      Number(item.ordered_quantity) - Number(item.received_quantity);
+    if (pending <= 0) continue;
+    const row = document.createElement('label');
+    row.className = 'receipt-purchase-row';
+    const identity = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = item.product_name;
+    const meta = document.createElement('small');
+    meta.textContent = `${item.sku} · máximo ${formatQuantity(pending)}`;
+    identity.append(name, meta);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = String(pending);
+    input.step = '0.0001';
+    input.value = String(pending);
+    input.dataset.purchaseItemId = item.id;
+    input.setAttribute('aria-label', `Cantidad recibida de ${item.product_name}`);
+    row.append(identity, input);
+    elements.receiptPurchaseItems.append(row);
+  }
+  elements.receiptPurchaseDialog.showModal();
+  elements.receiptWarehouseId.focus();
+}
+
+function closeReceiptPurchaseDialog() {
+  elements.receiptPurchaseDialog.close();
+}
+
+async function submitPurchaseReceipt(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.receiptPurchaseForm);
+  const items = [...elements.receiptPurchaseItems.querySelectorAll('input')]
+    .map((input) => ({
+      purchaseItemId: input.dataset.purchaseItemId,
+      quantity: Number(input.value),
+    }))
+    .filter((item) => item.quantity > 0);
+  if (!items.length) {
+    elements.receiptPurchaseFormError.textContent =
+      'Indica al menos una cantidad recibida.';
+    elements.receiptPurchaseFormError.hidden = false;
+    return;
+  }
+  elements.receiptPurchaseFormError.hidden = true;
+  elements.saveReceiptPurchaseButton.disabled = true;
+  elements.saveReceiptPurchaseButton.textContent = 'Actualizando inventario…';
+  try {
+    const purchaseId = selectedPurchase.id;
+    await getJson(`/api/purchases/${purchaseId}/receipts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        warehouseId: formData.get('warehouseId'),
+        notes: formData.get('notes'),
+        items,
+      }),
+    });
+    closeReceiptPurchaseDialog();
+    await Promise.all([
+      loadPurchases(),
+      loadInventory(),
+      loadCatalog(),
+    ]);
+    await loadPurchaseDetail(purchaseId);
+    showToast('Mercancía recibida e inventario actualizado.');
+  } catch (error) {
+    elements.receiptPurchaseFormError.textContent = error.message;
+    elements.receiptPurchaseFormError.hidden = false;
+  } finally {
+    elements.saveReceiptPurchaseButton.disabled = false;
+    elements.saveReceiptPurchaseButton.textContent = 'Confirmar entrada a inventario';
+  }
+}
+
 const inventoryMovementLabels = {
   PURCHASE: 'Entrada por compra',
   RETURN_IN: 'Devolución recibida',
@@ -2601,6 +3213,7 @@ async function refreshTenantData() {
     showInventoryError('Primero debes registrar o seleccionar una empresa.');
     showCountsError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
+    showPurchasesError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
@@ -2615,11 +3228,16 @@ async function refreshTenantData() {
     loadInventory(),
     loadPhysicalCounts(),
     loadCatalog(),
+    loadPurchases(),
     loadPos(),
     loadReceivables(),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
+  elements.newPurchaseButton.disabled =
+    !suppliers.some((supplier) => supplier.active) ||
+    !products.length ||
+    !branches.length;
   await syncPosWorkstation().catch(() => {});
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
@@ -2659,6 +3277,7 @@ const availableViews = new Set([
   'bodegas',
   'inventario',
   'productos',
+  'compras',
   'caja',
   'cartera',
   'modulos',
@@ -2678,6 +3297,7 @@ const viewTitles = {
   bodegas: 'Bodegas',
   inventario: 'Inventario',
   productos: 'Catálogo',
+  compras: 'Compras',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
   modulos: 'Mapa del ERP',
@@ -3303,6 +3923,7 @@ elements.companyContext.addEventListener('change', async () => {
   posCatalog = [];
   selectedReceivable = null;
   selectedPhysicalCount = null;
+  selectedPurchase = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -3373,6 +3994,38 @@ elements.transferProductId.addEventListener('change', syncTransferWarehouses);
 elements.transferSourceWarehouseId.addEventListener('change', updateTransferAvailability);
 elements.transferDialog.addEventListener('click', (event) => {
   if (event.target === elements.transferDialog) closeTransferDialog();
+});
+elements.reloadPurchasesButton.addEventListener('click', () => {
+  loadPurchases()
+    .then(() => showToast('Compras actualizadas.'))
+    .catch(() => showToast('No fue posible actualizar las compras.'));
+});
+elements.purchaseSearch.addEventListener('input', renderPurchaseOrders);
+document.querySelectorAll('[data-purchase-tab]').forEach((button) => {
+  button.addEventListener('click', () => showPurchasePanel(button.dataset.purchaseTab));
+});
+elements.newSupplierButton.addEventListener('click', openSupplierDialog);
+elements.supplierPanelCreateButton.addEventListener('click', openSupplierDialog);
+elements.closeSupplierDialog.addEventListener('click', closeSupplierDialog);
+elements.cancelSupplierButton.addEventListener('click', closeSupplierDialog);
+elements.supplierForm.addEventListener('submit', submitSupplier);
+elements.supplierDialog.addEventListener('click', (event) => {
+  if (event.target === elements.supplierDialog) closeSupplierDialog();
+});
+elements.newPurchaseButton.addEventListener('click', openPurchaseDialog);
+elements.addPurchaseItemButton.addEventListener('click', addPurchaseItemRow);
+elements.closePurchaseDialog.addEventListener('click', closePurchaseDialog);
+elements.cancelPurchaseButton.addEventListener('click', closePurchaseDialog);
+elements.purchaseForm.addEventListener('submit', submitPurchase);
+elements.purchaseDialog.addEventListener('click', (event) => {
+  if (event.target === elements.purchaseDialog) closePurchaseDialog();
+});
+elements.receivePurchaseButton.addEventListener('click', openReceiptPurchaseDialog);
+elements.closeReceiptPurchaseDialog.addEventListener('click', closeReceiptPurchaseDialog);
+elements.cancelReceiptPurchaseButton.addEventListener('click', closeReceiptPurchaseDialog);
+elements.receiptPurchaseForm.addEventListener('submit', submitPurchaseReceipt);
+elements.receiptPurchaseDialog.addEventListener('click', (event) => {
+  if (event.target === elements.receiptPurchaseDialog) closeReceiptPurchaseDialog();
 });
 elements.reloadCountsButton.addEventListener('click', () => {
   loadPhysicalCounts()

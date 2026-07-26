@@ -137,7 +137,7 @@ tomó como referencia la copia documentada con versión 1.17.3.
 ## Orden recomendado de integración
 
 1. Completado: conteos físicos, ajustes y transferencias de inventario.
-2. Proveedores, órdenes de compra y recepción por lotes.
+2. Completado: proveedores, órdenes de compra y recepción por lotes.
 3. Cuentas por pagar y costo aterrizado.
 4. Usuarios, roles y permisos multiempresa.
 5. Auditoría consultable y exportaciones.
@@ -147,7 +147,7 @@ tomó como referencia la copia documentada con versión 1.17.3.
 
 ## Siguiente fase recomendada
 
-Proveedores, órdenes de compra y recepción por lotes. Inventario ya cuenta con
-saldos, movimientos, ajustes, transferencias y tomas físicas; la siguiente
-entrada natural de mercancía debe originarse en un documento de compra
-controlado y actualizar costo y existencias con trazabilidad.
+Cuentas por pagar y costo aterrizado. Las órdenes y recepciones ya controlan la
+entrada física; el siguiente paso es registrar obligaciones con proveedores,
+vencimientos, abonos y costos adicionales de transporte o importación sin
+mezclarlos con las cuentas por cobrar.

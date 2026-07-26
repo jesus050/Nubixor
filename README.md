@@ -85,6 +85,11 @@ La interfaz incluye:
   transaccionales entre bodegas;
 - conteos físicos dentro de Inventario, visibles únicamente al programar una
   toma física;
+- directorio de proveedores con condiciones de facturación y pago;
+- órdenes de compra con productos, fechas, costos, impuestos y seguimiento de
+  cantidades pendientes;
+- recepciones parciales o totales que actualizan inventario, kardex y costo
+  promedio de forma transaccional;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;

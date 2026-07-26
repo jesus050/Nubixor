@@ -36,6 +36,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Existencias actuales/);
   assert.match(response.text, /Programar toma física/);
   assert.match(response.text, /Aprobar y ajustar inventario/);
+  assert.match(response.text, /data-view="compras"/);
+  assert.match(response.text, /Órdenes y recepciones/);
+  assert.match(response.text, /Confirmar entrada a inventario/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -245,6 +248,31 @@ test('inventario valida ajustes y transferencias antes de consultar PostgreSQL',
     })
     .expect(422);
   assert.match(transfer.body.error, /deben ser diferentes/i);
+});
+
+test('compras valida proveedores, órdenes y recepciones antes de consultar PostgreSQL', async () => {
+  const application = createApp();
+  await request(application)
+    .get('/api/purchases/summary')
+    .expect(400);
+  const supplier = await request(application)
+    .post('/api/purchases/suppliers')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ name: '   ' })
+    .expect(422);
+  assert.match(supplier.body.error, /nombre del proveedor/i);
+  const purchase = await request(application)
+    .post('/api/purchases')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(purchase.body.error, /UUID válidos/i);
+  const receipt = await request(application)
+    .post('/api/purchases/invalid/receipts')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(receipt.body.error, /UUID válidos/i);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {
