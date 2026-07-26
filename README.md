@@ -106,11 +106,17 @@ La interfaz incluye:
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
 - apertura y cierre de turnos de caja con registro del efectivo;
+- ingresos, gastos menores y retiros vinculados al turno y al responsable;
+- arqueo por denominaciones, efectivo esperado, diferencias justificadas e
+  historial de turnos;
 - venta rápida con carrito, medios de pago, comprobante y salida transaccional
   de inventario;
+- comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
   inventario y órdenes de compra abiertas;
+- pulso ejecutivo con ventas del día y del mes, margen bruto, stock bajo,
+  compras pendientes y flujo estimado a 30 días;
 - directorio de los 17 módulos previstos con su estado real.
 
 Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,

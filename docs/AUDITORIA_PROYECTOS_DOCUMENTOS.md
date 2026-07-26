@@ -141,15 +141,17 @@ tomó como referencia la copia documentada con versión 1.17.3.
 3. Completado: cuentas por pagar, vencimientos y pagos a proveedores.
 4. Costo aterrizado para transporte, aranceles y otros gastos de compra.
 5. Completado: usuarios, roles y permisos multiempresa.
-6. Auditoría consultable y exportaciones.
-7. Planner.
-8. Adaptador de Ticketera.
-9. Integraciones WooCommerce y canales comerciales.
+6. Completado: caja avanzada y dashboard ejecutivo de flujo.
+7. Autenticación, aplicación transversal de permisos y auditoría consultable.
+8. Reportes y exportaciones.
+9. Planner.
+10. Adaptador de Ticketera.
+11. Integraciones WooCommerce y canales comerciales.
 
 ## Siguiente fase recomendada
 
-Fortalecimiento de identidad y autorización. Usuarios y roles ya están
-organizados; el siguiente paso es incorporar inicio de sesión, recuperación de
-cuenta, sesiones seguras y aplicar los permisos del servidor a cada operación
-del ERP. Después se retoma costo aterrizado para transporte, seguros, aranceles
-y otros gastos de compra.
+Fortalecimiento de identidad y autorización. Usuarios, roles, caja avanzada y
+tablero ejecutivo ya están organizados; el siguiente paso es incorporar inicio
+de sesión, recuperación de cuenta, sesiones seguras y aplicar los permisos del
+servidor a cada operación del ERP. Después se agregan auditoría consultable,
+exportaciones y comparación orden–recepción–factura.

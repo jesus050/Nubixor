@@ -7,8 +7,26 @@ import { writeAudit } from '../audit.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const CASH_MOVEMENT_TYPES = new Set(['INCOME', 'EXPENSE', 'WITHDRAWAL']);
+const CASH_DENOMINATIONS = new Set([
+  100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50,
+]);
 
 router.use(requireTenant);
+
+function normalizedText(value, maxLength) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  if (normalized.length > maxLength) {
+    throw new AppError(
+      `El campo supera ${maxLength} caracteres.`,
+      422,
+      'FIELD_TOO_LONG',
+    );
+  }
+  return normalized;
+}
 
 router.get('/summary', asyncHandler(async (req, res) => {
   const summary = await withTransaction(async (client) => {
@@ -23,10 +41,39 @@ router.get('/summary', asyncHandler(async (req, res) => {
     const session = await client.query(
       `SELECT cs.id, cs.cash_register_id, cs.status, cs.opening_amount,
               cs.opened_at, cr.name register_name, cr.code register_code,
-              cr.branch_id, b.name branch_name
+              cr.branch_id, b.name branch_name,
+              COALESCE(sales.cash_sales, 0) cash_sales,
+              COALESCE(sales.card_sales, 0) card_sales,
+              COALESCE(sales.transfer_sales, 0) transfer_sales,
+              COALESCE(movements.income, 0) manual_income,
+              COALESCE(movements.expense, 0) expenses,
+              COALESCE(movements.withdrawal, 0) withdrawals,
+              cs.opening_amount
+                + COALESCE(sales.cash_sales, 0)
+                + COALESCE(movements.income, 0)
+                - COALESCE(movements.expense, 0)
+                - COALESCE(movements.withdrawal, 0) calculated_cash
        FROM cash_sessions cs
        JOIN cash_registers cr ON cr.id = cs.cash_register_id
        JOIN branches b ON b.id = cr.branch_id
+       LEFT JOIN LATERAL (
+         SELECT
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales,
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CARD'), 0) card_sales,
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
+         FROM sales
+         WHERE cash_session_id = cs.id
+           AND tenant_id = cs.tenant_id
+           AND status = 'COMPLETED'
+       ) sales ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'INCOME'), 0) income,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'EXPENSE'), 0) expense,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'WITHDRAWAL'), 0) withdrawal
+         FROM cash_movements
+         WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
+       ) movements ON TRUE
        WHERE cs.tenant_id = $1 AND cs.status = 'OPEN'
        ORDER BY cs.opened_at DESC
        LIMIT 1`,
@@ -38,6 +85,125 @@ router.get('/summary', asyncHandler(async (req, res) => {
     };
   });
   res.json(summary);
+}));
+
+router.get('/sessions', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT cs.id, cs.status, cs.opening_amount, cs.closing_amount,
+            cs.expected_cash, cs.difference, cs.opened_at, cs.closed_at,
+            cs.closing_notes, cr.name register_name, cr.code register_code,
+            b.name branch_name,
+            COALESCE(sales.sale_count, 0)::integer sale_count,
+            COALESCE(sales.sales_total, 0) sales_total,
+            COALESCE(sales.cash_sales, 0) cash_sales,
+            COALESCE(movements.movement_count, 0)::integer movement_count
+     FROM cash_sessions cs
+     JOIN cash_registers cr ON cr.id = cs.cash_register_id
+     JOIN branches b ON b.id = cr.branch_id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*) sale_count, COALESCE(SUM(total), 0) sales_total,
+              COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales
+       FROM sales
+       WHERE cash_session_id = cs.id
+         AND tenant_id = cs.tenant_id
+         AND status = 'COMPLETED'
+     ) sales ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*) movement_count
+       FROM cash_movements
+       WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
+     ) movements ON TRUE
+     WHERE cs.tenant_id = $1
+     ORDER BY cs.opened_at DESC
+     LIMIT 60`,
+    [req.context.tenantId],
+  );
+  res.json(result.rows);
+}));
+
+router.get('/sessions/:id', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    throw new AppError(
+      'El turno debe tener un UUID válido.',
+      422,
+      'INVALID_CASH_SESSION_ID',
+    );
+  }
+  const [session, movements, sales, counts] = await Promise.all([
+    query(
+      `SELECT cs.*, cr.name register_name, cr.code register_code,
+              b.name branch_name,
+              COALESCE(sale_totals.cash_sales, 0) cash_sales,
+              COALESCE(sale_totals.card_sales, 0) card_sales,
+              COALESCE(sale_totals.transfer_sales, 0) transfer_sales,
+              COALESCE(movement_totals.income, 0) manual_income,
+              COALESCE(movement_totals.expense, 0) expenses,
+              COALESCE(movement_totals.withdrawal, 0) withdrawals,
+              cs.opening_amount
+                + COALESCE(sale_totals.cash_sales, 0)
+                + COALESCE(movement_totals.income, 0)
+                - COALESCE(movement_totals.expense, 0)
+                - COALESCE(movement_totals.withdrawal, 0) calculated_cash
+       FROM cash_sessions cs
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
+       JOIN branches b ON b.id = cr.branch_id
+       LEFT JOIN LATERAL (
+         SELECT
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales,
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CARD'), 0) card_sales,
+           COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
+         FROM sales
+         WHERE cash_session_id = cs.id
+           AND tenant_id = cs.tenant_id
+           AND status = 'COMPLETED'
+       ) sale_totals ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'INCOME'), 0) income,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'EXPENSE'), 0) expense,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'WITHDRAWAL'), 0) withdrawal
+         FROM cash_movements
+         WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
+       ) movement_totals ON TRUE
+       WHERE cs.id = $1 AND cs.tenant_id = $2`,
+      [req.params.id, req.context.tenantId],
+    ),
+    query(
+      `SELECT id, movement_type, category, amount, reference, notes,
+              created_by, created_at
+       FROM cash_movements
+       WHERE cash_session_id = $1 AND tenant_id = $2
+       ORDER BY created_at DESC`,
+      [req.params.id, req.context.tenantId],
+    ),
+    query(
+      `SELECT id, sequence_number, payment_method, total, created_at
+       FROM sales
+       WHERE cash_session_id = $1 AND tenant_id = $2
+       ORDER BY created_at DESC`,
+      [req.params.id, req.context.tenantId],
+    ),
+    query(
+      `SELECT denomination, quantity, total
+       FROM cash_count_lines
+       WHERE cash_session_id = $1 AND tenant_id = $2
+       ORDER BY denomination DESC`,
+      [req.params.id, req.context.tenantId],
+    ),
+  ]);
+  if (!session.rowCount) {
+    throw new AppError(
+      'No encontramos el turno de caja.',
+      404,
+      'CASH_SESSION_NOT_FOUND',
+    );
+  }
+  res.json({
+    ...session.rows[0],
+    movements: movements.rows,
+    sales: sales.rows,
+    counts: counts.rows,
+  });
 }));
 
 router.get('/catalog', asyncHandler(async (req, res) => {
@@ -107,6 +273,15 @@ router.post('/sessions', asyncHandler(async (req, res) => {
          RETURNING id, tenant_id, cash_register_id, status, opening_amount, opened_at`,
         [req.context.tenantId, cashRegisterId, amount, req.context.userId],
       );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'cash.session_opened',
+        entityType: 'cash_session',
+        entityId: result.rows[0].id,
+        after: result.rows[0],
+        reason: 'Apertura de turno de caja',
+      });
       return result.rows[0];
     });
     res.status(201).json(session);
@@ -118,26 +293,197 @@ router.post('/sessions', asyncHandler(async (req, res) => {
   }
 }));
 
-router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
-  const { closingAmount } = req.body;
-  const amount = Number(closingAmount);
-  if (!Number.isFinite(amount) || amount < 0) {
-    return res.status(422).json({ error: 'closingAmount debe ser un valor positivo.' });
+router.post('/sessions/:id/movements', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    throw new AppError(
+      'El turno debe tener un UUID válido.',
+      422,
+      'INVALID_CASH_SESSION_ID',
+    );
   }
+  const movementType = normalizedText(req.body.movementType, 30)?.toUpperCase();
+  const category = normalizedText(req.body.category, 80);
+  const amount = Number(req.body.amount);
+  const reference = normalizedText(req.body.reference, 100);
+  const notes = normalizedText(req.body.notes, 300);
+  if (!CASH_MOVEMENT_TYPES.has(movementType) || !category || !notes ||
+      !Number.isFinite(amount) || amount <= 0) {
+    throw new AppError(
+      'Tipo, categoría, valor positivo y motivo son obligatorios.',
+      422,
+      'INVALID_CASH_MOVEMENT',
+    );
+  }
+  const movement = await withTransaction(async (client) => {
+    const session = await client.query(
+      `SELECT id FROM cash_sessions
+       WHERE id = $1 AND tenant_id = $2 AND status = 'OPEN'
+       FOR UPDATE`,
+      [req.params.id, req.context.tenantId],
+    );
+    if (!session.rowCount) {
+      throw new AppError(
+        'Los movimientos requieren un turno abierto.',
+        409,
+        'CASH_SESSION_REQUIRED',
+      );
+    }
+    const result = await client.query(
+      `INSERT INTO cash_movements(
+         tenant_id, cash_session_id, movement_type, category, amount,
+         reference, notes, created_by
+       )
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        req.context.tenantId,
+        req.params.id,
+        movementType,
+        category,
+        amount,
+        reference,
+        notes,
+        req.context.userId,
+      ],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'cash.movement_created',
+      entityType: 'cash_movement',
+      entityId: result.rows[0].id,
+      after: result.rows[0],
+      reason: notes,
+    });
+    return result.rows[0];
+  });
+  res.status(201).json(movement);
+}));
+
+router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
   if (!UUID_PATTERN.test(req.params.id)) {
     return res.status(422).json({ error: 'El turno debe tener un UUID válido.' });
   }
-  const session = await withTransaction(async (client) => {
-    const result = await client.query(
-      `UPDATE cash_sessions
-       SET status = 'CLOSED', closing_amount = $1, closed_by = $2, closed_at = now()
-       WHERE id = $3 AND tenant_id = $4 AND status = 'OPEN'
-       RETURNING id, status, opening_amount, closing_amount, opened_at, closed_at`,
-      [amount, req.context.userId, req.params.id, req.context.tenantId],
+  const counts = Array.isArray(req.body.counts) ? req.body.counts : [];
+  const normalizedCounts = counts.map((line) => ({
+    denomination: Number(line.denomination),
+    quantity: Number(line.quantity),
+  }));
+  const countKeys = normalizedCounts.map((line) => line.denomination);
+  if (normalizedCounts.some((line) =>
+    !CASH_DENOMINATIONS.has(line.denomination) ||
+    !Number.isInteger(line.quantity) ||
+    line.quantity < 0
+  ) || new Set(countKeys).size !== countKeys.length) {
+    throw new AppError(
+      'El conteo contiene denominaciones o cantidades no válidas.',
+      422,
+      'INVALID_CASH_COUNT',
     );
-    if (!result.rowCount) {
+  }
+  const countedFromLines = normalizedCounts.reduce(
+    (total, line) => total + line.denomination * line.quantity,
+    0,
+  );
+  const fallbackAmount = Number(req.body.closingAmount);
+  const amount = normalizedCounts.length ? countedFromLines : fallbackAmount;
+  const notes = normalizedText(req.body.notes, 500);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new AppError(
+      'Registra el conteo de efectivo antes de cerrar.',
+      422,
+      'INVALID_CLOSING_AMOUNT',
+    );
+  }
+  const session = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT cs.id, cs.opening_amount,
+              COALESCE(sales.cash_sales, 0) cash_sales,
+              COALESCE(movements.income, 0) manual_income,
+              COALESCE(movements.expense, 0) expenses,
+              COALESCE(movements.withdrawal, 0) withdrawals
+       FROM cash_sessions cs
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(SUM(total), 0) cash_sales
+         FROM sales
+         WHERE cash_session_id = cs.id
+           AND tenant_id = cs.tenant_id
+           AND payment_method = 'CASH'
+           AND status = 'COMPLETED'
+       ) sales ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'INCOME'), 0) income,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'EXPENSE'), 0) expense,
+           COALESCE(SUM(amount) FILTER (WHERE movement_type = 'WITHDRAWAL'), 0) withdrawal
+         FROM cash_movements
+         WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
+       ) movements ON TRUE
+       WHERE cs.id = $1 AND cs.tenant_id = $2 AND cs.status = 'OPEN'
+       FOR UPDATE OF cs`,
+      [req.params.id, req.context.tenantId],
+    );
+    if (!current.rowCount) {
       throw new AppError('No encontramos un turno de caja abierto.', 404, 'CASH_SESSION_NOT_FOUND');
     }
+    const expected =
+      Number(current.rows[0].opening_amount) +
+      Number(current.rows[0].cash_sales) +
+      Number(current.rows[0].manual_income) -
+      Number(current.rows[0].expenses) -
+      Number(current.rows[0].withdrawals);
+    const difference = amount - expected;
+    if (Math.abs(difference) >= 0.01 && !notes) {
+      throw new AppError(
+        'Explica la diferencia encontrada antes de cerrar.',
+        422,
+        'CASH_DIFFERENCE_REASON_REQUIRED',
+      );
+    }
+    if (normalizedCounts.length) {
+      for (const line of normalizedCounts) {
+        await client.query(
+          `INSERT INTO cash_count_lines(
+             tenant_id, cash_session_id, denomination, quantity
+           )
+           VALUES($1,$2,$3,$4)`,
+          [
+            req.context.tenantId,
+            req.params.id,
+            line.denomination,
+            line.quantity,
+          ],
+        );
+      }
+    }
+    const result = await client.query(
+      `UPDATE cash_sessions
+       SET status = 'CLOSED', closing_amount = $1, expected_cash = $2,
+           difference = $3, closing_notes = $4, closed_by = $5,
+           closed_at = now()
+       WHERE id = $6 AND tenant_id = $7 AND status = 'OPEN'
+       RETURNING id, status, opening_amount, closing_amount, expected_cash,
+                 difference, closing_notes, opened_at, closed_at`,
+      [
+        amount,
+        expected,
+        difference,
+        notes,
+        req.context.userId,
+        req.params.id,
+        req.context.tenantId,
+      ],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'cash.session_closed',
+      entityType: 'cash_session',
+      entityId: result.rows[0].id,
+      before: current.rows[0],
+      after: result.rows[0],
+      reason: notes || 'Cierre sin diferencias',
+    });
     return result.rows[0];
   });
   res.json(session);

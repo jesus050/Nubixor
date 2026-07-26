@@ -27,6 +27,13 @@ const elements = {
   dashboardPayable: document.querySelector('#dashboardPayable'),
   dashboardInventoryValue: document.querySelector('#dashboardInventoryValue'),
   dashboardOpenPurchases: document.querySelector('#dashboardOpenPurchases'),
+  dashboardSalesToday: document.querySelector('#dashboardSalesToday'),
+  dashboardSalesMonth: document.querySelector('#dashboardSalesMonth'),
+  dashboardGrossMargin: document.querySelector('#dashboardGrossMargin'),
+  dashboardLowStock: document.querySelector('#dashboardLowStock'),
+  dashboardPendingPurchases: document.querySelector('#dashboardPendingPurchases'),
+  dashboardCashProjection: document.querySelector('#dashboardCashProjection'),
+  dashboardCashProjectionDetail: document.querySelector('#dashboardCashProjectionDetail'),
   warehouseCount: document.querySelector('#warehouseCount'),
   warehouseDetail: document.querySelector('#warehouseDetail'),
   productCount: document.querySelector('#productCount'),
@@ -265,9 +272,22 @@ const elements = {
   cashBranchName: document.querySelector('#cashBranchName'),
   cashOpeningAmount: document.querySelector('#cashOpeningAmount'),
   cashOpenedAt: document.querySelector('#cashOpenedAt'),
+  cashExpectedAmount: document.querySelector('#cashExpectedAmount'),
   cashGuidance: document.querySelector('#cashGuidance'),
   openCashButton: document.querySelector('#openCashButton'),
   closeCashButton: document.querySelector('#closeCashButton'),
+  newCashMovementButton: document.querySelector('#newCashMovementButton'),
+  reloadCashControlButton: document.querySelector('#reloadCashControlButton'),
+  cashSalesAmount: document.querySelector('#cashSalesAmount'),
+  cashManualIncome: document.querySelector('#cashManualIncome'),
+  cashOutflows: document.querySelector('#cashOutflows'),
+  cashControlExpected: document.querySelector('#cashControlExpected'),
+  cashMovementCount: document.querySelector('#cashMovementCount'),
+  cashMovementList: document.querySelector('#cashMovementList'),
+  cashMovementState: document.querySelector('#cashMovementState'),
+  cashSessionCount: document.querySelector('#cashSessionCount'),
+  cashSessionList: document.querySelector('#cashSessionList'),
+  cashSessionState: document.querySelector('#cashSessionState'),
   openCashDialog: document.querySelector('#openCashDialog'),
   openCashForm: document.querySelector('#openCashForm'),
   openCashFormError: document.querySelector('#openCashFormError'),
@@ -278,9 +298,19 @@ const elements = {
   closeCashDialog: document.querySelector('#closeCashDialog'),
   closeCashForm: document.querySelector('#closeCashForm'),
   closeCashFormError: document.querySelector('#closeCashFormError'),
+  cashCloseExpected: document.querySelector('#cashCloseExpected'),
+  cashCloseCounted: document.querySelector('#cashCloseCounted'),
+  cashCloseDifference: document.querySelector('#cashCloseDifference'),
+  cashDenominationGrid: document.querySelector('#cashDenominationGrid'),
   closeCloseCashDialog: document.querySelector('#closeCloseCashDialog'),
   cancelCloseCashButton: document.querySelector('#cancelCloseCashButton'),
   saveCloseCashButton: document.querySelector('#saveCloseCashButton'),
+  cashMovementDialog: document.querySelector('#cashMovementDialog'),
+  cashMovementForm: document.querySelector('#cashMovementForm'),
+  cashMovementFormError: document.querySelector('#cashMovementFormError'),
+  closeCashMovementDialog: document.querySelector('#closeCashMovementDialog'),
+  cancelCashMovementButton: document.querySelector('#cancelCashMovementButton'),
+  saveCashMovementButton: document.querySelector('#saveCashMovementButton'),
   posWarehouseSelect: document.querySelector('#posWarehouseSelect'),
   posProductSearch: document.querySelector('#posProductSearch'),
   posProductGrid: document.querySelector('#posProductGrid'),
@@ -302,6 +332,7 @@ const elements = {
   receiptTax: document.querySelector('#receiptTax'),
   receiptTotal: document.querySelector('#receiptTotal'),
   closeReceiptDialog: document.querySelector('#closeReceiptDialog'),
+  printReceiptButton: document.querySelector('#printReceiptButton'),
   finishReceiptButton: document.querySelector('#finishReceiptButton'),
   arOutstanding: document.querySelector('#arOutstanding'),
   arOpenCount: document.querySelector('#arOpenCount'),
@@ -483,6 +514,7 @@ let brands = [];
 let taxCategories = [];
 let products = [];
 let posSummary = { registers: [], openSession: null };
+let executiveSummary = {};
 let posCatalog = [];
 let receivableCustomers = [];
 let receivableInvoices = [];
@@ -1145,6 +1177,40 @@ function syncCashRegisterOptions() {
   elements.cashRegisterId.disabled = posSummary.registers.length === 0;
 }
 
+function setExecutiveSummary(summary = {}) {
+  executiveSummary = summary;
+  elements.dashboardSalesToday.textContent = formatCurrency(summary.sales_today || 0);
+  elements.dashboardSalesMonth.textContent = formatCurrency(summary.sales_month || 0);
+  elements.dashboardGrossMargin.textContent =
+    `Margen ${formatCurrency(summary.gross_margin_month || 0)}`;
+  elements.dashboardLowStock.textContent = String(summary.low_stock_balances || 0);
+  elements.dashboardPendingPurchases.textContent =
+    formatCurrency(summary.pending_purchase_value || 0);
+  elements.dashboardCashProjection.textContent =
+    formatCurrency(summary.projected_cash_30_days || 0);
+  elements.dashboardCashProjectionDetail.textContent =
+    `${formatCurrency(summary.open_cash_position || 0)} en caja + ` +
+    `${formatCurrency(summary.receivables_30_days || 0)} por cobrar − ` +
+    `${formatCurrency(summary.payables_30_days || 0)} por pagar`;
+}
+
+async function loadExecutiveSummary() {
+  if (!activeTenantId) {
+    setExecutiveSummary();
+    return {};
+  }
+  try {
+    const summary = await getJson('/api/dashboard/executive', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    setExecutiveSummary(summary);
+    return summary;
+  } catch (error) {
+    setExecutiveSummary();
+    throw error;
+  }
+}
+
 function renderPos() {
   const session = posSummary.openSession;
   const firstRegister = posSummary.registers[0] || null;
@@ -1156,6 +1222,7 @@ function renderPos() {
     elements.cashRegisterName.textContent = `${session.register_name} · ${session.register_code}`;
     elements.cashBranchName.textContent = session.branch_name;
     elements.cashOpeningAmount.textContent = formatCurrency(session.opening_amount);
+    elements.cashExpectedAmount.textContent = formatCurrency(session.calculated_cash);
     elements.cashOpenedAt.textContent = new Intl.DateTimeFormat('es-CO', {
       day: '2-digit',
       month: 'short',
@@ -1163,9 +1230,11 @@ function renderPos() {
       minute: '2-digit',
     }).format(new Date(session.opened_at));
     elements.cashGuidance.textContent =
-      'El turno está listo. El carrito y el cobro se conectarán en el siguiente bloque sin romper inventario.';
+      'El efectivo esperado se actualiza con ventas, ingresos, gastos y retiros del turno.';
     elements.openCashButton.hidden = true;
     elements.closeCashButton.hidden = false;
+    elements.newCashMovementButton.hidden = false;
+    renderCashControl();
     return;
   }
 
@@ -1175,26 +1244,112 @@ function renderPos() {
   elements.cashBranchName.textContent = firstRegister?.branch_name || '—';
   elements.cashOpeningAmount.textContent = '—';
   elements.cashOpenedAt.textContent = '—';
+  elements.cashExpectedAmount.textContent = '—';
   elements.cashGuidance.textContent = firstRegister
     ? 'Abre un turno para preparar el registro de ventas y movimientos de efectivo.'
     : 'Registra una caja física antes de comenzar la operación POS.';
   elements.openCashButton.hidden = false;
   elements.openCashButton.disabled = !firstRegister;
   elements.closeCashButton.hidden = true;
+  elements.newCashMovementButton.hidden = true;
+  renderCashControl();
+}
+
+function renderCashControl() {
+  const session = posSummary.openSession;
+  const detail = posSummary.currentDetail;
+  const sessions = posSummary.sessions || [];
+  const movements = detail?.movements || [];
+  elements.cashSalesAmount.textContent = formatCurrency(session?.cash_sales || 0);
+  elements.cashManualIncome.textContent = formatCurrency(session?.manual_income || 0);
+  elements.cashOutflows.textContent = formatCurrency(
+    Number(session?.expenses || 0) + Number(session?.withdrawals || 0),
+  );
+  elements.cashControlExpected.textContent = formatCurrency(session?.calculated_cash || 0);
+  elements.cashMovementList.replaceChildren();
+  elements.cashMovementCount.textContent = String(movements.length);
+  elements.cashMovementState.hidden = movements.length > 0;
+  for (const movement of movements) {
+    const row = document.createElement('div');
+    row.className = 'cash-movement-row';
+    const icon = document.createElement('span');
+    icon.className = `cash-movement-icon ${movement.movement_type.toLocaleLowerCase('es')}`;
+    icon.textContent = movement.movement_type === 'INCOME' ? '+' : '−';
+    const copy = document.createElement('div');
+    copy.className = 'cash-movement-copy';
+    const category = document.createElement('strong');
+    category.textContent = movement.category;
+    const notes = document.createElement('span');
+    notes.textContent = movement.notes;
+    const time = document.createElement('small');
+    time.textContent = new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(movement.created_at));
+    copy.append(category, notes, time);
+    const amount = document.createElement('strong');
+    const incoming = movement.movement_type === 'INCOME';
+    amount.className = `cash-movement-amount${incoming ? '' : ' out'}`;
+    amount.textContent = `${incoming ? '+' : '−'} ${formatCurrency(movement.amount)}`;
+    row.append(icon, copy, amount);
+    elements.cashMovementList.append(row);
+  }
+
+  elements.cashSessionList.replaceChildren();
+  elements.cashSessionCount.textContent = String(sessions.length);
+  elements.cashSessionState.hidden = sessions.length > 0;
+  for (const item of sessions.slice(0, 8)) {
+    const row = document.createElement('div');
+    row.className = 'cash-session-row';
+    const copy = document.createElement('div');
+    copy.className = 'cash-session-copy';
+    const title = document.createElement('strong');
+    title.textContent = `${item.register_name} · ${item.status === 'OPEN' ? 'Abierto' : 'Cerrado'}`;
+    const date = document.createElement('span');
+    date.textContent = new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(item.opened_at));
+    const activity = document.createElement('small');
+    activity.textContent =
+      `${item.sale_count} ventas · ${item.movement_count} movimientos`;
+    copy.append(title, date, activity);
+    const result = document.createElement('div');
+    result.className = 'cash-session-result';
+    const total = document.createElement('strong');
+    total.textContent = formatCurrency(item.sales_total || 0);
+    const difference = document.createElement('span');
+    const differenceValue = Number(item.difference || 0);
+    difference.className =
+      Math.abs(differenceValue) < 0.01 ? 'difference-ok' : 'difference-alert';
+    difference.textContent = item.status === 'OPEN'
+      ? 'En operación'
+      : `Diferencia ${formatCurrency(differenceValue)}`;
+    result.append(total, difference);
+    row.append(copy, result);
+    elements.cashSessionList.append(row);
+  }
 }
 
 function showPosError(message) {
-  posSummary = { registers: [], openSession: null };
+  posSummary = { registers: [], openSession: null, sessions: [], currentDetail: null };
   elements.cashStatus.textContent = 'Caja no disponible';
   elements.cashStatus.className = 'pos-state error';
   elements.cashRegisterName.textContent = 'No pudimos consultar la caja';
   elements.cashBranchName.textContent = '—';
   elements.cashOpeningAmount.textContent = '—';
   elements.cashOpenedAt.textContent = '—';
+  elements.cashExpectedAmount.textContent = '—';
   elements.cashGuidance.textContent = message;
   elements.openCashButton.hidden = false;
   elements.openCashButton.disabled = true;
   elements.closeCashButton.hidden = true;
+  elements.newCashMovementButton.hidden = true;
+  renderCashControl();
   syncCashRegisterOptions();
 }
 
@@ -1204,9 +1359,15 @@ async function loadPos() {
     return posSummary;
   }
   try {
-    posSummary = await getJson('/api/pos/summary', {
-      headers: { 'x-tenant-id': activeTenantId },
-    });
+    const headers = { 'x-tenant-id': activeTenantId };
+    const [summary, sessions] = await Promise.all([
+      getJson('/api/pos/summary', { headers }),
+      getJson('/api/pos/sessions', { headers }),
+    ]);
+    const currentDetail = summary.openSession
+      ? await getJson(`/api/pos/sessions/${summary.openSession.id}`, { headers })
+      : null;
+    posSummary = { ...summary, sessions, currentDetail };
     renderPos();
     return posSummary;
   } catch (error) {
@@ -1711,6 +1872,7 @@ async function submitCustomer(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
+        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify(Object.fromEntries(formData)),
     });
@@ -4154,6 +4316,7 @@ async function refreshTenantData() {
     showUsersError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
+    setExecutiveSummary();
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
     setMetric(elements.productCount, elements.productDetail, { status: 'rejected' }, ['producto registrado', 'productos registrados']);
@@ -4171,6 +4334,7 @@ async function refreshTenantData() {
     loadPos(),
     loadReceivables(),
     loadUsers(),
+    loadExecutiveSummary(),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -4727,6 +4891,7 @@ async function submitOpenCash(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
+        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify({
         cashRegisterId: formData.get('cashRegisterId'),
@@ -4734,7 +4899,7 @@ async function submitOpenCash(event) {
       }),
     });
     closeOpenCashDialog();
-    await loadPos();
+    await Promise.all([loadPos(), loadExecutiveSummary()]);
     await syncPosWorkstation();
     showToast('Turno de caja abierto correctamente.');
   } catch (error) {
@@ -4753,13 +4918,39 @@ function openCloseCashDialog() {
     return;
   }
   elements.closeCashForm.reset();
+  elements.cashDenominationGrid.querySelectorAll('input').forEach((input) => {
+    input.value = '0';
+  });
   elements.closeCashFormError.hidden = true;
+  updateCashClosePreview();
   elements.closeCashDialog.showModal();
-  elements.closeCashForm.elements.closingAmount.focus();
+  elements.cashDenominationGrid.querySelector('input').focus();
 }
 
 function closeCloseCashDialog() {
   elements.closeCashDialog.close();
+}
+
+function cashCountLines() {
+  return [...elements.cashDenominationGrid.querySelectorAll('input')]
+    .map((input) => ({
+      denomination: Number(input.dataset.denomination),
+      quantity: Number(input.value || 0),
+    }));
+}
+
+function updateCashClosePreview() {
+  const expected = Number(posSummary.openSession?.calculated_cash || 0);
+  const counted = cashCountLines().reduce(
+    (total, line) => total + line.denomination * line.quantity,
+    0,
+  );
+  const difference = counted - expected;
+  elements.cashCloseExpected.textContent = formatCurrency(expected);
+  elements.cashCloseCounted.textContent = formatCurrency(counted);
+  elements.cashCloseDifference.textContent = formatCurrency(difference);
+  elements.cashCloseDifference.style.color =
+    Math.abs(difference) < 0.01 ? '#126579' : 'var(--color-purple-strong)';
 }
 
 async function submitCloseCash(event) {
@@ -4774,11 +4965,15 @@ async function submitCloseCash(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
+        'x-user-id': DEMO_USER_ID,
       },
-      body: JSON.stringify({ closingAmount: formData.get('closingAmount') }),
+      body: JSON.stringify({
+        counts: cashCountLines(),
+        notes: formData.get('notes'),
+      }),
     });
     closeCloseCashDialog();
-    await loadPos();
+    await Promise.all([loadPos(), loadExecutiveSummary()]);
     await syncPosWorkstation();
     showToast('Turno cerrado y efectivo registrado.');
   } catch (error) {
@@ -4787,6 +4982,49 @@ async function submitCloseCash(event) {
   } finally {
     elements.saveCloseCashButton.disabled = false;
     elements.saveCloseCashButton.textContent = 'Confirmar cierre';
+  }
+}
+
+function openCashMovementDialog() {
+  if (!posSummary.openSession) {
+    showToast('Abre un turno antes de registrar movimientos.');
+    return;
+  }
+  elements.cashMovementForm.reset();
+  elements.cashMovementFormError.hidden = true;
+  elements.cashMovementDialog.showModal();
+  elements.cashMovementForm.elements.movementType.focus();
+}
+
+function closeCashMovementDialog() {
+  elements.cashMovementDialog.close();
+}
+
+async function submitCashMovement(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.cashMovementForm);
+  elements.cashMovementFormError.hidden = true;
+  elements.saveCashMovementButton.disabled = true;
+  elements.saveCashMovementButton.textContent = 'Registrando…';
+  try {
+    await getJson(`/api/pos/sessions/${posSummary.openSession.id}/movements`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+        'x-user-id': DEMO_USER_ID,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeCashMovementDialog();
+    await Promise.all([loadPos(), loadExecutiveSummary()]);
+    showToast('Movimiento registrado y efectivo esperado actualizado.');
+  } catch (error) {
+    elements.cashMovementFormError.textContent = error.message;
+    elements.cashMovementFormError.hidden = false;
+  } finally {
+    elements.saveCashMovementButton.disabled = false;
+    elements.saveCashMovementButton.textContent = 'Registrar movimiento';
   }
 }
 
@@ -4823,6 +5061,7 @@ async function completeSale() {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
+        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify({
         cashSessionId: posSummary.openSession.id,
@@ -4835,7 +5074,11 @@ async function completeSale() {
       }),
     });
     saleCart.clear();
-    await loadPosCatalog();
+    await Promise.all([
+      loadPos(),
+      loadExecutiveSummary(),
+      loadPosCatalog(),
+    ]);
     showReceipt(receipt);
     showToast('Venta registrada e inventario actualizado.');
   } catch (error) {
@@ -5084,6 +5327,12 @@ elements.productImageDialog.addEventListener('click', (event) => {
 });
 elements.openCashButton.addEventListener('click', openCashDialog);
 elements.closeCashButton.addEventListener('click', openCloseCashDialog);
+elements.newCashMovementButton.addEventListener('click', openCashMovementDialog);
+elements.reloadCashControlButton.addEventListener('click', () => {
+  Promise.all([loadPos(), loadExecutiveSummary()])
+    .then(() => showToast('Control de caja actualizado.'))
+    .catch(() => showToast('No fue posible actualizar el control de caja.'));
+});
 elements.closeOpenCashDialog.addEventListener('click', closeOpenCashDialog);
 elements.cancelOpenCashButton.addEventListener('click', closeOpenCashDialog);
 elements.openCashForm.addEventListener('submit', submitOpenCash);
@@ -5096,6 +5345,13 @@ elements.closeCashForm.addEventListener('submit', submitCloseCash);
 elements.closeCashDialog.addEventListener('click', (event) => {
   if (event.target === elements.closeCashDialog) closeCloseCashDialog();
 });
+elements.cashDenominationGrid.addEventListener('input', updateCashClosePreview);
+elements.closeCashMovementDialog.addEventListener('click', closeCashMovementDialog);
+elements.cancelCashMovementButton.addEventListener('click', closeCashMovementDialog);
+elements.cashMovementForm.addEventListener('submit', submitCashMovement);
+elements.cashMovementDialog.addEventListener('click', (event) => {
+  if (event.target === elements.cashMovementDialog) closeCashMovementDialog();
+});
 elements.posWarehouseSelect.addEventListener('change', async () => {
   saleCart.clear();
   await loadPosCatalog().catch(() => {});
@@ -5103,6 +5359,7 @@ elements.posWarehouseSelect.addEventListener('change', async () => {
 elements.posProductSearch.addEventListener('input', renderPosCatalog);
 elements.completeSaleButton.addEventListener('click', completeSale);
 elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
+elements.printReceiptButton.addEventListener('click', () => window.print());
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();

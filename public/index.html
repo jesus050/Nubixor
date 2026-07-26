@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-9">
-    <script src="./app.js?v=20260726-9" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-10">
+    <script src="./app.js?v=20260726-10" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -231,6 +231,23 @@
                   <div><small>Órdenes abiertas</small><strong id="dashboardOpenPurchases">0</strong></div>
                   <b>Compras →</b>
                 </a>
+              </div>
+            </div>
+
+            <div class="executive-pulse">
+              <div class="executive-pulse-heading">
+                <div>
+                  <p class="eyebrow">Pulso ejecutivo</p>
+                  <h3>Lo que está pasando hoy</h3>
+                </div>
+                <span>Actualizado desde la operación real</span>
+              </div>
+              <div class="executive-pulse-grid">
+                <article><small>Ventas de hoy</small><strong id="dashboardSalesToday">$0</strong><span>Acumulado del día</span></article>
+                <article><small>Ventas del mes</small><strong id="dashboardSalesMonth">$0</strong><span id="dashboardGrossMargin">Margen $0</span></article>
+                <article><small>Stock bajo</small><strong id="dashboardLowStock">0</strong><span>Ubicaciones por reponer</span></article>
+                <article><small>Compras pendientes</small><strong id="dashboardPendingPurchases">$0</strong><span>Valor aún por recibir</span></article>
+                <article class="cash-projection-card"><small>Flujo estimado 30 días</small><strong id="dashboardCashProjection">$0</strong><span id="dashboardCashProjectionDetail">Caja + cobros − pagos</span></article>
               </div>
             </div>
           </section>
@@ -1028,6 +1045,10 @@
                     <dt>Apertura</dt>
                     <dd id="cashOpenedAt">—</dd>
                   </div>
+                  <div>
+                    <dt>Efectivo esperado</dt>
+                    <dd id="cashExpectedAmount">—</dd>
+                  </div>
                 </dl>
                 <p id="cashGuidance">
                   Abre un turno para preparar el registro de ventas y movimientos de efectivo.
@@ -1038,6 +1059,9 @@
                   </button>
                   <button class="secondary-button" id="closeCashButton" type="button" hidden>
                     Cerrar turno y contar efectivo
+                  </button>
+                  <button class="cash-movement-button" id="newCashMovementButton" type="button" hidden>
+                    Registrar ingreso o salida
                   </button>
                 </div>
               </article>
@@ -1064,6 +1088,46 @@
                   </li>
                 </ol>
               </article>
+            </div>
+
+            <div class="cash-control-center">
+              <div class="cash-control-heading">
+                <div>
+                  <p class="eyebrow">Control de efectivo</p>
+                  <h3>Movimientos e historial</h3>
+                </div>
+                <button class="secondary-button compact" id="reloadCashControlButton" type="button">Actualizar control</button>
+              </div>
+              <div class="cash-control-kpis">
+                <article><small>Ventas en efectivo</small><strong id="cashSalesAmount">$0</strong></article>
+                <article><small>Ingresos manuales</small><strong id="cashManualIncome">$0</strong></article>
+                <article><small>Gastos y retiros</small><strong id="cashOutflows">$0</strong></article>
+                <article><small>Efectivo esperado</small><strong id="cashControlExpected">$0</strong></article>
+              </div>
+              <div class="cash-control-grid">
+                <article class="cash-movement-panel">
+                  <div class="data-state-heading">
+                    <span>Movimientos del turno</span>
+                    <strong id="cashMovementCount">0</strong>
+                  </div>
+                  <div class="cash-movement-list" id="cashMovementList"></div>
+                  <div class="data-state" id="cashMovementState">
+                    <strong>Sin movimientos manuales</strong>
+                    <p>Los ingresos, gastos y retiros aparecerán aquí.</p>
+                  </div>
+                </article>
+                <article class="cash-history-panel">
+                  <div class="data-state-heading">
+                    <span>Historial de turnos</span>
+                    <strong id="cashSessionCount">0</strong>
+                  </div>
+                  <div class="cash-session-list" id="cashSessionList"></div>
+                  <div class="data-state" id="cashSessionState">
+                    <strong>Sin turnos registrados</strong>
+                    <p>Las aperturas y cierres aparecerán aquí.</p>
+                  </div>
+                </article>
+              </div>
             </div>
 
             <div class="pos-workstation" id="posSalePanel">
@@ -2783,15 +2847,77 @@
           </div>
           <button class="icon-button" id="closeCloseCashDialog" type="button" aria-label="Cerrar">×</button>
         </div>
-        <p class="dialog-copy">Cuenta el efectivo físico antes de cerrar. Este valor quedará registrado en el turno.</p>
+        <p class="dialog-copy">Cuenta billetes y monedas. MegaSuite comparará el total físico con el efectivo esperado.</p>
+        <div class="cash-close-preview">
+          <div><span>Esperado</span><strong id="cashCloseExpected">$0</strong></div>
+          <div><span>Contado</span><strong id="cashCloseCounted">$0</strong></div>
+          <div><span>Diferencia</span><strong id="cashCloseDifference">$0</strong></div>
+        </div>
+        <div class="cash-denomination-grid" id="cashDenominationGrid">
+          <label><span>$100.000</span><input type="number" min="0" step="1" value="0" data-denomination="100000"></label>
+          <label><span>$50.000</span><input type="number" min="0" step="1" value="0" data-denomination="50000"></label>
+          <label><span>$20.000</span><input type="number" min="0" step="1" value="0" data-denomination="20000"></label>
+          <label><span>$10.000</span><input type="number" min="0" step="1" value="0" data-denomination="10000"></label>
+          <label><span>$5.000</span><input type="number" min="0" step="1" value="0" data-denomination="5000"></label>
+          <label><span>$2.000</span><input type="number" min="0" step="1" value="0" data-denomination="2000"></label>
+          <label><span>$1.000</span><input type="number" min="0" step="1" value="0" data-denomination="1000"></label>
+          <label><span>$500</span><input type="number" min="0" step="1" value="0" data-denomination="500"></label>
+          <label><span>$200</span><input type="number" min="0" step="1" value="0" data-denomination="200"></label>
+          <label><span>$100</span><input type="number" min="0" step="1" value="0" data-denomination="100"></label>
+          <label><span>$50</span><input type="number" min="0" step="1" value="0" data-denomination="50"></label>
+        </div>
         <label class="form-field">
-          <span>Efectivo contado <b>*</b></span>
-          <input name="closingAmount" type="number" min="0" step="100" required placeholder="0">
+          <span>Explicación de diferencia</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Obligatoria cuando exista sobrante o faltante"></textarea>
         </label>
         <p class="form-error" id="closeCashFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelCloseCashButton" type="button">Seguir con el turno</button>
           <button class="primary-button compact" id="saveCloseCashButton" type="submit">Confirmar cierre</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="cashMovementDialog" aria-labelledby="cashMovementDialogTitle">
+      <form class="company-form" id="cashMovementForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Movimiento manual</p>
+            <h2 id="cashMovementDialogTitle">Registrar efectivo</h2>
+          </div>
+          <button class="icon-button" id="closeCashMovementDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Todo movimiento queda vinculado al turno, la empresa y el responsable.</p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Tipo <b>*</b></span>
+            <select name="movementType" required>
+              <option value="INCOME">Ingreso de efectivo</option>
+              <option value="EXPENSE">Gasto menor</option>
+              <option value="WITHDRAWAL">Retiro de efectivo</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Categoría <b>*</b></span>
+            <input name="category" type="text" maxlength="80" required placeholder="Ej. Papelería, mensajería o cambio">
+          </label>
+          <label class="form-field">
+            <span>Valor <b>*</b></span>
+            <input name="amount" type="number" min="0.01" step="0.01" required placeholder="0">
+          </label>
+          <label class="form-field">
+            <span>Referencia</span>
+            <input name="reference" type="text" maxlength="100" placeholder="Recibo, autorización o comprobante">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo <b>*</b></span>
+          <textarea name="notes" maxlength="300" rows="3" required placeholder="Explica por qué entra o sale este efectivo"></textarea>
+        </label>
+        <p class="form-error" id="cashMovementFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCashMovementButton" type="button">Volver sin registrar</button>
+          <button class="primary-button compact" id="saveCashMovementButton" type="submit">Registrar movimiento</button>
         </div>
       </form>
     </dialog>
@@ -2816,6 +2942,9 @@
           <div><span>Total cobrado</span><strong id="receiptTotal">$0</strong></div>
         </div>
         <div class="dialog-actions">
+          <button class="secondary-button" id="printReceiptButton" type="button">
+            Imprimir comprobante
+          </button>
           <button class="primary-button compact" id="finishReceiptButton" type="button">
             Iniciar nueva venta
           </button>

@@ -6,6 +6,15 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Dashboard ejecutivo real con ventas del día y mes, margen bruto mensual,
+  saldos bajos, compras pendientes, posición de caja y flujo proyectado a 30
+  días usando cartera y cuentas por pagar.
+- Centro de control de caja con ventas por medio de pago, ingresos manuales,
+  gastos menores, retiros, efectivo esperado y actividad reciente.
+- Arqueo detallado por denominaciones, diferencia automática, explicación
+  obligatoria cuando el cierre no cuadra e historial de turnos.
+- Auditoría de apertura, movimientos y cierre de caja.
+- Impresión local del comprobante POS.
 - Centro de Usuarios y accesos separado por empresa, con búsqueda, filtros,
   detalle de cada persona y alcance opcional por sucursal.
 - Invitaciones y actualización de membresías con estados invitado, activo y

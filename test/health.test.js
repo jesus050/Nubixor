@@ -48,6 +48,11 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Equipo y accesos/);
   assert.match(response.text, /Invitar persona/);
   assert.match(response.text, /Roles y permisos/);
+  assert.match(response.text, /Flujo estimado 30 días/);
+  assert.match(response.text, /Movimientos e historial/);
+  assert.match(response.text, /Registrar ingreso o salida/);
+  assert.match(response.text, /Imprimir comprobante/);
+  assert.match(response.text, /data-denomination="100000"/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -158,14 +163,21 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     .set(headers)
     .send({ closingAmount: -1 })
     .expect(422);
-  assert.equal(closeSession.body.error, 'closingAmount debe ser un valor positivo.');
+  assert.equal(closeSession.body.error, 'El turno debe tener un UUID válido.');
 
-  const invalidSession = await request(app)
-    .post('/api/pos/sessions/invalid/close')
+  const invalidCount = await request(app)
+    .post('/api/pos/sessions/00000000-0000-0000-0000-000000000099/close')
     .set(headers)
-    .send({ closingAmount: 0 })
+    .send({ counts: [{ denomination: 123, quantity: 1 }] })
     .expect(422);
-  assert.equal(invalidSession.body.error, 'El turno debe tener un UUID válido.');
+  assert.match(invalidCount.body.error, /denominaciones o cantidades/i);
+
+  const invalidMovement = await request(app)
+    .post('/api/pos/sessions/invalid/movements')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.equal(invalidMovement.body.error, 'El turno debe tener un UUID válido.');
 
   const invalidCatalog = await request(app)
     .get('/api/pos/catalog?warehouseId=invalid')
@@ -310,6 +322,12 @@ test('usuarios exige identidad antes de consultar membresías y permisos', async
     .set('x-tenant-id', DEMO_TENANT_ID)
     .expect(401);
   assert.equal(response.body.code, 'USER_CONTEXT_REQUIRED');
+});
+
+test('dashboard ejecutivo exige una empresa activa', async () => {
+  await request(createApp())
+    .get('/api/dashboard/executive')
+    .expect(400);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

@@ -174,6 +174,41 @@ Los roles personalizados usan `POST /api/users/roles`; sus permisos pueden
 actualizarse con `PATCH /api/users/roles/:id`. Los roles base no se editan y la
 API impide suspender o degradar al último propietario activo.
 
+## Dashboard ejecutivo y caja
+
+```bash
+curl http://localhost:4100/api/dashboard/executive \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/pos/sessions \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+Durante un turno abierto se pueden registrar ingresos, gastos menores y
+retiros:
+
+```bash
+curl -X POST http://localhost:4100/api/pos/sessions/CASH_SESSION_ID/movements \
+ -H 'Content-Type: application/json' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -H 'x-user-id: 50000000-0000-0000-0000-000000000001' \
+ -d '{"movementType":"EXPENSE","category":"Mensajería","amount":18000,"reference":"RC-18","notes":"Entrega urgente a cliente"}'
+```
+
+El cierre acepta un conteo por denominaciones. Si el total contado difiere del
+efectivo esperado, `notes` es obligatorio:
+
+```bash
+curl -X POST http://localhost:4100/api/pos/sessions/CASH_SESSION_ID/close \
+ -H 'Content-Type: application/json' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -H 'x-user-id: 50000000-0000-0000-0000-000000000001' \
+ -d '{"counts":[{"denomination":100000,"quantity":5},{"denomination":50000,"quantity":1}],"notes":"Arqueo confirmado"}'
+```
+
+`GET /api/pos/sessions/:id` entrega el detalle consolidado del turno,
+movimientos, ventas y denominaciones contadas.
+
 ## Conteos físicos programados
 
 ```bash

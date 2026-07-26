@@ -19,6 +19,7 @@ import posRouter from './modules/pos.js';
 import receivablesRouter from './modules/receivables.js';
 import payablesRouter from './modules/payables.js';
 import usersRouter from './modules/users.js';
+import dashboardRouter from './modules/dashboard.js';
 import physicalCountsRouter from './modules/physical-counts.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -81,6 +82,7 @@ export function createApp({ health = healthRouter } = {}) {
   application.use('/api/receivables', receivablesRouter);
   application.use('/api/payables', payablesRouter);
   application.use('/api/users', usersRouter);
+  application.use('/api/dashboard', dashboardRouter);
   application.use('/api/physical-counts', physicalCountsRouter);
 
   application.use(notFound);
