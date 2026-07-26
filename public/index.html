@@ -21,16 +21,27 @@
         </div>
 
         <nav class="main-nav">
-          <p class="nav-label">Espacio de trabajo</p>
+          <p class="nav-label">Principal</p>
           <a class="nav-item active" href="#inicio" aria-current="page">
             <span aria-hidden="true">⌂</span> Inicio
           </a>
           <a class="nav-item" href="#resumen">
             <span aria-hidden="true">▦</span> Resumen
           </a>
-          <a class="nav-item" href="#modulos">
-            <span aria-hidden="true">◇</span> Módulos
+          <p class="nav-label">Operación</p>
+          <a class="nav-item" href="#empresas">
+            <span aria-hidden="true">E</span> Empresas
           </a>
+          <a class="nav-item" href="#modulos">
+            <span aria-hidden="true">B</span> Bodegas
+          </a>
+          <a class="nav-item" href="#modulos">
+            <span aria-hidden="true">P</span> Productos
+          </a>
+          <a class="nav-item" href="#modulos">
+            <span aria-hidden="true">C</span> Compras
+          </a>
+          <p class="nav-label">Control</p>
           <a class="nav-item" href="#sistema">
             <span aria-hidden="true">◉</span> Sistema
           </a>
@@ -151,6 +162,55 @@
             </div>
           </section>
 
+          <section class="section companies-section" id="empresas" aria-labelledby="companiesTitle">
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Primer módulo funcional</p>
+                <h2 id="companiesTitle">Empresas</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="reloadCompaniesButton" type="button">
+                  Actualizar
+                </button>
+                <button class="primary-button compact" id="newCompanyButton" type="button">
+                  Nueva empresa <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="data-panel">
+              <div class="data-toolbar">
+                <label class="field-search">
+                  <span aria-hidden="true">⌕</span>
+                  <span class="sr-only">Buscar empresa</span>
+                  <input id="companySearch" type="search" placeholder="Buscar por nombre o NIT">
+                </label>
+                <span class="record-count" id="companyRecordCount">Cargando empresas</span>
+              </div>
+
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Empresa</th>
+                      <th>Nombre comercial</th>
+                      <th>NIT</th>
+                      <th>Estado</th>
+                      <th>Creada</th>
+                    </tr>
+                  </thead>
+                  <tbody id="companyTableBody"></tbody>
+                </table>
+              </div>
+
+              <div class="data-state" id="companyDataState">
+                <span class="data-state-symbol" aria-hidden="true">E</span>
+                <strong>Consultando empresas</strong>
+                <p>Estamos conectando con la API local.</p>
+              </div>
+            </div>
+          </section>
+
           <section class="section module-section" id="modulos" aria-labelledby="modulesTitle">
             <div class="section-heading">
               <div>
@@ -166,7 +226,10 @@
                 <div class="module-symbol green" aria-hidden="true">ME</div>
                 <h3>Empresas</h3>
                 <p>Base multiempresa para organizar cada operación con contexto propio.</p>
-                <span class="module-state ready">Base disponible</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#empresas">Gestionar <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="inventario bodegas productos movimientos">
                 <span class="module-number">02</span>
@@ -237,6 +300,71 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">
+      <form class="company-form" id="companyForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Configuración inicial</p>
+            <h2 id="companyDialogTitle">Nueva empresa</h2>
+          </div>
+          <button class="icon-button" id="closeCompanyDialog" type="button" aria-label="Cerrar">
+            ×
+          </button>
+        </div>
+
+        <p class="dialog-copy">
+          Crea el registro principal de una empresa. Las sucursales y bodegas se
+          organizarán dentro de ella.
+        </p>
+
+        <label class="form-field">
+          <span>Razón social <b>*</b></span>
+          <input
+            id="legalName"
+            name="legalName"
+            type="text"
+            maxlength="160"
+            autocomplete="organization"
+            required
+            placeholder="Ej. MegaSuite Colombia S.A.S."
+          >
+        </label>
+
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Nombre comercial</span>
+            <input
+              id="tradeName"
+              name="tradeName"
+              type="text"
+              maxlength="160"
+              placeholder="Ej. MegaSuite"
+            >
+          </label>
+          <label class="form-field">
+            <span>NIT o identificación</span>
+            <input
+              id="taxId"
+              name="taxId"
+              type="text"
+              maxlength="40"
+              inputmode="numeric"
+              placeholder="Ej. 900123456-7"
+            >
+          </label>
+        </div>
+
+        <p class="form-error" id="companyFormError" role="alert" hidden></p>
+
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCompanyButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveCompanyButton" type="submit">
+            Guardar empresa
+          </button>
+        </div>
+      </form>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>

@@ -14,6 +14,9 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   durante el desarrollo local.
 - Identidad visual basada en azul `#192584`, morado `#B541FA`, cian `#4FD2E9`
   y gris `#74706D`, aplicada a navegación, acciones, tarjetas y estados.
+- Navegación organizada por áreas de trabajo.
+- Primer módulo funcional de empresas con listado, búsqueda y creación mediante
+  la API real.
 
 ## [0.1.1] - 2026-07-26
 

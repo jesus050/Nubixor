@@ -9,6 +9,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.headers['content-type'], /^text\/html/);
   assert.match(response.text, /MegaSuite/);
   assert.match(response.text, /Centro de operaciones/);
+  assert.match(response.text, /Primer módulo funcional/);
+  assert.match(response.text, /Nueva empresa/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -23,6 +25,14 @@ test('la interfaz abierta como archivo puede consultar la API en local', async (
     .set('Origin', 'null')
     .expect(200);
   assert.ok(['null', '*'].includes(response.headers['access-control-allow-origin']));
+});
+
+test('POST /api/companies valida la razón social antes de consultar PostgreSQL', async () => {
+  const response = await request(createApp())
+    .post('/api/companies')
+    .send({ legalName: '   ' })
+    .expect(422);
+  assert.equal(response.body.error, 'legalName es obligatorio.');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {
