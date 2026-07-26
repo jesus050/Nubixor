@@ -9,7 +9,10 @@ import healthRouter from './modules/health.js';
 import companiesRouter from './modules/companies.js';
 import branchesRouter from './modules/branches.js';
 import warehousesRouter from './modules/warehouses.js';
+import categoriesRouter from './modules/categories.js';
+import brandsRouter from './modules/brands.js';
 import productsRouter from './modules/products.js';
+import taxesRouter from './modules/taxes.js';
 import inventoryRouter from './modules/inventory.js';
 import purchasesRouter from './modules/purchases.js';
 
@@ -50,7 +53,10 @@ export function createApp({ health = healthRouter } = {}) {
   application.use('/api/companies', companiesRouter);
   application.use('/api/branches', branchesRouter);
   application.use('/api/warehouses', warehousesRouter);
+  application.use('/api/categories', categoriesRouter);
+  application.use('/api/brands', brandsRouter);
   application.use('/api/products', productsRouter);
+  application.use('/api/taxes', taxesRouter);
   application.use('/api/inventory', inventoryRouter);
   application.use('/api/purchases', purchasesRouter);
 

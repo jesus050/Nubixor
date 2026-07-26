@@ -73,6 +73,8 @@ La interfaz incluye:
 - listado, búsqueda y creación de empresas;
 - listado, búsqueda y creación de sucursales por empresa;
 - listado, búsqueda y creación de bodegas por sucursal;
+- categorías y marcas independientes por empresa;
+- listado, búsqueda y creación de productos con costo, precio e impuesto;
 - métricas y salud de servicios en vivo;
 - directorio de los 15 módulos planeados con su estado real.
 
@@ -139,8 +141,9 @@ vida seguirá funcionando y la ruta de disponibilidad indicará `503`.
 
 ## Datos de demostración
 
-La migración `002_seed.sql` crea una empresa, una sucursal, una bodega y
-categorías tributarias de demostración. Para rutas empresariales:
+Las migraciones de datos de demostración crean una empresa, una sucursal, una
+bodega, categorías tributarias y un catálogo pequeño con categorías, marcas y
+productos. Para rutas empresariales:
 
 ```text
 x-tenant-id: 00000000-0000-0000-0000-000000000001

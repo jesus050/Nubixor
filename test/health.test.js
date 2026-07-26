@@ -15,6 +15,7 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Nueva empresa/);
   assert.match(response.text, /Habilitar bodega/);
   assert.match(response.text, /Roles &amp; permisos/);
+  assert.match(response.text, /Agregar al catálogo/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -67,6 +68,39 @@ test('POST /api/warehouses valida la jerarquía mínima antes de consultar Postg
     .send({ branchId: 'sucursal-invalida', name: 'Disponible', code: 'DISP' })
     .expect(422);
   assert.equal(invalidBranch.body.error, 'branchId debe ser un UUID válido.');
+});
+
+test('el catálogo valida categorías, marcas y productos antes de consultar PostgreSQL', async () => {
+  const app = createApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+
+  const category = await request(app)
+    .post('/api/categories')
+    .set(headers)
+    .send({ name: '   ', code: '' })
+    .expect(422);
+  assert.equal(category.body.error, 'name y code son obligatorios.');
+
+  const brand = await request(app)
+    .post('/api/brands')
+    .set(headers)
+    .send({ name: '', code: '   ' })
+    .expect(422);
+  assert.equal(brand.body.error, 'name y code son obligatorios.');
+
+  const product = await request(app)
+    .post('/api/products')
+    .set(headers)
+    .send({ sku: '', name: '   ' })
+    .expect(422);
+  assert.equal(product.body.error, 'sku y name son obligatorios.');
+
+  const invalidPrice = await request(app)
+    .post('/api/products')
+    .set(headers)
+    .send({ sku: 'SKU-1', name: 'Producto', salePrice: -1 })
+    .expect(422);
+  assert.equal(invalidPrice.body.error, 'cost y salePrice deben ser valores positivos.');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

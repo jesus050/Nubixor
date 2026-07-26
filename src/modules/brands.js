@@ -1,0 +1,50 @@
+import { Router } from 'express';
+import { query } from '../db.js';
+import { requireTenant } from '../middleware.js';
+import { asyncHandler } from '../shared/async-handler.js';
+import { AppError } from '../shared/errors.js';
+
+const router = Router();
+router.use(requireTenant);
+
+router.get('/', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT id, tenant_id, name, code, active, created_at
+     FROM brands
+     WHERE tenant_id = $1
+     ORDER BY name`,
+    [req.context.tenantId],
+  );
+  res.json(result.rows);
+}));
+
+router.post('/', asyncHandler(async (req, res) => {
+  const { name, code } = req.body;
+  const normalizedName = typeof name === 'string' ? name.trim() : '';
+  const normalizedCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+
+  if (!normalizedName || !normalizedCode) {
+    return res.status(422).json({ error: 'name y code son obligatorios.' });
+  }
+  if (normalizedName.length > 160 || normalizedCode.length > 30) {
+    return res.status(422).json({ error: 'Uno o más campos superan la longitud permitida.' });
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO brands(tenant_id, name, code)
+       VALUES($1,$2,$3)
+       RETURNING id, tenant_id, name, code, active, created_at`,
+      [req.context.tenantId, normalizedName, normalizedCode],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    if (error.code === '23505') {
+      throw new AppError('Ya existe una marca con ese código.', 409, 'BRAND_CODE_EXISTS');
+    }
+    throw error;
+  }
+}));
+
+export default router;
+

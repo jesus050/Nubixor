@@ -26,6 +26,14 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Directorio visual de los 15 módulos previstos, diferenciando claramente lo
   disponible, la base técnica preparada y las fases futuras.
 - Validación de la jerarquía empresa → sucursal → bodega en la API.
+- Catálogo funcional de productos con búsqueda, creación, precios, categoría,
+  marca e impuesto de venta.
+- Entidades multiempresa para categorías, marcas y variantes de producto.
+- Acciones específicas para crear categorías, registrar marcas y agregar
+  productos sin modificar inventario directamente.
+- Validación de pertenencia de las referencias del catálogo a la empresa activa.
+- Catálogo demostrativo pequeño para que la interfaz local muestre el flujo
+  completo desde el primer arranque.
 
 ## [0.1.1] - 2026-07-26
 

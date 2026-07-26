@@ -69,6 +69,39 @@ const elements = {
   warehouseForm: document.querySelector('#warehouseForm'),
   warehouseFormError: document.querySelector('#warehouseFormError'),
   saveWarehouseButton: document.querySelector('#saveWarehouseButton'),
+  productCompanyName: document.querySelector('#productCompanyName'),
+  productSearch: document.querySelector('#productSearch'),
+  productTableBody: document.querySelector('#productTableBody'),
+  productDataState: document.querySelector('#productDataState'),
+  productRecordCount: document.querySelector('#productRecordCount'),
+  reloadProductsButton: document.querySelector('#reloadProductsButton'),
+  newCategoryButton: document.querySelector('#newCategoryButton'),
+  newBrandButton: document.querySelector('#newBrandButton'),
+  newProductButton: document.querySelector('#newProductButton'),
+  categoryCount: document.querySelector('#categoryCount'),
+  brandCount: document.querySelector('#brandCount'),
+  taxCount: document.querySelector('#taxCount'),
+  categoryDialog: document.querySelector('#categoryDialog'),
+  categoryForm: document.querySelector('#categoryForm'),
+  categoryFormError: document.querySelector('#categoryFormError'),
+  closeCategoryDialog: document.querySelector('#closeCategoryDialog'),
+  cancelCategoryButton: document.querySelector('#cancelCategoryButton'),
+  saveCategoryButton: document.querySelector('#saveCategoryButton'),
+  brandDialog: document.querySelector('#brandDialog'),
+  brandForm: document.querySelector('#brandForm'),
+  brandFormError: document.querySelector('#brandFormError'),
+  closeBrandDialog: document.querySelector('#closeBrandDialog'),
+  cancelBrandButton: document.querySelector('#cancelBrandButton'),
+  saveBrandButton: document.querySelector('#saveBrandButton'),
+  productDialog: document.querySelector('#productDialog'),
+  productForm: document.querySelector('#productForm'),
+  productFormError: document.querySelector('#productFormError'),
+  productCategoryId: document.querySelector('#productCategoryId'),
+  productBrandId: document.querySelector('#productBrandId'),
+  productTaxId: document.querySelector('#productTaxId'),
+  closeProductDialog: document.querySelector('#closeProductDialog'),
+  cancelProductButton: document.querySelector('#cancelProductButton'),
+  saveProductButton: document.querySelector('#saveProductButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -76,6 +109,10 @@ let toastTimer;
 let companies = [];
 let branches = [];
 let warehouses = [];
+let categories = [];
+let brands = [];
+let taxCategories = [];
+let products = [];
 let activeTenantId = readTenantPreference();
 
 const warehouseTypeLabels = {
@@ -176,7 +213,11 @@ function syncCompanyContext(preferredTenantId = activeTenantId) {
   elements.branchCompanyName.textContent = companyName;
   elements.branchDialogCompany.textContent = companyName;
   elements.warehouseCompanyName.textContent = companyName;
+  elements.productCompanyName.textContent = companyName;
   elements.newBranchButton.disabled = !activeCompany;
+  elements.newCategoryButton.disabled = !activeCompany;
+  elements.newBrandButton.disabled = !activeCompany;
+  elements.newProductButton.disabled = !activeCompany;
   syncWarehouseBranchOptions();
 }
 
@@ -463,6 +504,167 @@ async function loadWarehouses() {
   }
 }
 
+function replaceCatalogOptions(select, placeholder, records, label) {
+  const selectedValue = select.value;
+  select.replaceChildren();
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = placeholder;
+  select.append(emptyOption);
+
+  for (const record of records) {
+    const option = document.createElement('option');
+    option.value = record.id;
+    option.textContent = label(record);
+    select.append(option);
+  }
+  if (records.some((record) => record.id === selectedValue)) {
+    select.value = selectedValue;
+  }
+}
+
+function syncProductOptions() {
+  replaceCatalogOptions(
+    elements.productCategoryId,
+    'Sin categoría',
+    categories,
+    (category) => `${category.name} · ${category.code}`,
+  );
+  replaceCatalogOptions(
+    elements.productBrandId,
+    'Sin marca',
+    brands,
+    (brand) => `${brand.name} · ${brand.code}`,
+  );
+  replaceCatalogOptions(
+    elements.productTaxId,
+    'Pendiente de revisión',
+    taxCategories,
+    (tax) => `${tax.name} · ${Number(tax.rate)}%`,
+  );
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+}
+
+function renderProducts() {
+  const query = normalizeSearch(elements.productSearch.value.trim());
+  const filtered = products.filter((product) => {
+    const searchable = normalizeSearch([
+      product.name,
+      product.sku,
+      product.barcode,
+      product.category_name,
+      product.brand_name,
+      product.tax_name,
+    ].filter(Boolean).join(' '));
+    return !query || searchable.includes(query);
+  });
+
+  elements.productTableBody.replaceChildren();
+  elements.productDataState.hidden = filtered.length > 0;
+  elements.productDataState.classList.remove('error');
+
+  if (!filtered.length) {
+    const hasSearch = Boolean(query);
+    elements.productDataState.querySelector('strong').textContent =
+      hasSearch ? 'No encontramos productos' : 'Esta empresa todavía no tiene productos';
+    elements.productDataState.querySelector('p').textContent =
+      hasSearch
+        ? 'Prueba con otro nombre, SKU, categoría o marca.'
+        : 'Agrega el primer producto para comenzar a construir el catálogo.';
+  }
+
+  for (const product of filtered) {
+    const row = document.createElement('tr');
+    const nameCell = document.createElement('td');
+    nameCell.dataset.label = 'Producto';
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'company-name';
+    const initial = document.createElement('span');
+    initial.textContent = product.name.slice(0, 1).toUpperCase();
+    const name = document.createElement('strong');
+    name.textContent = product.name;
+    nameWrap.append(initial, name);
+    nameCell.append(nameWrap);
+    row.append(nameCell);
+    row.append(createCell('SKU', product.sku));
+    row.append(createCell('Categoría', product.category_name));
+    row.append(createCell('Marca', product.brand_name));
+    row.append(createCell('Precio de venta', formatCurrency(product.sale_price)));
+
+    const taxCell = document.createElement('td');
+    taxCell.dataset.label = 'Impuesto';
+    const taxStatus = document.createElement('span');
+    taxStatus.className = `table-status ${product.tax_review_status === 'REVIEWED' ? 'active' : 'pending'}`;
+    taxStatus.textContent = product.tax_name
+      ? `${product.tax_name} · ${Number(product.tax_rate)}%`
+      : 'Pendiente';
+    taxCell.append(taxStatus);
+    row.append(taxCell);
+    elements.productTableBody.append(row);
+  }
+
+  elements.productRecordCount.textContent =
+    `${filtered.length} ${filtered.length === 1 ? 'producto' : 'productos'}`;
+}
+
+function updateCatalogCounters() {
+  elements.categoryCount.textContent =
+    `${categories.length} ${categories.length === 1 ? 'categoría' : 'categorías'}`;
+  elements.brandCount.textContent =
+    `${brands.length} ${brands.length === 1 ? 'marca' : 'marcas'}`;
+  elements.taxCount.textContent =
+    `${taxCategories.length} ${taxCategories.length === 1 ? 'impuesto' : 'impuestos'}`;
+}
+
+function showCatalogError(message) {
+  categories = [];
+  brands = [];
+  taxCategories = [];
+  products = [];
+  elements.productTableBody.replaceChildren();
+  elements.productDataState.hidden = false;
+  elements.productDataState.classList.add('error');
+  elements.productDataState.querySelector('strong').textContent = 'No pudimos cargar el catálogo';
+  elements.productDataState.querySelector('p').textContent = message;
+  elements.productRecordCount.textContent = 'Sin conexión de datos';
+  updateCatalogCounters();
+  syncProductOptions();
+}
+
+async function loadCatalog() {
+  if (!activeTenantId) {
+    showCatalogError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+
+  elements.reloadProductsButton.disabled = true;
+  const headers = { 'x-tenant-id': activeTenantId };
+  try {
+    [categories, brands, taxCategories, products] = await Promise.all([
+      getJson('/api/categories', { headers }),
+      getJson('/api/brands', { headers }),
+      getJson('/api/taxes', { headers }),
+      getJson('/api/products', { headers }),
+    ]);
+    updateCatalogCounters();
+    syncProductOptions();
+    renderProducts();
+    return products;
+  } catch (error) {
+    showCatalogError(error.message);
+    throw error;
+  } finally {
+    elements.reloadProductsButton.disabled = false;
+  }
+}
+
 function setMetric(valueElement, detailElement, result, label) {
   if (result.status === 'fulfilled') {
     const count = Array.isArray(result.value) ? result.value.length : 0;
@@ -535,17 +737,17 @@ async function refreshTenantData() {
   if (!activeTenantId) {
     showBranchError('Primero debes registrar o seleccionar una empresa.');
     showWarehouseError('Primero debes registrar o seleccionar una empresa.');
+    showCatalogError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
     setMetric(elements.productCount, elements.productDetail, { status: 'rejected' }, ['producto registrado', 'productos registrados']);
     return;
   }
 
-  const headers = { 'x-tenant-id': activeTenantId };
   const results = await Promise.allSettled([
     loadBranches(),
     loadWarehouses(),
-    getJson('/api/products', { headers }),
+    loadCatalog(),
   ]);
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
@@ -745,6 +947,155 @@ async function submitWarehouse(event) {
   }
 }
 
+function openCategoryDialog() {
+  if (!getActiveCompany()) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  elements.categoryForm.reset();
+  elements.categoryFormError.hidden = true;
+  elements.categoryDialog.showModal();
+  elements.categoryForm.elements.name.focus();
+}
+
+function closeCategoryDialog() {
+  elements.categoryDialog.close();
+}
+
+async function submitCategory(event) {
+  event.preventDefault();
+  elements.categoryFormError.hidden = true;
+  elements.saveCategoryButton.disabled = true;
+  elements.saveCategoryButton.textContent = 'Creando categoría…';
+  const formData = new FormData(elements.categoryForm);
+
+  try {
+    await getJson('/api/categories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        code: formData.get('code'),
+        description: formData.get('description') || null,
+      }),
+    });
+    closeCategoryDialog();
+    await loadCatalog();
+    showToast('Categoría creada y disponible para los productos.');
+  } catch (error) {
+    elements.categoryFormError.textContent = error.message;
+    elements.categoryFormError.hidden = false;
+  } finally {
+    elements.saveCategoryButton.disabled = false;
+    elements.saveCategoryButton.textContent = 'Crear categoría';
+  }
+}
+
+function openBrandDialog() {
+  if (!getActiveCompany()) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  elements.brandForm.reset();
+  elements.brandFormError.hidden = true;
+  elements.brandDialog.showModal();
+  elements.brandForm.elements.name.focus();
+}
+
+function closeBrandDialog() {
+  elements.brandDialog.close();
+}
+
+async function submitBrand(event) {
+  event.preventDefault();
+  elements.brandFormError.hidden = true;
+  elements.saveBrandButton.disabled = true;
+  elements.saveBrandButton.textContent = 'Registrando marca…';
+  const formData = new FormData(elements.brandForm);
+
+  try {
+    await getJson('/api/brands', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        code: formData.get('code'),
+      }),
+    });
+    closeBrandDialog();
+    await loadCatalog();
+    showToast('Marca registrada y disponible para el catálogo.');
+  } catch (error) {
+    elements.brandFormError.textContent = error.message;
+    elements.brandFormError.hidden = false;
+  } finally {
+    elements.saveBrandButton.disabled = false;
+    elements.saveBrandButton.textContent = 'Registrar marca';
+  }
+}
+
+function openProductDialog() {
+  if (!getActiveCompany()) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  elements.productForm.reset();
+  syncProductOptions();
+  elements.productFormError.hidden = true;
+  elements.productDialog.showModal();
+  document.querySelector('#productName').focus();
+}
+
+function closeProductDialog() {
+  elements.productDialog.close();
+}
+
+async function submitProduct(event) {
+  event.preventDefault();
+  elements.productFormError.hidden = true;
+  elements.saveProductButton.disabled = true;
+  elements.saveProductButton.textContent = 'Agregando producto…';
+  const formData = new FormData(elements.productForm);
+
+  try {
+    await getJson('/api/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        sku: formData.get('sku'),
+        barcode: formData.get('barcode') || null,
+        categoryId: formData.get('categoryId') || null,
+        brandId: formData.get('brandId') || null,
+        salesTaxCategoryId: formData.get('salesTaxCategoryId') || null,
+        cost: formData.get('cost'),
+        salePrice: formData.get('salePrice'),
+      }),
+    });
+    closeProductDialog();
+    await loadCatalog();
+    elements.productCount.textContent = String(products.length);
+    elements.productDetail.textContent =
+      `${products.length} ${products.length === 1 ? 'producto registrado' : 'productos registrados'}`;
+    showToast('Producto agregado al catálogo sin alterar el inventario.');
+  } catch (error) {
+    elements.productFormError.textContent = error.message;
+    elements.productFormError.hidden = false;
+  } finally {
+    elements.saveProductButton.disabled = false;
+    elements.saveProductButton.textContent = 'Agregar al catálogo';
+  }
+}
+
 document.querySelector('#currentDate').textContent = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',
   day: 'numeric',
@@ -756,6 +1107,7 @@ elements.moduleSearch.addEventListener('input', filterModules);
 elements.companySearch.addEventListener('input', renderCompanies);
 elements.branchSearch.addEventListener('input', renderBranches);
 elements.warehouseSearch.addEventListener('input', renderWarehouses);
+elements.productSearch.addEventListener('input', renderProducts);
 elements.companyContext.addEventListener('change', async () => {
   activeTenantId = elements.companyContext.value;
   saveTenantPreference(activeTenantId);
@@ -798,6 +1150,32 @@ elements.cancelWarehouseButton.addEventListener('click', closeWarehouseDialog);
 elements.warehouseForm.addEventListener('submit', submitWarehouse);
 elements.warehouseDialog.addEventListener('click', (event) => {
   if (event.target === elements.warehouseDialog) closeWarehouseDialog();
+});
+elements.reloadProductsButton.addEventListener('click', () => {
+  loadCatalog()
+    .then(() => showToast('Catálogo sincronizado.'))
+    .catch(() => showToast('No fue posible sincronizar el catálogo.'));
+});
+elements.newCategoryButton.addEventListener('click', openCategoryDialog);
+elements.closeCategoryDialog.addEventListener('click', closeCategoryDialog);
+elements.cancelCategoryButton.addEventListener('click', closeCategoryDialog);
+elements.categoryForm.addEventListener('submit', submitCategory);
+elements.categoryDialog.addEventListener('click', (event) => {
+  if (event.target === elements.categoryDialog) closeCategoryDialog();
+});
+elements.newBrandButton.addEventListener('click', openBrandDialog);
+elements.closeBrandDialog.addEventListener('click', closeBrandDialog);
+elements.cancelBrandButton.addEventListener('click', closeBrandDialog);
+elements.brandForm.addEventListener('submit', submitBrand);
+elements.brandDialog.addEventListener('click', (event) => {
+  if (event.target === elements.brandDialog) closeBrandDialog();
+});
+elements.newProductButton.addEventListener('click', openProductDialog);
+elements.closeProductDialog.addEventListener('click', closeProductDialog);
+elements.cancelProductButton.addEventListener('click', closeProductDialog);
+elements.productForm.addEventListener('submit', submitProduct);
+elements.productDialog.addEventListener('click', (event) => {
+  if (event.target === elements.productDialog) closeProductDialog();
 });
 elements.menuButton.addEventListener('click', () => toggleMenu());
 elements.sidebar.querySelectorAll('a').forEach((link) => {

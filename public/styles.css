@@ -705,6 +705,10 @@ input:focus-visible {
   padding-top: 110px;
 }
 
+.products-section {
+  padding-top: 110px;
+}
+
 .module-heading {
   align-items: center;
 }
@@ -812,6 +816,33 @@ input:focus-visible {
   font-weight: 800;
 }
 
+.toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.sync-link {
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(181, 65, 250, 0.38);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sync-link:hover {
+  border-color: var(--color-purple);
+  color: var(--color-purple-strong);
+}
+
+.sync-link:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -892,6 +923,58 @@ input:focus-visible {
 .table-status.inactive {
   background: var(--color-purple-light);
   color: var(--color-purple-strong);
+}
+
+.table-status.pending {
+  background: rgba(116, 112, 109, 0.12);
+  color: var(--color-muted);
+}
+
+.catalog-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.catalog-overview article {
+  display: flex;
+  min-height: 80px;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 17px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.catalog-overview article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.catalog-overview small {
+  color: var(--color-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.catalog-overview strong {
+  color: var(--color-ink);
+  font-size: 13px;
+}
+
+.catalog-symbol {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .data-state {
@@ -1242,6 +1325,10 @@ footer {
   color: var(--color-ink);
 }
 
+.product-dialog {
+  width: min(760px, calc(100% - 32px));
+}
+
 .company-dialog::backdrop {
   background: rgba(10, 15, 72, 0.62);
   backdrop-filter: blur(8px);
@@ -1415,6 +1502,11 @@ footer {
     width: 160px;
   }
 
+  .catalog-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .roadmap-callout {
     grid-template-columns: 1fr;
   }
@@ -1500,6 +1592,15 @@ footer {
 
   .record-count {
     align-self: flex-start;
+  }
+
+  .toolbar-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .catalog-overview {
+    grid-template-columns: 1fr;
   }
 
   .data-table thead {
