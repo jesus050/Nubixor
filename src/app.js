@@ -40,7 +40,15 @@ export function createApp({ health = healthRouter } = {}) {
   if (config.trustProxy) application.set('trust proxy', 1);
 
   application.disable('x-powered-by');
-  application.use(helmet());
+  application.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        // Safari puede intentar subir los recursos locales a HTTPS y dejar la
+        // interfaz sin CSS ni JavaScript cuando MegaSuite corre por HTTP.
+        'upgrade-insecure-requests': null,
+      },
+    },
+  }));
   application.use(cors(corsOptions()));
   application.use(express.json({ limit: config.jsonBodyLimit }));
   application.use(requestContext);
@@ -49,6 +57,11 @@ export function createApp({ health = healthRouter } = {}) {
   application.use(express.static(publicDir, {
     index: 'index.html',
     maxAge: config.nodeEnv === 'production' ? '1h' : 0,
+    setHeaders(response, filePath) {
+      if (path.extname(filePath) === '.html') {
+        response.setHeader('Cache-Control', 'no-store');
+      }
+    },
   }));
   application.use('/api/health', health);
   application.use('/api/companies', companiesRouter);

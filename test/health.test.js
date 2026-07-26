@@ -9,7 +9,14 @@ const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 test('GET / sirve la interfaz local', async () => {
   const response = await request(createApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);
+  assert.equal(response.headers['cache-control'], 'no-store');
   assert.match(response.text, /MegaSuite/);
+  assert.match(response.text, /href="\/styles\.css\?v=/);
+  assert.match(response.text, /src="\/app\.js\?v=/);
+  assert.doesNotMatch(
+    response.headers['content-security-policy'],
+    /upgrade-insecure-requests/,
+  );
   assert.match(response.text, /Centro de operaciones/);
   assert.match(response.text, /Primer módulo funcional/);
   assert.match(response.text, /Nueva empresa/);

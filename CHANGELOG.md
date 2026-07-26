@@ -6,6 +6,8 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Corrección de carga de CSS y JavaScript en Safari local, evitando que los
+  recursos HTTP sean forzados a HTTPS y renovando su caché.
 - Centro de operaciones local y responsive servido desde `public/index.html`.
 - Resumen con cantidades consultadas desde las APIs reales.
 - Estado en vivo de API, PostgreSQL y Redis.
