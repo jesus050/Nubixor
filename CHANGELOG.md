@@ -28,3 +28,10 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Las credenciales de ejemplo se limitan al desarrollo local.
 - Se ignoran archivos `.env`, logs y dependencias.
 - Los logs no incluyen cabeceras, cuerpos de petición ni URLs de conexión.
+
+### Validado
+
+- Migraciones e idempotencia sobre PostgreSQL 16.13 real.
+- Readiness y resiliencia sobre PostgreSQL 16.13 y Redis 7.2.11 reales.
+- Seeds y consultas API de empresas y bodegas.
+- Liveness estable durante la pérdida de PostgreSQL.

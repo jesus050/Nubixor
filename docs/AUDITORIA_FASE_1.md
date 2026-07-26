@@ -81,25 +81,37 @@ secretos, firewall, backups, observabilidad y endurecimiento del sistema.
 - `GET /api/health`: 200 sin dependencias.
 - `GET /api/health/ready`: 503 controlado sin dependencias.
 - Continuidad después de error PostgreSQL: confirmada.
+- PostgreSQL 16.13 real: conexión y migraciones correctas.
+- Redis 7.2.11 real: `PING` y readiness correctos.
+- Migraciones `001_core.sql` y `002_seed.sql`: aplicadas correctamente.
+- Segunda ejecución de migraciones: ambos archivos omitidos correctamente.
+- Esquema resultante: 14 tablas de aplicación y 2 migraciones registradas.
+- Seeds: empresa, sucursal, bodega y 3 categorías tributarias confirmadas.
+- `npm run services:wait`: dependencias detectadas en el primer intento.
+- Readiness con ambas dependencias: 200, PostgreSQL y Redis en `ok`.
+- Empresas y bodegas seed consultadas a través de la API: 200.
+- PostgreSQL detenido durante la ejecución: readiness 503, Redis `ok` y
+  liveness 200 antes y después del fallo.
 - Apagado con SIGINT: correcto.
 - YAML de Compose: parseo correcto.
 - `git diff --check`: sin errores de espacios.
 - Navegador integrado: la solicitud `GET /` llegó al servidor y respondió 200,
   pero el cliente bloqueó la visualización de direcciones locales.
 
-## Validaciones pendientes por infraestructura
+## Validaciones pendientes de Docker
 
-El equipo usado para esta fase no tiene Docker, PostgreSQL ni Redis instalados.
-Por ello quedan por ejecutar en un equipo con Docker:
+El equipo usado no tiene Docker Desktop. PostgreSQL y Redis se validaron con
+servidores reales y temporales, pero aún quedan por ejecutar específicamente
+con Docker:
 
 1. `docker compose up -d`.
 2. `npm run services:wait`.
-3. `npm run migrate` contra PostgreSQL 16 real.
-4. `GET /api/health/ready` esperando 200 con ambos servicios.
-5. `docker compose --profile full up -d --build`.
-6. Abrir `http://localhost:4100` en un navegador local normal.
+3. `docker compose --profile full up -d --build`.
+4. Abrir `http://localhost:4100` en un navegador local normal.
 
-Estas validaciones no se consideran aprobadas hasta ejecutarlas.
+La lógica de base de datos, Redis, migraciones y API sí está aprobada. La
+orquestación concreta mediante Compose no se considera aprobada hasta instalar
+Docker Desktop y ejecutar estos comandos.
 
 ## Riesgos fuera de Fase 1
 
