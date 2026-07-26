@@ -1,6 +1,11 @@
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:4100' : '';
 
+function resolvePublicAsset(path) {
+  if (!path || window.location.protocol !== 'file:' || !path.startsWith('/')) return path;
+  return `${API_BASE_URL}${path}`;
+}
+
 const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   overallIndicator: document.querySelector('#overallIndicator'),
@@ -797,7 +802,7 @@ function renderProducts() {
     if (product.image_url) {
       visual = document.createElement('img');
       visual.className = 'product-thumbnail';
-      visual.src = product.image_url;
+      visual.src = resolvePublicAsset(product.image_url);
       visual.alt = product.image_alt || product.name;
     } else {
       visual = document.createElement('span');
@@ -1082,7 +1087,7 @@ function renderPosCatalog() {
       : document.createElement('span');
     visual.className = 'pos-product-visual';
     if (product.image_url) {
-      visual.src = product.image_url;
+      visual.src = resolvePublicAsset(product.image_url);
       visual.alt = product.image_alt || product.name;
     } else {
       visual.textContent = product.name.slice(0, 1).toUpperCase();
@@ -1786,7 +1791,7 @@ function renderInventoryBalances() {
     visual.className = 'inventory-product-visual';
     if (balance.image_url) {
       const image = document.createElement('img');
-      image.src = balance.image_url;
+      image.src = resolvePublicAsset(balance.image_url);
       image.alt = balance.image_alt || balance.name;
       visual.append(image);
     } else {
@@ -2220,7 +2225,7 @@ function renderCountItems() {
     visual.className = 'count-item-visual';
     if (item.image_url) {
       const image = document.createElement('img');
-      image.src = item.image_url;
+      image.src = resolvePublicAsset(item.image_url);
       image.alt = item.image_alt || item.name_snapshot;
       visual.append(image);
     } else {

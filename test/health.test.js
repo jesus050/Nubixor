@@ -11,8 +11,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.headers['content-type'], /^text\/html/);
   assert.equal(response.headers['cache-control'], 'no-store');
   assert.match(response.text, /MegaSuite/);
-  assert.match(response.text, /href="\/styles\.css\?v=/);
-  assert.match(response.text, /src="\/app\.js\?v=/);
+  assert.match(response.text, /href="\.\/styles\.css\?v=/);
+  assert.match(response.text, /src="\.\/app\.js\?v=/);
   assert.doesNotMatch(
     response.headers['content-security-policy'],
     /upgrade-insecure-requests/,

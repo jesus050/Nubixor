@@ -17,6 +17,10 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   de salida y entrada, sin alterar el total de la empresa.
 - Conteo físico reorganizado como pestaña secundaria de Inventario para
   utilizarlo solamente cuando se programe una toma física.
+- Rutas relativas para CSS y JavaScript, permitiendo abrir `public/index.html`
+  directamente con `file://` sin perder el diseño ni la funcionalidad.
+- Resolución de fotografías desde la API local cuando la interfaz se abre como
+  archivo en Safari.
 - Auditoría de los proyectos con código encontrados en Documentos y mapa de
   reutilización para MegaSuite.
 - Módulo funcional de conteos físicos inspirado en Megainventario y MegaMundo:
