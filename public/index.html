@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="/styles.css?v=20260726-3">
-    <script src="/app.js?v=20260726-3" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=20260726-4">
+    <script src="/app.js?v=20260726-4" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -35,6 +35,9 @@
           <p class="nav-label">Inventario</p>
           <a class="nav-item" href="#bodegas" data-view-link="bodegas">
             <span aria-hidden="true">B</span> Bodegas
+          </a>
+          <a class="nav-item" href="#conteos" data-view-link="conteos">
+            <span aria-hidden="true">#</span> Conteos físicos
           </a>
           <a class="nav-item" href="#productos" data-view-link="productos">
             <span aria-hidden="true">P</span> Catálogo
@@ -99,6 +102,7 @@
           <a href="#empresas" data-view-link="empresas">Empresas</a>
           <a href="#sucursales" data-view-link="sucursales">Sucursales</a>
           <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
+          <a href="#conteos" data-view-link="conteos">Conteos</a>
           <a href="#productos" data-view-link="productos">Catálogo</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
@@ -349,6 +353,116 @@
                 <span class="data-state-symbol" aria-hidden="true">B</span>
                 <strong>Consultando bodegas</strong>
                 <p>Estamos leyendo las ubicaciones de la empresa activa.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section counts-section app-view" id="conteos" data-view="conteos" aria-labelledby="countsTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Control físico de inventario</p>
+                <h2 id="countsTitle">Conteos y diferencias</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="reloadCountsButton" type="button">Actualizar</button>
+                <button class="primary-button compact" id="newCountButton" type="button">
+                  Nuevo conteo <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="count-kpi-grid">
+              <article class="count-kpi primary">
+                <span>Conteos activos</span>
+                <strong id="activeCountTotal">0</strong>
+                <small>Procesos abiertos</small>
+              </article>
+              <article class="count-kpi">
+                <span>Productos pendientes</span>
+                <strong id="pendingCountItems">0</strong>
+                <small>Referencias sin verificar</small>
+              </article>
+              <article class="count-kpi alert">
+                <span>Diferencias detectadas</span>
+                <strong id="countDiscrepancies">0</strong>
+                <small>Faltantes, excesos o no esperados</small>
+              </article>
+              <article class="count-kpi complete">
+                <span>Cerrados este mes</span>
+                <strong id="completedCountsMonth">0</strong>
+                <small>Ajustes auditados</small>
+              </article>
+            </div>
+
+            <div class="count-workspace">
+              <aside class="count-session-panel">
+                <div class="count-panel-heading">
+                  <div><p class="eyebrow">Jornadas</p><h3>Conteos registrados</h3></div>
+                  <span id="countRecordCount">0</span>
+                </div>
+                <div class="count-session-list" id="countSessionList"></div>
+                <div class="data-state compact-state" id="countDataState">
+                  <span class="data-state-icon" aria-hidden="true">#</span>
+                  <strong>Cargando conteos</strong>
+                  <p>Consultando las jornadas de inventario.</p>
+                </div>
+              </aside>
+
+              <div class="count-detail-panel">
+                <div class="count-detail-empty" id="countDetailEmpty">
+                  <span aria-hidden="true">⌗</span>
+                  <strong>Selecciona un conteo</strong>
+                  <p>Verás el saldo esperado, lo encontrado y cada diferencia.</p>
+                </div>
+                <div id="countDetailContent" hidden>
+                  <div class="count-detail-heading">
+                    <div>
+                      <p class="eyebrow" id="countDetailNumber">Conteo</p>
+                      <h3 id="countDetailName">—</h3>
+                      <span id="countDetailWarehouse">—</span>
+                    </div>
+                    <span class="count-status" id="countDetailStatus">Borrador</span>
+                  </div>
+
+                  <div class="count-progress-block">
+                    <div>
+                      <span>Progreso del conteo</span>
+                      <strong id="countProgressLabel">0 de 0</strong>
+                    </div>
+                    <div class="count-progress-track"><span id="countProgressBar"></span></div>
+                    <small id="countDifferenceLabel">Sin diferencias registradas</small>
+                  </div>
+
+                  <div class="count-actions" id="countActions">
+                    <button class="primary-button compact" id="startCountButton" type="button">
+                      Iniciar conteo <span aria-hidden="true">→</span>
+                    </button>
+                    <button class="primary-button compact" id="submitCountButton" type="button" hidden>
+                      Enviar a revisión <span aria-hidden="true">→</span>
+                    </button>
+                    <button class="primary-button compact" id="completeCountButton" type="button" hidden>
+                      Aprobar y ajustar inventario <span aria-hidden="true">✓</span>
+                    </button>
+                  </div>
+
+                  <div class="count-items-toolbar">
+                    <label class="field-search count-search">
+                      <span aria-hidden="true">⌕</span>
+                      <span class="sr-only">Buscar producto en el conteo</span>
+                      <input id="countProductSearch" type="search" placeholder="Buscar nombre o SKU">
+                    </label>
+                    <label class="count-filter">
+                      <span>Mostrar</span>
+                      <select id="countItemFilter">
+                        <option value="ALL">Todos</option>
+                        <option value="PENDING">Pendientes</option>
+                        <option value="DIFFERENCE">Con diferencias</option>
+                        <option value="OK">Correctos</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="count-item-list" id="countItemList"></div>
+                </div>
               </div>
             </div>
           </section>
@@ -831,8 +945,11 @@
                 <span class="module-number">09</span>
                 <div class="module-symbol rose" aria-hidden="true">CF</div>
                 <h3>Conteos físicos</h3>
-                <p>Jornadas de conteo, diferencias y aprobación de ajustes.</p>
-                <span class="module-state planned">Próxima fase</span>
+                <p>Jornadas, fotografía del saldo, diferencias y ajustes auditados.</p>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#conteos">Abrir conteos <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="auditoría eventos cambios trazabilidad">
                 <span class="module-number">10</span>
@@ -937,6 +1054,70 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="countDialog" aria-labelledby="countDialogTitle">
+      <form class="company-form" id="countForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Nueva jornada de inventario</p>
+            <h2 id="countDialogTitle">Crear conteo físico</h2>
+          </div>
+          <button class="icon-button" id="closeCountDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          MegaSuite tomará una fotografía del saldo actual de todos los productos
+          en la bodega. Solo puede existir un conteo activo por bodega.
+        </p>
+        <label class="form-field">
+          <span>Bodega a verificar <b>*</b></span>
+          <select id="countWarehouseId" name="warehouseId" required>
+            <option value="">Selecciona una bodega</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Nombre de la jornada <b>*</b></span>
+          <input name="name" type="text" maxlength="160" required placeholder="Ej. Conteo mensual de julio">
+        </label>
+        <label class="form-field">
+          <span>Notas o alcance</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Responsables, zona o instrucciones para el equipo"></textarea>
+        </label>
+        <p class="form-error" id="countFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCountButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveCountButton" type="submit">Crear fotografía inicial</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="completeCountDialog" aria-labelledby="completeCountDialogTitle">
+      <form class="company-form" id="completeCountForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Cierre controlado</p>
+            <h2 id="completeCountDialogTitle">Aprobar diferencias</h2>
+          </div>
+          <button class="icon-button" id="closeCompleteCountDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="count-close-warning">
+          <span aria-hidden="true">!</span>
+          <p>
+            El inventario se ajustará a las cantidades contadas y cada cambio
+            generará un movimiento auditable. Si el saldo cambió después de
+            iniciar la jornada, el cierre será bloqueado.
+          </p>
+        </div>
+        <label class="form-field">
+          <span>Motivo y responsable de la aprobación <b>*</b></span>
+          <textarea name="reason" maxlength="500" rows="4" required placeholder="Ej. Conteo físico validado por coordinación de bodega"></textarea>
+        </label>
+        <p class="form-error" id="completeCountFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCompleteCountButton" type="button">Revisar nuevamente</button>
+          <button class="primary-button compact" id="saveCompleteCountButton" type="submit">Confirmar ajustes</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="customerDialog" aria-labelledby="customerDialogTitle">
       <form class="company-form" id="customerForm">

@@ -63,3 +63,26 @@ La API también expone:
 - `POST /api/receivables/invoices`
 - `GET /api/receivables/invoices/:id`
 - `POST /api/receivables/invoices/:id/payments`
+
+## Conteos físicos
+
+```bash
+curl http://localhost:4100/api/physical-counts \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/physical-counts/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+El flujo disponible en `/#conteos` es:
+
+1. Crear una jornada y seleccionar la bodega.
+2. Iniciar el conteo.
+3. Registrar la cantidad encontrada en cada producto.
+4. Enviar todas las referencias a revisión.
+5. Aprobar el cierre con un motivo.
+
+El cierre compara nuevamente el saldo real con la fotografía inicial. Si hubo
+ventas, compras u otros movimientos durante el conteo, se bloquea para evitar
+pisar inventario reciente. Cada diferencia aprobada crea un movimiento
+`COUNT_ADJUSTMENT` y un evento de auditoría.

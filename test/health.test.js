@@ -32,6 +32,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="cartera"/);
   assert.match(response.text, /Facturas y cuentas por cobrar/);
   assert.match(response.text, /Registrar abono/);
+  assert.match(response.text, /data-view="conteos"/);
+  assert.match(response.text, /Conteos y diferencias/);
+  assert.match(response.text, /Aprobar y ajustar inventario/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -191,6 +194,31 @@ test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL',
     .send({})
     .expect(422);
   assert.match(payment.body.error, /UUID válido/i);
+});
+
+test('conteos físicos validan jornada, producto y cierre antes de consultar PostgreSQL', async () => {
+  const application = createApp();
+  await request(application)
+    .get('/api/physical-counts/summary')
+    .expect(400);
+  const count = await request(application)
+    .post('/api/physical-counts')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ warehouseId: 'invalid', name: 'Conteo' })
+    .expect(422);
+  assert.match(count.body.error, /bodega debe tener un UUID/i);
+  const item = await request(application)
+    .put('/api/physical-counts/invalid/items/invalid')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ countedQuantity: 1 })
+    .expect(422);
+  assert.match(item.body.error, /UUID válidos/i);
+  const close = await request(application)
+    .post('/api/physical-counts/90000000-0000-0000-0000-000000000001/complete')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ reason: '   ' })
+    .expect(422);
+  assert.match(close.body.error, /motivo de cierre/i);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

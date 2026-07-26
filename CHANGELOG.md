@@ -6,6 +6,13 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Auditoría de los proyectos con código encontrados en Documentos y mapa de
+  reutilización para MegaSuite.
+- Módulo funcional de conteos físicos inspirado en Megainventario y MegaMundo:
+  fotografía inicial por bodega, captura por producto, diferencias, severidad,
+  revisión y cierre controlado.
+- Ajustes de inventario transaccionales al aprobar un conteo, con bloqueo si el
+  saldo cambió durante la jornada y movimiento auditable por diferencia.
 - Módulo funcional de cuentas por cobrar con clientes, facturas por conceptos,
   vencimientos, impuestos, saldos y abonos parciales o totales.
 - Tablero de cartera por edades: por vencer, 1–30, 31–60 y más de 60 días,

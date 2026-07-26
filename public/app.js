@@ -69,6 +69,43 @@ const elements = {
   warehouseForm: document.querySelector('#warehouseForm'),
   warehouseFormError: document.querySelector('#warehouseFormError'),
   saveWarehouseButton: document.querySelector('#saveWarehouseButton'),
+  activeCountTotal: document.querySelector('#activeCountTotal'),
+  pendingCountItems: document.querySelector('#pendingCountItems'),
+  countDiscrepancies: document.querySelector('#countDiscrepancies'),
+  completedCountsMonth: document.querySelector('#completedCountsMonth'),
+  reloadCountsButton: document.querySelector('#reloadCountsButton'),
+  newCountButton: document.querySelector('#newCountButton'),
+  countRecordCount: document.querySelector('#countRecordCount'),
+  countSessionList: document.querySelector('#countSessionList'),
+  countDataState: document.querySelector('#countDataState'),
+  countDetailEmpty: document.querySelector('#countDetailEmpty'),
+  countDetailContent: document.querySelector('#countDetailContent'),
+  countDetailNumber: document.querySelector('#countDetailNumber'),
+  countDetailName: document.querySelector('#countDetailName'),
+  countDetailWarehouse: document.querySelector('#countDetailWarehouse'),
+  countDetailStatus: document.querySelector('#countDetailStatus'),
+  countProgressLabel: document.querySelector('#countProgressLabel'),
+  countProgressBar: document.querySelector('#countProgressBar'),
+  countDifferenceLabel: document.querySelector('#countDifferenceLabel'),
+  startCountButton: document.querySelector('#startCountButton'),
+  submitCountButton: document.querySelector('#submitCountButton'),
+  completeCountButton: document.querySelector('#completeCountButton'),
+  countProductSearch: document.querySelector('#countProductSearch'),
+  countItemFilter: document.querySelector('#countItemFilter'),
+  countItemList: document.querySelector('#countItemList'),
+  countDialog: document.querySelector('#countDialog'),
+  countForm: document.querySelector('#countForm'),
+  countFormError: document.querySelector('#countFormError'),
+  countWarehouseId: document.querySelector('#countWarehouseId'),
+  closeCountDialog: document.querySelector('#closeCountDialog'),
+  cancelCountButton: document.querySelector('#cancelCountButton'),
+  saveCountButton: document.querySelector('#saveCountButton'),
+  completeCountDialog: document.querySelector('#completeCountDialog'),
+  completeCountForm: document.querySelector('#completeCountForm'),
+  completeCountFormError: document.querySelector('#completeCountFormError'),
+  closeCompleteCountDialog: document.querySelector('#closeCompleteCountDialog'),
+  cancelCompleteCountButton: document.querySelector('#cancelCompleteCountButton'),
+  saveCompleteCountButton: document.querySelector('#saveCompleteCountButton'),
   productCompanyName: document.querySelector('#productCompanyName'),
   productSearch: document.querySelector('#productSearch'),
   productTableBody: document.querySelector('#productTableBody'),
@@ -236,6 +273,8 @@ let posCatalog = [];
 let receivableCustomers = [];
 let receivableInvoices = [];
 let selectedReceivable = null;
+let physicalCounts = [];
+let selectedPhysicalCount = null;
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -1620,6 +1659,436 @@ async function submitPayment(event) {
   }
 }
 
+const countStatusLabels = {
+  DRAFT: 'Borrador',
+  IN_PROGRESS: 'En conteo',
+  REVIEW: 'En revisión',
+  COMPLETED: 'Cerrado',
+  CANCELLED: 'Cancelado',
+};
+
+const countClassificationLabels = {
+  PENDING: 'Pendiente',
+  OK: 'Correcto',
+  SHORTAGE: 'Faltante',
+  EXCESS: 'Sobrante',
+  UNEXPECTED: 'No esperado',
+  MISSING: 'Sin existencias',
+};
+
+function setCountSummary(summary = {}) {
+  elements.activeCountTotal.textContent = String(summary.active_counts || 0);
+  elements.pendingCountItems.textContent = String(summary.pending_items || 0);
+  elements.countDiscrepancies.textContent = String(summary.discrepancies || 0);
+  elements.completedCountsMonth.textContent = String(summary.completed_month || 0);
+}
+
+function showCountsError(message) {
+  physicalCounts = [];
+  selectedPhysicalCount = null;
+  setCountSummary();
+  elements.countSessionList.replaceChildren();
+  elements.countDataState.hidden = false;
+  elements.countDataState.classList.add('error');
+  elements.countDataState.querySelector('strong').textContent = 'No pudimos consultar los conteos';
+  elements.countDataState.querySelector('p').textContent = message;
+  elements.countRecordCount.textContent = '—';
+  elements.countDetailContent.hidden = true;
+  elements.countDetailEmpty.hidden = false;
+}
+
+function renderCountSessions() {
+  elements.countSessionList.replaceChildren();
+  elements.countRecordCount.textContent = String(physicalCounts.length);
+  elements.countDataState.hidden = physicalCounts.length > 0;
+  elements.countDataState.classList.remove('error');
+  if (!physicalCounts.length) {
+    elements.countDataState.querySelector('strong').textContent = 'Aún no hay conteos';
+    elements.countDataState.querySelector('p').textContent =
+      'Crea una jornada para tomar la primera fotografía física.';
+    return;
+  }
+  for (const count of physicalCounts) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'count-session-card';
+    if (selectedPhysicalCount?.id === count.id) button.classList.add('selected');
+
+    const top = document.createElement('div');
+    const number = document.createElement('strong');
+    number.textContent = count.count_number;
+    const status = document.createElement('span');
+    status.className = `count-status ${count.status.toLocaleLowerCase('es')}`;
+    status.textContent = countStatusLabels[count.status] || count.status;
+    top.append(number, status);
+
+    const name = document.createElement('span');
+    name.className = 'count-session-name';
+    name.textContent = count.name;
+    const warehouse = document.createElement('small');
+    warehouse.textContent = `${count.warehouse_name} · ${count.branch_name}`;
+
+    const progress = document.createElement('div');
+    progress.className = 'count-session-progress';
+    const counted = document.createElement('span');
+    counted.textContent = `${count.counted_count}/${count.item_count} contados`;
+    const discrepancies = document.createElement('strong');
+    discrepancies.textContent =
+      `${count.discrepancy_count} ${Number(count.discrepancy_count) === 1 ? 'diferencia' : 'diferencias'}`;
+    progress.append(counted, discrepancies);
+    button.append(top, name, warehouse, progress);
+    button.addEventListener('click', () => loadPhysicalCountDetail(count.id));
+    elements.countSessionList.append(button);
+  }
+}
+
+function countClassificationMeta(item) {
+  const classification = item.classification || 'PENDING';
+  return {
+    label: countClassificationLabels[classification] || classification,
+    className: classification.toLocaleLowerCase('es'),
+  };
+}
+
+function renderCountItems() {
+  if (!selectedPhysicalCount) return;
+  const search = normalizeSearch(elements.countProductSearch.value.trim());
+  const filter = elements.countItemFilter.value;
+  const filtered = selectedPhysicalCount.items.filter((item) => {
+    const matchesSearch = !search || normalizeSearch(
+      `${item.name_snapshot} ${item.sku_snapshot}`,
+    ).includes(search);
+    const hasDifference =
+      item.counted_quantity !== null && Number(item.difference) !== 0;
+    const matchesFilter =
+      filter === 'ALL' ||
+      (filter === 'PENDING' && item.counted_quantity === null) ||
+      (filter === 'DIFFERENCE' && hasDifference) ||
+      (filter === 'OK' && item.classification === 'OK');
+    return matchesSearch && matchesFilter;
+  });
+
+  elements.countItemList.replaceChildren();
+  if (!filtered.length) {
+    const empty = document.createElement('div');
+    empty.className = 'count-items-empty';
+    empty.innerHTML = '<strong>No hay productos para este filtro</strong><p>Cambia la búsqueda o consulta todas las referencias.</p>';
+    elements.countItemList.append(empty);
+    return;
+  }
+
+  for (const item of filtered) {
+    const card = document.createElement('article');
+    card.className = 'count-item-card';
+    if (item.severity === 'HIGH') card.classList.add('high-severity');
+
+    const identity = document.createElement('div');
+    identity.className = 'count-item-identity';
+    const visual = document.createElement('div');
+    visual.className = 'count-item-visual';
+    if (item.image_url) {
+      const image = document.createElement('img');
+      image.src = item.image_url;
+      image.alt = item.image_alt || item.name_snapshot;
+      visual.append(image);
+    } else {
+      visual.textContent = item.name_snapshot.slice(0, 1).toLocaleUpperCase('es');
+    }
+    const copy = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = item.name_snapshot;
+    const sku = document.createElement('small');
+    sku.textContent = item.sku_snapshot;
+    copy.append(name, sku);
+    identity.append(visual, copy);
+
+    const badgeMeta = countClassificationMeta(item);
+    const badge = document.createElement('span');
+    badge.className = `count-result ${badgeMeta.className}`;
+    badge.textContent = badgeMeta.label;
+
+    const facts = document.createElement('div');
+    facts.className = 'count-item-facts';
+    const expected = document.createElement('div');
+    expected.innerHTML = `<span>Esperado</span><strong>${Number(item.expected_quantity).toLocaleString('es-CO')}</strong>`;
+    const counted = document.createElement('div');
+    counted.innerHTML = `<span>Contado</span><strong>${item.counted_quantity === null ? '—' : Number(item.counted_quantity).toLocaleString('es-CO')}</strong>`;
+    const difference = document.createElement('div');
+    difference.innerHTML = `<span>Diferencia</span><strong>${item.difference === null ? '—' : Number(item.difference).toLocaleString('es-CO', { signDisplay: 'always' })}</strong>`;
+    facts.append(expected, counted, difference);
+
+    card.append(identity, badge, facts);
+
+    if (selectedPhysicalCount.status === 'IN_PROGRESS') {
+      const editor = document.createElement('div');
+      editor.className = 'count-item-editor';
+      const quantityLabel = document.createElement('label');
+      quantityLabel.className = 'form-field';
+      quantityLabel.innerHTML = '<span>Cantidad encontrada</span>';
+      const quantity = document.createElement('input');
+      quantity.type = 'number';
+      quantity.min = '0';
+      quantity.step = '0.0001';
+      quantity.value = item.counted_quantity ?? '';
+      quantity.placeholder = '0';
+      quantityLabel.append(quantity);
+
+      const notesLabel = document.createElement('label');
+      notesLabel.className = 'form-field count-item-notes';
+      notesLabel.innerHTML = '<span>Observación</span>';
+      const notes = document.createElement('input');
+      notes.type = 'text';
+      notes.maxLength = 500;
+      notes.value = item.notes || '';
+      notes.placeholder = 'Motivo, ubicación o novedad';
+      notesLabel.append(notes);
+
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'secondary-button count-save-item';
+      save.textContent = item.counted_quantity === null ? 'Registrar' : 'Actualizar';
+      save.addEventListener('click', () =>
+        savePhysicalCountItem(item.product_id, quantity.value, notes.value, save));
+      editor.append(quantityLabel, notesLabel, save);
+      card.append(editor);
+    } else if (item.notes) {
+      const note = document.createElement('p');
+      note.className = 'count-item-readonly-note';
+      note.textContent = item.notes;
+      card.append(note);
+    }
+
+    elements.countItemList.append(card);
+  }
+}
+
+function renderPhysicalCountDetail(count) {
+  selectedPhysicalCount = count;
+  elements.countDetailEmpty.hidden = true;
+  elements.countDetailContent.hidden = false;
+  elements.countDetailNumber.textContent = count.count_number;
+  elements.countDetailName.textContent = count.name;
+  elements.countDetailWarehouse.textContent =
+    `${count.warehouse_name} · ${count.branch_name}`;
+  elements.countDetailStatus.textContent = countStatusLabels[count.status] || count.status;
+  elements.countDetailStatus.className =
+    `count-status ${count.status.toLocaleLowerCase('es')}`;
+  elements.countProgressLabel.textContent = `${count.countedCount} de ${count.itemCount}`;
+  const percentage = count.itemCount
+    ? Math.round((count.countedCount / count.itemCount) * 100)
+    : 100;
+  elements.countProgressBar.style.width = `${percentage}%`;
+  elements.countDifferenceLabel.textContent = count.discrepancyCount
+    ? `${count.discrepancyCount} ${count.discrepancyCount === 1 ? 'diferencia requiere' : 'diferencias requieren'} revisión`
+    : 'Sin diferencias registradas';
+  elements.startCountButton.hidden = count.status !== 'DRAFT';
+  elements.submitCountButton.hidden = count.status !== 'IN_PROGRESS';
+  elements.submitCountButton.disabled = count.countedCount !== count.itemCount;
+  elements.completeCountButton.hidden = count.status !== 'REVIEW';
+  elements.countProductSearch.disabled = false;
+  elements.countItemFilter.disabled = false;
+  renderCountSessions();
+  renderCountItems();
+}
+
+async function loadPhysicalCountDetail(countId) {
+  try {
+    const detail = await getJson(`/api/physical-counts/${countId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderPhysicalCountDetail(detail);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadPhysicalCounts() {
+  if (!activeTenantId) {
+    showCountsError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, countsResult] = await Promise.all([
+      getJson('/api/physical-counts/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/physical-counts', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    physicalCounts = countsResult;
+    setCountSummary(summary);
+    renderCountSessions();
+    if (selectedPhysicalCount) {
+      const stillExists = countsResult.some((count) => count.id === selectedPhysicalCount.id);
+      if (stillExists) await loadPhysicalCountDetail(selectedPhysicalCount.id);
+      else {
+        selectedPhysicalCount = null;
+        elements.countDetailContent.hidden = true;
+        elements.countDetailEmpty.hidden = false;
+      }
+    }
+    return countsResult;
+  } catch (error) {
+    showCountsError(error.message);
+    throw error;
+  }
+}
+
+function openCountDialog() {
+  if (!activeTenantId || !warehouses.length) {
+    showToast('Crea una bodega antes de iniciar un conteo.');
+    return;
+  }
+  elements.countForm.reset();
+  elements.countWarehouseId.replaceChildren(new Option('Selecciona una bodega', ''));
+  for (const warehouse of warehouses.filter((item) => item.active)) {
+    elements.countWarehouseId.append(
+      new Option(`${warehouse.name} · ${warehouse.branch_name}`, warehouse.id),
+    );
+  }
+  elements.countFormError.hidden = true;
+  elements.countDialog.showModal();
+  elements.countWarehouseId.focus();
+}
+
+function closeCountDialog() {
+  elements.countDialog.close();
+}
+
+async function submitPhysicalCount(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.countForm);
+  elements.countFormError.hidden = true;
+  elements.saveCountButton.disabled = true;
+  elements.saveCountButton.textContent = 'Creando fotografía…';
+  try {
+    const count = await getJson('/api/physical-counts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeCountDialog();
+    await loadPhysicalCounts();
+    await loadPhysicalCountDetail(count.id);
+    showToast(`${count.count_number} creado con el saldo esperado.`);
+  } catch (error) {
+    elements.countFormError.textContent = error.message;
+    elements.countFormError.hidden = false;
+  } finally {
+    elements.saveCountButton.disabled = false;
+    elements.saveCountButton.textContent = 'Crear fotografía inicial';
+  }
+}
+
+async function startPhysicalCount() {
+  if (!selectedPhysicalCount) return;
+  elements.startCountButton.disabled = true;
+  try {
+    await getJson(`/api/physical-counts/${selectedPhysicalCount.id}/start`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await loadPhysicalCounts();
+    showToast('Conteo iniciado. Ya puedes registrar cantidades.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.startCountButton.disabled = false;
+  }
+}
+
+async function savePhysicalCountItem(productId, countedQuantity, notes, button) {
+  if (!selectedPhysicalCount) return;
+  button.disabled = true;
+  button.textContent = 'Guardando…';
+  try {
+    await getJson(
+      `/api/physical-counts/${selectedPhysicalCount.id}/items/${productId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ countedQuantity, notes }),
+      },
+    );
+    await loadPhysicalCounts();
+    showToast('Cantidad registrada.');
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = 'Reintentar';
+    showToast(error.message);
+  }
+}
+
+async function submitPhysicalCountReview() {
+  if (!selectedPhysicalCount) return;
+  elements.submitCountButton.disabled = true;
+  try {
+    await getJson(`/api/physical-counts/${selectedPhysicalCount.id}/submit`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await loadPhysicalCounts();
+    showToast('Conteo enviado a revisión.');
+  } catch (error) {
+    showToast(error.message);
+    elements.submitCountButton.disabled = false;
+  }
+}
+
+function openCompleteCountDialog() {
+  if (!selectedPhysicalCount || selectedPhysicalCount.status !== 'REVIEW') return;
+  elements.completeCountForm.reset();
+  elements.completeCountFormError.hidden = true;
+  elements.completeCountDialog.showModal();
+  elements.completeCountForm.elements.reason.focus();
+}
+
+function closeCompleteCountDialog() {
+  elements.completeCountDialog.close();
+}
+
+async function completePhysicalCount(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.completeCountForm);
+  elements.completeCountFormError.hidden = true;
+  elements.saveCompleteCountButton.disabled = true;
+  elements.saveCompleteCountButton.textContent = 'Aplicando ajustes…';
+  try {
+    const result = await getJson(
+      `/api/physical-counts/${selectedPhysicalCount.id}/complete`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ reason: formData.get('reason') }),
+      },
+    );
+    closeCompleteCountDialog();
+    await loadWarehouses();
+    await loadPhysicalCounts();
+    showToast(
+      result.adjustments
+        ? `${result.adjustments} ajustes aplicados y auditados.`
+        : 'Conteo cerrado sin diferencias.',
+    );
+  } catch (error) {
+    elements.completeCountFormError.textContent = error.message;
+    elements.completeCountFormError.hidden = false;
+  } finally {
+    elements.saveCompleteCountButton.disabled = false;
+    elements.saveCompleteCountButton.textContent = 'Confirmar ajustes';
+  }
+}
+
 function setMetric(valueElement, detailElement, result, label) {
   if (result.status === 'fulfilled') {
     const count = Array.isArray(result.value) ? result.value.length : 0;
@@ -1692,6 +2161,7 @@ async function refreshTenantData() {
   if (!activeTenantId) {
     showBranchError('Primero debes registrar o seleccionar una empresa.');
     showWarehouseError('Primero debes registrar o seleccionar una empresa.');
+    showCountsError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
@@ -1704,6 +2174,7 @@ async function refreshTenantData() {
   const results = await Promise.allSettled([
     loadBranches(),
     loadWarehouses(),
+    loadPhysicalCounts(),
     loadCatalog(),
     loadPos(),
     loadReceivables(),
@@ -1711,7 +2182,7 @@ async function refreshTenantData() {
   await syncPosWorkstation().catch(() => {});
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
-  setMetric(elements.productCount, elements.productDetail, results[2], ['producto registrado', 'productos registrados']);
+  setMetric(elements.productCount, elements.productDetail, results[3], ['producto registrado', 'productos registrados']);
 }
 
 function filterModules() {
@@ -1745,6 +2216,7 @@ const availableViews = new Set([
   'empresas',
   'sucursales',
   'bodegas',
+  'conteos',
   'productos',
   'caja',
   'cartera',
@@ -1762,6 +2234,7 @@ const viewTitles = {
   empresas: 'Empresas',
   sucursales: 'Sucursales',
   bodegas: 'Bodegas',
+  conteos: 'Conteos físicos',
   productos: 'Catálogo',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
@@ -2384,6 +2857,7 @@ elements.companyContext.addEventListener('change', async () => {
   saleCart.clear();
   posCatalog = [];
   selectedReceivable = null;
+  selectedPhysicalCount = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -2424,6 +2898,29 @@ elements.cancelWarehouseButton.addEventListener('click', closeWarehouseDialog);
 elements.warehouseForm.addEventListener('submit', submitWarehouse);
 elements.warehouseDialog.addEventListener('click', (event) => {
   if (event.target === elements.warehouseDialog) closeWarehouseDialog();
+});
+elements.reloadCountsButton.addEventListener('click', () => {
+  loadPhysicalCounts()
+    .then(() => showToast('Conteos actualizados.'))
+    .catch(() => showToast('No fue posible actualizar los conteos.'));
+});
+elements.newCountButton.addEventListener('click', openCountDialog);
+elements.closeCountDialog.addEventListener('click', closeCountDialog);
+elements.cancelCountButton.addEventListener('click', closeCountDialog);
+elements.countForm.addEventListener('submit', submitPhysicalCount);
+elements.countDialog.addEventListener('click', (event) => {
+  if (event.target === elements.countDialog) closeCountDialog();
+});
+elements.countProductSearch.addEventListener('input', renderCountItems);
+elements.countItemFilter.addEventListener('change', renderCountItems);
+elements.startCountButton.addEventListener('click', startPhysicalCount);
+elements.submitCountButton.addEventListener('click', submitPhysicalCountReview);
+elements.completeCountButton.addEventListener('click', openCompleteCountDialog);
+elements.closeCompleteCountDialog.addEventListener('click', closeCompleteCountDialog);
+elements.cancelCompleteCountButton.addEventListener('click', closeCompleteCountDialog);
+elements.completeCountForm.addEventListener('submit', completePhysicalCount);
+elements.completeCountDialog.addEventListener('click', (event) => {
+  if (event.target === elements.completeCountDialog) closeCompleteCountDialog();
 });
 elements.reloadProductsButton.addEventListener('click', () => {
   loadCatalog()

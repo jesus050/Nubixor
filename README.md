@@ -57,6 +57,8 @@ npm test
 - `/` abre el centro de operaciones local conectado a la API.
 - `/#cartera` abre el módulo de clientes, facturas por cobrar, vencimientos y
   aplicación de abonos.
+- `/#conteos` abre las jornadas de conteo físico, diferencias y ajustes de
+  inventario auditados.
 - `/api/health` es una prueba de vida. Siempre responde sin consultar
   PostgreSQL ni Redis.
 - `/api/health/ready` prueba conexiones reales a PostgreSQL y Redis. Responde
@@ -169,6 +171,12 @@ x-user-id: UUID-del-usuario
 La bodega representa una ubicación física. El tratamiento tributario pertenece
 al producto y a la fotografía histórica de cada operación; no existen bodegas
 “con IVA” o “sin IVA”.
+
+## Documentación de integración
+
+La revisión de Megainventario, MegaMundo Logística, Vision Creativa Planner,
+Ticketera Libre y los demás proyectos con código encontrados en Documentos está
+en `docs/AUDITORIA_PROYECTOS_DOCUMENTOS.md`.
 
 ## Despliegue
 
