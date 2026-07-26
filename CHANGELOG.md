@@ -17,6 +17,15 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Navegación organizada por áreas de trabajo.
 - Primer módulo funcional de empresas con listado, búsqueda y creación mediante
   la API real.
+- Selector persistente de empresa activa para mantener aislado el contexto
+  operativo.
+- Módulo funcional de sucursales con listado, búsqueda, creación y validación
+  de códigos por empresa.
+- Módulo funcional de bodegas con búsqueda, creación por sucursal y tipos de
+  ubicación operativa.
+- Directorio visual de los 15 módulos previstos, diferenciando claramente lo
+  disponible, la base técnica preparada y las fases futuras.
+- Validación de la jerarquía empresa → sucursal → bodega en la API.
 
 ## [0.1.1] - 2026-07-26
 

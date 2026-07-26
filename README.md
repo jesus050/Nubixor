@@ -2,8 +2,9 @@
 
 Núcleo de un ERP modular y multiempresa construido con Node.js 22, Express,
 PostgreSQL y Redis. La Fase 1 estabiliza el entorno, las migraciones, los logs,
-el manejo de errores y las rutas de salud. Todavía no incluye frontend ni la
-integración de proyectos legados.
+el manejo de errores y las rutas de salud. La interfaz local ya ofrece un
+centro de operaciones responsive y los primeros flujos reales de empresas,
+sucursales y bodegas. La integración de proyectos legados continúa por fases.
 
 ## Requisitos
 
@@ -59,6 +60,24 @@ npm test
 - `/api/health/ready` prueba conexiones reales a PostgreSQL y Redis. Responde
   `200` si ambas están disponibles o `503` con el estado de cada dependencia,
   sin detener el proceso.
+
+## Interfaz local
+
+Abra `http://localhost:4100` después de iniciar la aplicación. También puede
+abrir `public/index.html` directamente; en desarrollo consultará la API local
+en el puerto 4100.
+
+La interfaz incluye:
+
+- selector persistente de empresa activa;
+- listado, búsqueda y creación de empresas;
+- listado, búsqueda y creación de sucursales por empresa;
+- listado, búsqueda y creación de bodegas por sucursal;
+- métricas y salud de servicios en vivo;
+- directorio de los 15 módulos planeados con su estado real.
+
+Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
+aún tienen únicamente modelo o API base se identifican como tales.
 
 Para probar que la vida no depende de la base:
 

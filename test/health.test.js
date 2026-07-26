@@ -4,6 +4,8 @@ import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { createHealthRouter } from '../src/modules/health.js';
 
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+
 test('GET / sirve la interfaz local', async () => {
   const response = await request(createApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);
@@ -11,6 +13,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Centro de operaciones/);
   assert.match(response.text, /Primer módulo funcional/);
   assert.match(response.text, /Nueva empresa/);
+  assert.match(response.text, /Habilitar bodega/);
+  assert.match(response.text, /Roles &amp; permisos/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -33,6 +37,36 @@ test('POST /api/companies valida la razón social antes de consultar PostgreSQL'
     .send({ legalName: '   ' })
     .expect(422);
   assert.equal(response.body.error, 'legalName es obligatorio.');
+});
+
+test('POST /api/branches exige empresa y valida sus campos', async () => {
+  await request(createApp())
+    .post('/api/branches')
+    .send({ name: 'Principal', code: 'MAIN' })
+    .expect(400);
+
+  const response = await request(createApp())
+    .post('/api/branches')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ name: '   ', code: '' })
+    .expect(422);
+  assert.equal(response.body.error, 'name y code son obligatorios.');
+});
+
+test('POST /api/warehouses valida la jerarquía mínima antes de consultar PostgreSQL', async () => {
+  const response = await request(createApp())
+    .post('/api/warehouses')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ name: 'Disponible', code: 'DISP' })
+    .expect(422);
+  assert.equal(response.body.error, 'branchId, name y code son obligatorios.');
+
+  const invalidBranch = await request(createApp())
+    .post('/api/warehouses')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ branchId: 'sucursal-invalida', name: 'Disponible', code: 'DISP' })
+    .expect(422);
+  assert.equal(invalidBranch.body.error, 'branchId debe ser un UUID válido.');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

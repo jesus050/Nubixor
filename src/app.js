@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { requestContext, requestLogger, notFound, errorHandler } from './middleware.js';
 import healthRouter from './modules/health.js';
 import companiesRouter from './modules/companies.js';
+import branchesRouter from './modules/branches.js';
 import warehousesRouter from './modules/warehouses.js';
 import productsRouter from './modules/products.js';
 import inventoryRouter from './modules/inventory.js';
@@ -47,6 +48,7 @@ export function createApp({ health = healthRouter } = {}) {
   }));
   application.use('/api/health', health);
   application.use('/api/companies', companiesRouter);
+  application.use('/api/branches', branchesRouter);
   application.use('/api/warehouses', warehousesRouter);
   application.use('/api/products', productsRouter);
   application.use('/api/inventory', inventoryRouter);
