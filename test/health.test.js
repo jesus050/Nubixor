@@ -16,6 +16,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Habilitar bodega/);
   assert.match(response.text, /Roles &amp; permisos/);
   assert.match(response.text, /Agregar al catálogo/);
+  assert.match(response.text, /Adjuntar fotografía/);
+  assert.match(response.text, /Abrir turno de caja/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -101,6 +103,39 @@ test('el catálogo valida categorías, marcas y productos antes de consultar Pos
     .send({ sku: 'SKU-1', name: 'Producto', salePrice: -1 })
     .expect(422);
   assert.equal(invalidPrice.body.error, 'cost y salePrice deben ser valores positivos.');
+});
+
+test('las imágenes y la caja validan entradas antes de consultar dependencias', async () => {
+  const app = createApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+
+  const image = await request(app)
+    .post('/api/products/60000000-0000-0000-0000-000000000001/images')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.equal(image.body.error, 'Debes seleccionar una imagen.');
+
+  const cashSession = await request(app)
+    .post('/api/pos/sessions')
+    .set(headers)
+    .send({ openingAmount: 0 })
+    .expect(422);
+  assert.equal(cashSession.body.error, 'cashRegisterId es obligatorio.');
+
+  const closeSession = await request(app)
+    .post('/api/pos/sessions/invalid/close')
+    .set(headers)
+    .send({ closingAmount: -1 })
+    .expect(422);
+  assert.equal(closeSession.body.error, 'closingAmount debe ser un valor positivo.');
+
+  const invalidSession = await request(app)
+    .post('/api/pos/sessions/invalid/close')
+    .set(headers)
+    .send({ closingAmount: 0 })
+    .expect(422);
+  assert.equal(invalidSession.body.error, 'El turno debe tener un UUID válido.');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

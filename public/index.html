@@ -47,6 +47,9 @@
           <a class="nav-item" href="#modulos">
             <span aria-hidden="true">O</span> Compras
           </a>
+          <a class="nav-item" href="#caja">
+            <span aria-hidden="true">$</span> Caja &amp; POS
+          </a>
           <p class="nav-label">Control</p>
           <a class="nav-item" href="#sistema">
             <span aria-hidden="true">◉</span> Sistema
@@ -427,6 +430,76 @@
             </div>
           </section>
 
+          <section class="section pos-section" id="caja" aria-labelledby="posTitle">
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Operación de venta</p>
+                <h2 id="posTitle">Caja &amp; POS</h2>
+              </div>
+              <span class="pos-state" id="cashStatus">Consultando caja</span>
+            </div>
+
+            <div class="pos-layout">
+              <article class="cash-card">
+                <div class="cash-card-heading">
+                  <span class="cash-symbol" aria-hidden="true">$</span>
+                  <div>
+                    <small>Turno actual</small>
+                    <h3 id="cashRegisterName">Sin caja abierta</h3>
+                  </div>
+                </div>
+                <dl class="cash-details">
+                  <div>
+                    <dt>Sucursal</dt>
+                    <dd id="cashBranchName">—</dd>
+                  </div>
+                  <div>
+                    <dt>Fondo inicial</dt>
+                    <dd id="cashOpeningAmount">—</dd>
+                  </div>
+                  <div>
+                    <dt>Apertura</dt>
+                    <dd id="cashOpenedAt">—</dd>
+                  </div>
+                </dl>
+                <p id="cashGuidance">
+                  Abre un turno para preparar el registro de ventas y movimientos de efectivo.
+                </p>
+                <div class="cash-actions">
+                  <button class="primary-button compact" id="openCashButton" type="button">
+                    Abrir turno de caja <span aria-hidden="true">→</span>
+                  </button>
+                  <button class="secondary-button" id="closeCashButton" type="button" hidden>
+                    Cerrar turno y contar efectivo
+                  </button>
+                </div>
+              </article>
+
+              <article class="pos-roadmap">
+                <p class="eyebrow">Flujo organizado</p>
+                <h3>Ruta segura hacia la primera venta</h3>
+                <ol class="pos-steps">
+                  <li class="complete">
+                    <span>01</span>
+                    <div><strong>Catálogo</strong><small>Productos, precios, imágenes e impuestos.</small></div>
+                  </li>
+                  <li class="complete">
+                    <span>02</span>
+                    <div><strong>Turno de caja</strong><small>Apertura, fondo inicial y cierre.</small></div>
+                  </li>
+                  <li>
+                    <span>03</span>
+                    <div><strong>Carrito y cobro</strong><small>Siguiente bloque funcional.</small></div>
+                  </li>
+                  <li>
+                    <span>04</span>
+                    <div><strong>Salida de inventario</strong><small>Se conectará al confirmar la venta.</small></div>
+                  </li>
+                </ol>
+              </article>
+            </div>
+          </section>
+
           <section class="section module-section" id="modulos" aria-labelledby="modulesTitle">
             <div class="section-heading">
               <div>
@@ -537,8 +610,11 @@
                 <span class="module-number">13</span>
                 <div class="module-symbol rose" aria-hidden="true">VE</div>
                 <h3>Ventas &amp; POS</h3>
-                <p>Próximo espacio para ventas, caja y facturación electrónica.</p>
-                <span class="module-state planned">Fase futura</span>
+                <p>Apertura y cierre de caja preparados para conectar el flujo de venta.</p>
+                <div class="module-footer">
+                  <span class="module-state build">Base operativa</span>
+                  <a class="module-action" href="#caja">Abrir caja <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
                 <span class="module-number">14</span>
@@ -928,10 +1004,107 @@
           </label>
         </div>
 
+        <label class="image-field">
+          <span class="image-field-symbol" aria-hidden="true">＋</span>
+          <span>
+            <strong>Imagen principal</strong>
+            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+          </span>
+          <input id="newProductImage" name="productImage" type="file" accept="image/jpeg,image/png,image/webp">
+        </label>
+
         <p class="form-error" id="productFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelProductButton" type="button">Volver sin guardar</button>
           <button class="primary-button compact" id="saveProductButton" type="submit">Agregar al catálogo</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="productImageDialog" aria-labelledby="productImageDialogTitle">
+      <form class="company-form" id="productImageForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Imagen del catálogo</p>
+            <h2 id="productImageDialogTitle">Adjuntar fotografía</h2>
+          </div>
+          <button class="icon-button" id="closeProductImageDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <p class="dialog-copy">
+          Producto: <strong id="imageProductName">—</strong>. La nueva fotografía quedará como imagen principal.
+        </p>
+
+        <label class="image-dropzone" id="imageDropzone">
+          <img id="productImagePreview" alt="Vista previa de la fotografía seleccionada" hidden>
+          <span id="productImagePlaceholder">
+            <b>Seleccionar fotografía</b>
+            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+          </span>
+          <input id="productImageFile" name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
+        </label>
+
+        <label class="form-field">
+          <span>Descripción accesible</span>
+          <input id="productImageAlt" name="altText" type="text" maxlength="180" placeholder="Ej. Vista frontal del producto">
+        </label>
+
+        <p class="form-error" id="productImageFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelProductImageButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveProductImageButton" type="submit">
+            Guardar fotografía
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="openCashDialog" aria-labelledby="openCashDialogTitle">
+      <form class="company-form" id="openCashForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Inicio de jornada</p>
+            <h2 id="openCashDialogTitle">Abrir turno de caja</h2>
+          </div>
+          <button class="icon-button" id="closeOpenCashDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Selecciona la caja física y registra el efectivo disponible al iniciar.</p>
+        <label class="form-field">
+          <span>Caja <b>*</b></span>
+          <select id="cashRegisterId" name="cashRegisterId" required>
+            <option value="">Selecciona una caja</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Fondo inicial</span>
+          <input name="openingAmount" type="number" min="0" step="100" value="0">
+        </label>
+        <p class="form-error" id="openCashFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelOpenCashButton" type="button">Volver sin abrir</button>
+          <button class="primary-button compact" id="saveOpenCashButton" type="submit">Abrir turno de caja</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="closeCashDialog" aria-labelledby="closeCashDialogTitle">
+      <form class="company-form" id="closeCashForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Fin de jornada</p>
+            <h2 id="closeCashDialogTitle">Cerrar turno</h2>
+          </div>
+          <button class="icon-button" id="closeCloseCashDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Cuenta el efectivo físico antes de cerrar. Este valor quedará registrado en el turno.</p>
+        <label class="form-field">
+          <span>Efectivo contado <b>*</b></span>
+          <input name="closingAmount" type="number" min="0" step="100" required placeholder="0">
+        </label>
+        <p class="form-error" id="closeCashFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCloseCashButton" type="button">Seguir con el turno</button>
+          <button class="primary-button compact" id="saveCloseCashButton" type="submit">Confirmar cierre</button>
         </div>
       </form>
     </dialog>

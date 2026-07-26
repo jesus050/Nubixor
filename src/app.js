@@ -15,6 +15,7 @@ import productsRouter from './modules/products.js';
 import taxesRouter from './modules/taxes.js';
 import inventoryRouter from './modules/inventory.js';
 import purchasesRouter from './modules/purchases.js';
+import posRouter from './modules/pos.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
@@ -59,6 +60,7 @@ export function createApp({ health = healthRouter } = {}) {
   application.use('/api/taxes', taxesRouter);
   application.use('/api/inventory', inventoryRouter);
   application.use('/api/purchases', purchasesRouter);
+  application.use('/api/pos', posRouter);
 
   application.use(notFound);
   application.use(errorHandler);

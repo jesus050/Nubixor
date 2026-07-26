@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
@@ -7,6 +11,17 @@ import { AppError } from '../shared/errors.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const IMAGE_DATA_PATTERN = /^data:(image\/(?:jpeg|png|webp));base64,([a-z0-9+/=\s]+)$/i;
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const productImageDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../public/uploads/product-images',
+);
+const imageExtensions = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
 
 router.use(requireTenant);
 
@@ -15,11 +30,19 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,
             c.name category_name, b.name brand_name,
-            tc.name tax_name, tc.rate tax_rate
+            tc.name tax_name, tc.rate tax_rate,
+            pi.public_url image_url, pi.alt_text image_alt
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id AND c.tenant_id = p.tenant_id
      LEFT JOIN brands b ON b.id = p.brand_id AND b.tenant_id = p.tenant_id
      LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
+     LEFT JOIN LATERAL (
+       SELECT public_url, alt_text
+       FROM product_images
+       WHERE tenant_id = p.tenant_id AND product_id = p.id
+       ORDER BY is_primary DESC, created_at
+       LIMIT 1
+     ) pi ON TRUE
      WHERE p.tenant_id = $1 AND p.deleted_at IS NULL
      ORDER BY p.name`,
     [req.context.tenantId],
@@ -118,6 +141,79 @@ router.post('/', asyncHandler(async (req, res) => {
     if (error.code === '23505') {
       throw new AppError('Ya existe un producto con ese SKU.', 409, 'PRODUCT_SKU_EXISTS');
     }
+    throw error;
+  }
+}));
+
+router.post('/:id/images', asyncHandler(async (req, res) => {
+  const { dataUrl, altText = null } = req.body;
+  const normalizedAltText = typeof altText === 'string' ? altText.trim() || null : null;
+  if (!UUID_PATTERN.test(req.params.id)) {
+    return res.status(422).json({ error: 'El producto debe tener un UUID válido.' });
+  }
+  if (typeof dataUrl !== 'string') {
+    return res.status(422).json({ error: 'Debes seleccionar una imagen.' });
+  }
+  const match = dataUrl.match(IMAGE_DATA_PATTERN);
+  if (!match) {
+    return res.status(422).json({ error: 'La imagen debe ser JPG, PNG o WEBP.' });
+  }
+  if (normalizedAltText?.length > 180) {
+    return res.status(422).json({ error: 'La descripción de la imagen es demasiado larga.' });
+  }
+
+  const contentType = match[1].toLowerCase();
+  const imageBuffer = Buffer.from(match[2].replace(/\s/g, ''), 'base64');
+  if (!imageBuffer.length || imageBuffer.length > MAX_IMAGE_BYTES) {
+    return res.status(422).json({ error: 'La imagen debe pesar máximo 2 MB.' });
+  }
+
+  const product = await query(
+    `SELECT id, name
+     FROM products
+     WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+    [req.params.id, req.context.tenantId],
+  );
+  if (!product.rowCount) {
+    throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+  }
+
+  const fileName = `${randomUUID()}.${imageExtensions[contentType]}`;
+  const filePath = path.join(productImageDir, fileName);
+  const publicUrl = `/uploads/product-images/${fileName}`;
+  await mkdir(productImageDir, { recursive: true });
+  await writeFile(filePath, imageBuffer, { flag: 'wx' });
+
+  try {
+    const image = await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE product_images
+         SET is_primary = FALSE
+         WHERE product_id = $1 AND tenant_id = $2 AND is_primary = TRUE`,
+        [req.params.id, req.context.tenantId],
+      );
+      const result = await client.query(
+        `INSERT INTO product_images(
+           tenant_id, product_id, file_name, public_url,
+           content_type, byte_size, alt_text, is_primary
+         )
+         VALUES($1,$2,$3,$4,$5,$6,$7,TRUE)
+         RETURNING id, product_id, public_url, content_type, byte_size, alt_text, is_primary`,
+        [
+          req.context.tenantId,
+          req.params.id,
+          fileName,
+          publicUrl,
+          contentType,
+          imageBuffer.length,
+          normalizedAltText || product.rows[0].name,
+        ],
+      );
+      return result.rows[0];
+    });
+    res.status(201).json(image);
+  } catch (error) {
+    await unlink(filePath).catch(() => {});
     throw error;
   }
 }));

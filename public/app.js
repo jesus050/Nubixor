@@ -99,9 +99,42 @@ const elements = {
   productCategoryId: document.querySelector('#productCategoryId'),
   productBrandId: document.querySelector('#productBrandId'),
   productTaxId: document.querySelector('#productTaxId'),
+  newProductImage: document.querySelector('#newProductImage'),
   closeProductDialog: document.querySelector('#closeProductDialog'),
   cancelProductButton: document.querySelector('#cancelProductButton'),
   saveProductButton: document.querySelector('#saveProductButton'),
+  productImageDialog: document.querySelector('#productImageDialog'),
+  productImageForm: document.querySelector('#productImageForm'),
+  productImageFormError: document.querySelector('#productImageFormError'),
+  productImageFile: document.querySelector('#productImageFile'),
+  productImagePreview: document.querySelector('#productImagePreview'),
+  productImagePlaceholder: document.querySelector('#productImagePlaceholder'),
+  productImageAlt: document.querySelector('#productImageAlt'),
+  imageProductName: document.querySelector('#imageProductName'),
+  closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
+  cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
+  saveProductImageButton: document.querySelector('#saveProductImageButton'),
+  cashStatus: document.querySelector('#cashStatus'),
+  cashRegisterName: document.querySelector('#cashRegisterName'),
+  cashBranchName: document.querySelector('#cashBranchName'),
+  cashOpeningAmount: document.querySelector('#cashOpeningAmount'),
+  cashOpenedAt: document.querySelector('#cashOpenedAt'),
+  cashGuidance: document.querySelector('#cashGuidance'),
+  openCashButton: document.querySelector('#openCashButton'),
+  closeCashButton: document.querySelector('#closeCashButton'),
+  openCashDialog: document.querySelector('#openCashDialog'),
+  openCashForm: document.querySelector('#openCashForm'),
+  openCashFormError: document.querySelector('#openCashFormError'),
+  cashRegisterId: document.querySelector('#cashRegisterId'),
+  closeOpenCashDialog: document.querySelector('#closeOpenCashDialog'),
+  cancelOpenCashButton: document.querySelector('#cancelOpenCashButton'),
+  saveOpenCashButton: document.querySelector('#saveOpenCashButton'),
+  closeCashDialog: document.querySelector('#closeCashDialog'),
+  closeCashForm: document.querySelector('#closeCashForm'),
+  closeCashFormError: document.querySelector('#closeCashFormError'),
+  closeCloseCashDialog: document.querySelector('#closeCloseCashDialog'),
+  cancelCloseCashButton: document.querySelector('#cancelCloseCashButton'),
+  saveCloseCashButton: document.querySelector('#saveCloseCashButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -113,6 +146,9 @@ let categories = [];
 let brands = [];
 let taxCategories = [];
 let products = [];
+let posSummary = { registers: [], openSession: null };
+let imageProduct = null;
+let imagePreviewUrl = null;
 let activeTenantId = readTenantPreference();
 
 const warehouseTypeLabels = {
@@ -586,12 +622,25 @@ function renderProducts() {
     nameCell.dataset.label = 'Producto';
     const nameWrap = document.createElement('div');
     nameWrap.className = 'company-name';
-    const initial = document.createElement('span');
-    initial.textContent = product.name.slice(0, 1).toUpperCase();
+    let visual;
+    if (product.image_url) {
+      visual = document.createElement('img');
+      visual.className = 'product-thumbnail';
+      visual.src = product.image_url;
+      visual.alt = product.image_alt || product.name;
+    } else {
+      visual = document.createElement('span');
+      visual.textContent = product.name.slice(0, 1).toUpperCase();
+    }
     const name = document.createElement('strong');
     name.textContent = product.name;
-    nameWrap.append(initial, name);
-    nameCell.append(nameWrap);
+    nameWrap.append(visual, name);
+    const imageButton = document.createElement('button');
+    imageButton.className = 'photo-action';
+    imageButton.type = 'button';
+    imageButton.textContent = product.image_url ? 'Cambiar foto' : 'Adjuntar foto';
+    imageButton.addEventListener('click', () => openProductImageDialog(product));
+    nameCell.append(nameWrap, imageButton);
     row.append(nameCell);
     row.append(createCell('SKU', product.sku));
     row.append(createCell('Categoría', product.category_name));
@@ -662,6 +711,98 @@ async function loadCatalog() {
     throw error;
   } finally {
     elements.reloadProductsButton.disabled = false;
+  }
+}
+
+function syncCashRegisterOptions() {
+  const selectedValue = elements.cashRegisterId.value;
+  elements.cashRegisterId.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = posSummary.registers.length
+    ? 'Selecciona una caja'
+    : 'No hay cajas configuradas';
+  elements.cashRegisterId.append(placeholder);
+
+  for (const register of posSummary.registers) {
+    const option = document.createElement('option');
+    option.value = register.id;
+    option.textContent = `${register.name} · ${register.branch_name}`;
+    elements.cashRegisterId.append(option);
+  }
+  if (posSummary.registers.some((register) => register.id === selectedValue)) {
+    elements.cashRegisterId.value = selectedValue;
+  }
+  elements.cashRegisterId.disabled = posSummary.registers.length === 0;
+}
+
+function renderPos() {
+  const session = posSummary.openSession;
+  const firstRegister = posSummary.registers[0] || null;
+  syncCashRegisterOptions();
+
+  if (session) {
+    elements.cashStatus.textContent = 'Turno abierto';
+    elements.cashStatus.className = 'pos-state open';
+    elements.cashRegisterName.textContent = `${session.register_name} · ${session.register_code}`;
+    elements.cashBranchName.textContent = session.branch_name;
+    elements.cashOpeningAmount.textContent = formatCurrency(session.opening_amount);
+    elements.cashOpenedAt.textContent = new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(session.opened_at));
+    elements.cashGuidance.textContent =
+      'El turno está listo. El carrito y el cobro se conectarán en el siguiente bloque sin romper inventario.';
+    elements.openCashButton.hidden = true;
+    elements.closeCashButton.hidden = false;
+    return;
+  }
+
+  elements.cashStatus.textContent = firstRegister ? 'Caja cerrada' : 'Sin cajas configuradas';
+  elements.cashStatus.className = 'pos-state';
+  elements.cashRegisterName.textContent = firstRegister?.name || 'Sin caja disponible';
+  elements.cashBranchName.textContent = firstRegister?.branch_name || '—';
+  elements.cashOpeningAmount.textContent = '—';
+  elements.cashOpenedAt.textContent = '—';
+  elements.cashGuidance.textContent = firstRegister
+    ? 'Abre un turno para preparar el registro de ventas y movimientos de efectivo.'
+    : 'Registra una caja física antes de comenzar la operación POS.';
+  elements.openCashButton.hidden = false;
+  elements.openCashButton.disabled = !firstRegister;
+  elements.closeCashButton.hidden = true;
+}
+
+function showPosError(message) {
+  posSummary = { registers: [], openSession: null };
+  elements.cashStatus.textContent = 'Caja no disponible';
+  elements.cashStatus.className = 'pos-state error';
+  elements.cashRegisterName.textContent = 'No pudimos consultar la caja';
+  elements.cashBranchName.textContent = '—';
+  elements.cashOpeningAmount.textContent = '—';
+  elements.cashOpenedAt.textContent = '—';
+  elements.cashGuidance.textContent = message;
+  elements.openCashButton.hidden = false;
+  elements.openCashButton.disabled = true;
+  elements.closeCashButton.hidden = true;
+  syncCashRegisterOptions();
+}
+
+async function loadPos() {
+  if (!activeTenantId) {
+    showPosError('Primero debes registrar o seleccionar una empresa.');
+    return posSummary;
+  }
+  try {
+    posSummary = await getJson('/api/pos/summary', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderPos();
+    return posSummary;
+  } catch (error) {
+    showPosError(error.message);
+    throw error;
   }
 }
 
@@ -738,6 +879,7 @@ async function refreshTenantData() {
     showBranchError('Primero debes registrar o seleccionar una empresa.');
     showWarehouseError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
+    showPosError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
     setMetric(elements.productCount, elements.productDetail, { status: 'rejected' }, ['producto registrado', 'productos registrados']);
@@ -748,6 +890,7 @@ async function refreshTenantData() {
     loadBranches(),
     loadWarehouses(),
     loadCatalog(),
+    loadPos(),
   ]);
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
@@ -1056,6 +1199,38 @@ function closeProductDialog() {
   elements.productDialog.close();
 }
 
+function validateImageFile(file) {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!file || !allowedTypes.includes(file.type)) {
+    throw new Error('Selecciona una imagen JPG, PNG o WEBP.');
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error('La imagen debe pesar máximo 2 MB.');
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(reader.result));
+    reader.addEventListener('error', () => reject(new Error('No fue posible leer la imagen.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadProductImage(productId, file, altText) {
+  validateImageFile(file);
+  const dataUrl = await fileToDataUrl(file);
+  return getJson(`/api/products/${productId}/images`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({ dataUrl, altText }),
+  });
+}
+
 async function submitProduct(event) {
   event.preventDefault();
   elements.productFormError.hidden = true;
@@ -1064,7 +1239,9 @@ async function submitProduct(event) {
   const formData = new FormData(elements.productForm);
 
   try {
-    await getJson('/api/products', {
+    const imageFile = elements.newProductImage.files[0] || null;
+    if (imageFile) validateImageFile(imageFile);
+    const createdProduct = await getJson('/api/products', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1081,18 +1258,184 @@ async function submitProduct(event) {
         salePrice: formData.get('salePrice'),
       }),
     });
+    let imageUploaded = false;
+    let imageWarning = null;
+    if (imageFile) {
+      try {
+        await uploadProductImage(createdProduct.id, imageFile, formData.get('name'));
+        imageUploaded = true;
+      } catch (error) {
+        imageWarning = error.message;
+      }
+    }
     closeProductDialog();
     await loadCatalog();
     elements.productCount.textContent = String(products.length);
     elements.productDetail.textContent =
       `${products.length} ${products.length === 1 ? 'producto registrado' : 'productos registrados'}`;
-    showToast('Producto agregado al catálogo sin alterar el inventario.');
+    if (imageWarning) {
+      showToast('Producto creado; la fotografía se puede adjuntar desde el listado.');
+    } else {
+      showToast(
+        imageUploaded
+          ? 'Producto e imagen agregados al catálogo.'
+          : 'Producto agregado al catálogo sin alterar el inventario.',
+      );
+    }
   } catch (error) {
     elements.productFormError.textContent = error.message;
     elements.productFormError.hidden = false;
   } finally {
     elements.saveProductButton.disabled = false;
     elements.saveProductButton.textContent = 'Agregar al catálogo';
+  }
+}
+
+function resetProductImagePreview() {
+  if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+  imagePreviewUrl = null;
+  elements.productImagePreview.hidden = true;
+  elements.productImagePreview.removeAttribute('src');
+  elements.productImagePlaceholder.hidden = false;
+}
+
+function openProductImageDialog(product) {
+  imageProduct = product;
+  elements.productImageForm.reset();
+  elements.productImageFormError.hidden = true;
+  elements.imageProductName.textContent = product.name;
+  elements.productImageAlt.value = product.name;
+  resetProductImagePreview();
+  elements.productImageDialog.showModal();
+  elements.productImageFile.focus();
+}
+
+function closeProductImageDialog() {
+  elements.productImageDialog.close();
+  resetProductImagePreview();
+  imageProduct = null;
+}
+
+function previewProductImage() {
+  const file = elements.productImageFile.files[0];
+  resetProductImagePreview();
+  if (!file) return;
+  try {
+    validateImageFile(file);
+    imagePreviewUrl = URL.createObjectURL(file);
+    elements.productImagePreview.src = imagePreviewUrl;
+    elements.productImagePreview.hidden = false;
+    elements.productImagePlaceholder.hidden = true;
+    elements.productImageFormError.hidden = true;
+  } catch (error) {
+    elements.productImageFile.value = '';
+    elements.productImageFormError.textContent = error.message;
+    elements.productImageFormError.hidden = false;
+  }
+}
+
+async function submitProductImage(event) {
+  event.preventDefault();
+  const file = elements.productImageFile.files[0];
+  elements.productImageFormError.hidden = true;
+  elements.saveProductImageButton.disabled = true;
+  elements.saveProductImageButton.textContent = 'Guardando fotografía…';
+  try {
+    await uploadProductImage(imageProduct.id, file, elements.productImageAlt.value);
+    closeProductImageDialog();
+    await loadCatalog();
+    showToast('Fotografía principal actualizada.');
+  } catch (error) {
+    elements.productImageFormError.textContent = error.message;
+    elements.productImageFormError.hidden = false;
+  } finally {
+    elements.saveProductImageButton.disabled = false;
+    elements.saveProductImageButton.textContent = 'Guardar fotografía';
+  }
+}
+
+function openCashDialog() {
+  if (!getActiveCompany() || !posSummary.registers.length) {
+    showToast('No hay una caja disponible para la empresa activa.');
+    return;
+  }
+  elements.openCashForm.reset();
+  syncCashRegisterOptions();
+  elements.openCashFormError.hidden = true;
+  elements.openCashDialog.showModal();
+  elements.cashRegisterId.focus();
+}
+
+function closeOpenCashDialog() {
+  elements.openCashDialog.close();
+}
+
+async function submitOpenCash(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.openCashForm);
+  elements.openCashFormError.hidden = true;
+  elements.saveOpenCashButton.disabled = true;
+  elements.saveOpenCashButton.textContent = 'Abriendo turno…';
+  try {
+    await getJson('/api/pos/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        cashRegisterId: formData.get('cashRegisterId'),
+        openingAmount: formData.get('openingAmount'),
+      }),
+    });
+    closeOpenCashDialog();
+    await loadPos();
+    showToast('Turno de caja abierto correctamente.');
+  } catch (error) {
+    elements.openCashFormError.textContent = error.message;
+    elements.openCashFormError.hidden = false;
+  } finally {
+    elements.saveOpenCashButton.disabled = false;
+    elements.saveOpenCashButton.textContent = 'Abrir turno de caja';
+  }
+}
+
+function openCloseCashDialog() {
+  if (!posSummary.openSession) return;
+  elements.closeCashForm.reset();
+  elements.closeCashFormError.hidden = true;
+  elements.closeCashDialog.showModal();
+  elements.closeCashForm.elements.closingAmount.focus();
+}
+
+function closeCloseCashDialog() {
+  elements.closeCashDialog.close();
+}
+
+async function submitCloseCash(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.closeCashForm);
+  elements.closeCashFormError.hidden = true;
+  elements.saveCloseCashButton.disabled = true;
+  elements.saveCloseCashButton.textContent = 'Cerrando turno…';
+  try {
+    await getJson(`/api/pos/sessions/${posSummary.openSession.id}/close`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ closingAmount: formData.get('closingAmount') }),
+    });
+    closeCloseCashDialog();
+    await loadPos();
+    showToast('Turno cerrado y efectivo registrado.');
+  } catch (error) {
+    elements.closeCashFormError.textContent = error.message;
+    elements.closeCashFormError.hidden = false;
+  } finally {
+    elements.saveCloseCashButton.disabled = false;
+    elements.saveCloseCashButton.textContent = 'Confirmar cierre';
   }
 }
 
@@ -1176,6 +1519,27 @@ elements.cancelProductButton.addEventListener('click', closeProductDialog);
 elements.productForm.addEventListener('submit', submitProduct);
 elements.productDialog.addEventListener('click', (event) => {
   if (event.target === elements.productDialog) closeProductDialog();
+});
+elements.productImageFile.addEventListener('change', previewProductImage);
+elements.closeProductImageDialog.addEventListener('click', closeProductImageDialog);
+elements.cancelProductImageButton.addEventListener('click', closeProductImageDialog);
+elements.productImageForm.addEventListener('submit', submitProductImage);
+elements.productImageDialog.addEventListener('click', (event) => {
+  if (event.target === elements.productImageDialog) closeProductImageDialog();
+});
+elements.openCashButton.addEventListener('click', openCashDialog);
+elements.closeCashButton.addEventListener('click', openCloseCashDialog);
+elements.closeOpenCashDialog.addEventListener('click', closeOpenCashDialog);
+elements.cancelOpenCashButton.addEventListener('click', closeOpenCashDialog);
+elements.openCashForm.addEventListener('submit', submitOpenCash);
+elements.openCashDialog.addEventListener('click', (event) => {
+  if (event.target === elements.openCashDialog) closeOpenCashDialog();
+});
+elements.closeCloseCashDialog.addEventListener('click', closeCloseCashDialog);
+elements.cancelCloseCashButton.addEventListener('click', closeCloseCashDialog);
+elements.closeCashForm.addEventListener('submit', submitCloseCash);
+elements.closeCashDialog.addEventListener('click', (event) => {
+  if (event.target === elements.closeCashDialog) closeCloseCashDialog();
 });
 elements.menuButton.addEventListener('click', () => toggleMenu());
 elements.sidebar.querySelectorAll('a').forEach((link) => {

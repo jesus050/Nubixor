@@ -75,11 +75,18 @@ La interfaz incluye:
 - listado, búsqueda y creación de bodegas por sucursal;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
+- fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
+- apertura y cierre de turnos de caja con registro del efectivo;
 - métricas y salud de servicios en vivo;
 - directorio de los 15 módulos planeados con su estado real.
 
 Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
 aún tienen únicamente modelo o API base se identifican como tales.
+
+En local, las fotografías se guardan en `public/uploads/product-images` y sus
+metadatos permanecen en PostgreSQL. Los archivos subidos no se incluyen en Git;
+deben formar parte de las copias de seguridad y migrarse a almacenamiento de
+objetos antes de un despliegue distribuido.
 
 Para probar que la vida no depende de la base:
 

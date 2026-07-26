@@ -24,7 +24,7 @@ function readPositiveInteger(name, value, fallback) {
 }
 
 function readBodyLimit(value) {
-  const limit = value || '1mb';
+  const limit = value || '3mb';
   if (!/^\d+(b|kb|mb|gb)$/i.test(limit)) {
     throw new Error('JSON_BODY_LIMIT debe usar un formato como 512kb o 1mb.');
   }

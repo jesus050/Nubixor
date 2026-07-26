@@ -34,6 +34,13 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Validación de pertenencia de las referencias del catálogo a la empresa activa.
 - Catálogo demostrativo pequeño para que la interfaz local muestre el flujo
   completo desde el primer arranque.
+- Imágenes principales para productos, almacenadas localmente con metadatos en
+  PostgreSQL y límite de 2 MB.
+- Acción para adjuntar o cambiar la fotografía de cualquier producto existente.
+- Base funcional de Caja y POS con caja física, apertura de turno, fondo
+  inicial, cierre y conteo de efectivo.
+- Ruta visual del POS que separa lo operativo de los próximos pasos de carrito,
+  cobro y salida de inventario.
 
 ## [0.1.1] - 2026-07-26
 
