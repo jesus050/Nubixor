@@ -135,6 +135,28 @@ const elements = {
   closeCloseCashDialog: document.querySelector('#closeCloseCashDialog'),
   cancelCloseCashButton: document.querySelector('#cancelCloseCashButton'),
   saveCloseCashButton: document.querySelector('#saveCloseCashButton'),
+  posWarehouseSelect: document.querySelector('#posWarehouseSelect'),
+  posProductSearch: document.querySelector('#posProductSearch'),
+  posProductGrid: document.querySelector('#posProductGrid'),
+  posCatalogState: document.querySelector('#posCatalogState'),
+  cartItems: document.querySelector('#cartItems'),
+  cartEmpty: document.querySelector('#cartEmpty'),
+  cartItemCount: document.querySelector('#cartItemCount'),
+  cartSubtotal: document.querySelector('#cartSubtotal'),
+  cartTax: document.querySelector('#cartTax'),
+  cartTotal: document.querySelector('#cartTotal'),
+  posPaymentMethod: document.querySelector('#posPaymentMethod'),
+  posSaleError: document.querySelector('#posSaleError'),
+  completeSaleButton: document.querySelector('#completeSaleButton'),
+  posSaleLock: document.querySelector('#posSaleLock'),
+  receiptDialog: document.querySelector('#receiptDialog'),
+  receiptNumber: document.querySelector('#receiptNumber'),
+  receiptLines: document.querySelector('#receiptLines'),
+  receiptSubtotal: document.querySelector('#receiptSubtotal'),
+  receiptTax: document.querySelector('#receiptTax'),
+  receiptTotal: document.querySelector('#receiptTotal'),
+  closeReceiptDialog: document.querySelector('#closeReceiptDialog'),
+  finishReceiptButton: document.querySelector('#finishReceiptButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -147,6 +169,8 @@ let brands = [];
 let taxCategories = [];
 let products = [];
 let posSummary = { registers: [], openSession: null };
+let posCatalog = [];
+const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
 let activeTenantId = readTenantPreference();
@@ -806,6 +830,241 @@ async function loadPos() {
   }
 }
 
+function setPosCatalogState(title, message, isError = false) {
+  elements.posProductGrid.replaceChildren();
+  elements.posCatalogState.hidden = false;
+  elements.posCatalogState.classList.toggle('error', isError);
+  elements.posCatalogState.querySelector('strong').textContent = title;
+  elements.posCatalogState.querySelector('p').textContent = message;
+}
+
+function calculateCartTotals() {
+  let total = 0;
+  let tax = 0;
+  let itemCount = 0;
+  for (const item of saleCart.values()) {
+    const lineTotal = Number(item.product.sale_price) * item.quantity;
+    const taxRate = Number(item.product.tax_rate) || 0;
+    total += lineTotal;
+    tax += taxRate > 0 ? lineTotal * taxRate / (100 + taxRate) : 0;
+    itemCount += item.quantity;
+  }
+  total = Math.round(total * 100) / 100;
+  tax = Math.round(tax * 100) / 100;
+  return {
+    subtotal: Math.round((total - tax) * 100) / 100,
+    tax,
+    total,
+    itemCount,
+  };
+}
+
+function renderPosCatalog() {
+  const search = normalizeSearch(elements.posProductSearch.value.trim());
+  const filtered = posCatalog.filter((product) => {
+    const searchable = normalizeSearch(`${product.name} ${product.sku}`);
+    return !search || searchable.includes(search);
+  });
+  elements.posProductGrid.replaceChildren();
+  elements.posCatalogState.hidden = filtered.length > 0;
+  elements.posCatalogState.classList.remove('error');
+
+  if (!filtered.length) {
+    elements.posCatalogState.querySelector('strong').textContent =
+      search ? 'No encontramos ese producto' : 'No hay productos disponibles';
+    elements.posCatalogState.querySelector('p').textContent =
+      search
+        ? 'Prueba con otro nombre o SKU.'
+        : 'Registra existencias en esta bodega para habilitar la venta.';
+  }
+
+  for (const product of filtered) {
+    const card = document.createElement('article');
+    card.className = 'pos-product-card';
+    const visual = product.image_url
+      ? document.createElement('img')
+      : document.createElement('span');
+    visual.className = 'pos-product-visual';
+    if (product.image_url) {
+      visual.src = product.image_url;
+      visual.alt = product.image_alt || product.name;
+    } else {
+      visual.textContent = product.name.slice(0, 1).toUpperCase();
+    }
+    const info = document.createElement('div');
+    info.className = 'pos-product-info';
+    const sku = document.createElement('small');
+    sku.textContent = product.sku;
+    const name = document.createElement('strong');
+    name.textContent = product.name;
+    const price = document.createElement('b');
+    price.textContent = formatCurrency(product.sale_price);
+    info.append(sku, name, price);
+
+    const footer = document.createElement('div');
+    footer.className = 'pos-product-footer';
+    const stock = Number(product.on_hand);
+    const stockLabel = document.createElement('span');
+    stockLabel.textContent = `${stock} disponibles`;
+    const currentQuantity = saleCart.get(product.id)?.quantity || 0;
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.textContent = stock <= 0 ? 'Sin existencias' : 'Agregar';
+    addButton.disabled =
+      stock <= 0 ||
+      currentQuantity >= stock ||
+      product.tax_review_status !== 'REVIEWED';
+    addButton.addEventListener('click', () => addProductToCart(product));
+    footer.append(stockLabel, addButton);
+    card.append(visual, info, footer);
+    elements.posProductGrid.append(card);
+  }
+}
+
+function addProductToCart(product) {
+  const current = saleCart.get(product.id);
+  const nextQuantity = (current?.quantity || 0) + 1;
+  if (nextQuantity > Number(product.on_hand)) {
+    showToast('No hay más existencias disponibles.');
+    return;
+  }
+  saleCart.set(product.id, { product, quantity: nextQuantity });
+  renderCart();
+  renderPosCatalog();
+}
+
+function changeCartQuantity(productId, change) {
+  const current = saleCart.get(productId);
+  if (!current) return;
+  const nextQuantity = current.quantity + change;
+  if (nextQuantity <= 0) saleCart.delete(productId);
+  else if (nextQuantity <= Number(current.product.on_hand)) {
+    saleCart.set(productId, { ...current, quantity: nextQuantity });
+  }
+  renderCart();
+  renderPosCatalog();
+}
+
+function renderCart() {
+  elements.cartItems.replaceChildren();
+  elements.cartEmpty.hidden = saleCart.size > 0;
+
+  for (const item of saleCart.values()) {
+    const row = document.createElement('div');
+    row.className = 'cart-item';
+    const info = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = item.product.name;
+    const detail = document.createElement('small');
+    detail.textContent = `${item.product.sku} · ${formatCurrency(item.product.sale_price)}`;
+    info.append(name, detail);
+
+    const controls = document.createElement('div');
+    controls.className = 'cart-quantity';
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.textContent = '−';
+    minus.setAttribute('aria-label', `Restar ${item.product.name}`);
+    minus.addEventListener('click', () => changeCartQuantity(item.product.id, -1));
+    const quantity = document.createElement('span');
+    quantity.textContent = String(item.quantity);
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.textContent = '+';
+    plus.disabled = item.quantity >= Number(item.product.on_hand);
+    plus.setAttribute('aria-label', `Agregar otro ${item.product.name}`);
+    plus.addEventListener('click', () => changeCartQuantity(item.product.id, 1));
+    controls.append(minus, quantity, plus);
+
+    const lineTotal = document.createElement('b');
+    lineTotal.textContent = formatCurrency(Number(item.product.sale_price) * item.quantity);
+    row.append(info, controls, lineTotal);
+    elements.cartItems.append(row);
+  }
+
+  const totals = calculateCartTotals();
+  elements.cartItemCount.textContent =
+    `${totals.itemCount} ${totals.itemCount === 1 ? 'artículo' : 'artículos'}`;
+  elements.cartSubtotal.textContent = formatCurrency(totals.subtotal);
+  elements.cartTax.textContent = formatCurrency(totals.tax);
+  elements.cartTotal.textContent = formatCurrency(totals.total);
+  elements.completeSaleButton.disabled =
+    !posSummary.openSession || !elements.posWarehouseSelect.value || saleCart.size === 0;
+  elements.posSaleError.hidden = true;
+}
+
+function clearCart() {
+  saleCart.clear();
+  renderCart();
+  renderPosCatalog();
+}
+
+async function loadPosCatalog() {
+  const warehouseId = elements.posWarehouseSelect.value;
+  if (!posSummary.openSession || !warehouseId) {
+    posCatalog = [];
+    setPosCatalogState(
+      'Abre un turno y selecciona una bodega',
+      'Los productos disponibles aparecerán aquí con sus existencias.',
+    );
+    renderCart();
+    return [];
+  }
+  try {
+    posCatalog = await getJson(`/api/pos/catalog?warehouseId=${encodeURIComponent(warehouseId)}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderPosCatalog();
+    renderCart();
+    return posCatalog;
+  } catch (error) {
+    posCatalog = [];
+    setPosCatalogState('No pudimos cargar las existencias', error.message, true);
+    renderCart();
+    throw error;
+  }
+}
+
+async function syncPosWorkstation() {
+  const session = posSummary.openSession;
+  const currentWarehouse = elements.posWarehouseSelect.value;
+  const eligibleWarehouses = session
+    ? warehouses.filter((warehouse) =>
+      warehouse.active &&
+      warehouse.branch_id === session.branch_id &&
+      warehouse.warehouse_type === 'AVAILABLE')
+    : [];
+  elements.posWarehouseSelect.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = eligibleWarehouses.length
+    ? 'Selecciona una bodega'
+    : 'Sin bodegas disponibles';
+  elements.posWarehouseSelect.append(placeholder);
+  for (const warehouse of eligibleWarehouses) {
+    const option = document.createElement('option');
+    option.value = warehouse.id;
+    option.textContent = `${warehouse.name} · ${warehouse.code}`;
+    elements.posWarehouseSelect.append(option);
+  }
+  elements.posWarehouseSelect.value = eligibleWarehouses.some(
+    (warehouse) => warehouse.id === currentWarehouse,
+  ) ? currentWarehouse : (eligibleWarehouses[0]?.id || '');
+  elements.posWarehouseSelect.disabled = !session || !eligibleWarehouses.length;
+  elements.posProductSearch.disabled = !session;
+  elements.posSaleLock.hidden = Boolean(session);
+  if (!session) {
+    posCatalog = [];
+    clearCart();
+    setPosCatalogState(
+      'Abre un turno y selecciona una bodega',
+      'Los productos disponibles aparecerán aquí con sus existencias.',
+    );
+    return;
+  }
+  await loadPosCatalog();
+}
+
 function setMetric(valueElement, detailElement, result, label) {
   if (result.status === 'fulfilled') {
     const count = Array.isArray(result.value) ? result.value.length : 0;
@@ -892,6 +1151,7 @@ async function refreshTenantData() {
     loadCatalog(),
     loadPos(),
   ]);
+  await syncPosWorkstation().catch(() => {});
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
   setMetric(elements.productCount, elements.productDetail, results[2], ['producto registrado', 'productos registrados']);
@@ -965,6 +1225,8 @@ async function submitCompany(event) {
     });
     closeCompanyDialog();
     activeTenantId = createdCompany.id;
+    saleCart.clear();
+    posCatalog = [];
     await loadCompanies();
     elements.companyCount.textContent = String(companies.length);
     elements.companyDetail.textContent =
@@ -1390,6 +1652,7 @@ async function submitOpenCash(event) {
     });
     closeOpenCashDialog();
     await loadPos();
+    await syncPosWorkstation();
     showToast('Turno de caja abierto correctamente.');
   } catch (error) {
     elements.openCashFormError.textContent = error.message;
@@ -1402,6 +1665,10 @@ async function submitOpenCash(event) {
 
 function openCloseCashDialog() {
   if (!posSummary.openSession) return;
+  if (saleCart.size) {
+    showToast('Termina o vacía la venta actual antes de cerrar la caja.');
+    return;
+  }
   elements.closeCashForm.reset();
   elements.closeCashFormError.hidden = true;
   elements.closeCashDialog.showModal();
@@ -1429,6 +1696,7 @@ async function submitCloseCash(event) {
     });
     closeCloseCashDialog();
     await loadPos();
+    await syncPosWorkstation();
     showToast('Turno cerrado y efectivo registrado.');
   } catch (error) {
     elements.closeCashFormError.textContent = error.message;
@@ -1436,6 +1704,63 @@ async function submitCloseCash(event) {
   } finally {
     elements.saveCloseCashButton.disabled = false;
     elements.saveCloseCashButton.textContent = 'Confirmar cierre';
+  }
+}
+
+function showReceipt(receipt) {
+  elements.receiptNumber.textContent = receipt.receiptNumber;
+  elements.receiptLines.replaceChildren();
+  for (const item of receipt.items) {
+    const line = document.createElement('div');
+    const description = document.createElement('span');
+    description.textContent = `${item.quantity} × ${item.name}`;
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(item.lineTotal);
+    line.append(description, amount);
+    elements.receiptLines.append(line);
+  }
+  elements.receiptSubtotal.textContent = formatCurrency(receipt.subtotal);
+  elements.receiptTax.textContent = formatCurrency(receipt.tax_total);
+  elements.receiptTotal.textContent = formatCurrency(receipt.total);
+  elements.receiptDialog.showModal();
+}
+
+function closeReceiptDialog() {
+  elements.receiptDialog.close();
+}
+
+async function completeSale() {
+  if (!posSummary.openSession || !saleCart.size) return;
+  elements.posSaleError.hidden = true;
+  elements.completeSaleButton.disabled = true;
+  elements.completeSaleButton.textContent = 'Confirmando venta…';
+  try {
+    const receipt = await getJson('/api/pos/sales', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        cashSessionId: posSummary.openSession.id,
+        warehouseId: elements.posWarehouseSelect.value,
+        paymentMethod: elements.posPaymentMethod.value,
+        items: [...saleCart.values()].map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+    saleCart.clear();
+    await loadPosCatalog();
+    showReceipt(receipt);
+    showToast('Venta registrada e inventario actualizado.');
+  } catch (error) {
+    elements.posSaleError.textContent = error.message;
+    elements.posSaleError.hidden = false;
+  } finally {
+    elements.completeSaleButton.textContent = 'Cobrar y descontar inventario →';
+    renderCart();
   }
 }
 
@@ -1453,6 +1778,8 @@ elements.warehouseSearch.addEventListener('input', renderWarehouses);
 elements.productSearch.addEventListener('input', renderProducts);
 elements.companyContext.addEventListener('change', async () => {
   activeTenantId = elements.companyContext.value;
+  saleCart.clear();
+  posCatalog = [];
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -1540,6 +1867,17 @@ elements.cancelCloseCashButton.addEventListener('click', closeCloseCashDialog);
 elements.closeCashForm.addEventListener('submit', submitCloseCash);
 elements.closeCashDialog.addEventListener('click', (event) => {
   if (event.target === elements.closeCashDialog) closeCloseCashDialog();
+});
+elements.posWarehouseSelect.addEventListener('change', async () => {
+  saleCart.clear();
+  await loadPosCatalog().catch(() => {});
+});
+elements.posProductSearch.addEventListener('input', renderPosCatalog);
+elements.completeSaleButton.addEventListener('click', completeSale);
+elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
+elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
+elements.receiptDialog.addEventListener('click', (event) => {
+  if (event.target === elements.receiptDialog) closeReceiptDialog();
 });
 elements.menuButton.addEventListener('click', () => toggleMenu());
 elements.sidebar.querySelectorAll('a').forEach((link) => {

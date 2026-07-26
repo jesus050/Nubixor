@@ -487,16 +487,86 @@
                     <span>02</span>
                     <div><strong>Turno de caja</strong><small>Apertura, fondo inicial y cierre.</small></div>
                   </li>
-                  <li>
+                  <li class="complete">
                     <span>03</span>
-                    <div><strong>Carrito y cobro</strong><small>Siguiente bloque funcional.</small></div>
+                    <div><strong>Carrito y cobro</strong><small>Productos, cantidades y medio de pago.</small></div>
                   </li>
-                  <li>
+                  <li class="complete">
                     <span>04</span>
-                    <div><strong>Salida de inventario</strong><small>Se conectará al confirmar la venta.</small></div>
+                    <div><strong>Salida de inventario</strong><small>Movimiento automático al confirmar.</small></div>
                   </li>
                 </ol>
               </article>
+            </div>
+
+            <div class="pos-workstation" id="posSalePanel">
+              <div class="pos-workstation-heading">
+                <div>
+                  <p class="eyebrow">Venta rápida</p>
+                  <h3>Registrar una venta</h3>
+                </div>
+                <div class="pos-filters">
+                  <label>
+                    <span>Bodega de salida</span>
+                    <select id="posWarehouseSelect">
+                      <option value="">Selecciona una bodega</option>
+                    </select>
+                  </label>
+                  <label class="field-search pos-search">
+                    <span aria-hidden="true">⌕</span>
+                    <span class="sr-only">Buscar producto para vender</span>
+                    <input id="posProductSearch" type="search" placeholder="Buscar producto o SKU">
+                  </label>
+                </div>
+              </div>
+
+              <div class="sale-layout">
+                <div class="pos-catalog">
+                  <div class="pos-product-grid" id="posProductGrid"></div>
+                  <div class="pos-empty" id="posCatalogState">
+                    <strong>Abre un turno y selecciona una bodega</strong>
+                    <p>Los productos disponibles aparecerán aquí con sus existencias.</p>
+                  </div>
+                </div>
+
+                <aside class="cart-panel" aria-labelledby="cartTitle">
+                  <div class="cart-heading">
+                    <div>
+                      <small>Venta actual</small>
+                      <h3 id="cartTitle">Carrito</h3>
+                    </div>
+                    <span id="cartItemCount">0 artículos</span>
+                  </div>
+                  <div class="cart-items" id="cartItems"></div>
+                  <div class="cart-empty" id="cartEmpty">
+                    <span aria-hidden="true">＋</span>
+                    <strong>Carrito vacío</strong>
+                    <p>Agrega productos desde el catálogo.</p>
+                  </div>
+                  <div class="cart-summary">
+                    <div><span>Subtotal</span><strong id="cartSubtotal">$0</strong></div>
+                    <div><span>Impuestos incluidos</span><strong id="cartTax">$0</strong></div>
+                    <div class="cart-total"><span>Total</span><strong id="cartTotal">$0</strong></div>
+                  </div>
+                  <label class="form-field cart-payment">
+                    <span>Medio de pago</span>
+                    <select id="posPaymentMethod">
+                      <option value="CASH">Efectivo</option>
+                      <option value="CARD">Tarjeta</option>
+                      <option value="TRANSFER">Transferencia</option>
+                    </select>
+                  </label>
+                  <p class="form-error" id="posSaleError" role="alert" hidden></p>
+                  <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
+                    Cobrar y descontar inventario <span aria-hidden="true">→</span>
+                  </button>
+                </aside>
+              </div>
+
+              <div class="pos-lock" id="posSaleLock">
+                <span aria-hidden="true">◎</span>
+                <strong>La venta rápida se habilita al abrir un turno de caja.</strong>
+              </div>
             </div>
           </section>
 
@@ -610,10 +680,10 @@
                 <span class="module-number">13</span>
                 <div class="module-symbol rose" aria-hidden="true">VE</div>
                 <h3>Ventas &amp; POS</h3>
-                <p>Apertura y cierre de caja preparados para conectar el flujo de venta.</p>
+                <p>Turnos, carrito, cobro, comprobante y salida controlada de inventario.</p>
                 <div class="module-footer">
-                  <span class="module-state build">Base operativa</span>
-                  <a class="module-action" href="#caja">Abrir caja <span>→</span></a>
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#caja">Abrir POS <span>→</span></a>
                 </div>
               </article>
               <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
@@ -1107,6 +1177,33 @@
           <button class="primary-button compact" id="saveCloseCashButton" type="submit">Confirmar cierre</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="company-dialog receipt-dialog" id="receiptDialog" aria-labelledby="receiptDialogTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Venta confirmada</p>
+            <h2 id="receiptDialogTitle">Comprobante <span id="receiptNumber">—</span></h2>
+          </div>
+          <button class="icon-button" id="closeReceiptDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="receipt-check" aria-hidden="true">✓</div>
+        <p class="receipt-message">
+          La venta quedó registrada y las existencias fueron descontadas de la bodega seleccionada.
+        </p>
+        <div class="receipt-lines" id="receiptLines"></div>
+        <div class="receipt-totals">
+          <div><span>Subtotal</span><strong id="receiptSubtotal">$0</strong></div>
+          <div><span>Impuestos incluidos</span><strong id="receiptTax">$0</strong></div>
+          <div><span>Total cobrado</span><strong id="receiptTotal">$0</strong></div>
+        </div>
+        <div class="dialog-actions">
+          <button class="primary-button compact" id="finishReceiptButton" type="button">
+            Iniciar nueva venta
+          </button>
+        </div>
+      </div>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

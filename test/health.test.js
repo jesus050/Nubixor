@@ -18,6 +18,7 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Agregar al catálogo/);
   assert.match(response.text, /Adjuntar fotografía/);
   assert.match(response.text, /Abrir turno de caja/);
+  assert.match(response.text, /Cobrar y descontar inventario/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -136,6 +137,22 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     .send({ closingAmount: 0 })
     .expect(422);
   assert.equal(invalidSession.body.error, 'El turno debe tener un UUID válido.');
+
+  const invalidCatalog = await request(app)
+    .get('/api/pos/catalog?warehouseId=invalid')
+    .set(headers)
+    .expect(422);
+  assert.equal(invalidCatalog.body.error, 'warehouseId debe ser un UUID válido.');
+
+  const emptySale = await request(app)
+    .post('/api/pos/sales')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.equal(
+    emptySale.body.error,
+    'cashSessionId, warehouseId, paymentMethod e items son obligatorios.',
+  );
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

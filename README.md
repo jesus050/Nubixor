@@ -77,6 +77,8 @@ La interfaz incluye:
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
 - apertura y cierre de turnos de caja con registro del efectivo;
+- venta rápida con carrito, medios de pago, comprobante y salida transaccional
+  de inventario;
 - métricas y salud de servicios en vivo;
 - directorio de los 15 módulos planeados con su estado real.
 

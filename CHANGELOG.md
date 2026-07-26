@@ -41,6 +41,13 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   inicial, cierre y conteo de efectivo.
 - Ruta visual del POS que separa lo operativo de los próximos pasos de carrito,
   cobro y salida de inventario.
+- Venta rápida con catálogo por bodega, existencias disponibles, búsqueda,
+  carrito y control de cantidades.
+- Cobros en efectivo, tarjeta o transferencia vinculados al turno abierto.
+- Comprobante POS con fotografía histórica de nombre, SKU, precio, costo e
+  impuesto de cada producto vendido.
+- Descuento transaccional de existencias mediante movimientos de inventario,
+  impidiendo ventas con stock insuficiente.
 
 ## [0.1.1] - 2026-07-26
 
