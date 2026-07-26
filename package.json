@@ -8,12 +8,25 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "migrate": "node src/migrate.js",
-    "check": "node --check src/server.js && node --check src/app.js"
+    "services:up": "docker compose up -d postgres redis",
+    "services:down": "docker compose down",
+    "services:wait": "node scripts/wait-for-services.js",
+    "setup:local": "npm run services:up && npm run services:wait && npm run migrate",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/migrate.js && node --test"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "helmet": "^8.0.0",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10"
   }
 }

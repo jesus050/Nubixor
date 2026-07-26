@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
 import { writeAudit } from '../audit.js';
+import { asyncHandler } from '../shared/async-handler.js';
 const router = Router();
 router.use(requireTenant);
-router.get('/balances', async (req, res) => {
+router.get('/balances', asyncHandler(async (req, res) => {
   const result = await query(`SELECT ib.*,p.sku,p.name,w.name warehouse_name FROM inventory_balances ib JOIN products p ON p.id=ib.product_id JOIN warehouses w ON w.id=ib.warehouse_id WHERE ib.tenant_id=$1 ORDER BY p.name,w.name`,[req.context.tenantId]);
   res.json(result.rows);
-});
-router.post('/movements', async (req, res) => {
+}));
+router.post('/movements', asyncHandler(async (req, res) => {
   const { productId, warehouseId, movementType, quantity, unitCost = 0, reason, referenceType = null, referenceId = null } = req.body;
   if (!productId || !warehouseId || !movementType || !quantity || !reason) return res.status(422).json({ error:'productId, warehouseId, movementType, quantity y reason son obligatorios.' });
   const signed = ['PURCHASE','RETURN_IN','TRANSFER_IN','ADJUSTMENT_IN'].includes(movementType) ? Math.abs(Number(quantity)) : -Math.abs(Number(quantity));
@@ -20,5 +21,5 @@ router.post('/movements', async (req, res) => {
     return { movement:created.rows[0], balance:balance.rows[0] };
   });
   res.status(201).json(movement);
-});
+}));
 export default router;

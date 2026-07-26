@@ -2,13 +2,14 @@ import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
 import { writeAudit } from '../audit.js';
+import { asyncHandler } from '../shared/async-handler.js';
 const router = Router();
 router.use(requireTenant);
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   const result = await query(`SELECT p.*, tc.name tax_name, tc.rate tax_rate FROM products p LEFT JOIN tax_categories tc ON tc.id=p.sales_tax_category_id WHERE p.tenant_id=$1 AND p.deleted_at IS NULL ORDER BY p.name`, [req.context.tenantId]);
   res.json(result.rows);
-});
-router.post('/', async (req, res) => {
+}));
+router.post('/', asyncHandler(async (req, res) => {
   const { sku, name, barcode = null, category = null, salesTaxCategoryId = null, cost = 0, salePrice = 0 } = req.body;
   if (!sku || !name) return res.status(422).json({ error: 'sku y name son obligatorios.' });
   const product = await withTransaction(async (client) => {
@@ -17,8 +18,8 @@ router.post('/', async (req, res) => {
     return result.rows[0];
   });
   res.status(201).json(product);
-});
-router.patch('/:id/tax', async (req, res) => {
+}));
+router.patch('/:id/tax', asyncHandler(async (req, res) => {
   const { taxCategoryId, reason } = req.body;
   if (!taxCategoryId || !reason) return res.status(422).json({ error: 'taxCategoryId y reason son obligatorios.' });
   const product = await withTransaction(async (client) => {
@@ -30,5 +31,5 @@ router.patch('/:id/tax', async (req, res) => {
     return updated.rows[0];
   });
   res.json(product);
-});
+}));
 export default router;

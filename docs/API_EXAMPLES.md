@@ -1,5 +1,16 @@
 # Ejemplos
 
+## Salud
+
+```bash
+curl http://localhost:4100/
+curl http://localhost:4100/api/health
+curl -i http://localhost:4100/api/health/ready
+```
+
+La prueba de vida no consulta dependencias. La prueba de disponibilidad devuelve
+`503` si PostgreSQL o Redis no responden, pero la API continúa en ejecución.
+
 ## Crear producto
 ```bash
 curl -X POST http://localhost:4100/api/products \

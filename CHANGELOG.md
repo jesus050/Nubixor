@@ -1,0 +1,30 @@
+# Changelog
+
+Todos los cambios relevantes de MegaSuite se documentan en este archivo.
+
+## [0.1.1] - 2026-07-26
+
+### Añadido
+
+- Rutas `GET /`, `GET /api/health` y `GET /api/health/ready`.
+- Comprobaciones reales e independientes de PostgreSQL y Redis.
+- Validación temprana de variables de entorno.
+- Logs JSON de arranque, peticiones, errores, migraciones y apagado.
+- Manejo centralizado de errores asíncronos.
+- Pruebas automáticas de salud y disponibilidad.
+- Servicios Redis y healthchecks en Docker Compose.
+- Scripts npm para levantar, esperar y preparar servicios locales.
+
+### Cambiado
+
+- La API de Compose se ejecuta mediante el perfil opcional `full`, evitando
+  conflictos con `npm run dev`.
+- Las migraciones se serializan mediante un advisory lock de PostgreSQL.
+- CORS es configurable, Helmet protege las cabeceras y el servidor se apaga
+  ordenadamente.
+
+### Seguridad
+
+- Las credenciales de ejemplo se limitan al desarrollo local.
+- Se ignoran archivos `.env`, logs y dependencias.
+- Los logs no incluyen cabeceras, cuerpos de petición ni URLs de conexión.
