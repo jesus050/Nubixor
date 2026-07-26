@@ -44,6 +44,10 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Registrar pago/);
   assert.match(response.text, /Dinero e inventario/);
   assert.match(response.text, /id="dashboardPayable"/);
+  assert.match(response.text, /data-view="usuarios"/);
+  assert.match(response.text, /Equipo y accesos/);
+  assert.match(response.text, /Invitar persona/);
+  assert.match(response.text, /Roles y permisos/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -297,6 +301,15 @@ test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQ
     .send({})
     .expect(422);
   assert.match(payment.body.error, /UUID válido/i);
+});
+
+test('usuarios exige identidad antes de consultar membresías y permisos', async () => {
+  const application = createApp();
+  const response = await request(application)
+    .get('/api/users/summary')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .expect(401);
+  assert.equal(response.body.code, 'USER_CONTEXT_REQUIRED');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

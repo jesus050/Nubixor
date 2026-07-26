@@ -59,6 +59,8 @@ npm test
   aplicación de abonos.
 - `/#cuentas-pagar` abre obligaciones con proveedores, vencimientos y registro
   de pagos parciales o totales.
+- `/#usuarios` abre el equipo de la empresa, sus roles, permisos, alcance por
+  sucursal y estado de acceso.
 - `/#inventario` abre existencias valorizadas, kardex, ajustes, transferencias
   y la herramienta secundaria de conteo físico.
 - `/#conteos` se conserva como enlace compatible y redirige al módulo
@@ -94,6 +96,12 @@ La interfaz incluye:
   promedio de forma transaccional;
 - cuentas por pagar originadas en compras recibidas o registradas manualmente,
   con edades de vencimiento e historial de pagos;
+- equipo separado por empresa con invitaciones, estados activo/invitado/
+  suspendido y alcance opcional por sucursal;
+- cinco roles base protegidos, roles personalizados y permisos explícitos por
+  operación;
+- protección del último propietario y creación automática de la estructura de
+  acceso para cada empresa nueva;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
@@ -106,8 +114,13 @@ La interfaz incluye:
 - directorio de los 17 módulos previstos con su estado real.
 
 Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
-`#productos`, `#caja` y `#cuentas-pagar`, por lo que pueden guardarse como
-favoritos sin configurar rutas adicionales en el servidor.
+`#productos`, `#caja`, `#cuentas-pagar` y `#usuarios`, por lo que pueden
+guardarse como favoritos sin configurar rutas adicionales en el servidor.
+
+La fase actual usa al administrador local sembrado para gestionar usuarios.
+La autorización del módulo ya se comprueba en el servidor mediante permisos;
+el inicio de sesión, recuperación de cuenta y aplicación de permisos a todos
+los módulos forman parte de la siguiente fase de fortalecimiento.
 
 Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
 aún tienen únicamente modelo o API base se identifican como tales.

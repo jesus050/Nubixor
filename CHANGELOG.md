@@ -6,6 +6,15 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Centro de Usuarios y accesos separado por empresa, con búsqueda, filtros,
+  detalle de cada persona y alcance opcional por sucursal.
+- Invitaciones y actualización de membresías con estados invitado, activo y
+  suspendido.
+- Roles base Propietario, Administrador, Operaciones, Caja y Auditor, más roles
+  personalizados con matriz explícita de permisos.
+- Autorización del lado del servidor para administrar usuarios y roles.
+- Protección transaccional del último propietario activo.
+- Inicialización automática de roles y propietario al crear una empresa.
 - Módulo separado de Cuentas por pagar con obligaciones originadas en compras
   recibidas o registradas directamente para un proveedor.
 - Vencimientos, saldo pendiente, pagos parciales o totales e historial

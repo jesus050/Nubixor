@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { query } from '../db.js';
+import { query, withTransaction } from '../db.js';
+import { bootstrapTenantAccess } from '../authorization.js';
 import { asyncHandler } from '../shared/async-handler.js';
 const router = Router();
 router.get('/', asyncHandler(async (_req, res) => {
@@ -17,12 +18,19 @@ router.post('/', asyncHandler(async (req, res) => {
   if (normalizedLegalName.length > 160 || normalizedTradeName?.length > 160 || normalizedTaxId?.length > 40) {
     return res.status(422).json({ error: 'Uno o más campos superan la longitud permitida.' });
   }
-  const result = await query(
-    `INSERT INTO tenants(legal_name, trade_name, tax_id)
-     VALUES($1,$2,$3)
-     RETURNING id, legal_name, trade_name, tax_id, status, created_at`,
-    [normalizedLegalName, normalizedTradeName, normalizedTaxId],
-  );
-  res.status(201).json(result.rows[0]);
+  const company = await withTransaction(async (client) => {
+    const result = await client.query(
+      `INSERT INTO tenants(legal_name, trade_name, tax_id)
+       VALUES($1,$2,$3)
+       RETURNING id, legal_name, trade_name, tax_id, status, created_at`,
+      [normalizedLegalName, normalizedTradeName, normalizedTaxId],
+    );
+    await bootstrapTenantAccess(client, {
+      tenantId: result.rows[0].id,
+      ownerUserId: req.context.userId,
+    });
+    return result.rows[0];
+  });
+  res.status(201).json(company);
 }));
 export default router;

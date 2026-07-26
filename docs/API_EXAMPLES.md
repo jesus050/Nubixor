@@ -151,6 +151,29 @@ Un pago se aplica con `POST /api/payables/invoices/:id/payments`, enviando
 `amount`, `paymentDate`, `method`, `reference` y `notes`. La API impide pagar
 por encima del saldo pendiente y actualiza el estado a `PARTIAL` o `PAID`.
 
+## Usuarios, roles y permisos
+
+El centro está disponible en `/#usuarios`. Durante esta fase local, las rutas
+protegidas requieren empresa y usuario:
+
+```bash
+curl http://localhost:4100/api/users/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -H 'x-user-id: 50000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/users/roles \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -H 'x-user-id: 50000000-0000-0000-0000-000000000001'
+```
+
+Una invitación usa `POST /api/users/invite` con `fullName`, `email`, `roleId`
+y, opcionalmente, `jobTitle`, `phone`, `branchId` y `reason`. La membresía se
+actualiza con `PATCH /api/users/:id`.
+
+Los roles personalizados usan `POST /api/users/roles`; sus permisos pueden
+actualizarse con `PATCH /api/users/roles/:id`. Los roles base no se editan y la
+API impide suspender o degradar al último propietario activo.
+
 ## Conteos físicos programados
 
 ```bash

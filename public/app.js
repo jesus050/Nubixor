@@ -1,4 +1,5 @@
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const DEMO_USER_ID = '50000000-0000-0000-0000-000000000001';
 const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:4100' : '';
 
 function resolvePublicAsset(path) {
@@ -416,6 +417,60 @@ const elements = {
   closePayablePaymentDialog: document.querySelector('#closePayablePaymentDialog'),
   cancelPayablePaymentButton: document.querySelector('#cancelPayablePaymentButton'),
   savePayablePaymentButton: document.querySelector('#savePayablePaymentButton'),
+  userTotalMembers: document.querySelector('#userTotalMembers'),
+  userActiveMembers: document.querySelector('#userActiveMembers'),
+  userPendingInvites: document.querySelector('#userPendingInvites'),
+  userRolesInUse: document.querySelector('#userRolesInUse'),
+  showTeamPanelButton: document.querySelector('#showTeamPanelButton'),
+  showRolesPanelButton: document.querySelector('#showRolesPanelButton'),
+  teamPanel: document.querySelector('#teamPanel'),
+  rolesPanel: document.querySelector('#rolesPanel'),
+  userSearch: document.querySelector('#userSearch'),
+  userStatusFilter: document.querySelector('#userStatusFilter'),
+  reloadUsersButton: document.querySelector('#reloadUsersButton'),
+  userRecordCount: document.querySelector('#userRecordCount'),
+  userList: document.querySelector('#userList'),
+  userDataState: document.querySelector('#userDataState'),
+  userDetailEmpty: document.querySelector('#userDetailEmpty'),
+  userDetailContent: document.querySelector('#userDetailContent'),
+  userDetailAvatar: document.querySelector('#userDetailAvatar'),
+  userDetailRole: document.querySelector('#userDetailRole'),
+  userDetailName: document.querySelector('#userDetailName'),
+  userDetailEmail: document.querySelector('#userDetailEmail'),
+  userDetailStatus: document.querySelector('#userDetailStatus'),
+  userDetailJob: document.querySelector('#userDetailJob'),
+  userDetailBranch: document.querySelector('#userDetailBranch'),
+  userDetailJoined: document.querySelector('#userDetailJoined'),
+  userDetailLastLogin: document.querySelector('#userDetailLastLogin'),
+  userDetailPermissionCount: document.querySelector('#userDetailPermissionCount'),
+  userDetailPermissions: document.querySelector('#userDetailPermissions'),
+  inviteUserButton: document.querySelector('#inviteUserButton'),
+  editUserButton: document.querySelector('#editUserButton'),
+  roleGrid: document.querySelector('#roleGrid'),
+  roleDataState: document.querySelector('#roleDataState'),
+  newRoleButton: document.querySelector('#newRoleButton'),
+  userDialog: document.querySelector('#userDialog'),
+  userForm: document.querySelector('#userForm'),
+  userDialogEyebrow: document.querySelector('#userDialogEyebrow'),
+  userDialogTitle: document.querySelector('#userDialogTitle'),
+  userDialogCopy: document.querySelector('#userDialogCopy'),
+  userEmailInput: document.querySelector('#userEmailInput'),
+  userRoleId: document.querySelector('#userRoleId'),
+  userBranchId: document.querySelector('#userBranchId'),
+  userStatusField: document.querySelector('#userStatusField'),
+  userStatus: document.querySelector('#userStatus'),
+  userFormError: document.querySelector('#userFormError'),
+  closeUserDialog: document.querySelector('#closeUserDialog'),
+  cancelUserButton: document.querySelector('#cancelUserButton'),
+  saveUserButton: document.querySelector('#saveUserButton'),
+  roleDialog: document.querySelector('#roleDialog'),
+  roleForm: document.querySelector('#roleForm'),
+  roleDialogTitle: document.querySelector('#roleDialogTitle'),
+  rolePermissionPicker: document.querySelector('#rolePermissionPicker'),
+  roleFormError: document.querySelector('#roleFormError'),
+  closeRoleDialog: document.querySelector('#closeRoleDialog'),
+  cancelRoleButton: document.querySelector('#cancelRoleButton'),
+  saveRoleButton: document.querySelector('#saveRoleButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -443,6 +498,12 @@ let selectedPurchase = null;
 let payableInvoices = [];
 let payableSources = { suppliers: [], purchases: [] };
 let selectedPayable = null;
+let teamUsers = [];
+let accessRoles = [];
+let accessPermissions = [];
+let selectedTeamUser = null;
+let editingTeamUser = null;
+let editingAccessRole = null;
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -2736,6 +2797,459 @@ async function submitPayablePayment(event) {
   }
 }
 
+function accessRequestHeaders() {
+  return {
+    'x-tenant-id': activeTenantId,
+    'x-user-id': DEMO_USER_ID,
+  };
+}
+
+function userInitials(name = '') {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'US';
+}
+
+function userStatusMeta(status) {
+  const statuses = {
+    ACTIVE: { label: 'Activo', className: 'active' },
+    INVITED: { label: 'Invitado', className: 'invited' },
+    SUSPENDED: { label: 'Suspendido', className: 'suspended' },
+  };
+  return statuses[status] || statuses.SUSPENDED;
+}
+
+function permissionName(code) {
+  return accessPermissions.find((permission) => permission.code === code)?.name || code;
+}
+
+function roleForUser(user) {
+  return accessRoles.find((role) => role.id === user.role_id) || null;
+}
+
+function setUserSummary(summary = {}) {
+  elements.userTotalMembers.textContent = String(summary.total_members || 0);
+  elements.userActiveMembers.textContent = String(summary.active_members || 0);
+  elements.userPendingInvites.textContent = String(summary.pending_invites || 0);
+  elements.userRolesInUse.textContent = String(summary.roles_in_use || 0);
+}
+
+function showUsersError(message) {
+  teamUsers = [];
+  accessRoles = [];
+  accessPermissions = [];
+  selectedTeamUser = null;
+  setUserSummary();
+  elements.userList.replaceChildren();
+  elements.roleGrid.replaceChildren();
+  elements.userDataState.hidden = false;
+  elements.userDataState.classList.add('error');
+  elements.userDataState.querySelector('strong').textContent =
+    'No pudimos consultar el equipo';
+  elements.userDataState.querySelector('p').textContent = message;
+  elements.roleDataState.hidden = false;
+  elements.roleDataState.classList.add('error');
+  elements.roleDataState.querySelector('strong').textContent =
+    'No pudimos consultar los roles';
+  elements.roleDataState.querySelector('p').textContent = message;
+  elements.userRecordCount.textContent = '—';
+  elements.userDetailContent.hidden = true;
+  elements.userDetailEmpty.hidden = false;
+}
+
+function renderUserList() {
+  const search = normalizeSearch(elements.userSearch.value.trim());
+  const filter = elements.userStatusFilter.value;
+  const filtered = teamUsers.filter((user) => {
+    const matchesSearch = !search || normalizeSearch([
+      user.full_name,
+      user.email,
+      user.job_title,
+      user.role_name,
+      user.branch_name,
+    ].filter(Boolean).join(' ')).includes(search);
+    return matchesSearch && (filter === 'ALL' || user.status === filter);
+  });
+  elements.userList.replaceChildren();
+  elements.userRecordCount.textContent = String(filtered.length);
+  elements.userDataState.hidden = filtered.length > 0;
+  elements.userDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.userDataState.querySelector('strong').textContent =
+      search || filter !== 'ALL' ? 'No hay coincidencias' : 'No hay personas';
+    elements.userDataState.querySelector('p').textContent =
+      search || filter !== 'ALL'
+        ? 'Cambia la búsqueda o consulta todos los estados.'
+        : 'Invita a la primera persona para organizar el equipo.';
+    return;
+  }
+  for (const user of filtered) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'user-card';
+    if (selectedTeamUser?.id === user.id) button.classList.add('selected');
+    const avatar = document.createElement('span');
+    avatar.className = 'user-avatar';
+    avatar.textContent = userInitials(user.full_name);
+    const main = document.createElement('span');
+    main.className = 'user-card-main';
+    const name = document.createElement('strong');
+    name.textContent = user.full_name;
+    const email = document.createElement('span');
+    email.textContent = user.email;
+    const scope = document.createElement('small');
+    scope.textContent =
+      `${user.role_name} · ${user.branch_name || 'Toda la empresa'}`;
+    main.append(name, email, scope);
+    const side = document.createElement('span');
+    side.className = 'user-card-side';
+    const statusMeta = userStatusMeta(user.status);
+    const status = document.createElement('span');
+    status.className = `user-status ${statusMeta.className}`;
+    status.textContent = statusMeta.label;
+    const activity = document.createElement('small');
+    activity.textContent = user.last_login_at ? 'Con actividad' : 'Sin ingreso';
+    side.append(status, activity);
+    button.append(avatar, main, side);
+    button.addEventListener('click', () => selectTeamUser(user.id));
+    elements.userList.append(button);
+  }
+}
+
+function renderUserDetail(user) {
+  selectedTeamUser = user;
+  const role = roleForUser(user);
+  const permissions = role?.permissions || [];
+  const status = userStatusMeta(user.status);
+  elements.userDetailEmpty.hidden = true;
+  elements.userDetailContent.hidden = false;
+  elements.userDetailAvatar.textContent = userInitials(user.full_name);
+  elements.userDetailRole.textContent = user.role_name;
+  elements.userDetailName.textContent = user.full_name;
+  elements.userDetailEmail.textContent = user.email;
+  elements.userDetailStatus.textContent = status.label;
+  elements.userDetailStatus.className = `user-status ${status.className}`;
+  elements.userDetailJob.textContent = user.job_title || 'Sin cargo registrado';
+  elements.userDetailBranch.textContent = user.branch_name || 'Toda la empresa';
+  elements.userDetailJoined.textContent =
+    user.joined_at ? formatShortDate(user.joined_at) : 'Pendiente';
+  elements.userDetailLastLogin.textContent =
+    user.last_login_at ? formatShortDate(user.last_login_at) : 'Sin ingreso';
+  elements.userDetailPermissionCount.textContent =
+    `${permissions.length} ${permissions.length === 1 ? 'acceso' : 'accesos'}`;
+  elements.userDetailPermissions.replaceChildren();
+  const visiblePermissions = permissions.slice(0, 6);
+  for (const code of visiblePermissions) {
+    const tag = document.createElement('span');
+    tag.textContent = permissionName(code);
+    elements.userDetailPermissions.append(tag);
+  }
+  if (permissions.length > visiblePermissions.length) {
+    const more = document.createElement('span');
+    more.textContent = `+${permissions.length - visiblePermissions.length} más`;
+    elements.userDetailPermissions.append(more);
+  }
+  renderUserList();
+}
+
+function selectTeamUser(userId) {
+  const user = teamUsers.find((item) => item.id === userId);
+  if (user) renderUserDetail(user);
+}
+
+function renderRoles() {
+  elements.roleGrid.replaceChildren();
+  elements.roleDataState.hidden = accessRoles.length > 0;
+  elements.roleDataState.classList.remove('error');
+  if (!accessRoles.length) {
+    elements.roleDataState.querySelector('strong').textContent = 'No hay roles';
+    elements.roleDataState.querySelector('p').textContent =
+      'Crea un rol para organizar los permisos.';
+    return;
+  }
+  for (const role of accessRoles) {
+    const card = document.createElement('article');
+    card.className = 'role-card';
+    const top = document.createElement('div');
+    top.className = 'role-card-top';
+    const icon = document.createElement('span');
+    icon.className = `role-icon ${role.color.toLocaleLowerCase('es')}`;
+    icon.textContent = role.code === 'OWNER' ? '★' : userInitials(role.name);
+    const type = document.createElement('span');
+    type.className = 'role-base-label';
+    type.textContent = role.is_system ? 'Rol base' : 'Personalizado';
+    top.append(icon, type);
+    const name = document.createElement('h4');
+    name.textContent = role.name;
+    const description = document.createElement('p');
+    description.textContent = role.description || 'Perfil de acceso personalizado.';
+    const tags = document.createElement('div');
+    tags.className = 'role-card-permissions';
+    for (const permission of role.permissions.slice(0, 4)) {
+      const tag = document.createElement('span');
+      tag.textContent = permissionName(permission);
+      tags.append(tag);
+    }
+    if (role.permissions.length > 4) {
+      const tag = document.createElement('span');
+      tag.textContent = `+${role.permissions.length - 4}`;
+      tags.append(tag);
+    }
+    const footer = document.createElement('div');
+    footer.className = 'role-card-footer';
+    const members = document.createElement('span');
+    members.textContent =
+      `${role.member_count} ${Number(role.member_count) === 1 ? 'persona' : 'personas'}`;
+    if (role.is_system) {
+      const protectedLabel = document.createElement('span');
+      protectedLabel.className = 'role-base-label';
+      protectedLabel.textContent = 'Protegido';
+      footer.append(members, protectedLabel);
+    } else {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'role-edit-button';
+      edit.textContent = 'Editar permisos';
+      edit.addEventListener('click', () => openRoleDialog(role));
+      footer.append(members, edit);
+    }
+    card.append(top, name, description, tags, footer);
+    elements.roleGrid.append(card);
+  }
+}
+
+async function loadUsers() {
+  if (!activeTenantId) {
+    showUsersError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const headers = accessRequestHeaders();
+    const [summary, roles, permissions, users] = await Promise.all([
+      getJson('/api/users/summary', { headers }),
+      getJson('/api/users/roles', { headers }),
+      getJson('/api/users/permissions', { headers }),
+      getJson('/api/users', { headers }),
+    ]);
+    accessRoles = roles;
+    accessPermissions = permissions;
+    teamUsers = users;
+    setUserSummary(summary);
+    renderRoles();
+    renderUserList();
+    if (selectedTeamUser) {
+      const current = users.find((user) => user.id === selectedTeamUser.id);
+      if (current) renderUserDetail(current);
+      else selectedTeamUser = null;
+    }
+    if (!selectedTeamUser && users.length) selectTeamUser(users[0].id);
+    return users;
+  } catch (error) {
+    showUsersError(error.message);
+    throw error;
+  }
+}
+
+function showUserPanel(panel) {
+  const roles = panel === 'roles';
+  elements.teamPanel.hidden = roles;
+  elements.rolesPanel.hidden = !roles;
+  elements.showTeamPanelButton.classList.toggle('active', !roles);
+  elements.showRolesPanelButton.classList.toggle('active', roles);
+  elements.showTeamPanelButton.setAttribute('aria-selected', String(!roles));
+  elements.showRolesPanelButton.setAttribute('aria-selected', String(roles));
+}
+
+function fillUserFormSelects() {
+  fillInventorySelect(
+    elements.userRoleId,
+    'Selecciona un rol',
+    accessRoles,
+    (role) => `${role.name} · ${role.permissions.length} accesos`,
+  );
+  fillInventorySelect(
+    elements.userBranchId,
+    'Toda la empresa',
+    branches,
+    (branch) => `${branch.name} · ${branch.code}`,
+  );
+}
+
+function openInviteUserDialog() {
+  editingTeamUser = null;
+  elements.userForm.reset();
+  elements.userFormError.hidden = true;
+  elements.userDialogEyebrow.textContent = 'Nueva persona';
+  elements.userDialogTitle.textContent = 'Invitar al equipo';
+  elements.userDialogCopy.textContent =
+    'Define su identidad, el rol que tendrá y si trabajará en toda la empresa o en una sucursal.';
+  elements.userEmailInput.disabled = false;
+  elements.userEmailInput.required = true;
+  elements.userStatusField.hidden = true;
+  elements.saveUserButton.textContent = 'Enviar invitación';
+  fillUserFormSelects();
+  elements.userDialog.showModal();
+  elements.userForm.elements.fullName.focus();
+}
+
+function openEditUserDialog() {
+  if (!selectedTeamUser) return;
+  editingTeamUser = selectedTeamUser;
+  elements.userForm.reset();
+  elements.userFormError.hidden = true;
+  elements.userDialogEyebrow.textContent = 'Membresía y alcance';
+  elements.userDialogTitle.textContent = 'Editar acceso';
+  elements.userDialogCopy.textContent =
+    'Actualiza el perfil operativo sin cambiar la identidad del correo.';
+  fillUserFormSelects();
+  elements.userForm.elements.fullName.value = selectedTeamUser.full_name;
+  elements.userEmailInput.value = selectedTeamUser.email;
+  elements.userEmailInput.disabled = true;
+  elements.userEmailInput.required = false;
+  elements.userForm.elements.jobTitle.value = selectedTeamUser.job_title || '';
+  elements.userForm.elements.phone.value = selectedTeamUser.phone || '';
+  elements.userRoleId.value = selectedTeamUser.role_id;
+  elements.userBranchId.value = selectedTeamUser.branch_id || '';
+  elements.userStatus.value = selectedTeamUser.status;
+  elements.userStatusField.hidden = false;
+  elements.saveUserButton.textContent = 'Guardar acceso';
+  elements.userDialog.showModal();
+  elements.userForm.elements.fullName.focus();
+}
+
+function closeUserDialog() {
+  elements.userDialog.close();
+  editingTeamUser = null;
+}
+
+async function submitUser(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.userForm);
+  const editing = Boolean(editingTeamUser);
+  const payload = {
+    fullName: formData.get('fullName'),
+    email: formData.get('email'),
+    jobTitle: formData.get('jobTitle'),
+    phone: formData.get('phone'),
+    roleId: formData.get('roleId'),
+    branchId: formData.get('branchId') || null,
+    status: editing ? formData.get('status') : undefined,
+    reason: formData.get('reason'),
+  };
+  elements.userFormError.hidden = true;
+  elements.saveUserButton.disabled = true;
+  elements.saveUserButton.textContent = editing ? 'Guardando…' : 'Invitando…';
+  try {
+    const targetId = editingTeamUser?.id;
+    await getJson(editing ? `/api/users/${targetId}` : '/api/users/invite', {
+      method: editing ? 'PATCH' : 'POST',
+      headers: {
+        ...accessRequestHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    elements.userDialog.close();
+    editingTeamUser = null;
+    await loadUsers();
+    if (targetId) selectTeamUser(targetId);
+    showToast(editing ? 'Acceso actualizado correctamente.' : 'Invitación registrada.');
+  } catch (error) {
+    elements.userFormError.textContent = error.message;
+    elements.userFormError.hidden = false;
+  } finally {
+    elements.saveUserButton.disabled = false;
+    elements.saveUserButton.textContent = editing ? 'Guardar acceso' : 'Enviar invitación';
+  }
+}
+
+function renderPermissionPicker(selected = []) {
+  elements.rolePermissionPicker.replaceChildren();
+  let currentGroup = '';
+  for (const permission of accessPermissions) {
+    if (permission.group !== currentGroup) {
+      currentGroup = permission.group;
+      const group = document.createElement('strong');
+      group.className = 'permission-group-title';
+      group.textContent = currentGroup;
+      elements.rolePermissionPicker.append(group);
+    }
+    const label = document.createElement('label');
+    label.className = 'permission-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.name = 'permissions';
+    checkbox.value = permission.code;
+    checkbox.checked = selected.includes(permission.code);
+    const copy = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = permission.name;
+    const description = document.createElement('small');
+    description.textContent = permission.description;
+    copy.append(name, description);
+    label.append(checkbox, copy);
+    elements.rolePermissionPicker.append(label);
+  }
+}
+
+function openRoleDialog(role = null) {
+  editingAccessRole = role;
+  elements.roleForm.reset();
+  elements.roleFormError.hidden = true;
+  elements.roleDialogTitle.textContent = role ? 'Editar rol personalizado' : 'Crear rol';
+  if (role) {
+    elements.roleForm.elements.name.value = role.name;
+    elements.roleForm.elements.color.value = role.color;
+    elements.roleForm.elements.description.value = role.description || '';
+  }
+  renderPermissionPicker(role?.permissions || []);
+  elements.saveRoleButton.textContent = role ? 'Actualizar rol' : 'Guardar rol';
+  elements.roleDialog.showModal();
+  elements.roleForm.elements.name.focus();
+}
+
+function closeRoleDialog() {
+  elements.roleDialog.close();
+  editingAccessRole = null;
+}
+
+async function submitRole(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.roleForm);
+  const editing = Boolean(editingAccessRole);
+  const payload = {
+    name: formData.get('name'),
+    color: formData.get('color'),
+    description: formData.get('description'),
+    permissions: formData.getAll('permissions'),
+  };
+  elements.roleFormError.hidden = true;
+  elements.saveRoleButton.disabled = true;
+  elements.saveRoleButton.textContent = 'Guardando…';
+  try {
+    await getJson(
+      editing ? `/api/users/roles/${editingAccessRole.id}` : '/api/users/roles',
+      {
+        method: editing ? 'PATCH' : 'POST',
+        headers: {
+          ...accessRequestHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    closeRoleDialog();
+    await loadUsers();
+    showUserPanel('roles');
+    showToast(editing ? 'Permisos del rol actualizados.' : 'Rol personalizado creado.');
+  } catch (error) {
+    elements.roleFormError.textContent = error.message;
+    elements.roleFormError.hidden = false;
+  } finally {
+    elements.saveRoleButton.disabled = false;
+    elements.saveRoleButton.textContent = editing ? 'Actualizar rol' : 'Guardar rol';
+  }
+}
+
 const inventoryMovementLabels = {
   PURCHASE: 'Entrada por compra',
   RETURN_IN: 'Devolución recibida',
@@ -3637,6 +4151,7 @@ async function refreshTenantData() {
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
     showPurchasesError('Primero debes registrar o seleccionar una empresa.');
     showPayablesError('Primero debes registrar o seleccionar una empresa.');
+    showUsersError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
@@ -3655,6 +4170,7 @@ async function refreshTenantData() {
     loadPayables(),
     loadPos(),
     loadReceivables(),
+    loadUsers(),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -3703,6 +4219,7 @@ const availableViews = new Set([
   'productos',
   'compras',
   'cuentas-pagar',
+  'usuarios',
   'caja',
   'cartera',
   'modulos',
@@ -3724,6 +4241,7 @@ const viewTitles = {
   productos: 'Catálogo',
   compras: 'Compras',
   'cuentas-pagar': 'Cuentas por pagar',
+  usuarios: 'Usuarios y accesos',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
   modulos: 'Mapa del ERP',
@@ -3782,7 +4300,10 @@ async function submitCompany(event) {
   try {
     const createdCompany = await getJson('/api/companies', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': DEMO_USER_ID,
+      },
       body: JSON.stringify(payload),
     });
     closeCompanyDialog();
@@ -4351,6 +4872,7 @@ elements.companyContext.addEventListener('change', async () => {
   selectedPhysicalCount = null;
   selectedPurchase = null;
   selectedPayable = null;
+  selectedTeamUser = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -4477,6 +4999,30 @@ elements.cancelPayablePaymentButton.addEventListener('click', closePayablePaymen
 elements.payablePaymentForm.addEventListener('submit', submitPayablePayment);
 elements.payablePaymentDialog.addEventListener('click', (event) => {
   if (event.target === elements.payablePaymentDialog) closePayablePaymentDialog();
+});
+elements.showTeamPanelButton.addEventListener('click', () => showUserPanel('team'));
+elements.showRolesPanelButton.addEventListener('click', () => showUserPanel('roles'));
+elements.userSearch.addEventListener('input', renderUserList);
+elements.userStatusFilter.addEventListener('change', renderUserList);
+elements.reloadUsersButton.addEventListener('click', () => {
+  loadUsers()
+    .then(() => showToast('Equipo y accesos actualizados.'))
+    .catch(() => showToast('No fue posible actualizar los usuarios.'));
+});
+elements.inviteUserButton.addEventListener('click', openInviteUserDialog);
+elements.editUserButton.addEventListener('click', openEditUserDialog);
+elements.closeUserDialog.addEventListener('click', closeUserDialog);
+elements.cancelUserButton.addEventListener('click', closeUserDialog);
+elements.userForm.addEventListener('submit', submitUser);
+elements.userDialog.addEventListener('click', (event) => {
+  if (event.target === elements.userDialog) closeUserDialog();
+});
+elements.newRoleButton.addEventListener('click', () => openRoleDialog());
+elements.closeRoleDialog.addEventListener('click', closeRoleDialog);
+elements.cancelRoleButton.addEventListener('click', closeRoleDialog);
+elements.roleForm.addEventListener('submit', submitRole);
+elements.roleDialog.addEventListener('click', (event) => {
+  if (event.target === elements.roleDialog) closeRoleDialog();
 });
 elements.reloadCountsButton.addEventListener('click', () => {
   loadPhysicalCounts()

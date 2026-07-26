@@ -140,7 +140,7 @@ tomó como referencia la copia documentada con versión 1.17.3.
 2. Completado: proveedores, órdenes de compra y recepción por lotes.
 3. Completado: cuentas por pagar, vencimientos y pagos a proveedores.
 4. Costo aterrizado para transporte, aranceles y otros gastos de compra.
-5. Usuarios, roles y permisos multiempresa.
+5. Completado: usuarios, roles y permisos multiempresa.
 6. Auditoría consultable y exportaciones.
 7. Planner.
 8. Adaptador de Ticketera.
@@ -148,7 +148,8 @@ tomó como referencia la copia documentada con versión 1.17.3.
 
 ## Siguiente fase recomendada
 
-Costo aterrizado. Las órdenes, recepciones y obligaciones ya controlan la
-entrada física y la deuda con el proveedor; el siguiente paso es distribuir
-transporte, seguros, aranceles y otros gastos sobre los productos recibidos sin
-mezclarlos con las cuentas por cobrar.
+Fortalecimiento de identidad y autorización. Usuarios y roles ya están
+organizados; el siguiente paso es incorporar inicio de sesión, recuperación de
+cuenta, sesiones seguras y aplicar los permisos del servidor a cada operación
+del ERP. Después se retoma costo aterrizado para transporte, seguros, aranceles
+y otros gastos de compra.

@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-8">
-    <script src="./app.js?v=20260726-8" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-9">
+    <script src="./app.js?v=20260726-9" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -61,6 +61,9 @@
             <span aria-hidden="true">▦</span> Mapa del ERP
           </a>
           <p class="nav-label">Control</p>
+          <a class="nav-item" href="#usuarios" data-view-link="usuarios">
+            <span aria-hidden="true">U</span> Usuarios &amp; accesos
+          </a>
           <a class="nav-item" href="#sistema" data-view-link="sistema">
             <span aria-hidden="true">◉</span> Sistema
           </a>
@@ -115,6 +118,7 @@
           <a href="#cuentas-pagar" data-view-link="cuentas-pagar">CxP</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
+          <a href="#usuarios" data-view-link="usuarios">Usuarios</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
           <a href="#sistema" data-view-link="sistema">Sistema</a>
         </nav>
@@ -1262,6 +1266,133 @@
             </div>
           </section>
 
+          <section class="section users-section app-view" id="usuarios" data-view="usuarios" aria-labelledby="usersTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Identidad y control</p>
+                <h2 id="usersTitle">Equipo y accesos</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="user-invite-button" id="inviteUserButton" type="button">
+                  <span aria-hidden="true">+</span>
+                  <span>Invitar persona<small>Asignar rol y alcance</small></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="user-kpi-grid">
+              <article class="inventory-kpi-card user-featured">
+                <span>Equipo</span>
+                <strong id="userTotalMembers">—</strong>
+                <small>personas vinculadas</small>
+              </article>
+              <article class="inventory-kpi-card">
+                <span>Acceso activo</span>
+                <strong id="userActiveMembers">—</strong>
+                <small>pueden trabajar</small>
+              </article>
+              <article class="inventory-kpi-card">
+                <span>Invitaciones</span>
+                <strong id="userPendingInvites">—</strong>
+                <small>pendientes de ingreso</small>
+              </article>
+              <article class="inventory-kpi-card">
+                <span>Roles en uso</span>
+                <strong id="userRolesInUse">—</strong>
+                <small>perfiles de acceso</small>
+              </article>
+            </div>
+
+            <div class="user-panel-tabs" role="tablist" aria-label="Áreas de usuarios">
+              <button class="active" id="showTeamPanelButton" type="button" role="tab" aria-selected="true">Personas</button>
+              <button id="showRolesPanelButton" type="button" role="tab" aria-selected="false">Roles y permisos</button>
+            </div>
+
+            <div id="teamPanel">
+              <div class="user-toolbar">
+                <label class="inventory-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input id="userSearch" type="search" placeholder="Buscar por nombre, correo, cargo o rol">
+                </label>
+                <select id="userStatusFilter" aria-label="Filtrar usuarios por estado">
+                  <option value="ALL">Todos los estados</option>
+                  <option value="ACTIVE">Activos</option>
+                  <option value="INVITED">Invitados</option>
+                  <option value="SUSPENDED">Suspendidos</option>
+                </select>
+                <button class="secondary-button compact" id="reloadUsersButton" type="button">Actualizar equipo</button>
+              </div>
+
+              <div class="user-workspace">
+                <div class="user-list-panel">
+                  <div class="data-state-heading">
+                    <span>Personas</span>
+                    <strong id="userRecordCount">0</strong>
+                  </div>
+                  <div class="user-list" id="userList"></div>
+                  <div class="data-state" id="userDataState">
+                    <strong>Cargando equipo</strong>
+                    <p>Consultando membresías y accesos de la empresa.</p>
+                  </div>
+                </div>
+
+                <aside class="user-detail-panel">
+                  <div class="user-detail-empty" id="userDetailEmpty">
+                    <span aria-hidden="true">ID</span>
+                    <strong>Selecciona una persona</strong>
+                    <p>Revisa su rol, alcance y estado de acceso.</p>
+                  </div>
+                  <div id="userDetailContent" hidden>
+                    <div class="user-detail-heading">
+                      <div class="user-avatar-large" id="userDetailAvatar">MS</div>
+                      <div>
+                        <span id="userDetailRole">Rol</span>
+                        <h3 id="userDetailName">Persona</h3>
+                        <p id="userDetailEmail">correo@empresa.com</p>
+                      </div>
+                      <span class="user-status active" id="userDetailStatus">Activo</span>
+                    </div>
+                    <dl class="user-detail-facts">
+                      <div><dt>Cargo</dt><dd id="userDetailJob">Sin cargo</dd></div>
+                      <div><dt>Alcance</dt><dd id="userDetailBranch">Toda la empresa</dd></div>
+                      <div><dt>Ingreso</dt><dd id="userDetailJoined">—</dd></div>
+                      <div><dt>Último acceso</dt><dd id="userDetailLastLogin">—</dd></div>
+                    </dl>
+                    <div class="user-access-summary">
+                      <div>
+                        <span>Permisos del rol</span>
+                        <strong id="userDetailPermissionCount">0 accesos</strong>
+                      </div>
+                      <div class="user-permission-tags" id="userDetailPermissions"></div>
+                    </div>
+                    <button class="user-edit-button" id="editUserButton" type="button">
+                      <span aria-hidden="true">↗</span>
+                      <span>Editar acceso<small>Rol, sucursal y estado</small></span>
+                    </button>
+                  </div>
+                </aside>
+              </div>
+            </div>
+
+            <div id="rolesPanel" hidden>
+              <div class="roles-heading">
+                <div>
+                  <p class="eyebrow">Matriz de autorización</p>
+                  <h3>Roles de la empresa</h3>
+                  <p>Los roles base están protegidos. Puedes crear perfiles personalizados sin alterar los originales.</p>
+                </div>
+                <button class="role-create-button" id="newRoleButton" type="button">
+                  <span aria-hidden="true">+</span> Crear rol personalizado
+                </button>
+              </div>
+              <div class="role-grid" id="roleGrid"></div>
+              <div class="data-state" id="roleDataState">
+                <strong>Cargando roles</strong>
+                <p>Organizando los permisos disponibles.</p>
+              </div>
+            </div>
+          </section>
+
           <section class="section module-section app-view" id="modulos" data-view="modulos" aria-labelledby="modulesTitle" hidden>
             <div class="section-heading">
               <div>
@@ -1371,14 +1502,20 @@
                 <div class="module-symbol blue" aria-hidden="true">US</div>
                 <h3>Usuarios</h3>
                 <p>Personas del equipo, acceso por empresa y estado de cuenta.</p>
-                <span class="module-state planned">Próxima fase</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#usuarios">Abrir equipo <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="roles permisos seguridad autorización">
                 <span class="module-number">12</span>
                 <div class="module-symbol amber" aria-hidden="true">RP</div>
                 <h3>Roles &amp; permisos</h3>
                 <p>Control detallado de quién puede consultar, crear o aprobar.</p>
-                <span class="module-state planned">Próxima fase</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#usuarios">Configurar accesos <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="ventas pos facturación clientes caja">
                 <span class="module-number">13</span>
@@ -1472,6 +1609,116 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog user-dialog" id="userDialog" aria-labelledby="userDialogTitle">
+      <form class="company-form" id="userForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" id="userDialogEyebrow">Nueva persona</p>
+            <h2 id="userDialogTitle">Invitar al equipo</h2>
+          </div>
+          <button class="icon-button" id="closeUserDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="userDialogCopy">
+          Define su identidad, el rol que tendrá y si trabajará en toda la empresa o en una sucursal.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Nombre completo <b>*</b></span>
+            <input name="fullName" type="text" maxlength="160" required placeholder="Ej. Laura Gómez">
+          </label>
+          <label class="form-field">
+            <span>Correo electrónico <b>*</b></span>
+            <input id="userEmailInput" name="email" type="email" maxlength="254" required placeholder="laura@empresa.com">
+          </label>
+          <label class="form-field">
+            <span>Cargo</span>
+            <input name="jobTitle" type="text" maxlength="120" placeholder="Ej. Coordinadora de inventario">
+          </label>
+          <label class="form-field">
+            <span>Teléfono</span>
+            <input name="phone" type="tel" maxlength="40" placeholder="+57 300 000 0000">
+          </label>
+          <label class="form-field">
+            <span>Rol de acceso <b>*</b></span>
+            <select id="userRoleId" name="roleId" required>
+              <option value="">Selecciona un rol</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Alcance por sucursal</span>
+            <select id="userBranchId" name="branchId">
+              <option value="">Toda la empresa</option>
+            </select>
+          </label>
+          <label class="form-field" id="userStatusField" hidden>
+            <span>Estado de acceso <b>*</b></span>
+            <select id="userStatus" name="status">
+              <option value="ACTIVE">Activo</option>
+              <option value="INVITED">Invitado</option>
+              <option value="SUSPENDED">Suspendido</option>
+            </select>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo o nota administrativa</span>
+          <textarea name="reason" maxlength="300" rows="3" placeholder="Responsabilidad asignada o motivo del cambio"></textarea>
+        </label>
+        <p class="form-error" id="userFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelUserButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveUserButton" type="submit">Enviar invitación</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog role-dialog" id="roleDialog" aria-labelledby="roleDialogTitle">
+      <form class="company-form" id="roleForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Autorización personalizada</p>
+            <h2 id="roleDialogTitle">Crear rol</h2>
+          </div>
+          <button class="icon-button" id="closeRoleDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Agrupa solamente los accesos necesarios. Los cambios aplican a todas las personas que tengan este rol.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Nombre del rol <b>*</b></span>
+            <input name="name" type="text" maxlength="100" required placeholder="Ej. Líder de abastecimiento">
+          </label>
+          <label class="form-field">
+            <span>Identidad visual</span>
+            <select name="color">
+              <option value="BLUE">Azul</option>
+              <option value="PURPLE">Morado</option>
+              <option value="CYAN">Cian</option>
+              <option value="GREEN">Verde</option>
+              <option value="AMBER">Ámbar</option>
+              <option value="ROSE">Rosa</option>
+            </select>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Descripción</span>
+          <textarea name="description" maxlength="300" rows="2" placeholder="Responsabilidad principal de este perfil"></textarea>
+        </label>
+        <div class="permission-picker">
+          <div>
+            <span>Permisos del rol <b>*</b></span>
+            <small>Selecciona las operaciones que estarán habilitadas.</small>
+          </div>
+          <div id="rolePermissionPicker"></div>
+        </div>
+        <p class="form-error" id="roleFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelRoleButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveRoleButton" type="submit">Guardar rol</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="payableDialog" aria-labelledby="payableDialogTitle">
       <form class="company-form" id="payableForm">
