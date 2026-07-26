@@ -6,6 +6,14 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Módulo separado de Cuentas por pagar con obligaciones originadas en compras
+  recibidas o registradas directamente para un proveedor.
+- Vencimientos, saldo pendiente, pagos parciales o totales e historial
+  auditable por obligación.
+- Tablero de pagos por edades: vigente, 1–30, 31–60 y más de 60 días, más el
+  valor pagado durante el mes.
+- Resumen financiero enlazado desde el dashboard con cartera, cuentas por
+  pagar, valor del inventario y órdenes abiertas.
 - Módulo separado de Compras con pestañas de órdenes/recepciones y proveedores.
 - Directorio de proveedores con documento, contacto, plazo de pago, obligación
   de facturar y condición de facturador electrónico.
@@ -64,7 +72,7 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   de códigos por empresa.
 - Módulo funcional de bodegas con búsqueda, creación por sucursal y tipos de
   ubicación operativa.
-- Directorio visual de los 16 módulos previstos, diferenciando claramente lo
+- Directorio visual de los 17 módulos previstos, diferenciando claramente lo
   disponible, la base técnica preparada y las fases futuras.
 - Validación de la jerarquía empresa → sucursal → bodega en la API.
 - Catálogo funcional de productos con búsqueda, creación, precios, categoría,

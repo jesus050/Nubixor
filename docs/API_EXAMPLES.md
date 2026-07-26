@@ -121,6 +121,36 @@ La creación de una orden usa `POST /api/purchases`; la recepción utiliza
 `POST /api/purchases/:id/receipts`. Una recepción genera movimientos
 `PURCHASE`, incrementa el saldo de la bodega y recalcula el costo promedio.
 
+## Cuentas por pagar
+
+El espacio operativo está disponible en `/#cuentas-pagar`. Una obligación
+puede tomar el proveedor y el total de una compra recibida, o registrarse
+manualmente cuando no existe una orden previa.
+
+```bash
+curl http://localhost:4100/api/payables/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/payables/sources \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/payables/invoices \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+Para registrar una obligación manual:
+
+```bash
+curl -X POST http://localhost:4100/api/payables/invoices \
+ -H 'Content-Type: application/json' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -d '{"supplierId":"SUPPLIER_ID","issueDate":"2026-07-26","dueDate":"2026-08-25","subtotal":500000,"tax":95000,"notes":"Factura del proveedor"}'
+```
+
+Un pago se aplica con `POST /api/payables/invoices/:id/payments`, enviando
+`amount`, `paymentDate`, `method`, `reference` y `notes`. La API impide pagar
+por encima del saldo pendiente y actualiza el estado a `PARTIAL` o `PAID`.
+
 ## Conteos físicos programados
 
 ```bash

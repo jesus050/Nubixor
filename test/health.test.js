@@ -39,6 +39,11 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="compras"/);
   assert.match(response.text, /Órdenes y recepciones/);
   assert.match(response.text, /Confirmar entrada a inventario/);
+  assert.match(response.text, /data-view="cuentas-pagar"/);
+  assert.match(response.text, /Facturas y cuentas por pagar/);
+  assert.match(response.text, /Registrar pago/);
+  assert.match(response.text, /Dinero e inventario/);
+  assert.match(response.text, /id="dashboardPayable"/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -273,6 +278,25 @@ test('compras valida proveedores, órdenes y recepciones antes de consultar Post
     .send({})
     .expect(422);
   assert.match(receipt.body.error, /UUID válidos/i);
+});
+
+test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQL', async () => {
+  const application = createApp();
+  await request(application)
+    .get('/api/payables/summary')
+    .expect(400);
+  const invoice = await request(application)
+    .post('/api/payables/invoices')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(invoice.body.error, /compra recibida o un proveedor/i);
+  const payment = await request(application)
+    .post('/api/payables/invoices/invalid/payments')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(payment.body.error, /UUID válido/i);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

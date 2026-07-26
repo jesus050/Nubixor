@@ -22,6 +22,10 @@ const elements = {
   companyContext: document.querySelector('#companyContext'),
   companyCount: document.querySelector('#companyCount'),
   companyDetail: document.querySelector('#companyDetail'),
+  dashboardReceivable: document.querySelector('#dashboardReceivable'),
+  dashboardPayable: document.querySelector('#dashboardPayable'),
+  dashboardInventoryValue: document.querySelector('#dashboardInventoryValue'),
+  dashboardOpenPurchases: document.querySelector('#dashboardOpenPurchases'),
   warehouseCount: document.querySelector('#warehouseCount'),
   warehouseDetail: document.querySelector('#warehouseDetail'),
   productCount: document.querySelector('#productCount'),
@@ -357,6 +361,61 @@ const elements = {
   closePaymentDialog: document.querySelector('#closePaymentDialog'),
   cancelPaymentButton: document.querySelector('#cancelPaymentButton'),
   savePaymentButton: document.querySelector('#savePaymentButton'),
+  apOutstanding: document.querySelector('#apOutstanding'),
+  apOpenCount: document.querySelector('#apOpenCount'),
+  apCurrent: document.querySelector('#apCurrent'),
+  apOverdue30: document.querySelector('#apOverdue30'),
+  apOverdue60: document.querySelector('#apOverdue60'),
+  apOverdue61: document.querySelector('#apOverdue61'),
+  apPaidMonth: document.querySelector('#apPaidMonth'),
+  payableSearch: document.querySelector('#payableSearch'),
+  payableStatusFilter: document.querySelector('#payableStatusFilter'),
+  reloadPayablesButton: document.querySelector('#reloadPayablesButton'),
+  payableRecordCount: document.querySelector('#payableRecordCount'),
+  payableList: document.querySelector('#payableList'),
+  payableDataState: document.querySelector('#payableDataState'),
+  payableDetailEmpty: document.querySelector('#payableDetailEmpty'),
+  payableDetailContent: document.querySelector('#payableDetailContent'),
+  payableDetailNumber: document.querySelector('#payableDetailNumber'),
+  payableDetailSupplier: document.querySelector('#payableDetailSupplier'),
+  payableDetailDocument: document.querySelector('#payableDetailDocument'),
+  payableDetailStatus: document.querySelector('#payableDetailStatus'),
+  payableDetailIssue: document.querySelector('#payableDetailIssue'),
+  payableDetailDue: document.querySelector('#payableDetailDue'),
+  payableDetailTotal: document.querySelector('#payableDetailTotal'),
+  payableDetailBalance: document.querySelector('#payableDetailBalance'),
+  payableDetailOrigin: document.querySelector('#payableDetailOrigin'),
+  payableDetailExternal: document.querySelector('#payableDetailExternal'),
+  payablePaymentCount: document.querySelector('#payablePaymentCount'),
+  payablePaymentList: document.querySelector('#payablePaymentList'),
+  newPayableButton: document.querySelector('#newPayableButton'),
+  newPayablePaymentButton: document.querySelector('#newPayablePaymentButton'),
+  payableDialog: document.querySelector('#payableDialog'),
+  payableForm: document.querySelector('#payableForm'),
+  payableFormError: document.querySelector('#payableFormError'),
+  payableSourceType: document.querySelector('#payableSourceType'),
+  payablePurchaseFields: document.querySelector('#payablePurchaseFields'),
+  payablePurchaseId: document.querySelector('#payablePurchaseId'),
+  payableSourcePreview: document.querySelector('#payableSourcePreview'),
+  payableManualFields: document.querySelector('#payableManualFields'),
+  payableSupplierId: document.querySelector('#payableSupplierId'),
+  payableSubtotal: document.querySelector('#payableSubtotal'),
+  payableTaxTotal: document.querySelector('#payableTaxTotal'),
+  payableIssueDate: document.querySelector('#payableIssueDate'),
+  payableDueDate: document.querySelector('#payableDueDate'),
+  closePayableDialog: document.querySelector('#closePayableDialog'),
+  cancelPayableButton: document.querySelector('#cancelPayableButton'),
+  savePayableButton: document.querySelector('#savePayableButton'),
+  payablePaymentDialog: document.querySelector('#payablePaymentDialog'),
+  payablePaymentForm: document.querySelector('#payablePaymentForm'),
+  payablePaymentFormError: document.querySelector('#payablePaymentFormError'),
+  payablePaymentNumber: document.querySelector('#payablePaymentNumber'),
+  payablePaymentBalance: document.querySelector('#payablePaymentBalance'),
+  payablePaymentAmount: document.querySelector('#payablePaymentAmount'),
+  payablePaymentDate: document.querySelector('#payablePaymentDate'),
+  closePayablePaymentDialog: document.querySelector('#closePayablePaymentDialog'),
+  cancelPayablePaymentButton: document.querySelector('#cancelPayablePaymentButton'),
+  savePayablePaymentButton: document.querySelector('#savePayablePaymentButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -381,6 +440,9 @@ let inventoryMovements = [];
 let suppliers = [];
 let purchases = [];
 let selectedPurchase = null;
+let payableInvoices = [];
+let payableSources = { suppliers: [], purchases: [] };
+let selectedPayable = null;
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -1358,6 +1420,7 @@ function receivableStatus(invoice) {
 
 function setReceivableSummary(summary = {}) {
   elements.arOutstanding.textContent = formatCurrency(summary.outstanding || 0);
+  elements.dashboardReceivable.textContent = formatCurrency(summary.outstanding || 0);
   elements.arOpenCount.textContent =
     `${summary.open_count || 0} ${Number(summary.open_count) === 1 ? 'factura abierta' : 'facturas abiertas'}`;
   elements.arCurrent.textContent = formatCurrency(summary.current || 0);
@@ -1775,6 +1838,7 @@ const purchaseStatusLabels = {
 
 function setPurchaseSummary(summary = {}) {
   elements.purchaseOpenOrders.textContent = String(summary.open_orders || 0);
+  elements.dashboardOpenPurchases.textContent = String(summary.open_orders || 0);
   elements.purchasePendingUnits.textContent = formatQuantity(summary.pending_units || 0);
   elements.purchaseReceivedMonth.textContent =
     formatCurrency(summary.received_value_month || 0);
@@ -2316,6 +2380,362 @@ async function submitPurchaseReceipt(event) {
   }
 }
 
+function payableStatus(invoice) {
+  if (invoice.status === 'PAID') return { label: 'Pagada', className: 'paid' };
+  if (Number(invoice.days_overdue) > 0) {
+    return {
+      label: `${invoice.days_overdue} d vencida`,
+      className: Number(invoice.days_overdue) > 60 ? 'critical' : 'overdue',
+    };
+  }
+  if (invoice.status === 'PARTIAL') return { label: 'Pago parcial', className: 'partial' };
+  return { label: 'Por pagar', className: 'open' };
+}
+
+function setPayableSummary(summary = {}) {
+  elements.apOutstanding.textContent = formatCurrency(summary.outstanding || 0);
+  elements.dashboardPayable.textContent = formatCurrency(summary.outstanding || 0);
+  elements.apOpenCount.textContent =
+    `${summary.open_count || 0} ${Number(summary.open_count) === 1 ? 'obligación abierta' : 'obligaciones abiertas'}`;
+  elements.apCurrent.textContent = formatCurrency(summary.current || 0);
+  elements.apOverdue30.textContent = formatCurrency(summary.overdue_1_30 || 0);
+  elements.apOverdue60.textContent = formatCurrency(summary.overdue_31_60 || 0);
+  elements.apOverdue61.textContent = formatCurrency(summary.overdue_61_plus || 0);
+  elements.apPaidMonth.textContent = formatCurrency(summary.paid_month || 0);
+}
+
+function showPayablesError(message) {
+  payableInvoices = [];
+  payableSources = { suppliers: [], purchases: [] };
+  selectedPayable = null;
+  setPayableSummary();
+  elements.payableList.replaceChildren();
+  elements.payableDataState.hidden = false;
+  elements.payableDataState.classList.add('error');
+  elements.payableDataState.querySelector('strong').textContent =
+    'No pudimos consultar las cuentas por pagar';
+  elements.payableDataState.querySelector('p').textContent = message;
+  elements.payableRecordCount.textContent = 'Sin datos';
+  elements.payableDetailContent.hidden = true;
+  elements.payableDetailEmpty.hidden = false;
+}
+
+function renderPayableList() {
+  const search = normalizeSearch(elements.payableSearch.value.trim());
+  const filter = elements.payableStatusFilter.value;
+  const filtered = payableInvoices.filter((invoice) => {
+    const matchesSearch = !search || normalizeSearch([
+      invoice.payable_number,
+      invoice.supplier_invoice_number,
+      invoice.order_number,
+      invoice.supplier_name,
+      invoice.tax_id,
+    ].filter(Boolean).join(' ')).includes(search);
+    const isOpen = ['ISSUED', 'PARTIAL'].includes(invoice.status);
+    const matchesFilter =
+      filter === 'ALL' ||
+      (filter === 'OPEN' && isOpen) ||
+      (filter === 'OVERDUE' && isOpen && Number(invoice.days_overdue) > 0) ||
+      (filter === 'PAID' && invoice.status === 'PAID');
+    return matchesSearch && matchesFilter;
+  });
+  elements.payableList.replaceChildren();
+  elements.payableRecordCount.textContent = String(filtered.length);
+  elements.payableDataState.hidden = filtered.length > 0;
+  elements.payableDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.payableDataState.querySelector('strong').textContent =
+      search || filter !== 'ALL' ? 'No hay coincidencias' : 'No hay obligaciones';
+    elements.payableDataState.querySelector('p').textContent =
+      search || filter !== 'ALL'
+        ? 'Cambia la búsqueda o consulta todos los estados.'
+        : 'Registra una cuenta desde una compra recibida o un proveedor.';
+    return;
+  }
+  for (const invoice of filtered) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ar-invoice-card';
+    if (selectedPayable?.id === invoice.id) button.classList.add('selected');
+    const top = document.createElement('div');
+    const number = document.createElement('strong');
+    number.textContent = invoice.payable_number;
+    const meta = payableStatus(invoice);
+    const status = document.createElement('span');
+    status.className = `ar-status ${meta.className}`;
+    status.textContent = meta.label;
+    top.append(number, status);
+    const supplier = document.createElement('span');
+    supplier.className = 'ar-customer-name';
+    supplier.textContent = invoice.supplier_name;
+    const reference = document.createElement('small');
+    reference.textContent =
+      invoice.order_number || invoice.supplier_invoice_number || 'Registro manual';
+    const amounts = document.createElement('div');
+    amounts.className = 'ar-invoice-amounts';
+    const due = document.createElement('span');
+    due.textContent = `Vence ${formatShortDate(invoice.due_date)}`;
+    const balance = document.createElement('strong');
+    balance.textContent = formatCurrency(invoice.balance);
+    amounts.append(due, balance);
+    button.append(top, supplier, reference, amounts);
+    button.addEventListener('click', () => loadPayableDetail(invoice.id));
+    elements.payableList.append(button);
+  }
+}
+
+function renderPayableDetail(invoice) {
+  selectedPayable = invoice;
+  elements.payableDetailEmpty.hidden = true;
+  elements.payableDetailContent.hidden = false;
+  elements.payableDetailNumber.textContent = invoice.payable_number;
+  elements.payableDetailSupplier.textContent = invoice.supplier_name;
+  elements.payableDetailDocument.textContent =
+    invoice.tax_id ? `NIT ${invoice.tax_id}` : 'Documento no registrado';
+  const status = payableStatus(invoice);
+  elements.payableDetailStatus.textContent = status.label;
+  elements.payableDetailStatus.className = `ar-status ${status.className}`;
+  elements.payableDetailIssue.textContent = formatShortDate(invoice.issue_date);
+  elements.payableDetailDue.textContent = formatShortDate(invoice.due_date);
+  elements.payableDetailTotal.textContent = formatCurrency(invoice.total);
+  elements.payableDetailBalance.textContent = formatCurrency(invoice.balance);
+  elements.payableDetailOrigin.textContent =
+    invoice.order_number ? `Orden ${invoice.order_number}` : 'Registro manual';
+  elements.payableDetailExternal.textContent =
+    invoice.supplier_invoice_number
+      ? `Factura proveedor: ${invoice.supplier_invoice_number}`
+      : 'Sin referencia del proveedor';
+  elements.payablePaymentList.replaceChildren();
+  elements.payablePaymentCount.textContent =
+    `${invoice.payments.length} ${invoice.payments.length === 1 ? 'pago' : 'pagos'}`;
+  if (!invoice.payments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ar-no-payments';
+    empty.textContent = 'Todavía no se han registrado pagos.';
+    elements.payablePaymentList.append(empty);
+  }
+  for (const payment of invoice.payments) {
+    const row = document.createElement('div');
+    const info = document.createElement('div');
+    const date = document.createElement('strong');
+    date.textContent = formatShortDate(payment.payment_date);
+    const reference = document.createElement('small');
+    reference.textContent =
+      payment.reference ||
+      payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+    info.append(date, reference);
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(payment.amount);
+    row.append(info, amount);
+    elements.payablePaymentList.append(row);
+  }
+  elements.newPayablePaymentButton.hidden = invoice.status === 'PAID';
+  renderPayableList();
+}
+
+async function loadPayableDetail(invoiceId) {
+  try {
+    const detail = await getJson(`/api/payables/invoices/${invoiceId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderPayableDetail(detail);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadPayables() {
+  if (!activeTenantId) {
+    showPayablesError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, sources, invoices] = await Promise.all([
+      getJson('/api/payables/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/payables/sources', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/payables/invoices', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    payableSources = sources;
+    payableInvoices = invoices;
+    setPayableSummary(summary);
+    renderPayableList();
+    elements.newPayableButton.disabled = !sources.suppliers.length;
+    if (selectedPayable) {
+      const exists = invoices.some((invoice) => invoice.id === selectedPayable.id);
+      if (exists) await loadPayableDetail(selectedPayable.id);
+      else {
+        selectedPayable = null;
+        elements.payableDetailContent.hidden = true;
+        elements.payableDetailEmpty.hidden = false;
+      }
+    }
+    return invoices;
+  } catch (error) {
+    showPayablesError(error.message);
+    throw error;
+  }
+}
+
+function updatePayableSourceFields() {
+  const purchaseMode = elements.payableSourceType.value === 'PURCHASE';
+  if (purchaseMode && !payableSources.purchases.length) {
+    elements.payableSourceType.value = 'MANUAL';
+  }
+  const resolvedPurchaseMode = elements.payableSourceType.value === 'PURCHASE';
+  elements.payablePurchaseFields.hidden = !resolvedPurchaseMode;
+  elements.payableManualFields.hidden = resolvedPurchaseMode;
+  elements.payablePurchaseId.required = resolvedPurchaseMode;
+  elements.payableSupplierId.required = !resolvedPurchaseMode;
+  elements.payableSubtotal.required = !resolvedPurchaseMode;
+}
+
+function updatePayablePurchasePreview() {
+  const purchase = payableSources.purchases.find(
+    (item) => item.id === elements.payablePurchaseId.value,
+  );
+  const preview = elements.payableSourcePreview;
+  preview.querySelector('strong').textContent =
+    purchase ? formatCurrency(purchase.total) : '$0';
+  preview.querySelector('small').textContent = purchase
+    ? `${purchase.supplier_name} · ${purchase.order_number}`
+    : 'Selecciona una orden recibida';
+  if (purchase) {
+    const due = new Date(`${elements.payableIssueDate.value}T12:00:00`);
+    due.setDate(due.getDate() + Number(purchase.payment_terms_days || 30));
+    elements.payableDueDate.value = due.toISOString().slice(0, 10);
+  }
+}
+
+function openPayableDialog() {
+  if (!payableSources.suppliers.length) {
+    showToast('Registra un proveedor antes de crear una cuenta por pagar.');
+    return;
+  }
+  elements.payableForm.reset();
+  elements.payableFormError.hidden = true;
+  fillInventorySelect(
+    elements.payablePurchaseId,
+    'Selecciona una orden recibida',
+    payableSources.purchases,
+    (purchase) =>
+      `${purchase.order_number} · ${purchase.supplier_name} · ${formatCurrency(purchase.total)}`,
+  );
+  fillInventorySelect(
+    elements.payableSupplierId,
+    'Selecciona un proveedor',
+    payableSources.suppliers,
+    (supplier) => `${supplier.name}${supplier.tax_id ? ` · ${supplier.tax_id}` : ''}`,
+  );
+  elements.payableSourceType.value =
+    payableSources.purchases.length ? 'PURCHASE' : 'MANUAL';
+  elements.payableIssueDate.value = isoDate();
+  const due = new Date();
+  due.setDate(due.getDate() + 30);
+  elements.payableDueDate.value = due.toISOString().slice(0, 10);
+  updatePayableSourceFields();
+  updatePayablePurchasePreview();
+  elements.payableDialog.showModal();
+  (elements.payableSourceType.value === 'PURCHASE'
+    ? elements.payablePurchaseId
+    : elements.payableSupplierId).focus();
+}
+
+function closePayableDialog() {
+  elements.payableDialog.close();
+}
+
+async function submitPayable(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.payableForm);
+  const manual = formData.get('sourceType') === 'MANUAL';
+  elements.payableFormError.hidden = true;
+  elements.savePayableButton.disabled = true;
+  elements.savePayableButton.textContent = 'Registrando…';
+  try {
+    const invoice = await getJson('/api/payables/invoices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        purchaseId: manual ? null : formData.get('purchaseId'),
+        supplierId: manual ? formData.get('supplierId') : null,
+        subtotal: manual ? formData.get('subtotal') : null,
+        taxTotal: manual ? formData.get('taxTotal') : null,
+        supplierInvoiceNumber: formData.get('supplierInvoiceNumber'),
+        issueDate: formData.get('issueDate'),
+        dueDate: formData.get('dueDate'),
+        notes: formData.get('notes'),
+      }),
+    });
+    closePayableDialog();
+    await loadPayables();
+    await loadPayableDetail(invoice.id);
+    showToast(`${invoice.payable_number} agregada a cuentas por pagar.`);
+  } catch (error) {
+    elements.payableFormError.textContent = error.message;
+    elements.payableFormError.hidden = false;
+  } finally {
+    elements.savePayableButton.disabled = false;
+    elements.savePayableButton.textContent = 'Crear cuenta por pagar';
+  }
+}
+
+function openPayablePaymentDialog() {
+  if (!selectedPayable || selectedPayable.status === 'PAID') return;
+  elements.payablePaymentForm.reset();
+  elements.payablePaymentFormError.hidden = true;
+  elements.payablePaymentNumber.textContent = selectedPayable.payable_number;
+  elements.payablePaymentBalance.textContent =
+    `${formatCurrency(selectedPayable.balance)} pendientes`;
+  elements.payablePaymentAmount.max = String(selectedPayable.balance);
+  elements.payablePaymentAmount.value = String(selectedPayable.balance);
+  elements.payablePaymentDate.value = isoDate();
+  elements.payablePaymentDialog.showModal();
+  elements.payablePaymentAmount.focus();
+  elements.payablePaymentAmount.select();
+}
+
+function closePayablePaymentDialog() {
+  elements.payablePaymentDialog.close();
+}
+
+async function submitPayablePayment(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.payablePaymentForm);
+  elements.payablePaymentFormError.hidden = true;
+  elements.savePayablePaymentButton.disabled = true;
+  elements.savePayablePaymentButton.textContent = 'Aplicando pago…';
+  try {
+    const invoiceId = selectedPayable.id;
+    await getJson(`/api/payables/invoices/${invoiceId}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closePayablePaymentDialog();
+    await loadPayables();
+    await loadPayableDetail(invoiceId);
+    showToast('Pago aplicado y saldo actualizado.');
+  } catch (error) {
+    elements.payablePaymentFormError.textContent = error.message;
+    elements.payablePaymentFormError.hidden = false;
+  } finally {
+    elements.savePayablePaymentButton.disabled = false;
+    elements.savePayablePaymentButton.textContent = 'Aplicar pago';
+  }
+}
+
 const inventoryMovementLabels = {
   PURCHASE: 'Entrada por compra',
   RETURN_IN: 'Devolución recibida',
@@ -2337,6 +2757,8 @@ function formatQuantity(value, { sign = false } = {}) {
 function setInventorySummary(summary = {}) {
   inventorySummary = summary;
   elements.inventoryValue.textContent = formatCurrency(summary.inventory_value || 0);
+  elements.dashboardInventoryValue.textContent =
+    formatCurrency(summary.inventory_value || 0);
   elements.inventoryStockedProducts.textContent =
     `${summary.stocked_products || 0} productos con saldo`;
   elements.inventoryAvailableUnits.textContent =
@@ -3214,6 +3636,7 @@ async function refreshTenantData() {
     showCountsError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
     showPurchasesError('Primero debes registrar o seleccionar una empresa.');
+    showPayablesError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
@@ -3229,6 +3652,7 @@ async function refreshTenantData() {
     loadPhysicalCounts(),
     loadCatalog(),
     loadPurchases(),
+    loadPayables(),
     loadPos(),
     loadReceivables(),
   ]);
@@ -3278,6 +3702,7 @@ const availableViews = new Set([
   'inventario',
   'productos',
   'compras',
+  'cuentas-pagar',
   'caja',
   'cartera',
   'modulos',
@@ -3298,6 +3723,7 @@ const viewTitles = {
   inventario: 'Inventario',
   productos: 'Catálogo',
   compras: 'Compras',
+  'cuentas-pagar': 'Cuentas por pagar',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
   modulos: 'Mapa del ERP',
@@ -3924,6 +4350,7 @@ elements.companyContext.addEventListener('change', async () => {
   selectedReceivable = null;
   selectedPhysicalCount = null;
   selectedPurchase = null;
+  selectedPayable = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -4026,6 +4453,30 @@ elements.cancelReceiptPurchaseButton.addEventListener('click', closeReceiptPurch
 elements.receiptPurchaseForm.addEventListener('submit', submitPurchaseReceipt);
 elements.receiptPurchaseDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptPurchaseDialog) closeReceiptPurchaseDialog();
+});
+elements.reloadPayablesButton.addEventListener('click', () => {
+  loadPayables()
+    .then(() => showToast('Cuentas por pagar actualizadas.'))
+    .catch(() => showToast('No fue posible actualizar las obligaciones.'));
+});
+elements.payableSearch.addEventListener('input', renderPayableList);
+elements.payableStatusFilter.addEventListener('change', renderPayableList);
+elements.newPayableButton.addEventListener('click', openPayableDialog);
+elements.closePayableDialog.addEventListener('click', closePayableDialog);
+elements.cancelPayableButton.addEventListener('click', closePayableDialog);
+elements.payableSourceType.addEventListener('change', updatePayableSourceFields);
+elements.payablePurchaseId.addEventListener('change', updatePayablePurchasePreview);
+elements.payableIssueDate.addEventListener('change', updatePayablePurchasePreview);
+elements.payableForm.addEventListener('submit', submitPayable);
+elements.payableDialog.addEventListener('click', (event) => {
+  if (event.target === elements.payableDialog) closePayableDialog();
+});
+elements.newPayablePaymentButton.addEventListener('click', openPayablePaymentDialog);
+elements.closePayablePaymentDialog.addEventListener('click', closePayablePaymentDialog);
+elements.cancelPayablePaymentButton.addEventListener('click', closePayablePaymentDialog);
+elements.payablePaymentForm.addEventListener('submit', submitPayablePayment);
+elements.payablePaymentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.payablePaymentDialog) closePayablePaymentDialog();
 });
 elements.reloadCountsButton.addEventListener('click', () => {
   loadPhysicalCounts()

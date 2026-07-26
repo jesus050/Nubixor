@@ -751,6 +751,124 @@ input:focus-visible {
   font-size: 11px;
 }
 
+.financial-snapshot {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid rgba(79, 210, 233, 0.32);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(181, 65, 250, 0.12), transparent 32%),
+    linear-gradient(145deg, rgba(25, 37, 132, 0.97), rgba(20, 30, 102, 0.98));
+  box-shadow: 0 20px 50px rgba(25, 37, 132, 0.16);
+  color: white;
+}
+
+.financial-snapshot-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.financial-snapshot-heading .eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-cyan);
+}
+
+.financial-snapshot-heading h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.financial-snapshot-heading > span {
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.financial-snapshot-grid a {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.075);
+  color: white;
+  text-decoration: none;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.financial-snapshot-grid a:hover {
+  border-color: rgba(79, 210, 233, 0.55);
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.financial-snapshot-grid a > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.financial-snapshot-grid small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-snapshot-grid strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.financial-snapshot-grid b {
+  grid-column: 2;
+  color: var(--color-cyan);
+  font-size: 9px;
+}
+
+.financial-symbol {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(79, 210, 233, 0.15);
+  color: var(--color-cyan);
+  font-size: 17px;
+}
+
+.financial-symbol.outgoing {
+  background: rgba(181, 65, 250, 0.18);
+  color: #dca2ff;
+}
+
+.financial-symbol.inventory {
+  background: rgba(255, 255, 255, 0.13);
+  color: white;
+}
+
+.financial-symbol.orders {
+  background: rgba(79, 210, 233, 0.15);
+  color: var(--color-cyan);
+}
+
 .companies-section {
   padding-top: 110px;
 }
@@ -2202,6 +2320,114 @@ footer {
 
 .purchases-section {
   min-height: calc(100vh - 104px);
+}
+
+.payables-section {
+  min-height: calc(100vh - 104px);
+}
+
+.payable-create-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 7px;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--color-ink), #3543a7);
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  box-shadow: 0 11px 25px rgba(25, 37, 132, 0.2);
+}
+
+.payable-create-button > span:first-child {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(79, 210, 233, 0.2);
+  color: var(--color-cyan);
+  font-size: 16px;
+}
+
+.payable-create-button > span:last-child {
+  display: grid;
+  text-align: left;
+}
+
+.payable-create-button small {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 7px;
+}
+
+.payable-featured {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(181, 65, 250, 0.32), transparent 30%),
+    linear-gradient(135deg, var(--color-ink), #303ca0) !important;
+}
+
+.payable-paid {
+  background: linear-gradient(145deg, white, var(--color-purple-light)) !important;
+}
+
+.payable-origin-card {
+  display: grid;
+  gap: 5px;
+  margin: 17px 0 22px;
+  padding: 14px 16px;
+  border: 1px solid rgba(79, 210, 233, 0.32);
+  border-radius: 13px;
+  background: linear-gradient(105deg, var(--color-cyan-light), white 75%);
+}
+
+.payable-origin-card span,
+.payable-origin-card small {
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.payable-origin-card strong {
+  color: var(--color-ink);
+  font-size: 11px;
+}
+
+#payablePurchaseFields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  align-items: end;
+  gap: 11px;
+  margin: 12px 0;
+}
+
+#payablePurchaseFields[hidden],
+#payableManualFields[hidden] {
+  display: none;
+}
+
+.payable-source-preview {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 63px;
+  padding: 11px 13px;
+  border: 1px dashed rgba(79, 210, 233, 0.68);
+  border-radius: 12px;
+  background: var(--color-cyan-light);
+}
+
+.payable-source-preview span,
+.payable-source-preview small {
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.payable-source-preview strong {
+  color: var(--color-ink);
+  font-size: 14px;
 }
 
 .purchase-order-button,
@@ -4568,6 +4794,10 @@ footer {
 }
 
 @media (max-width: 1120px) {
+  .financial-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .purchase-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4818,6 +5048,15 @@ footer {
 }
 
 @media (max-width: 580px) {
+  .financial-snapshot-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .financial-snapshot-grid {
+    grid-template-columns: 1fr;
+  }
+
   .topbar {
     gap: 12px;
   }
@@ -4925,6 +5164,10 @@ footer {
   }
 
   .receipt-purchase-row {
+    grid-template-columns: 1fr;
+  }
+
+  #payablePurchaseFields {
     grid-template-columns: 1fr;
   }
 

@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-7">
-    <script src="./app.js?v=20260726-7" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-8">
+    <script src="./app.js?v=20260726-8" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -45,6 +45,9 @@
           <p class="nav-label">Abastecimiento</p>
           <a class="nav-item" href="#compras" data-view-link="compras">
             <span aria-hidden="true">OC</span> Compras
+          </a>
+          <a class="nav-item" href="#cuentas-pagar" data-view-link="cuentas-pagar">
+            <span aria-hidden="true">CP</span> Cuentas por pagar
           </a>
           <p class="nav-label">Ventas</p>
           <a class="nav-item" href="#caja" data-view-link="caja">
@@ -109,6 +112,7 @@
           <a href="#inventario" data-view-link="inventario">Inventario</a>
           <a href="#productos" data-view-link="productos">Catálogo</a>
           <a href="#compras" data-view-link="compras">Compras</a>
+          <a href="#cuentas-pagar" data-view-link="cuentas-pagar">CxP</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
@@ -195,6 +199,35 @@
                   <small id="branchDetail">Consultando API</small>
                 </div>
               </article>
+            </div>
+
+            <div class="financial-snapshot">
+              <div class="financial-snapshot-heading">
+                <div><p class="eyebrow">Posición operativa</p><h3>Dinero e inventario</h3></div>
+                <span>Empresa activa</span>
+              </div>
+              <div class="financial-snapshot-grid">
+                <a href="#cartera">
+                  <span class="financial-symbol incoming" aria-hidden="true">↙</span>
+                  <div><small>Por cobrar</small><strong id="dashboardReceivable">$0</strong></div>
+                  <b>Clientes →</b>
+                </a>
+                <a href="#cuentas-pagar">
+                  <span class="financial-symbol outgoing" aria-hidden="true">↗</span>
+                  <div><small>Por pagar</small><strong id="dashboardPayable">$0</strong></div>
+                  <b>Proveedores →</b>
+                </a>
+                <a href="#inventario">
+                  <span class="financial-symbol inventory" aria-hidden="true">I</span>
+                  <div><small>Valor inventario</small><strong id="dashboardInventoryValue">$0</strong></div>
+                  <b>Existencias →</b>
+                </a>
+                <a href="#compras">
+                  <span class="financial-symbol orders" aria-hidden="true">OC</span>
+                  <div><small>Órdenes abiertas</small><strong id="dashboardOpenPurchases">0</strong></div>
+                  <b>Compras →</b>
+                </a>
+              </div>
             </div>
           </section>
 
@@ -842,6 +875,124 @@
             </div>
           </section>
 
+          <section class="section receivables-section payables-section app-view" id="cuentas-pagar" data-view="cuentas-pagar" aria-labelledby="payablesTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Control de obligaciones</p>
+                <h2 id="payablesTitle">Facturas y cuentas por pagar</h2>
+              </div>
+              <button class="payable-create-button" id="newPayableButton" type="button">
+                <span aria-hidden="true">＋</span>
+                <span><small>Registrar obligación</small>Nueva cuenta</span>
+              </button>
+            </div>
+
+            <div class="ar-kpi-grid payable-kpi-grid" aria-label="Resumen de cuentas por pagar">
+              <article class="ar-kpi featured payable-featured">
+                <span>Total pendiente</span>
+                <strong id="apOutstanding">$0</strong>
+                <small id="apOpenCount">0 obligaciones abiertas</small>
+              </article>
+              <article class="ar-kpi">
+                <span>Por vencer</span>
+                <strong id="apCurrent">$0</strong>
+                <small>Dentro del plazo acordado</small>
+              </article>
+              <article class="ar-kpi warning">
+                <span>Vencida 1–30 días</span>
+                <strong id="apOverdue30">$0</strong>
+                <small>Pago prioritario</small>
+              </article>
+              <article class="ar-kpi danger">
+                <span>Vencida 31–60 días</span>
+                <strong id="apOverdue60">$0</strong>
+                <small>Requiere programación</small>
+              </article>
+              <article class="ar-kpi danger-strong">
+                <span>Más de 60 días</span>
+                <strong id="apOverdue61">$0</strong>
+                <small>Obligación crítica</small>
+              </article>
+              <article class="ar-kpi collected payable-paid">
+                <span>Pagado este mes</span>
+                <strong id="apPaidMonth">$0</strong>
+                <small>Salidas registradas</small>
+              </article>
+            </div>
+
+            <div class="ar-toolbar">
+              <label class="field-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="sr-only">Buscar cuentas por pagar</span>
+                <input id="payableSearch" type="search" placeholder="Buscar número, proveedor u orden">
+              </label>
+              <label class="ar-status-filter">
+                <span>Estado</span>
+                <select id="payableStatusFilter">
+                  <option value="ALL">Todas</option>
+                  <option value="OPEN">Pendientes</option>
+                  <option value="OVERDUE">Vencidas</option>
+                  <option value="PAID">Pagadas</option>
+                </select>
+              </label>
+              <button class="sync-link" id="reloadPayablesButton" type="button">Actualizar pagos</button>
+            </div>
+
+            <div class="ar-workspace">
+              <aside class="ar-invoice-panel">
+                <div class="ar-panel-heading">
+                  <div><p class="eyebrow">Proveedores</p><h3>Obligaciones</h3></div>
+                  <span id="payableRecordCount">0</span>
+                </div>
+                <div class="ar-invoice-list" id="payableList"></div>
+                <div class="data-state compact-state" id="payableDataState">
+                  <span class="data-state-icon" aria-hidden="true">CP</span>
+                  <strong>Consultando obligaciones</strong>
+                  <p>Estamos calculando vencimientos y saldos.</p>
+                </div>
+              </aside>
+
+              <div class="ar-detail-panel">
+                <div class="ar-detail-empty" id="payableDetailEmpty">
+                  <span aria-hidden="true">↗</span>
+                  <strong>Selecciona una cuenta por pagar</strong>
+                  <p>Verás el proveedor, su origen, saldo y pagos realizados.</p>
+                </div>
+                <div id="payableDetailContent" hidden>
+                  <div class="ar-detail-heading">
+                    <div>
+                      <p class="eyebrow" id="payableDetailNumber">Cuenta por pagar</p>
+                      <h3 id="payableDetailSupplier">—</h3>
+                      <span id="payableDetailDocument">—</span>
+                    </div>
+                    <span class="ar-status" id="payableDetailStatus">Pendiente</span>
+                  </div>
+                  <div class="ar-detail-facts">
+                    <div><span>Emisión</span><strong id="payableDetailIssue">—</strong></div>
+                    <div><span>Vencimiento</span><strong id="payableDetailDue">—</strong></div>
+                    <div><span>Total</span><strong id="payableDetailTotal">$0</strong></div>
+                    <div><span>Saldo</span><strong id="payableDetailBalance">$0</strong></div>
+                  </div>
+                  <div class="payable-origin-card">
+                    <span>Origen de la obligación</span>
+                    <strong id="payableDetailOrigin">Registro manual</strong>
+                    <small id="payableDetailExternal">Sin referencia del proveedor</small>
+                  </div>
+                  <div class="ar-payments-heading">
+                    <div><p class="eyebrow">Tesorería</p><h3>Pagos realizados</h3></div>
+                    <div>
+                      <span id="payablePaymentCount">0 pagos</span>
+                      <button class="primary-button compact" id="newPayablePaymentButton" type="button">
+                        Registrar pago <span aria-hidden="true">＋</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="ar-payment-list" id="payablePaymentList"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
@@ -1249,15 +1400,25 @@
                   <a class="module-action" href="#cartera">Abrir cartera <span>→</span></a>
                 </div>
               </article>
-              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+              <article class="module-card" data-search="cuentas pagar proveedores obligaciones vencimientos pagos tesorería">
                 <span class="module-number">15</span>
+                <div class="module-symbol rose" aria-hidden="true">CP</div>
+                <h3>Cuentas por pagar</h3>
+                <p>Obligaciones de proveedores, vencimientos, abonos y programación de pagos.</p>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#cuentas-pagar">Abrir obligaciones <span>→</span></a>
+                </div>
+              </article>
+              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+                <span class="module-number">16</span>
                 <div class="module-symbol green" aria-hidden="true">PL</div>
                 <h3>Planner</h3>
                 <p>Planeación de tareas, responsables, fechas y seguimiento visual.</p>
                 <span class="module-state planned">Fase futura</span>
               </article>
               <article class="module-card" data-search="tickets soporte solicitudes ticketera libre">
-                <span class="module-number">16</span>
+                <span class="module-number">17</span>
                 <div class="module-symbol blue" aria-hidden="true">TK</div>
                 <h3>Tickets</h3>
                 <p>Solicitudes internas, prioridades, responsables y tiempos de atención.</p>
@@ -1311,6 +1472,129 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="payableDialog" aria-labelledby="payableDialogTitle">
+      <form class="company-form" id="payableForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Nueva obligación</p>
+            <h2 id="payableDialogTitle">Registrar cuenta por pagar</h2>
+          </div>
+          <button class="icon-button" id="closePayableDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Vincúlala con una compra recibida para copiar sus valores o registra una obligación independiente.
+        </p>
+        <label class="form-field">
+          <span>Origen <b>*</b></span>
+          <select id="payableSourceType" name="sourceType">
+            <option value="PURCHASE">Compra recibida</option>
+            <option value="MANUAL">Registro manual</option>
+          </select>
+        </label>
+        <div id="payablePurchaseFields">
+          <label class="form-field">
+            <span>Orden recibida <b>*</b></span>
+            <select id="payablePurchaseId" name="purchaseId">
+              <option value="">Selecciona una orden</option>
+            </select>
+          </label>
+          <div class="payable-source-preview" id="payableSourcePreview">
+            <span>Valor de la compra</span>
+            <strong>$0</strong>
+            <small>Selecciona una orden recibida</small>
+          </div>
+        </div>
+        <div class="form-grid" id="payableManualFields" hidden>
+          <label class="form-field">
+            <span>Proveedor <b>*</b></span>
+            <select id="payableSupplierId" name="supplierId">
+              <option value="">Selecciona un proveedor</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Subtotal <b>*</b></span>
+            <input id="payableSubtotal" name="subtotal" type="number" min="0" step="0.01" placeholder="0">
+          </label>
+          <label class="form-field">
+            <span>Impuestos</span>
+            <input id="payableTaxTotal" name="taxTotal" type="number" min="0" step="0.01" value="0">
+          </label>
+        </div>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Factura del proveedor</span>
+            <input name="supplierInvoiceNumber" type="text" maxlength="80" placeholder="Número o referencia">
+          </label>
+          <label class="form-field">
+            <span>Fecha de emisión <b>*</b></span>
+            <input id="payableIssueDate" name="issueDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha de vencimiento <b>*</b></span>
+            <input id="payableDueDate" name="dueDate" type="date" required>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Notas</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Condiciones, concepto o responsable"></textarea>
+        </label>
+        <p class="form-error" id="payableFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPayableButton" type="button">Volver sin registrar</button>
+          <button class="primary-button compact" id="savePayableButton" type="submit">Crear cuenta por pagar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="payablePaymentDialog" aria-labelledby="payablePaymentDialogTitle">
+      <form class="company-form" id="payablePaymentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Salida de tesorería</p>
+            <h2 id="payablePaymentDialogTitle">Registrar pago</h2>
+          </div>
+          <button class="icon-button" id="closePayablePaymentDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Obligación <strong id="payablePaymentNumber">—</strong> ·
+          <span id="payablePaymentBalance">$0 pendientes</span>
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Valor pagado <b>*</b></span>
+            <input id="payablePaymentAmount" name="amount" type="number" min="0.01" step="0.01" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha <b>*</b></span>
+            <input id="payablePaymentDate" name="paymentDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Medio de pago</span>
+            <select name="paymentMethod">
+              <option value="BANK_TRANSFER">Transferencia bancaria</option>
+              <option value="CASH">Efectivo</option>
+              <option value="CARD">Tarjeta</option>
+              <option value="CHECK">Cheque</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Referencia</span>
+            <input name="reference" type="text" maxlength="100" placeholder="Comprobante o transacción">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Observaciones</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Cuenta bancaria, autorización o nota interna"></textarea>
+        </label>
+        <p class="form-error" id="payablePaymentFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPayablePaymentButton" type="button">Volver sin pagar</button>
+          <button class="primary-button compact" id="savePayablePaymentButton" type="submit">Aplicar pago</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="supplierDialog" aria-labelledby="supplierDialogTitle">
       <form class="company-form" id="supplierForm">

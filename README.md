@@ -57,6 +57,8 @@ npm test
 - `/` abre el centro de operaciones local conectado a la API.
 - `/#cartera` abre el módulo de clientes, facturas por cobrar, vencimientos y
   aplicación de abonos.
+- `/#cuentas-pagar` abre obligaciones con proveedores, vencimientos y registro
+  de pagos parciales o totales.
 - `/#inventario` abre existencias valorizadas, kardex, ajustes, transferencias
   y la herramienta secundaria de conteo físico.
 - `/#conteos` se conserva como enlace compatible y redirige al módulo
@@ -90,6 +92,8 @@ La interfaz incluye:
   cantidades pendientes;
 - recepciones parciales o totales que actualizan inventario, kardex y costo
   promedio de forma transaccional;
+- cuentas por pagar originadas en compras recibidas o registradas manualmente,
+  con edades de vencimiento e historial de pagos;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
@@ -97,11 +101,13 @@ La interfaz incluye:
 - venta rápida con carrito, medios de pago, comprobante y salida transaccional
   de inventario;
 - métricas y salud de servicios en vivo;
-- directorio de los 15 módulos planeados con su estado real.
+- resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
+  inventario y órdenes de compra abiertas;
+- directorio de los 17 módulos previstos con su estado real.
 
 Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
-`#productos` y `#caja`, por lo que pueden guardarse como favoritos sin configurar rutas
-adicionales en el servidor.
+`#productos`, `#caja` y `#cuentas-pagar`, por lo que pueden guardarse como
+favoritos sin configurar rutas adicionales en el servidor.
 
 Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
 aún tienen únicamente modelo o API base se identifican como tales.

@@ -138,16 +138,17 @@ tomó como referencia la copia documentada con versión 1.17.3.
 
 1. Completado: conteos físicos, ajustes y transferencias de inventario.
 2. Completado: proveedores, órdenes de compra y recepción por lotes.
-3. Cuentas por pagar y costo aterrizado.
-4. Usuarios, roles y permisos multiempresa.
-5. Auditoría consultable y exportaciones.
-6. Planner.
-7. Adaptador de Ticketera.
-8. Integraciones WooCommerce y canales comerciales.
+3. Completado: cuentas por pagar, vencimientos y pagos a proveedores.
+4. Costo aterrizado para transporte, aranceles y otros gastos de compra.
+5. Usuarios, roles y permisos multiempresa.
+6. Auditoría consultable y exportaciones.
+7. Planner.
+8. Adaptador de Ticketera.
+9. Integraciones WooCommerce y canales comerciales.
 
 ## Siguiente fase recomendada
 
-Cuentas por pagar y costo aterrizado. Las órdenes y recepciones ya controlan la
-entrada física; el siguiente paso es registrar obligaciones con proveedores,
-vencimientos, abonos y costos adicionales de transporte o importación sin
+Costo aterrizado. Las órdenes, recepciones y obligaciones ya controlan la
+entrada física y la deuda con el proveedor; el siguiente paso es distribuir
+transporte, seguros, aranceles y otros gastos sobre los productos recibidos sin
 mezclarlos con las cuentas por cobrar.
