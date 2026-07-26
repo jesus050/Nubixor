@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="Centro de operaciones local de MegaSuite, plataforma ERP modular y multiempresa."
+    >
+    <meta name="theme-color" content="#17221d">
+    <title>MegaSuite — Centro de operaciones</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">M</span>
+          <span class="brand-name">MegaSuite</span>
+        </div>
+
+        <nav class="main-nav">
+          <p class="nav-label">Espacio de trabajo</p>
+          <a class="nav-item active" href="#inicio" aria-current="page">
+            <span aria-hidden="true">⌂</span> Inicio
+          </a>
+          <a class="nav-item" href="#resumen">
+            <span aria-hidden="true">▦</span> Resumen
+          </a>
+          <a class="nav-item" href="#modulos">
+            <span aria-hidden="true">◇</span> Módulos
+          </a>
+          <a class="nav-item" href="#sistema">
+            <span aria-hidden="true">◉</span> Sistema
+          </a>
+        </nav>
+
+        <div class="sidebar-note">
+          <span class="note-kicker">Entorno</span>
+          <strong>Local · Fase 1</strong>
+          <p>Base estable para crecer módulo por módulo.</p>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <button
+            class="menu-button"
+            id="menuButton"
+            type="button"
+            aria-label="Abrir menú"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >
+            <span></span><span></span>
+          </button>
+
+          <label class="search">
+            <span aria-hidden="true">⌕</span>
+            <span class="sr-only">Buscar módulos</span>
+            <input id="moduleSearch" type="search" placeholder="Buscar un módulo">
+          </label>
+
+          <div class="topbar-actions">
+            <span class="environment-badge">Local</span>
+            <div class="avatar" aria-label="MegaSuite local">MS</div>
+          </div>
+        </header>
+
+        <main>
+          <section class="hero" id="inicio">
+            <div class="hero-copy">
+              <p class="eyebrow" id="currentDate">Centro de operaciones</p>
+              <h1>Todo tu negocio,<br><span>en un solo lugar.</span></h1>
+              <p class="hero-description">
+                MegaSuite conecta empresas, inventario y operaciones sobre una
+                base preparada para crecer sin perder el control.
+              </p>
+              <div class="hero-actions">
+                <button class="primary-button" id="refreshButton" type="button">
+                  Actualizar estado
+                  <span aria-hidden="true">↻</span>
+                </button>
+                <a class="text-link" href="#modulos">Explorar módulos <span>→</span></a>
+              </div>
+            </div>
+
+            <div class="hero-panel" aria-label="Estado general de MegaSuite">
+              <div class="hero-panel-top">
+                <span>Estado general</span>
+                <span class="live-indicator" id="overallIndicator">
+                  <i></i><b id="overallLabel">Comprobando</b>
+                </span>
+              </div>
+              <div class="score-ring" id="scoreRing">
+                <div>
+                  <strong id="systemScore">—</strong>
+                  <span>servicios listos</span>
+                </div>
+              </div>
+              <div class="hero-panel-foot">
+                <span>Última comprobación</span>
+                <strong id="lastChecked">Pendiente</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="resumen" aria-labelledby="summaryTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Datos conectados</p>
+                <h2 id="summaryTitle">Resumen de plataforma</h2>
+              </div>
+              <p>Información consultada directamente desde la API local.</p>
+            </div>
+
+            <div class="metric-grid">
+              <article class="metric-card">
+                <span class="metric-icon green" aria-hidden="true">E</span>
+                <div>
+                  <span>Empresas</span>
+                  <strong id="companyCount">—</strong>
+                  <small id="companyDetail">Consultando API</small>
+                </div>
+              </article>
+              <article class="metric-card">
+                <span class="metric-icon amber" aria-hidden="true">B</span>
+                <div>
+                  <span>Bodegas</span>
+                  <strong id="warehouseCount">—</strong>
+                  <small id="warehouseDetail">Consultando API</small>
+                </div>
+              </article>
+              <article class="metric-card">
+                <span class="metric-icon blue" aria-hidden="true">P</span>
+                <div>
+                  <span>Productos</span>
+                  <strong id="productCount">—</strong>
+                  <small id="productDetail">Consultando API</small>
+                </div>
+              </article>
+              <article class="metric-card">
+                <span class="metric-icon rose" aria-hidden="true">M</span>
+                <div>
+                  <span>Saldos</span>
+                  <strong id="balanceCount">—</strong>
+                  <small id="balanceDetail">Saldos registrados</small>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="section module-section" id="modulos" aria-labelledby="modulesTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Arquitectura modular</p>
+                <h2 id="modulesTitle">Tu suite, lista para crecer</h2>
+              </div>
+              <p id="moduleResult">Módulos actuales y próximos componentes del ERP.</p>
+            </div>
+
+            <div class="module-grid" id="moduleGrid">
+              <article class="module-card" data-search="empresas multiempresa compañías">
+                <span class="module-number">01</span>
+                <div class="module-symbol green" aria-hidden="true">ME</div>
+                <h3>Empresas</h3>
+                <p>Base multiempresa para organizar cada operación con contexto propio.</p>
+                <span class="module-state ready">Base disponible</span>
+              </article>
+              <article class="module-card" data-search="inventario bodegas productos movimientos">
+                <span class="module-number">02</span>
+                <div class="module-symbol amber" aria-hidden="true">IN</div>
+                <h3>Inventario</h3>
+                <p>Productos, bodegas, movimientos y saldos con trazabilidad.</p>
+                <span class="module-state ready">Base disponible</span>
+              </article>
+              <article class="module-card" data-search="compras proveedores documentos soporte">
+                <span class="module-number">03</span>
+                <div class="module-symbol blue" aria-hidden="true">CO</div>
+                <h3>Compras</h3>
+                <p>Proveedores y documentos preparados para el flujo de recepción.</p>
+                <span class="module-state ready">Base disponible</span>
+              </article>
+              <article class="module-card" data-search="ventas pos facturación clientes">
+                <span class="module-number">04</span>
+                <div class="module-symbol rose" aria-hidden="true">VE</div>
+                <h3>Ventas &amp; POS</h3>
+                <p>Próximo espacio para ventas, caja y facturación electrónica.</p>
+                <span class="module-state planned">Próxima fase</span>
+              </article>
+            </div>
+            <div class="empty-search" id="emptySearch" hidden>
+              <strong>No encontramos ese módulo</strong>
+              <p>Prueba con empresas, inventario, compras o ventas.</p>
+            </div>
+          </section>
+
+          <section class="section" id="sistema" aria-labelledby="systemTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Infraestructura</p>
+                <h2 id="systemTitle">Salud del sistema</h2>
+              </div>
+              <p>Lectura en vivo de las dependencias esenciales.</p>
+            </div>
+
+            <div class="system-card">
+              <div class="service-row">
+                <div class="service-name">
+                  <span class="service-dot" id="apiDot"></span>
+                  <div><strong>API MegaSuite</strong><small>Servidor Express</small></div>
+                </div>
+                <span class="service-result" id="apiResult">Comprobando</span>
+              </div>
+              <div class="service-row">
+                <div class="service-name">
+                  <span class="service-dot" id="postgresDot"></span>
+                  <div><strong>PostgreSQL</strong><small>Persistencia principal</small></div>
+                </div>
+                <span class="service-result" id="postgresResult">Comprobando</span>
+              </div>
+              <div class="service-row">
+                <div class="service-name">
+                  <span class="service-dot" id="redisDot"></span>
+                  <div><strong>Redis</strong><small>Servicios rápidos</small></div>
+                </div>
+                <span class="service-result" id="redisResult">Comprobando</span>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer>
+          <span>MegaSuite · Entorno local</span>
+          <span>Construido sobre una base modular y auditable.</span>
+        </footer>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

@@ -2,6 +2,15 @@
 
 Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
+## [Unreleased]
+
+### Añadido
+
+- Centro de operaciones local y responsive servido desde `public/index.html`.
+- Resumen con cantidades consultadas desde las APIs reales.
+- Estado en vivo de API, PostgreSQL y Redis.
+- Navegación móvil, búsqueda de módulos, estados de carga y mensajes de error.
+
 ## [0.1.1] - 2026-07-26
 
 ### Añadido

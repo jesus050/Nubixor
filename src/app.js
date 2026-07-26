@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -9,6 +11,8 @@ import warehousesRouter from './modules/warehouses.js';
 import productsRouter from './modules/products.js';
 import inventoryRouter from './modules/inventory.js';
 import purchasesRouter from './modules/purchases.js';
+
+const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
 function corsOptions() {
   if (config.corsOrigins.includes('*')) return {};
@@ -34,14 +38,10 @@ export function createApp({ health = healthRouter } = {}) {
   application.use(requestContext);
   application.use(requestLogger);
 
-  application.get('/', (_req, res) => {
-    res.json({
-      ok: true,
-      service: config.appName,
-      health: '/api/health',
-      readiness: '/api/health/ready',
-    });
-  });
+  application.use(express.static(publicDir, {
+    index: 'index.html',
+    maxAge: config.nodeEnv === 'production' ? '1h' : 0,
+  }));
   application.use('/api/health', health);
   application.use('/api/companies', companiesRouter);
   application.use('/api/warehouses', warehousesRouter);

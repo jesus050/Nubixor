@@ -4,11 +4,17 @@ import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { createHealthRouter } from '../src/modules/health.js';
 
-test('GET / describe la API', async () => {
+test('GET / sirve la interfaz local', async () => {
   const response = await request(createApp()).get('/').expect(200);
-  assert.equal(response.body.ok, true);
-  assert.equal(response.body.health, '/api/health');
-  assert.equal(response.body.readiness, '/api/health/ready');
+  assert.match(response.headers['content-type'], /^text\/html/);
+  assert.match(response.text, /MegaSuite/);
+  assert.match(response.text, /Centro de operaciones/);
+});
+
+test('GET /styles.css sirve los estilos locales', async () => {
+  const response = await request(createApp()).get('/styles.css').expect(200);
+  assert.match(response.headers['content-type'], /^text\/css/);
+  assert.match(response.text, /--color-ink/);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

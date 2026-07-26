@@ -30,8 +30,9 @@ npm run dev
 ```
 
 `docker compose up -d` inicia PostgreSQL y Redis. La API corre con npm y queda
-disponible en `http://localhost:4100`. El modo de desarrollo evita que exista
-otra API Docker ocupando el mismo puerto.
+disponible en `http://localhost:4100`. Esta dirección sirve también la interfaz
+local responsive desde `public/index.html`. El modo de desarrollo evita que
+exista otra API Docker ocupando el mismo puerto.
 
 Alternativamente, después de `npm install`:
 
@@ -52,7 +53,7 @@ curl -i http://localhost:4100/api/health/ready
 npm test
 ```
 
-- `/` describe el servicio y enlaza las rutas de salud.
+- `/` abre el centro de operaciones local conectado a la API.
 - `/api/health` es una prueba de vida. Siempre responde sin consultar
   PostgreSQL ni Redis.
 - `/api/health/ready` prueba conexiones reales a PostgreSQL y Redis. Responde
