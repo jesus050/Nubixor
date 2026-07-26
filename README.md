@@ -55,6 +55,8 @@ npm test
 ```
 
 - `/` abre el centro de operaciones local conectado a la API.
+- `/#cartera` abre el módulo de clientes, facturas por cobrar, vencimientos y
+  aplicación de abonos.
 - `/api/health` es una prueba de vida. Siempre responde sin consultar
   PostgreSQL ni Redis.
 - `/api/health/ready` prueba conexiones reales a PostgreSQL y Redis. Responde

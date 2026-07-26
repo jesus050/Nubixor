@@ -161,6 +161,65 @@ const elements = {
   receiptTotal: document.querySelector('#receiptTotal'),
   closeReceiptDialog: document.querySelector('#closeReceiptDialog'),
   finishReceiptButton: document.querySelector('#finishReceiptButton'),
+  arOutstanding: document.querySelector('#arOutstanding'),
+  arOpenCount: document.querySelector('#arOpenCount'),
+  arCurrent: document.querySelector('#arCurrent'),
+  arOverdue30: document.querySelector('#arOverdue30'),
+  arOverdue60: document.querySelector('#arOverdue60'),
+  arOverdue61: document.querySelector('#arOverdue61'),
+  arCollectedMonth: document.querySelector('#arCollectedMonth'),
+  invoiceSearch: document.querySelector('#invoiceSearch'),
+  invoiceStatusFilter: document.querySelector('#invoiceStatusFilter'),
+  reloadReceivablesButton: document.querySelector('#reloadReceivablesButton'),
+  invoiceList: document.querySelector('#invoiceList'),
+  invoiceDataState: document.querySelector('#invoiceDataState'),
+  invoiceRecordCount: document.querySelector('#invoiceRecordCount'),
+  invoiceDetailEmpty: document.querySelector('#invoiceDetailEmpty'),
+  invoiceDetailContent: document.querySelector('#invoiceDetailContent'),
+  invoiceDetailNumber: document.querySelector('#invoiceDetailNumber'),
+  invoiceDetailStatus: document.querySelector('#invoiceDetailStatus'),
+  invoiceDetailCustomer: document.querySelector('#invoiceDetailCustomer'),
+  invoiceDetailDocument: document.querySelector('#invoiceDetailDocument'),
+  invoiceDetailIssue: document.querySelector('#invoiceDetailIssue'),
+  invoiceDetailDue: document.querySelector('#invoiceDetailDue'),
+  invoiceDetailTotal: document.querySelector('#invoiceDetailTotal'),
+  invoiceDetailBalance: document.querySelector('#invoiceDetailBalance'),
+  invoiceDetailItems: document.querySelector('#invoiceDetailItems'),
+  invoicePaymentCount: document.querySelector('#invoicePaymentCount'),
+  invoicePaymentList: document.querySelector('#invoicePaymentList'),
+  newCustomerButton: document.querySelector('#newCustomerButton'),
+  newInvoiceButton: document.querySelector('#newInvoiceButton'),
+  newPaymentButton: document.querySelector('#newPaymentButton'),
+  customerDialog: document.querySelector('#customerDialog'),
+  customerForm: document.querySelector('#customerForm'),
+  customerFormError: document.querySelector('#customerFormError'),
+  closeCustomerDialog: document.querySelector('#closeCustomerDialog'),
+  cancelCustomerButton: document.querySelector('#cancelCustomerButton'),
+  saveCustomerButton: document.querySelector('#saveCustomerButton'),
+  invoiceDialog: document.querySelector('#invoiceDialog'),
+  invoiceForm: document.querySelector('#invoiceForm'),
+  invoiceFormError: document.querySelector('#invoiceFormError'),
+  invoiceCustomerId: document.querySelector('#invoiceCustomerId'),
+  invoiceBranchId: document.querySelector('#invoiceBranchId'),
+  invoiceIssueDate: document.querySelector('#invoiceIssueDate'),
+  invoiceDueDate: document.querySelector('#invoiceDueDate'),
+  invoiceItemRows: document.querySelector('#invoiceItemRows'),
+  invoiceItemTemplate: document.querySelector('#invoiceItemTemplate'),
+  invoiceDraftTotal: document.querySelector('#invoiceDraftTotal'),
+  addInvoiceItemButton: document.querySelector('#addInvoiceItemButton'),
+  closeInvoiceDialog: document.querySelector('#closeInvoiceDialog'),
+  cancelInvoiceButton: document.querySelector('#cancelInvoiceButton'),
+  saveInvoiceButton: document.querySelector('#saveInvoiceButton'),
+  paymentDialog: document.querySelector('#paymentDialog'),
+  paymentForm: document.querySelector('#paymentForm'),
+  paymentFormError: document.querySelector('#paymentFormError'),
+  paymentInvoiceNumber: document.querySelector('#paymentInvoiceNumber'),
+  paymentBalance: document.querySelector('#paymentBalance'),
+  paymentAmount: document.querySelector('#paymentAmount'),
+  paymentDate: document.querySelector('#paymentDate'),
+  closePaymentDialog: document.querySelector('#closePaymentDialog'),
+  cancelPaymentButton: document.querySelector('#cancelPaymentButton'),
+  savePaymentButton: document.querySelector('#savePaymentButton'),
   toast: document.querySelector('#toast'),
 };
 
@@ -174,6 +233,9 @@ let taxCategories = [];
 let products = [];
 let posSummary = { registers: [], openSession: null };
 let posCatalog = [];
+let receivableCustomers = [];
+let receivableInvoices = [];
+let selectedReceivable = null;
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -1120,6 +1182,444 @@ async function syncPosWorkstation() {
   await loadPosCatalog();
 }
 
+function isoDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatShortDate(value) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${String(value).slice(0, 10)}T00:00:00Z`));
+}
+
+function receivableStatus(invoice) {
+  if (invoice.status === 'PAID') return { label: 'Pagada', className: 'paid' };
+  if (Number(invoice.days_overdue) > 0) {
+    return {
+      label: `${invoice.days_overdue} d vencida`,
+      className: Number(invoice.days_overdue) > 60 ? 'critical' : 'overdue',
+    };
+  }
+  if (invoice.status === 'PARTIAL') return { label: 'Abono parcial', className: 'partial' };
+  return { label: 'Por cobrar', className: 'open' };
+}
+
+function setReceivableSummary(summary = {}) {
+  elements.arOutstanding.textContent = formatCurrency(summary.outstanding || 0);
+  elements.arOpenCount.textContent =
+    `${summary.open_count || 0} ${Number(summary.open_count) === 1 ? 'factura abierta' : 'facturas abiertas'}`;
+  elements.arCurrent.textContent = formatCurrency(summary.current || 0);
+  elements.arOverdue30.textContent = formatCurrency(summary.overdue_1_30 || 0);
+  elements.arOverdue60.textContent = formatCurrency(summary.overdue_31_60 || 0);
+  elements.arOverdue61.textContent = formatCurrency(summary.overdue_61_plus || 0);
+  elements.arCollectedMonth.textContent = formatCurrency(summary.collected_month || 0);
+}
+
+function showReceivableError(message) {
+  receivableCustomers = [];
+  receivableInvoices = [];
+  selectedReceivable = null;
+  setReceivableSummary();
+  elements.invoiceList.replaceChildren();
+  elements.invoiceDataState.hidden = false;
+  elements.invoiceDataState.classList.add('error');
+  elements.invoiceDataState.querySelector('strong').textContent = 'No pudimos consultar la cartera';
+  elements.invoiceDataState.querySelector('p').textContent = message;
+  elements.invoiceRecordCount.textContent = 'Sin datos';
+  elements.invoiceDetailContent.hidden = true;
+  elements.invoiceDetailEmpty.hidden = false;
+}
+
+function renderInvoiceList() {
+  const search = normalizeSearch(elements.invoiceSearch.value.trim());
+  const filter = elements.invoiceStatusFilter.value;
+  const filtered = receivableInvoices.filter((invoice) => {
+    const haystack = normalizeSearch([
+      invoice.invoice_number,
+      invoice.external_reference,
+      invoice.customer_name,
+      invoice.document_number,
+    ].filter(Boolean).join(' '));
+    const matchesSearch = !search || haystack.includes(search);
+    const overdue = Number(invoice.days_overdue) > 0 && ['ISSUED', 'PARTIAL'].includes(invoice.status);
+    const matchesStatus =
+      filter === 'ALL' ||
+      (filter === 'OPEN' && ['ISSUED', 'PARTIAL'].includes(invoice.status)) ||
+      (filter === 'OVERDUE' && overdue) ||
+      (filter === 'PAID' && invoice.status === 'PAID');
+    return matchesSearch && matchesStatus;
+  });
+
+  elements.invoiceList.replaceChildren();
+  elements.invoiceRecordCount.textContent =
+    `${filtered.length} ${filtered.length === 1 ? 'registro' : 'registros'}`;
+  elements.invoiceDataState.hidden = filtered.length > 0;
+  elements.invoiceDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.invoiceDataState.querySelector('strong').textContent =
+      receivableInvoices.length ? 'No hay coincidencias' : 'Aún no hay facturas';
+    elements.invoiceDataState.querySelector('p').textContent =
+      receivableInvoices.length
+        ? 'Cambia la búsqueda o el filtro para consultar otros documentos.'
+        : 'Crea la primera cuenta por cobrar para comenzar el seguimiento.';
+    return;
+  }
+
+  for (const invoice of filtered) {
+    const status = receivableStatus(invoice);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ar-invoice-card';
+    if (selectedReceivable?.id === invoice.id) button.classList.add('selected');
+    button.dataset.invoiceId = invoice.id;
+
+    const top = document.createElement('div');
+    top.className = 'ar-invoice-card-top';
+    const number = document.createElement('strong');
+    number.textContent = invoice.invoice_number;
+    const badge = document.createElement('span');
+    badge.className = `ar-status ${status.className}`;
+    badge.textContent = status.label;
+    top.append(number, badge);
+
+    const customer = document.createElement('span');
+    customer.className = 'ar-invoice-customer';
+    customer.textContent = invoice.customer_name;
+
+    const bottom = document.createElement('div');
+    bottom.className = 'ar-invoice-card-bottom';
+    const due = document.createElement('span');
+    due.textContent = `Vence ${formatShortDate(invoice.due_date)}`;
+    const balance = document.createElement('strong');
+    balance.textContent = formatCurrency(invoice.balance);
+    bottom.append(due, balance);
+    button.append(top, customer, bottom);
+    button.addEventListener('click', () => loadInvoiceDetail(invoice.id));
+    elements.invoiceList.append(button);
+  }
+}
+
+function renderInvoiceDetail(invoice) {
+  selectedReceivable = invoice;
+  elements.invoiceDetailEmpty.hidden = true;
+  elements.invoiceDetailContent.hidden = false;
+  elements.invoiceDetailNumber.textContent = invoice.invoice_number;
+  const status = receivableStatus(invoice);
+  elements.invoiceDetailStatus.textContent = status.label;
+  elements.invoiceDetailStatus.className = `ar-status ${status.className}`;
+  elements.invoiceDetailCustomer.textContent = invoice.customer_name;
+  elements.invoiceDetailDocument.textContent =
+    invoice.document_number
+      ? `${invoice.document_type} ${invoice.document_number}`
+      : 'Sin documento registrado';
+  elements.invoiceDetailIssue.textContent = formatShortDate(invoice.issue_date);
+  elements.invoiceDetailDue.textContent = formatShortDate(invoice.due_date);
+  elements.invoiceDetailTotal.textContent = formatCurrency(invoice.total);
+  elements.invoiceDetailBalance.textContent = formatCurrency(invoice.balance);
+
+  elements.invoiceDetailItems.replaceChildren();
+  for (const item of invoice.items) {
+    const row = document.createElement('div');
+    const description = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = item.description;
+    const meta = document.createElement('small');
+    meta.textContent =
+      `${Number(item.quantity).toLocaleString('es-CO')} × ${formatCurrency(item.unit_price)} · IVA ${Number(item.tax_rate)}%`;
+    description.append(name, meta);
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(item.line_total);
+    row.append(description, amount);
+    elements.invoiceDetailItems.append(row);
+  }
+
+  elements.invoicePaymentList.replaceChildren();
+  elements.invoicePaymentCount.textContent = String(invoice.payments.length);
+  if (!invoice.payments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ar-no-payments';
+    empty.textContent = 'Todavía no se han registrado abonos.';
+    elements.invoicePaymentList.append(empty);
+  } else {
+    for (const payment of invoice.payments) {
+      const row = document.createElement('div');
+      const info = document.createElement('div');
+      const date = document.createElement('strong');
+      date.textContent = formatShortDate(payment.payment_date);
+      const reference = document.createElement('small');
+      reference.textContent =
+        payment.reference || payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+      info.append(date, reference);
+      const amount = document.createElement('strong');
+      amount.textContent = formatCurrency(payment.amount);
+      row.append(info, amount);
+      elements.invoicePaymentList.append(row);
+    }
+  }
+  elements.newPaymentButton.hidden = invoice.status === 'PAID';
+  renderInvoiceList();
+}
+
+async function loadInvoiceDetail(invoiceId) {
+  try {
+    const detail = await getJson(`/api/receivables/invoices/${invoiceId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderInvoiceDetail(detail);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadReceivables() {
+  if (!activeTenantId) {
+    showReceivableError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, customersResult, invoicesResult] = await Promise.all([
+      getJson('/api/receivables/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/receivables/customers', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/receivables/invoices', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    receivableCustomers = customersResult;
+    receivableInvoices = invoicesResult;
+    setReceivableSummary(summary);
+    renderInvoiceList();
+    if (selectedReceivable) {
+      const stillExists = invoicesResult.some((invoice) => invoice.id === selectedReceivable.id);
+      if (stillExists) await loadInvoiceDetail(selectedReceivable.id);
+      else {
+        selectedReceivable = null;
+        elements.invoiceDetailContent.hidden = true;
+        elements.invoiceDetailEmpty.hidden = false;
+      }
+    }
+    return invoicesResult;
+  } catch (error) {
+    showReceivableError(error.message);
+    throw error;
+  }
+}
+
+function openCustomerDialog() {
+  if (!activeTenantId) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  elements.customerForm.reset();
+  elements.customerFormError.hidden = true;
+  elements.customerDialog.showModal();
+  elements.customerForm.elements.name.focus();
+}
+
+function closeCustomerDialog() {
+  elements.customerDialog.close();
+}
+
+async function submitCustomer(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.customerForm);
+  elements.customerFormError.hidden = true;
+  elements.saveCustomerButton.disabled = true;
+  elements.saveCustomerButton.textContent = 'Registrando cliente…';
+  try {
+    await getJson('/api/receivables/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeCustomerDialog();
+    await loadReceivables();
+    showToast('Cliente registrado y disponible para facturar.');
+  } catch (error) {
+    elements.customerFormError.textContent = error.message;
+    elements.customerFormError.hidden = false;
+  } finally {
+    elements.saveCustomerButton.disabled = false;
+    elements.saveCustomerButton.textContent = 'Registrar cliente';
+  }
+}
+
+function syncInvoiceOptions() {
+  elements.invoiceCustomerId.replaceChildren(new Option('Selecciona un cliente', ''));
+  for (const customer of receivableCustomers.filter((item) => item.active)) {
+    const detail = customer.document_number ? ` · ${customer.document_number}` : '';
+    elements.invoiceCustomerId.append(new Option(`${customer.name}${detail}`, customer.id));
+  }
+  elements.invoiceBranchId.replaceChildren(new Option('Sin sucursal específica', ''));
+  for (const branch of branches.filter((item) => item.active)) {
+    elements.invoiceBranchId.append(new Option(branch.name, branch.id));
+  }
+}
+
+function updateInvoiceDraftTotal() {
+  let total = 0;
+  elements.invoiceItemRows.querySelectorAll('.ar-item-row').forEach((row) => {
+    const quantity = Number(row.querySelector('[data-item="quantity"]').value) || 0;
+    const unitPrice = Number(row.querySelector('[data-item="unitPrice"]').value) || 0;
+    const taxRate = Number(row.querySelector('[data-item="taxRate"]').value) || 0;
+    const subtotal = quantity * unitPrice;
+    total += subtotal + (subtotal * taxRate / 100);
+  });
+  elements.invoiceDraftTotal.textContent = formatCurrency(total);
+}
+
+function addInvoiceItemRow() {
+  const row = elements.invoiceItemTemplate.content.firstElementChild.cloneNode(true);
+  row.querySelectorAll('input').forEach((input) => {
+    input.addEventListener('input', updateInvoiceDraftTotal);
+  });
+  row.querySelector('[data-remove-item]').addEventListener('click', () => {
+    if (elements.invoiceItemRows.children.length === 1) {
+      showToast('La factura debe conservar al menos un concepto.');
+      return;
+    }
+    row.remove();
+    updateInvoiceDraftTotal();
+  });
+  elements.invoiceItemRows.append(row);
+  updateInvoiceDraftTotal();
+  return row;
+}
+
+function openInvoiceDialog() {
+  if (!activeTenantId) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  if (!receivableCustomers.length) {
+    showToast('Registra un cliente antes de crear la factura.');
+    openCustomerDialog();
+    return;
+  }
+  elements.invoiceForm.reset();
+  elements.invoiceItemRows.replaceChildren();
+  syncInvoiceOptions();
+  const today = new Date();
+  const due = new Date(today);
+  due.setDate(due.getDate() + 30);
+  elements.invoiceIssueDate.value = isoDate(today);
+  elements.invoiceDueDate.value = isoDate(due);
+  addInvoiceItemRow();
+  elements.invoiceFormError.hidden = true;
+  elements.invoiceDialog.showModal();
+  elements.invoiceCustomerId.focus();
+}
+
+function closeInvoiceDialog() {
+  elements.invoiceDialog.close();
+}
+
+function collectInvoiceItems() {
+  return [...elements.invoiceItemRows.querySelectorAll('.ar-item-row')].map((row) => ({
+    description: row.querySelector('[data-item="description"]').value,
+    quantity: row.querySelector('[data-item="quantity"]').value,
+    unitPrice: row.querySelector('[data-item="unitPrice"]').value,
+    taxRate: row.querySelector('[data-item="taxRate"]').value,
+  }));
+}
+
+async function submitInvoice(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.invoiceForm);
+  elements.invoiceFormError.hidden = true;
+  elements.saveInvoiceButton.disabled = true;
+  elements.saveInvoiceButton.textContent = 'Emitiendo factura…';
+  try {
+    const invoice = await getJson('/api/receivables/invoices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        customerId: formData.get('customerId'),
+        branchId: formData.get('branchId') || null,
+        issueDate: formData.get('issueDate'),
+        dueDate: formData.get('dueDate'),
+        externalReference: formData.get('externalReference') || null,
+        notes: formData.get('notes') || null,
+        items: collectInvoiceItems(),
+      }),
+    });
+    closeInvoiceDialog();
+    await loadReceivables();
+    await loadInvoiceDetail(invoice.id);
+    showToast(`${invoice.invoice_number} creada y agregada a cartera.`);
+  } catch (error) {
+    elements.invoiceFormError.textContent = error.message;
+    elements.invoiceFormError.hidden = false;
+  } finally {
+    elements.saveInvoiceButton.disabled = false;
+    elements.saveInvoiceButton.textContent = 'Emitir cuenta por cobrar';
+  }
+}
+
+function openPaymentDialog() {
+  if (!selectedReceivable || selectedReceivable.status === 'PAID') return;
+  elements.paymentForm.reset();
+  elements.paymentFormError.hidden = true;
+  elements.paymentInvoiceNumber.textContent = selectedReceivable.invoice_number;
+  elements.paymentBalance.textContent =
+    `${formatCurrency(selectedReceivable.balance)} pendientes`;
+  elements.paymentAmount.max = String(selectedReceivable.balance);
+  elements.paymentAmount.value = String(selectedReceivable.balance);
+  elements.paymentDate.value = isoDate();
+  elements.paymentDialog.showModal();
+  elements.paymentAmount.focus();
+  elements.paymentAmount.select();
+}
+
+function closePaymentDialog() {
+  elements.paymentDialog.close();
+}
+
+async function submitPayment(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.paymentForm);
+  elements.paymentFormError.hidden = true;
+  elements.savePaymentButton.disabled = true;
+  elements.savePaymentButton.textContent = 'Aplicando abono…';
+  try {
+    await getJson(`/api/receivables/invoices/${selectedReceivable.id}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    const invoiceId = selectedReceivable.id;
+    closePaymentDialog();
+    await loadReceivables();
+    await loadInvoiceDetail(invoiceId);
+    showToast('Abono registrado y saldo actualizado.');
+  } catch (error) {
+    elements.paymentFormError.textContent = error.message;
+    elements.paymentFormError.hidden = false;
+  } finally {
+    elements.savePaymentButton.disabled = false;
+    elements.savePaymentButton.textContent = 'Aplicar abono';
+  }
+}
+
 function setMetric(valueElement, detailElement, result, label) {
   if (result.status === 'fulfilled') {
     const count = Array.isArray(result.value) ? result.value.length : 0;
@@ -1194,6 +1694,7 @@ async function refreshTenantData() {
     showWarehouseError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
+    showReceivableError('Primero debes registrar o seleccionar una empresa.');
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
     setMetric(elements.productCount, elements.productDetail, { status: 'rejected' }, ['producto registrado', 'productos registrados']);
@@ -1205,6 +1706,7 @@ async function refreshTenantData() {
     loadWarehouses(),
     loadCatalog(),
     loadPos(),
+    loadReceivables(),
   ]);
   await syncPosWorkstation().catch(() => {});
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
@@ -1245,6 +1747,7 @@ const availableViews = new Set([
   'bodegas',
   'productos',
   'caja',
+  'cartera',
   'modulos',
   'sistema',
 ]);
@@ -1261,6 +1764,7 @@ const viewTitles = {
   bodegas: 'Bodegas',
   productos: 'Catálogo',
   caja: 'Caja & POS',
+  cartera: 'Cuentas por cobrar',
   modulos: 'Mapa del ERP',
   sistema: 'Sistema',
 };
@@ -1879,6 +2383,7 @@ elements.companyContext.addEventListener('change', async () => {
   activeTenantId = elements.companyContext.value;
   saleCart.clear();
   posCatalog = [];
+  selectedReceivable = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   await refreshTenantData();
@@ -1979,6 +2484,35 @@ elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();
+});
+elements.invoiceSearch.addEventListener('input', renderInvoiceList);
+elements.invoiceStatusFilter.addEventListener('change', renderInvoiceList);
+elements.reloadReceivablesButton.addEventListener('click', () => {
+  loadReceivables()
+    .then(() => showToast('Cartera actualizada.'))
+    .catch(() => showToast('No fue posible actualizar la cartera.'));
+});
+elements.newCustomerButton.addEventListener('click', openCustomerDialog);
+elements.closeCustomerDialog.addEventListener('click', closeCustomerDialog);
+elements.cancelCustomerButton.addEventListener('click', closeCustomerDialog);
+elements.customerForm.addEventListener('submit', submitCustomer);
+elements.customerDialog.addEventListener('click', (event) => {
+  if (event.target === elements.customerDialog) closeCustomerDialog();
+});
+elements.newInvoiceButton.addEventListener('click', openInvoiceDialog);
+elements.closeInvoiceDialog.addEventListener('click', closeInvoiceDialog);
+elements.cancelInvoiceButton.addEventListener('click', closeInvoiceDialog);
+elements.invoiceForm.addEventListener('submit', submitInvoice);
+elements.invoiceDialog.addEventListener('click', (event) => {
+  if (event.target === elements.invoiceDialog) closeInvoiceDialog();
+});
+elements.addInvoiceItemButton.addEventListener('click', addInvoiceItemRow);
+elements.newPaymentButton.addEventListener('click', openPaymentDialog);
+elements.closePaymentDialog.addEventListener('click', closePaymentDialog);
+elements.cancelPaymentButton.addEventListener('click', closePaymentDialog);
+elements.paymentForm.addEventListener('submit', submitPayment);
+elements.paymentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.paymentDialog) closePaymentDialog();
 });
 document.querySelectorAll('[data-catalog-tab]').forEach((tab) => {
   tab.addEventListener('click', () => showCatalogPanel(tab.dataset.catalogTab));

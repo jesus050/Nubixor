@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="/styles.css?v=20260726-2">
-    <script src="/app.js?v=20260726-2" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=20260726-3">
+    <script src="/app.js?v=20260726-3" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -42,6 +42,9 @@
           <p class="nav-label">Ventas</p>
           <a class="nav-item" href="#caja" data-view-link="caja">
             <span aria-hidden="true">$</span> Caja &amp; POS
+          </a>
+          <a class="nav-item" href="#cartera" data-view-link="cartera">
+            <span aria-hidden="true">C</span> Cuentas por cobrar
           </a>
           <p class="nav-label">Planeación</p>
           <a class="nav-item" href="#modulos" data-view-link="modulos">
@@ -98,6 +101,7 @@
           <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
           <a href="#productos" data-view-link="productos">Catálogo</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
+          <a href="#cartera" data-view-link="cartera">Cartera</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
           <a href="#sistema" data-view-link="sistema">Sistema</a>
         </nav>
@@ -616,6 +620,135 @@
             </div>
           </section>
 
+          <section class="section receivables-section app-view" id="cartera" data-view="cartera" aria-labelledby="receivablesTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Control de cartera</p>
+                <h2 id="receivablesTitle">Facturas y cuentas por cobrar</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="newCustomerButton" type="button">
+                  Nuevo cliente
+                </button>
+                <button class="primary-button compact" id="newInvoiceButton" type="button">
+                  Crear factura <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="ar-kpi-grid" aria-label="Resumen de cartera">
+              <article class="ar-kpi featured">
+                <span>Cartera pendiente</span>
+                <strong id="arOutstanding">$0</strong>
+                <small id="arOpenCount">0 facturas abiertas</small>
+              </article>
+              <article class="ar-kpi">
+                <span>Por vencer</span>
+                <strong id="arCurrent">$0</strong>
+                <small>Saldo dentro del plazo</small>
+              </article>
+              <article class="ar-kpi warning">
+                <span>Vencida 1–30 días</span>
+                <strong id="arOverdue30">$0</strong>
+                <small>Seguimiento prioritario</small>
+              </article>
+              <article class="ar-kpi danger">
+                <span>Vencida 31–60 días</span>
+                <strong id="arOverdue60">$0</strong>
+                <small>Requiere gestión</small>
+              </article>
+              <article class="ar-kpi danger-strong">
+                <span>Más de 60 días</span>
+                <strong id="arOverdue61">$0</strong>
+                <small>Cartera crítica</small>
+              </article>
+              <article class="ar-kpi collected">
+                <span>Recaudado este mes</span>
+                <strong id="arCollectedMonth">$0</strong>
+                <small>Abonos registrados</small>
+              </article>
+            </div>
+
+            <div class="ar-toolbar">
+              <label class="field-search ar-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="sr-only">Buscar factura o cliente</span>
+                <input id="invoiceSearch" type="search" placeholder="Buscar factura, cliente o documento">
+              </label>
+              <label class="ar-status-filter">
+                <span>Estado</span>
+                <select id="invoiceStatusFilter">
+                  <option value="ALL">Todas</option>
+                  <option value="OPEN">Pendientes</option>
+                  <option value="OVERDUE">Vencidas</option>
+                  <option value="PAID">Pagadas</option>
+                </select>
+              </label>
+              <button class="secondary-button" id="reloadReceivablesButton" type="button">
+                Actualizar cartera
+              </button>
+            </div>
+
+            <div class="ar-workspace">
+              <div class="ar-invoice-panel">
+                <div class="ar-panel-heading">
+                  <div>
+                    <p class="eyebrow">Documentos</p>
+                    <h3>Facturas registradas</h3>
+                  </div>
+                  <span id="invoiceRecordCount">0 registros</span>
+                </div>
+                <div class="ar-invoice-list" id="invoiceList"></div>
+                <div class="data-state" id="invoiceDataState">
+                  <span class="data-state-icon" aria-hidden="true">C</span>
+                  <strong>Cargando cartera</strong>
+                  <p>Estamos organizando saldos y vencimientos.</p>
+                </div>
+              </div>
+
+              <aside class="ar-detail-panel" id="invoiceDetailPanel" aria-live="polite">
+                <div class="ar-detail-empty" id="invoiceDetailEmpty">
+                  <span aria-hidden="true">↗</span>
+                  <strong>Selecciona una factura</strong>
+                  <p>Aquí verás conceptos, vencimiento, saldo y abonos.</p>
+                </div>
+                <div id="invoiceDetailContent" hidden>
+                  <div class="ar-detail-heading">
+                    <div>
+                      <small>Factura por cobrar</small>
+                      <h3 id="invoiceDetailNumber">—</h3>
+                    </div>
+                    <span class="ar-status" id="invoiceDetailStatus">Pendiente</span>
+                  </div>
+                  <div class="ar-customer-block">
+                    <strong id="invoiceDetailCustomer">—</strong>
+                    <span id="invoiceDetailDocument">—</span>
+                  </div>
+                  <dl class="ar-detail-facts">
+                    <div><dt>Emisión</dt><dd id="invoiceDetailIssue">—</dd></div>
+                    <div><dt>Vencimiento</dt><dd id="invoiceDetailDue">—</dd></div>
+                    <div><dt>Total</dt><dd id="invoiceDetailTotal">$0</dd></div>
+                    <div><dt>Saldo</dt><dd id="invoiceDetailBalance">$0</dd></div>
+                  </dl>
+                  <div class="ar-detail-section">
+                    <div class="ar-subheading"><strong>Conceptos</strong></div>
+                    <div class="ar-line-list" id="invoiceDetailItems"></div>
+                  </div>
+                  <div class="ar-detail-section">
+                    <div class="ar-subheading">
+                      <strong>Historial de abonos</strong>
+                      <span id="invoicePaymentCount">0</span>
+                    </div>
+                    <div class="ar-payment-list" id="invoicePaymentList"></div>
+                  </div>
+                  <button class="primary-button ar-payment-button" id="newPaymentButton" type="button">
+                    Registrar abono <span aria-hidden="true">→</span>
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
           <section class="section module-section app-view" id="modulos" data-view="modulos" aria-labelledby="modulesTitle" hidden>
             <div class="section-heading">
               <div>
@@ -732,15 +865,25 @@
                   <a class="module-action" href="#caja">Abrir POS <span>→</span></a>
                 </div>
               </article>
-              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+              <article class="module-card" data-search="cartera facturas cuentas cobrar clientes abonos vencimientos recaudo">
                 <span class="module-number">14</span>
+                <div class="module-symbol blue" aria-hidden="true">CX</div>
+                <h3>Cuentas por cobrar</h3>
+                <p>Clientes, facturas, vencimientos, abonos y análisis de cartera por edades.</p>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#cartera">Abrir cartera <span>→</span></a>
+                </div>
+              </article>
+              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+                <span class="module-number">15</span>
                 <div class="module-symbol green" aria-hidden="true">PL</div>
                 <h3>Planner</h3>
                 <p>Planeación de tareas, responsables, fechas y seguimiento visual.</p>
                 <span class="module-state planned">Fase futura</span>
               </article>
               <article class="module-card" data-search="tickets soporte solicitudes ticketera libre">
-                <span class="module-number">15</span>
+                <span class="module-number">16</span>
                 <div class="module-symbol blue" aria-hidden="true">TK</div>
                 <h3>Tickets</h3>
                 <p>Solicitudes internas, prioridades, responsables y tiempos de atención.</p>
@@ -794,6 +937,190 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="customerDialog" aria-labelledby="customerDialogTitle">
+      <form class="company-form" id="customerForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Tercero comercial</p>
+            <h2 id="customerDialogTitle">Nuevo cliente</h2>
+          </div>
+          <button class="icon-button" id="closeCustomerDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Registra los datos básicos para asociar facturas, vencimientos y pagos.
+        </p>
+        <label class="form-field">
+          <span>Nombre o razón social <b>*</b></span>
+          <input name="name" type="text" maxlength="160" required autocomplete="organization" placeholder="Ej. Cliente Comercial S.A.S.">
+        </label>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Tipo de documento</span>
+            <select name="documentType">
+              <option value="NIT">NIT</option>
+              <option value="CC">Cédula</option>
+              <option value="CE">Cédula de extranjería</option>
+              <option value="PASSPORT">Pasaporte</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Número de documento</span>
+            <input name="documentNumber" type="text" maxlength="40" placeholder="Ej. 900123456-7">
+          </label>
+          <label class="form-field">
+            <span>Correo</span>
+            <input name="email" type="email" maxlength="160" autocomplete="email" placeholder="cartera@cliente.com">
+          </label>
+          <label class="form-field">
+            <span>Teléfono</span>
+            <input name="phone" type="tel" maxlength="40" autocomplete="tel" placeholder="Ej. 300 000 0000">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Dirección</span>
+          <input name="address" type="text" maxlength="240" autocomplete="street-address" placeholder="Dirección comercial">
+        </label>
+        <p class="form-error" id="customerFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCustomerButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveCustomerButton" type="submit">Registrar cliente</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog ar-invoice-dialog" id="invoiceDialog" aria-labelledby="invoiceDialogTitle">
+      <form class="company-form" id="invoiceForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Nueva cuenta por cobrar</p>
+            <h2 id="invoiceDialogTitle">Crear factura</h2>
+          </div>
+          <button class="icon-button" id="closeInvoiceDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Registra el documento, sus conceptos y la fecha límite acordada con el cliente.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Cliente <b>*</b></span>
+            <select id="invoiceCustomerId" name="customerId" required>
+              <option value="">Selecciona un cliente</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Sucursal</span>
+            <select id="invoiceBranchId" name="branchId">
+              <option value="">Sin sucursal específica</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Fecha de emisión <b>*</b></span>
+            <input id="invoiceIssueDate" name="issueDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha de vencimiento <b>*</b></span>
+            <input id="invoiceDueDate" name="dueDate" type="date" required>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Referencia externa</span>
+          <input name="externalReference" type="text" maxlength="80" placeholder="Orden de compra, factura electrónica u otra referencia">
+        </label>
+
+        <div class="ar-item-editor">
+          <div class="ar-item-editor-heading">
+            <div><strong>Conceptos facturados</strong><small>Valores antes de impuesto.</small></div>
+            <button class="secondary-button" id="addInvoiceItemButton" type="button">Agregar concepto</button>
+          </div>
+          <div id="invoiceItemRows"></div>
+          <template id="invoiceItemTemplate">
+            <div class="ar-item-row">
+              <label class="form-field ar-item-description">
+                <span>Descripción <b>*</b></span>
+                <input data-item="description" type="text" maxlength="240" required placeholder="Servicio o producto">
+              </label>
+              <label class="form-field">
+                <span>Cantidad</span>
+                <input data-item="quantity" type="number" min="0.0001" step="0.0001" value="1" required>
+              </label>
+              <label class="form-field">
+                <span>Valor unitario</span>
+                <input data-item="unitPrice" type="number" min="0" step="0.01" required placeholder="0">
+              </label>
+              <label class="form-field">
+                <span>Impuesto %</span>
+                <input data-item="taxRate" type="number" min="0" max="100" step="0.01" value="0">
+              </label>
+              <button class="ar-remove-item" data-remove-item type="button" aria-label="Eliminar concepto">×</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="ar-draft-total">
+          <span>Total estimado</span>
+          <strong id="invoiceDraftTotal">$0</strong>
+        </div>
+        <label class="form-field">
+          <span>Notas de cobro</span>
+          <textarea name="notes" maxlength="500" rows="3" placeholder="Condiciones, contacto o información para seguimiento"></textarea>
+        </label>
+        <p class="form-error" id="invoiceFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelInvoiceButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveInvoiceButton" type="submit">Emitir cuenta por cobrar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="paymentDialog" aria-labelledby="paymentDialogTitle">
+      <form class="company-form" id="paymentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Aplicar recaudo</p>
+            <h2 id="paymentDialogTitle">Registrar abono</h2>
+          </div>
+          <button class="icon-button" id="closePaymentDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="ar-payment-context">
+          <span id="paymentInvoiceNumber">Factura —</span>
+          <strong id="paymentBalance">$0 pendientes</strong>
+        </div>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Valor recibido <b>*</b></span>
+            <input id="paymentAmount" name="amount" type="number" min="0.01" step="0.01" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha del abono <b>*</b></span>
+            <input id="paymentDate" name="paymentDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Medio de pago</span>
+            <select name="paymentMethod">
+              <option value="BANK_TRANSFER">Transferencia bancaria</option>
+              <option value="CASH">Efectivo</option>
+              <option value="CARD">Tarjeta</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Referencia</span>
+            <input name="reference" type="text" maxlength="100" placeholder="Comprobante o número de operación">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Notas</span>
+          <textarea name="notes" maxlength="300" rows="3" placeholder="Observaciones del recaudo"></textarea>
+        </label>
+        <p class="form-error" id="paymentFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPaymentButton" type="button">Volver sin registrar</button>
+          <button class="primary-button compact" id="savePaymentButton" type="submit">Aplicar abono</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">
       <form class="company-form" id="companyForm">

@@ -29,6 +29,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
+  assert.match(response.text, /data-view="cartera"/);
+  assert.match(response.text, /Facturas y cuentas por cobrar/);
+  assert.match(response.text, /Registrar abono/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -163,6 +166,31 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     emptySale.body.error,
     'cashSessionId, warehouseId, paymentMethod e items son obligatorios.',
   );
+});
+
+test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {
+  const application = createApp();
+  await request(application)
+    .get('/api/receivables/summary')
+    .expect(400);
+  const customer = await request(application)
+    .post('/api/receivables/customers')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ name: '   ' })
+    .expect(422);
+  assert.equal(customer.body.error, 'El nombre del cliente es obligatorio.');
+  const invoice = await request(application)
+    .post('/api/receivables/invoices')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(invoice.body.error, /cliente o la sucursal/i);
+  const payment = await request(application)
+    .post('/api/receivables/invoices/invalid/payments')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(payment.body.error, /UUID válido/i);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

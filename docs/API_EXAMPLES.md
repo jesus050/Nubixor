@@ -37,3 +37,29 @@ curl -X PATCH http://localhost:4100/api/products/PRODUCT_ID/tax \
   "supportDocumentRequired": true
 }
 ```
+
+## Cuentas por cobrar
+
+Todas las rutas de cartera requieren la empresa activa:
+
+```bash
+curl http://localhost:4100/api/receivables/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/receivables/invoices \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+El flujo operativo disponible en `/#cartera` es:
+
+1. Registrar un cliente.
+2. Crear una factura con uno o más conceptos y fecha de vencimiento.
+3. Consultar el saldo y su edad de cartera.
+4. Aplicar abonos parciales o el pago total.
+
+La API también expone:
+
+- `POST /api/receivables/customers`
+- `POST /api/receivables/invoices`
+- `GET /api/receivables/invoices/:id`
+- `POST /api/receivables/invoices/:id/payments`

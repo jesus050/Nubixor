@@ -6,6 +6,12 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Módulo funcional de cuentas por cobrar con clientes, facturas por conceptos,
+  vencimientos, impuestos, saldos y abonos parciales o totales.
+- Tablero de cartera por edades: por vencer, 1–30, 31–60 y más de 60 días,
+  además del recaudo mensual.
+- Detalle de cada factura con conceptos, historial de pagos y estado calculado.
+- Auditoría transaccional para la creación de facturas y aplicación de abonos.
 - Corrección de carga de CSS y JavaScript en Safari local, evitando que los
   recursos HTTP sean forzados a HTTPS y renovando su caché.
 - Centro de operaciones local y responsive servido desde `public/index.html`.
@@ -25,7 +31,7 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   de códigos por empresa.
 - Módulo funcional de bodegas con búsqueda, creación por sucursal y tipos de
   ubicación operativa.
-- Directorio visual de los 15 módulos previstos, diferenciando claramente lo
+- Directorio visual de los 16 módulos previstos, diferenciando claramente lo
   disponible, la base técnica preparada y las fases futuras.
 - Validación de la jerarquía empresa → sucursal → bodega en la API.
 - Catálogo funcional de productos con búsqueda, creación, precios, categoría,
