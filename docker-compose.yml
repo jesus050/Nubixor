@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: megasuite
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - megasuite_pg:/var/lib/postgresql/data
+
+  api:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      PORT: 4100
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/megasuite
+      DATABASE_SSL: "false"
+    ports:
+      - "4100:4100"
+
+volumes:
+  megasuite_pg:

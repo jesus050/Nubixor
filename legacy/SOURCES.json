@@ -1,0 +1,22 @@
+{
+  "planner": {
+    "source": "vision-creativa-planner-v2.0.2-2026-07-12-0037.zip",
+    "role": "core/planner/finance"
+  },
+  "inventory": {
+    "source": "Megainventario(1).zip",
+    "role": "physical counts and audit"
+  },
+  "logistics": {
+    "source": "megamundo-logistica.zip",
+    "role": "receiving/PWA/WooCommerce/Mekano"
+  },
+  "ticketing": {
+    "source": "ticketera-libre-massive-v1.23.0(1).zip",
+    "role": "specialized ticketing adapter"
+  },
+  "refrienergy": {
+    "source": "refrienergy.zip",
+    "role": "not reusable"
+  }
+}
