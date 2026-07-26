@@ -136,7 +136,7 @@ tomó como referencia la copia documentada con versión 1.17.3.
 
 ## Orden recomendado de integración
 
-1. Conteos físicos y ajustes de inventario.
+1. Completado: conteos físicos, ajustes y transferencias de inventario.
 2. Proveedores, órdenes de compra y recepción por lotes.
 3. Cuentas por pagar y costo aterrizado.
 4. Usuarios, roles y permisos multiempresa.
@@ -145,8 +145,9 @@ tomó como referencia la copia documentada con versión 1.17.3.
 7. Adaptador de Ticketera.
 8. Integraciones WooCommerce y canales comerciales.
 
-## Siguiente fase elegida
+## Siguiente fase recomendada
 
-Conteos físicos, porque MegaSuite ya tiene productos, bodegas, saldos y
-movimientos. Es el punto donde Megainventario y MegaMundo aportan más lógica
-probada sin introducir dependencias de WordPress, WooCommerce o SQLite.
+Proveedores, órdenes de compra y recepción por lotes. Inventario ya cuenta con
+saldos, movimientos, ajustes, transferencias y tomas físicas; la siguiente
+entrada natural de mercancía debe originarse en un documento de compra
+controlado y actualizar costo y existencias con trazabilidad.

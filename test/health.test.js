@@ -32,8 +32,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="cartera"/);
   assert.match(response.text, /Facturas y cuentas por cobrar/);
   assert.match(response.text, /Registrar abono/);
-  assert.match(response.text, /data-view="conteos"/);
-  assert.match(response.text, /Conteos y diferencias/);
+  assert.match(response.text, /data-view="inventario"/);
+  assert.match(response.text, /Existencias actuales/);
+  assert.match(response.text, /Programar toma física/);
   assert.match(response.text, /Aprobar y ajustar inventario/);
 });
 
@@ -219,6 +220,31 @@ test('conteos físicos validan jornada, producto y cierre antes de consultar Pos
     .send({ reason: '   ' })
     .expect(422);
   assert.match(close.body.error, /motivo de cierre/i);
+});
+
+test('inventario valida ajustes y transferencias antes de consultar PostgreSQL', async () => {
+  const application = createApp();
+  await request(application)
+    .get('/api/inventory/summary')
+    .expect(400);
+  const adjustment = await request(application)
+    .post('/api/inventory/adjustments')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ productId: 'invalid', warehouseId: 'invalid', quantity: 1, reason: 'Novedad' })
+    .expect(422);
+  assert.match(adjustment.body.error, /UUID válidos/i);
+  const transfer = await request(application)
+    .post('/api/inventory/transfers')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      productId: '90000000-0000-0000-0000-000000000001',
+      sourceWarehouseId: '90000000-0000-0000-0000-000000000002',
+      destinationWarehouseId: '90000000-0000-0000-0000-000000000002',
+      quantity: 1,
+      reason: 'Redistribución',
+    })
+    .expect(422);
+  assert.match(transfer.body.error, /deben ser diferentes/i);
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

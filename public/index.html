@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="/styles.css?v=20260726-4">
-    <script src="/app.js?v=20260726-4" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=20260726-5">
+    <script src="/app.js?v=20260726-5" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -36,8 +36,8 @@
           <a class="nav-item" href="#bodegas" data-view-link="bodegas">
             <span aria-hidden="true">B</span> Bodegas
           </a>
-          <a class="nav-item" href="#conteos" data-view-link="conteos">
-            <span aria-hidden="true">#</span> Conteos físicos
+          <a class="nav-item" href="#inventario" data-view-link="inventario">
+            <span aria-hidden="true">I</span> Inventario
           </a>
           <a class="nav-item" href="#productos" data-view-link="productos">
             <span aria-hidden="true">P</span> Catálogo
@@ -102,7 +102,7 @@
           <a href="#empresas" data-view-link="empresas">Empresas</a>
           <a href="#sucursales" data-view-link="sucursales">Sucursales</a>
           <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
-          <a href="#conteos" data-view-link="conteos">Conteos</a>
+          <a href="#inventario" data-view-link="inventario">Inventario</a>
           <a href="#productos" data-view-link="productos">Catálogo</a>
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
@@ -357,19 +357,128 @@
             </div>
           </section>
 
-          <section class="section counts-section app-view" id="conteos" data-view="conteos" aria-labelledby="countsTitle" hidden>
+          <section class="section counts-section inventory-section app-view" id="inventario" data-view="inventario" aria-labelledby="inventoryTitle" hidden>
             <div class="section-heading module-heading">
               <div>
-                <p class="eyebrow">Control físico de inventario</p>
-                <h2 id="countsTitle">Conteos y diferencias</h2>
+                <p class="eyebrow">Operación y trazabilidad</p>
+                <h2 id="inventoryTitle">Inventario</h2>
               </div>
               <div class="heading-actions">
-                <button class="secondary-button" id="reloadCountsButton" type="button">Actualizar</button>
-                <button class="primary-button compact" id="newCountButton" type="button">
-                  Nuevo conteo <span aria-hidden="true">＋</span>
+                <button class="secondary-button" id="reloadInventoryButton" type="button">Sincronizar</button>
+                <button class="inventory-action-button transfer" id="newTransferButton" type="button">
+                  <span aria-hidden="true">⇄</span>
+                  <span><small>Mover mercancía</small>Transferir</span>
                 </button>
               </div>
             </div>
+
+            <div class="inventory-tabs" role="tablist" aria-label="Áreas de inventario">
+              <button class="active" type="button" role="tab" data-inventory-tab="stock" aria-selected="true">
+                Existencias y movimientos
+              </button>
+              <button type="button" role="tab" data-inventory-tab="counts" aria-selected="false">
+                Conteo físico
+                <span class="inventory-tab-badge" id="inventoryActiveCountBadge">0</span>
+              </button>
+            </div>
+
+            <div class="inventory-panel" data-inventory-panel="stock">
+              <div class="inventory-kpi-grid">
+                <article class="inventory-kpi featured">
+                  <span>Valor al costo</span>
+                  <strong id="inventoryValue">$0</strong>
+                  <small id="inventoryStockedProducts">0 productos con saldo</small>
+                </article>
+                <article class="inventory-kpi">
+                  <span>Unidades disponibles</span>
+                  <strong id="inventoryAvailableUnits">0</strong>
+                  <small id="inventoryReservedUnits">0 reservadas</small>
+                </article>
+                <article class="inventory-kpi warning">
+                  <span>Saldos bajos</span>
+                  <strong id="inventoryLowStock">0</strong>
+                  <small>Hasta 5 unidades disponibles</small>
+                </article>
+                <article class="inventory-kpi">
+                  <span>Movimientos del mes</span>
+                  <strong id="inventoryMovementsMonth">0</strong>
+                  <small>Entradas, salidas y traslados</small>
+                </article>
+              </div>
+
+              <div class="inventory-command-bar">
+                <div>
+                  <strong>Controla el saldo sin perder el rastro</strong>
+                  <p>Consulta existencias, corrige novedades justificadas o mueve mercancía entre bodegas.</p>
+                </div>
+                <div>
+                  <button class="inventory-action-button adjust" id="newAdjustmentButton" type="button">
+                    <span aria-hidden="true">±</span>
+                    <span><small>Corregir novedad</small>Ajustar saldo</span>
+                  </button>
+                  <button class="inventory-action-button count" id="openCountsPanelButton" type="button">
+                    <span aria-hidden="true">⌗</span>
+                    <span><small>Solo cuando corresponda</small>Programar conteo</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="inventory-layout">
+                <div class="inventory-balances-panel">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Saldo por ubicación</p><h3>Existencias actuales</h3></div>
+                    <span id="inventoryBalanceCount">0 saldos</span>
+                  </div>
+                  <div class="inventory-toolbar">
+                    <label class="field-search">
+                      <span aria-hidden="true">⌕</span>
+                      <span class="sr-only">Buscar existencias</span>
+                      <input id="inventorySearch" type="search" placeholder="Buscar producto, SKU o bodega">
+                    </label>
+                    <select id="inventoryWarehouseFilter" aria-label="Filtrar existencias por bodega">
+                      <option value="">Todas las bodegas</option>
+                    </select>
+                  </div>
+                  <div class="inventory-balance-list" id="inventoryBalanceList"></div>
+                  <div class="data-state compact-state" id="inventoryDataState">
+                    <span class="data-state-symbol" aria-hidden="true">I</span>
+                    <strong>Consultando existencias</strong>
+                    <p>Estamos consolidando los saldos de la empresa activa.</p>
+                  </div>
+                </div>
+
+                <aside class="inventory-movements-panel">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Kardex reciente</p><h3>Últimos movimientos</h3></div>
+                    <span id="inventoryMovementCount">0</span>
+                  </div>
+                  <div class="inventory-movement-list" id="inventoryMovementList"></div>
+                  <div class="data-state compact-state" id="inventoryMovementState">
+                    <span class="data-state-symbol" aria-hidden="true">↕</span>
+                    <strong>Sin movimientos</strong>
+                    <p>Las entradas y salidas aparecerán aquí.</p>
+                  </div>
+                </aside>
+              </div>
+            </div>
+
+            <div class="inventory-panel" data-inventory-panel="counts" hidden>
+              <div class="inventory-count-intro">
+                <div>
+                  <span aria-hidden="true">⌗</span>
+                  <div>
+                    <p class="eyebrow">Proceso ocasional y controlado</p>
+                    <h3>Inventario físico</h3>
+                    <p>Úsalo únicamente cuando programes una toma física. MegaSuite congela una fotografía del saldo esperado y audita cada diferencia al cierre.</p>
+                  </div>
+                </div>
+                <div class="heading-actions">
+                  <button class="secondary-button" id="reloadCountsButton" type="button">Actualizar jornadas</button>
+                  <button class="primary-button compact" id="newCountButton" type="button">
+                    Programar toma física <span aria-hidden="true">＋</span>
+                  </button>
+                </div>
+              </div>
 
             <div class="count-kpi-grid">
               <article class="count-kpi primary">
@@ -464,6 +573,7 @@
                   <div class="count-item-list" id="countItemList"></div>
                 </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -939,7 +1049,10 @@
                 <div class="module-symbol amber" aria-hidden="true">IN</div>
                 <h3>Inventario</h3>
                 <p>Entradas, transferencias, ajustes y saldos calculados por movimiento.</p>
-                <span class="module-state ready">API base</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#inventario">Abrir inventario <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="conteos físicos diferencias inventario">
                 <span class="module-number">09</span>
@@ -948,7 +1061,7 @@
                 <p>Jornadas, fotografía del saldo, diferencias y ajustes auditados.</p>
                 <div class="module-footer">
                   <span class="module-state ready">Disponible</span>
-                  <a class="module-action" href="#conteos">Abrir conteos <span>→</span></a>
+                  <a class="module-action" href="#conteos">Programar en inventario <span>→</span></a>
                 </div>
               </article>
               <article class="module-card" data-search="auditoría eventos cambios trazabilidad">
@@ -1054,6 +1167,107 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="adjustmentDialog" aria-labelledby="adjustmentDialogTitle">
+      <form class="company-form" id="adjustmentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Novedad de inventario</p>
+            <h2 id="adjustmentDialogTitle">Ajustar existencia</h2>
+          </div>
+          <button class="icon-button" id="closeAdjustmentDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Registra una corrección puntual. Para una verificación masiva utiliza una toma física programada.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Producto <b>*</b></span>
+            <select id="adjustmentProductId" name="productId" required>
+              <option value="">Selecciona un producto</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Bodega <b>*</b></span>
+            <select id="adjustmentWarehouseId" name="warehouseId" required>
+              <option value="">Selecciona una bodega</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Tipo de corrección <b>*</b></span>
+            <select name="direction" required>
+              <option value="IN">Agregar unidades</option>
+              <option value="OUT">Retirar unidades</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Cantidad <b>*</b></span>
+            <input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="0">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo de la corrección <b>*</b></span>
+          <textarea name="reason" maxlength="500" rows="3" required placeholder="Ej. Avería confirmada, devolución o registro inicial autorizado"></textarea>
+        </label>
+        <p class="form-error" id="adjustmentFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelAdjustmentButton" type="button">Volver sin ajustar</button>
+          <button class="primary-button compact" id="saveAdjustmentButton" type="submit">Registrar ajuste</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="transferDialog" aria-labelledby="transferDialogTitle">
+      <form class="company-form" id="transferForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Traslado interno</p>
+            <h2 id="transferDialogTitle">Transferir mercancía</h2>
+          </div>
+          <button class="icon-button" id="closeTransferDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          El traslado genera una salida y una entrada enlazadas. El total de la empresa no cambia.
+        </p>
+        <label class="form-field">
+          <span>Producto con existencia <b>*</b></span>
+          <select id="transferProductId" name="productId" required>
+            <option value="">Selecciona un producto</option>
+          </select>
+        </label>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Bodega de origen <b>*</b></span>
+            <select id="transferSourceWarehouseId" name="sourceWarehouseId" required>
+              <option value="">Selecciona origen</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Bodega de destino <b>*</b></span>
+            <select id="transferDestinationWarehouseId" name="destinationWarehouseId" required>
+              <option value="">Selecciona destino</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Cantidad <b>*</b></span>
+            <input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="0">
+          </label>
+          <div class="transfer-availability" id="transferAvailability">
+            <span>Disponible en origen</span>
+            <strong>—</strong>
+          </div>
+        </div>
+        <label class="form-field">
+          <span>Motivo del traslado <b>*</b></span>
+          <textarea name="reason" maxlength="500" rows="3" required placeholder="Ej. Reposición de punto de venta o redistribución de existencias"></textarea>
+        </label>
+        <p class="form-error" id="transferFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelTransferButton" type="button">Volver sin transferir</button>
+          <button class="primary-button compact" id="saveTransferButton" type="submit">Confirmar traslado</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog" id="countDialog" aria-labelledby="countDialogTitle">
       <form class="company-form" id="countForm">

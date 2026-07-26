@@ -69,6 +69,43 @@ const elements = {
   warehouseForm: document.querySelector('#warehouseForm'),
   warehouseFormError: document.querySelector('#warehouseFormError'),
   saveWarehouseButton: document.querySelector('#saveWarehouseButton'),
+  reloadInventoryButton: document.querySelector('#reloadInventoryButton'),
+  inventoryValue: document.querySelector('#inventoryValue'),
+  inventoryStockedProducts: document.querySelector('#inventoryStockedProducts'),
+  inventoryAvailableUnits: document.querySelector('#inventoryAvailableUnits'),
+  inventoryReservedUnits: document.querySelector('#inventoryReservedUnits'),
+  inventoryLowStock: document.querySelector('#inventoryLowStock'),
+  inventoryMovementsMonth: document.querySelector('#inventoryMovementsMonth'),
+  inventoryActiveCountBadge: document.querySelector('#inventoryActiveCountBadge'),
+  inventorySearch: document.querySelector('#inventorySearch'),
+  inventoryWarehouseFilter: document.querySelector('#inventoryWarehouseFilter'),
+  inventoryBalanceCount: document.querySelector('#inventoryBalanceCount'),
+  inventoryBalanceList: document.querySelector('#inventoryBalanceList'),
+  inventoryDataState: document.querySelector('#inventoryDataState'),
+  inventoryMovementCount: document.querySelector('#inventoryMovementCount'),
+  inventoryMovementList: document.querySelector('#inventoryMovementList'),
+  inventoryMovementState: document.querySelector('#inventoryMovementState'),
+  newAdjustmentButton: document.querySelector('#newAdjustmentButton'),
+  newTransferButton: document.querySelector('#newTransferButton'),
+  openCountsPanelButton: document.querySelector('#openCountsPanelButton'),
+  adjustmentDialog: document.querySelector('#adjustmentDialog'),
+  adjustmentForm: document.querySelector('#adjustmentForm'),
+  adjustmentFormError: document.querySelector('#adjustmentFormError'),
+  adjustmentProductId: document.querySelector('#adjustmentProductId'),
+  adjustmentWarehouseId: document.querySelector('#adjustmentWarehouseId'),
+  closeAdjustmentDialog: document.querySelector('#closeAdjustmentDialog'),
+  cancelAdjustmentButton: document.querySelector('#cancelAdjustmentButton'),
+  saveAdjustmentButton: document.querySelector('#saveAdjustmentButton'),
+  transferDialog: document.querySelector('#transferDialog'),
+  transferForm: document.querySelector('#transferForm'),
+  transferFormError: document.querySelector('#transferFormError'),
+  transferProductId: document.querySelector('#transferProductId'),
+  transferSourceWarehouseId: document.querySelector('#transferSourceWarehouseId'),
+  transferDestinationWarehouseId: document.querySelector('#transferDestinationWarehouseId'),
+  transferAvailability: document.querySelector('#transferAvailability'),
+  closeTransferDialog: document.querySelector('#closeTransferDialog'),
+  cancelTransferButton: document.querySelector('#cancelTransferButton'),
+  saveTransferButton: document.querySelector('#saveTransferButton'),
   activeCountTotal: document.querySelector('#activeCountTotal'),
   pendingCountItems: document.querySelector('#pendingCountItems'),
   countDiscrepancies: document.querySelector('#countDiscrepancies'),
@@ -275,6 +312,9 @@ let receivableInvoices = [];
 let selectedReceivable = null;
 let physicalCounts = [];
 let selectedPhysicalCount = null;
+let inventorySummary = {};
+let inventoryBalances = [];
+let inventoryMovements = [];
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -1659,6 +1699,397 @@ async function submitPayment(event) {
   }
 }
 
+const inventoryMovementLabels = {
+  PURCHASE: 'Entrada por compra',
+  RETURN_IN: 'Devolución recibida',
+  SALE: 'Salida por venta',
+  TRANSFER_IN: 'Transferencia recibida',
+  TRANSFER_OUT: 'Transferencia enviada',
+  ADJUSTMENT_IN: 'Ajuste de entrada',
+  ADJUSTMENT_OUT: 'Ajuste de salida',
+  COUNT_ADJUSTMENT: 'Ajuste por conteo',
+};
+
+function formatQuantity(value, { sign = false } = {}) {
+  return Number(value || 0).toLocaleString('es-CO', {
+    maximumFractionDigits: 4,
+    signDisplay: sign ? 'always' : 'auto',
+  });
+}
+
+function setInventorySummary(summary = {}) {
+  inventorySummary = summary;
+  elements.inventoryValue.textContent = formatCurrency(summary.inventory_value || 0);
+  elements.inventoryStockedProducts.textContent =
+    `${summary.stocked_products || 0} productos con saldo`;
+  elements.inventoryAvailableUnits.textContent =
+    formatQuantity(summary.available_units || 0);
+  elements.inventoryReservedUnits.textContent =
+    `${formatQuantity(summary.reserved_units || 0)} reservadas`;
+  elements.inventoryLowStock.textContent = String(summary.low_stock_balances || 0);
+  elements.inventoryMovementsMonth.textContent = String(summary.movements_month || 0);
+}
+
+function showInventoryError(message) {
+  inventoryBalances = [];
+  inventoryMovements = [];
+  setInventorySummary();
+  elements.inventoryBalanceList.replaceChildren();
+  elements.inventoryMovementList.replaceChildren();
+  elements.inventoryDataState.hidden = false;
+  elements.inventoryDataState.classList.add('error');
+  elements.inventoryDataState.querySelector('strong').textContent =
+    'No pudimos consultar el inventario';
+  elements.inventoryDataState.querySelector('p').textContent = message;
+  elements.inventoryMovementState.hidden = false;
+  elements.inventoryBalanceCount.textContent = '—';
+  elements.inventoryMovementCount.textContent = '—';
+}
+
+function renderInventoryBalances() {
+  const query = normalizeSearch(elements.inventorySearch.value.trim());
+  const warehouseId = elements.inventoryWarehouseFilter.value;
+  const filtered = inventoryBalances.filter((balance) => {
+    const matchesWarehouse = !warehouseId || balance.warehouse_id === warehouseId;
+    const matchesSearch = !query || normalizeSearch([
+      balance.name,
+      balance.sku,
+      balance.category_name,
+      balance.brand_name,
+      balance.warehouse_name,
+      balance.branch_name,
+    ].filter(Boolean).join(' ')).includes(query);
+    return matchesWarehouse && matchesSearch;
+  });
+  elements.inventoryBalanceList.replaceChildren();
+  elements.inventoryBalanceCount.textContent =
+    `${filtered.length} ${filtered.length === 1 ? 'saldo' : 'saldos'}`;
+  elements.inventoryDataState.hidden = filtered.length > 0;
+  elements.inventoryDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.inventoryDataState.querySelector('strong').textContent =
+      query || warehouseId ? 'No hay coincidencias' : 'Aún no hay existencias';
+    elements.inventoryDataState.querySelector('p').textContent =
+      query || warehouseId
+        ? 'Cambia la búsqueda o consulta todas las bodegas.'
+        : 'Registra una compra, ajuste autorizado o transferencia para iniciar.';
+    return;
+  }
+
+  for (const balance of filtered) {
+    const card = document.createElement('article');
+    card.className = 'inventory-balance-card';
+    const available = Number(balance.available);
+    if (available <= 5 && Number(balance.on_hand) > 0) card.classList.add('low-stock');
+
+    const visual = document.createElement('div');
+    visual.className = 'inventory-product-visual';
+    if (balance.image_url) {
+      const image = document.createElement('img');
+      image.src = balance.image_url;
+      image.alt = balance.image_alt || balance.name;
+      visual.append(image);
+    } else {
+      visual.textContent = balance.name.slice(0, 1).toLocaleUpperCase('es');
+    }
+
+    const identity = document.createElement('div');
+    identity.className = 'inventory-product-identity';
+    const name = document.createElement('strong');
+    name.textContent = balance.name;
+    const meta = document.createElement('small');
+    meta.textContent = `${balance.sku} · ${balance.warehouse_name}`;
+    const branch = document.createElement('span');
+    branch.textContent = balance.branch_name;
+    identity.append(name, meta, branch);
+
+    const quantities = document.createElement('div');
+    quantities.className = 'inventory-quantity-block';
+    const onHand = document.createElement('div');
+    onHand.innerHTML =
+      `<span>Existencia</span><strong>${formatQuantity(balance.on_hand)}</strong>`;
+    const availableBlock = document.createElement('div');
+    availableBlock.innerHTML =
+      `<span>Disponible</span><strong>${formatQuantity(balance.available)}</strong>`;
+    quantities.append(onHand, availableBlock);
+
+    const value = document.createElement('div');
+    value.className = 'inventory-stock-value';
+    const valueLabel = document.createElement('span');
+    valueLabel.textContent = 'Valor al costo';
+    const valueAmount = document.createElement('strong');
+    valueAmount.textContent = formatCurrency(balance.stock_value);
+    value.append(valueLabel, valueAmount);
+
+    const adjust = document.createElement('button');
+    adjust.type = 'button';
+    adjust.className = 'inventory-row-action';
+    adjust.textContent = 'Ajustar';
+    adjust.addEventListener('click', () => openAdjustmentDialog(balance));
+    card.append(visual, identity, quantities, value, adjust);
+    elements.inventoryBalanceList.append(card);
+  }
+}
+
+function renderInventoryMovements() {
+  elements.inventoryMovementList.replaceChildren();
+  elements.inventoryMovementCount.textContent = String(inventoryMovements.length);
+  elements.inventoryMovementState.hidden = inventoryMovements.length > 0;
+  for (const movement of inventoryMovements) {
+    const item = document.createElement('article');
+    item.className = 'inventory-movement-item';
+    const quantity = Number(movement.quantity);
+    item.classList.add(quantity > 0 ? 'incoming' : 'outgoing');
+    const symbol = document.createElement('span');
+    symbol.className = 'inventory-movement-symbol';
+    symbol.textContent = quantity > 0 ? '↘' : '↗';
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent =
+      inventoryMovementLabels[movement.movement_type] || movement.movement_type;
+    const product = document.createElement('span');
+    product.textContent = movement.product_name;
+    const meta = document.createElement('small');
+    meta.textContent =
+      `${movement.warehouse_name} · ${formatShortDate(movement.created_at)}`;
+    copy.append(title, product, meta);
+    const movementQuantity = document.createElement('strong');
+    movementQuantity.className = 'inventory-movement-quantity';
+    movementQuantity.textContent = formatQuantity(quantity, { sign: true });
+    item.title = movement.reason;
+    item.append(symbol, copy, movementQuantity);
+    elements.inventoryMovementList.append(item);
+  }
+}
+
+function syncInventoryWarehouseFilter() {
+  const selected = elements.inventoryWarehouseFilter.value;
+  elements.inventoryWarehouseFilter.replaceChildren(new Option('Todas las bodegas', ''));
+  for (const warehouse of warehouses.filter((item) => item.active)) {
+    elements.inventoryWarehouseFilter.append(
+      new Option(`${warehouse.name} · ${warehouse.code}`, warehouse.id),
+    );
+  }
+  if (warehouses.some((warehouse) => warehouse.id === selected)) {
+    elements.inventoryWarehouseFilter.value = selected;
+  }
+}
+
+async function loadInventory() {
+  if (!activeTenantId) {
+    showInventoryError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, balances, movements] = await Promise.all([
+      getJson('/api/inventory/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/inventory/balances', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/inventory/movements?limit=40', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    inventoryBalances = balances;
+    inventoryMovements = movements;
+    setInventorySummary(summary);
+    syncInventoryWarehouseFilter();
+    renderInventoryBalances();
+    renderInventoryMovements();
+    return balances;
+  } catch (error) {
+    showInventoryError(error.message);
+    throw error;
+  }
+}
+
+function fillInventorySelect(select, placeholder, records, label, value = '') {
+  select.replaceChildren(new Option(placeholder, ''));
+  for (const record of records) {
+    select.append(new Option(label(record), record.id));
+  }
+  if (records.some((record) => record.id === value)) select.value = value;
+}
+
+function openAdjustmentDialog(balance = null) {
+  if (!products.length || !warehouses.length) {
+    showToast('Necesitas productos y bodegas para registrar un ajuste.');
+    return;
+  }
+  elements.adjustmentForm.reset();
+  elements.adjustmentFormError.hidden = true;
+  fillInventorySelect(
+    elements.adjustmentProductId,
+    'Selecciona un producto',
+    products,
+    (product) => `${product.name} · ${product.sku}`,
+    balance?.product_id,
+  );
+  fillInventorySelect(
+    elements.adjustmentWarehouseId,
+    'Selecciona una bodega',
+    warehouses.filter((warehouse) => warehouse.active),
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+    balance?.warehouse_id,
+  );
+  elements.adjustmentDialog.showModal();
+  (balance ? elements.adjustmentForm.elements.quantity : elements.adjustmentProductId).focus();
+}
+
+function closeAdjustmentDialog() {
+  elements.adjustmentDialog.close();
+}
+
+async function submitAdjustment(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.adjustmentForm);
+  const quantity = Number(formData.get('quantity'));
+  const signedQuantity = formData.get('direction') === 'OUT' ? -quantity : quantity;
+  elements.adjustmentFormError.hidden = true;
+  elements.saveAdjustmentButton.disabled = true;
+  elements.saveAdjustmentButton.textContent = 'Registrando…';
+  try {
+    await getJson('/api/inventory/adjustments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        productId: formData.get('productId'),
+        warehouseId: formData.get('warehouseId'),
+        quantity: signedQuantity,
+        reason: formData.get('reason'),
+      }),
+    });
+    closeAdjustmentDialog();
+    await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
+    showToast('Ajuste registrado con trazabilidad.');
+  } catch (error) {
+    elements.adjustmentFormError.textContent = error.message;
+    elements.adjustmentFormError.hidden = false;
+  } finally {
+    elements.saveAdjustmentButton.disabled = false;
+    elements.saveAdjustmentButton.textContent = 'Registrar ajuste';
+  }
+}
+
+function transferProducts() {
+  const unique = new Map();
+  for (const balance of inventoryBalances) {
+    if (Number(balance.available) > 0 && !unique.has(balance.product_id)) {
+      unique.set(balance.product_id, {
+        id: balance.product_id,
+        name: balance.name,
+        sku: balance.sku,
+      });
+    }
+  }
+  return [...unique.values()];
+}
+
+function syncTransferWarehouses() {
+  const productId = elements.transferProductId.value;
+  const sources = inventoryBalances
+    .filter((balance) => balance.product_id === productId && Number(balance.available) > 0)
+    .map((balance) => ({
+      id: balance.warehouse_id,
+      name: balance.warehouse_name,
+      code: balance.warehouse_code,
+    }));
+  fillInventorySelect(
+    elements.transferSourceWarehouseId,
+    'Selecciona origen',
+    sources,
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+  );
+  fillInventorySelect(
+    elements.transferDestinationWarehouseId,
+    'Selecciona destino',
+    warehouses.filter((warehouse) => warehouse.active),
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+  );
+  updateTransferAvailability();
+}
+
+function updateTransferAvailability() {
+  const balance = inventoryBalances.find((item) =>
+    item.product_id === elements.transferProductId.value &&
+    item.warehouse_id === elements.transferSourceWarehouseId.value);
+  elements.transferAvailability.querySelector('strong').textContent =
+    balance ? `${formatQuantity(balance.available)} unidades` : '—';
+  for (const option of elements.transferDestinationWarehouseId.options) {
+    option.disabled =
+      Boolean(option.value) && option.value === elements.transferSourceWarehouseId.value;
+  }
+  if (elements.transferDestinationWarehouseId.selectedOptions[0]?.disabled) {
+    elements.transferDestinationWarehouseId.value = '';
+  }
+}
+
+function openTransferDialog() {
+  const transferable = transferProducts();
+  if (!transferable.length || warehouses.filter((warehouse) => warehouse.active).length < 2) {
+    showToast('Necesitas existencias disponibles y al menos dos bodegas activas.');
+    return;
+  }
+  elements.transferForm.reset();
+  elements.transferFormError.hidden = true;
+  fillInventorySelect(
+    elements.transferProductId,
+    'Selecciona un producto',
+    transferable,
+    (product) => `${product.name} · ${product.sku}`,
+  );
+  syncTransferWarehouses();
+  elements.transferDialog.showModal();
+  elements.transferProductId.focus();
+}
+
+function closeTransferDialog() {
+  elements.transferDialog.close();
+}
+
+async function submitTransfer(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.transferForm);
+  elements.transferFormError.hidden = true;
+  elements.saveTransferButton.disabled = true;
+  elements.saveTransferButton.textContent = 'Trasladando…';
+  try {
+    await getJson('/api/inventory/transfers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeTransferDialog();
+    await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
+    showToast('Transferencia completada en ambas bodegas.');
+  } catch (error) {
+    elements.transferFormError.textContent = error.message;
+    elements.transferFormError.hidden = false;
+  } finally {
+    elements.saveTransferButton.disabled = false;
+    elements.saveTransferButton.textContent = 'Confirmar traslado';
+  }
+}
+
+function selectInventoryPanel(panelName) {
+  document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
+    const selected = button.dataset.inventoryTab === panelName;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-selected', String(selected));
+  });
+  document.querySelectorAll('[data-inventory-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.inventoryPanel !== panelName;
+  });
+}
+
 const countStatusLabels = {
   DRAFT: 'Borrador',
   IN_PROGRESS: 'En conteo',
@@ -1678,6 +2109,7 @@ const countClassificationLabels = {
 
 function setCountSummary(summary = {}) {
   elements.activeCountTotal.textContent = String(summary.active_counts || 0);
+  elements.inventoryActiveCountBadge.textContent = String(summary.active_counts || 0);
   elements.pendingCountItems.textContent = String(summary.pending_items || 0);
   elements.countDiscrepancies.textContent = String(summary.discrepancies || 0);
   elements.completedCountsMonth.textContent = String(summary.completed_month || 0);
@@ -2161,6 +2593,7 @@ async function refreshTenantData() {
   if (!activeTenantId) {
     showBranchError('Primero debes registrar o seleccionar una empresa.');
     showWarehouseError('Primero debes registrar o seleccionar una empresa.');
+    showInventoryError('Primero debes registrar o seleccionar una empresa.');
     showCountsError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
@@ -2174,15 +2607,18 @@ async function refreshTenantData() {
   const results = await Promise.allSettled([
     loadBranches(),
     loadWarehouses(),
+    loadInventory(),
     loadPhysicalCounts(),
     loadCatalog(),
     loadPos(),
     loadReceivables(),
   ]);
+  syncInventoryWarehouseFilter();
+  renderInventoryBalances();
   await syncPosWorkstation().catch(() => {});
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
-  setMetric(elements.productCount, elements.productDetail, results[3], ['producto registrado', 'productos registrados']);
+  setMetric(elements.productCount, elements.productDetail, results[4], ['producto registrado', 'productos registrados']);
 }
 
 function filterModules() {
@@ -2216,7 +2652,7 @@ const availableViews = new Set([
   'empresas',
   'sucursales',
   'bodegas',
-  'conteos',
+  'inventario',
   'productos',
   'caja',
   'cartera',
@@ -2227,6 +2663,7 @@ const availableViews = new Set([
 const viewAliases = {
   resumen: 'inicio',
   catalogos: 'productos',
+  conteos: 'inventario',
 };
 
 const viewTitles = {
@@ -2234,7 +2671,7 @@ const viewTitles = {
   empresas: 'Empresas',
   sucursales: 'Sucursales',
   bodegas: 'Bodegas',
-  conteos: 'Conteos físicos',
+  inventario: 'Inventario',
   productos: 'Catálogo',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
@@ -2261,6 +2698,9 @@ function showView(requestedView, { scroll = true } = {}) {
   });
   document.body.dataset.activeView = view;
   document.title = `MegaSuite — ${viewTitles[view]}`;
+  if (view === 'inventario') {
+    selectInventoryPanel(requestedView === 'conteos' ? 'counts' : 'stock');
+  }
   if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
@@ -2899,6 +3339,36 @@ elements.warehouseForm.addEventListener('submit', submitWarehouse);
 elements.warehouseDialog.addEventListener('click', (event) => {
   if (event.target === elements.warehouseDialog) closeWarehouseDialog();
 });
+elements.reloadInventoryButton.addEventListener('click', () => {
+  loadInventory()
+    .then(() => showToast('Inventario sincronizado.'))
+    .catch(() => showToast('No fue posible sincronizar el inventario.'));
+});
+elements.inventorySearch.addEventListener('input', renderInventoryBalances);
+elements.inventoryWarehouseFilter.addEventListener('change', renderInventoryBalances);
+document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
+  button.addEventListener('click', () => selectInventoryPanel(button.dataset.inventoryTab));
+});
+elements.openCountsPanelButton.addEventListener('click', () => {
+  selectInventoryPanel('counts');
+  elements.newCountButton.focus();
+});
+elements.newAdjustmentButton.addEventListener('click', () => openAdjustmentDialog());
+elements.closeAdjustmentDialog.addEventListener('click', closeAdjustmentDialog);
+elements.cancelAdjustmentButton.addEventListener('click', closeAdjustmentDialog);
+elements.adjustmentForm.addEventListener('submit', submitAdjustment);
+elements.adjustmentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.adjustmentDialog) closeAdjustmentDialog();
+});
+elements.newTransferButton.addEventListener('click', openTransferDialog);
+elements.closeTransferDialog.addEventListener('click', closeTransferDialog);
+elements.cancelTransferButton.addEventListener('click', closeTransferDialog);
+elements.transferForm.addEventListener('submit', submitTransfer);
+elements.transferProductId.addEventListener('change', syncTransferWarehouses);
+elements.transferSourceWarehouseId.addEventListener('change', updateTransferAvailability);
+elements.transferDialog.addEventListener('click', (event) => {
+  if (event.target === elements.transferDialog) closeTransferDialog();
+});
 elements.reloadCountsButton.addEventListener('click', () => {
   loadPhysicalCounts()
     .then(() => showToast('Conteos actualizados.'))
@@ -3021,9 +3491,11 @@ document.querySelectorAll('[data-view-link]').forEach((link) => {
     if (elements.sidebar.contains(link)) toggleMenu(false);
   });
 });
-window.addEventListener('hashchange', () => showView(resolveView()));
+window.addEventListener('hashchange', () => {
+  showView(window.location.hash.replace(/^#/, '') || 'inicio');
+});
 
-showView(resolveView(), { scroll: false });
+showView(window.location.hash.replace(/^#/, '') || 'inicio', { scroll: false });
 
 refreshStatus().catch(() => {
   elements.refreshButton.classList.remove('loading');

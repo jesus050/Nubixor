@@ -6,6 +6,17 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Centro de Inventario unificado con valoración al costo, unidades disponibles,
+  reservas, saldos bajos y movimientos del mes.
+- Listado de existencias por producto y bodega con fotografía, búsqueda,
+  filtro de ubicación y acceso directo al ajuste.
+- Kardex reciente con tipo, producto, bodega, fecha y cantidad firmada.
+- Ajustes manuales con motivo obligatorio, validación de pertenencia
+  multiempresa y protección de existencias reservadas.
+- Transferencias transaccionales entre bodegas mediante movimientos enlazados
+  de salida y entrada, sin alterar el total de la empresa.
+- Conteo físico reorganizado como pestaña secundaria de Inventario para
+  utilizarlo solamente cuando se programe una toma física.
 - Auditoría de los proyectos con código encontrados en Documentos y mapa de
   reutilización para MegaSuite.
 - Módulo funcional de conteos físicos inspirado en Megainventario y MegaMundo:

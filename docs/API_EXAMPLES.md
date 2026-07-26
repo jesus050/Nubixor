@@ -64,7 +64,39 @@ La API también expone:
 - `GET /api/receivables/invoices/:id`
 - `POST /api/receivables/invoices/:id/payments`
 
-## Conteos físicos
+## Inventario
+
+```bash
+curl http://localhost:4100/api/inventory/summary \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/inventory/balances \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+
+curl http://localhost:4100/api/inventory/movements?limit=40 \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
+```
+
+Un ajuste puntual usa una cantidad positiva para agregar y negativa para
+retirar:
+
+```bash
+curl -X POST http://localhost:4100/api/inventory/adjustments \
+ -H 'Content-Type: application/json' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -d '{"productId":"PRODUCT_ID","warehouseId":"WAREHOUSE_ID","quantity":-2,"reason":"Avería confirmada"}'
+```
+
+Una transferencia requiere bodegas distintas y existencia disponible:
+
+```bash
+curl -X POST http://localhost:4100/api/inventory/transfers \
+ -H 'Content-Type: application/json' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -d '{"productId":"PRODUCT_ID","sourceWarehouseId":"ORIGIN_ID","destinationWarehouseId":"DESTINATION_ID","quantity":5,"reason":"Reposición de punto de venta"}'
+```
+
+## Conteos físicos programados
 
 ```bash
 curl http://localhost:4100/api/physical-counts \
@@ -74,7 +106,8 @@ curl http://localhost:4100/api/physical-counts/summary \
  -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001'
 ```
 
-El flujo disponible en `/#conteos` es:
+El flujo está dentro de la pestaña `Conteo físico` de `/#inventario`. No forma
+parte del trabajo diario; se abre cuando se programa una toma física:
 
 1. Crear una jornada y seleccionar la bodega.
 2. Iniciar el conteo.
