@@ -19,6 +19,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Adjuntar fotografía/);
   assert.match(response.text, /Abrir turno de caja/);
   assert.match(response.text, /Cobrar y descontar inventario/);
+  assert.match(response.text, /Pestañas principales/);
+  assert.match(response.text, /data-view="productos"/);
+  assert.match(response.text, /Áreas del catálogo/);
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {

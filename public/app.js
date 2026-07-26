@@ -81,6 +81,10 @@ const elements = {
   categoryCount: document.querySelector('#categoryCount'),
   brandCount: document.querySelector('#brandCount'),
   taxCount: document.querySelector('#taxCount'),
+  categoryList: document.querySelector('#categoryList'),
+  brandList: document.querySelector('#brandList'),
+  categoryPanelCreateButton: document.querySelector('#categoryPanelCreateButton'),
+  brandPanelCreateButton: document.querySelector('#brandPanelCreateButton'),
   categoryDialog: document.querySelector('#categoryDialog'),
   categoryForm: document.querySelector('#categoryForm'),
   categoryFormError: document.querySelector('#categoryFormError'),
@@ -278,6 +282,8 @@ function syncCompanyContext(preferredTenantId = activeTenantId) {
   elements.newCategoryButton.disabled = !activeCompany;
   elements.newBrandButton.disabled = !activeCompany;
   elements.newProductButton.disabled = !activeCompany;
+  elements.categoryPanelCreateButton.disabled = !activeCompany;
+  elements.brandPanelCreateButton.disabled = !activeCompany;
   syncWarehouseBranchOptions();
 }
 
@@ -696,6 +702,53 @@ function updateCatalogCounters() {
     `${taxCategories.length} ${taxCategories.length === 1 ? 'impuesto' : 'impuestos'}`;
 }
 
+function renderTaxonomyList(container, records, type) {
+  container.replaceChildren();
+  if (!records.length) {
+    const empty = document.createElement('div');
+    empty.className = 'taxonomy-empty';
+    empty.textContent = type === 'category'
+      ? 'Todavía no hay categorías registradas.'
+      : 'Todavía no hay marcas registradas.';
+    container.append(empty);
+    return;
+  }
+  for (const record of records) {
+    const card = document.createElement('article');
+    const symbol = document.createElement('span');
+    symbol.textContent = record.name.slice(0, 1).toUpperCase();
+    const content = document.createElement('div');
+    const code = document.createElement('small');
+    code.textContent = record.code;
+    const name = document.createElement('strong');
+    name.textContent = record.name;
+    const description = document.createElement('p');
+    description.textContent = record.description ||
+      (type === 'category' ? 'Categoría activa del catálogo.' : 'Marca activa del catálogo.');
+    content.append(code, name, description);
+    const status = document.createElement('b');
+    status.textContent = record.active ? 'Activa' : 'Inactiva';
+    card.append(symbol, content, status);
+    container.append(card);
+  }
+}
+
+function renderTaxonomies() {
+  renderTaxonomyList(elements.categoryList, categories, 'category');
+  renderTaxonomyList(elements.brandList, brands, 'brand');
+}
+
+function showCatalogPanel(panelName) {
+  document.querySelectorAll('[data-catalog-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.catalogPanel !== panelName;
+  });
+  document.querySelectorAll('[data-catalog-tab]').forEach((tab) => {
+    const isActive = tab.dataset.catalogTab === panelName;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-selected', String(isActive));
+  });
+}
+
 function showCatalogError(message) {
   categories = [];
   brands = [];
@@ -708,6 +761,7 @@ function showCatalogError(message) {
   elements.productDataState.querySelector('p').textContent = message;
   elements.productRecordCount.textContent = 'Sin conexión de datos';
   updateCatalogCounters();
+  renderTaxonomies();
   syncProductOptions();
 }
 
@@ -727,6 +781,7 @@ async function loadCatalog() {
       getJson('/api/products', { headers }),
     ]);
     updateCatalogCounters();
+    renderTaxonomies();
     syncProductOptions();
     renderProducts();
     return products;
@@ -1183,14 +1238,53 @@ function toggleMenu(forceOpen) {
   elements.menuButton.setAttribute('aria-expanded', String(open));
 }
 
-function setActiveNavigation(selectedLink) {
-  const links = [...elements.sidebar.querySelectorAll('.nav-item')];
-  for (const link of links) {
-    const isActive = link === selectedLink;
+const availableViews = new Set([
+  'inicio',
+  'empresas',
+  'sucursales',
+  'bodegas',
+  'productos',
+  'caja',
+  'modulos',
+  'sistema',
+]);
+
+const viewAliases = {
+  resumen: 'inicio',
+  catalogos: 'productos',
+};
+
+const viewTitles = {
+  inicio: 'Dashboard',
+  empresas: 'Empresas',
+  sucursales: 'Sucursales',
+  bodegas: 'Bodegas',
+  productos: 'Catálogo',
+  caja: 'Caja & POS',
+  modulos: 'Mapa del ERP',
+  sistema: 'Sistema',
+};
+
+function resolveView(hash = window.location.hash) {
+  const requested = hash.replace(/^#/, '') || 'inicio';
+  const resolved = viewAliases[requested] || requested;
+  return availableViews.has(resolved) ? resolved : 'inicio';
+}
+
+function showView(requestedView, { scroll = true } = {}) {
+  const view = resolveView(`#${requestedView}`);
+  document.querySelectorAll('.app-view').forEach((section) => {
+    section.hidden = section.dataset.view !== view;
+  });
+  document.querySelectorAll('[data-view-link]').forEach((link) => {
+    const isActive = link.dataset.viewLink === view;
     link.classList.toggle('active', isActive);
     if (isActive) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
-  }
+  });
+  document.body.dataset.activeView = view;
+  document.title = `MegaSuite — ${viewTitles[view]}`;
+  if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function openCompanyDialog() {
@@ -1771,7 +1865,12 @@ document.querySelector('#currentDate').textContent = new Intl.DateTimeFormat('es
 }).format(new Date());
 
 elements.refreshButton.addEventListener('click', () => refreshStatus({ notify: true }));
-elements.moduleSearch.addEventListener('input', filterModules);
+elements.moduleSearch.addEventListener('input', () => {
+  filterModules();
+  if (elements.moduleSearch.value.trim() && resolveView() !== 'modulos') {
+    window.location.hash = 'modulos';
+  }
+});
 elements.companySearch.addEventListener('input', renderCompanies);
 elements.branchSearch.addEventListener('input', renderBranches);
 elements.warehouseSearch.addEventListener('input', renderWarehouses);
@@ -1827,6 +1926,7 @@ elements.reloadProductsButton.addEventListener('click', () => {
     .catch(() => showToast('No fue posible sincronizar el catálogo.'));
 });
 elements.newCategoryButton.addEventListener('click', openCategoryDialog);
+elements.categoryPanelCreateButton.addEventListener('click', openCategoryDialog);
 elements.closeCategoryDialog.addEventListener('click', closeCategoryDialog);
 elements.cancelCategoryButton.addEventListener('click', closeCategoryDialog);
 elements.categoryForm.addEventListener('submit', submitCategory);
@@ -1834,6 +1934,7 @@ elements.categoryDialog.addEventListener('click', (event) => {
   if (event.target === elements.categoryDialog) closeCategoryDialog();
 });
 elements.newBrandButton.addEventListener('click', openBrandDialog);
+elements.brandPanelCreateButton.addEventListener('click', openBrandDialog);
 elements.closeBrandDialog.addEventListener('click', closeBrandDialog);
 elements.cancelBrandButton.addEventListener('click', closeBrandDialog);
 elements.brandForm.addEventListener('submit', submitBrand);
@@ -1879,13 +1980,19 @@ elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();
 });
+document.querySelectorAll('[data-catalog-tab]').forEach((tab) => {
+  tab.addEventListener('click', () => showCatalogPanel(tab.dataset.catalogTab));
+});
 elements.menuButton.addEventListener('click', () => toggleMenu());
-elements.sidebar.querySelectorAll('a').forEach((link) => {
+document.querySelectorAll('[data-view-link]').forEach((link) => {
   link.addEventListener('click', () => {
-    setActiveNavigation(link);
-    toggleMenu(false);
+    showView(link.dataset.viewLink);
+    if (elements.sidebar.contains(link)) toggleMenu(false);
   });
 });
+window.addEventListener('hashchange', () => showView(resolveView()));
+
+showView(resolveView(), { scroll: false });
 
 refreshStatus().catch(() => {
   elements.refreshButton.classList.remove('loading');

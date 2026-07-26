@@ -22,44 +22,41 @@
 
         <nav class="main-nav">
           <p class="nav-label">Principal</p>
-          <a class="nav-item active" href="#inicio" aria-current="page">
-            <span aria-hidden="true">⌂</span> Inicio
+          <a class="nav-item active" href="#inicio" data-view-link="inicio" aria-current="page">
+            <span aria-hidden="true">⌂</span> Dashboard
           </a>
-          <a class="nav-item" href="#resumen">
-            <span aria-hidden="true">▦</span> Resumen
-          </a>
-          <p class="nav-label">Operación</p>
-          <a class="nav-item" href="#empresas">
+          <p class="nav-label">Administración</p>
+          <a class="nav-item" href="#empresas" data-view-link="empresas">
             <span aria-hidden="true">E</span> Empresas
           </a>
-          <a class="nav-item" href="#sucursales">
+          <a class="nav-item" href="#sucursales" data-view-link="sucursales">
             <span aria-hidden="true">S</span> Sucursales
           </a>
-          <a class="nav-item" href="#bodegas">
+          <p class="nav-label">Inventario</p>
+          <a class="nav-item" href="#bodegas" data-view-link="bodegas">
             <span aria-hidden="true">B</span> Bodegas
           </a>
-          <a class="nav-item" href="#productos">
-            <span aria-hidden="true">P</span> Productos
+          <a class="nav-item" href="#productos" data-view-link="productos">
+            <span aria-hidden="true">P</span> Catálogo
           </a>
-          <a class="nav-item" href="#catalogos">
-            <span aria-hidden="true">C</span> Categorías y marcas
-          </a>
-          <a class="nav-item" href="#modulos">
-            <span aria-hidden="true">O</span> Compras
-          </a>
-          <a class="nav-item" href="#caja">
+          <p class="nav-label">Ventas</p>
+          <a class="nav-item" href="#caja" data-view-link="caja">
             <span aria-hidden="true">$</span> Caja &amp; POS
           </a>
+          <p class="nav-label">Planeación</p>
+          <a class="nav-item" href="#modulos" data-view-link="modulos">
+            <span aria-hidden="true">▦</span> Mapa del ERP
+          </a>
           <p class="nav-label">Control</p>
-          <a class="nav-item" href="#sistema">
+          <a class="nav-item" href="#sistema" data-view-link="sistema">
             <span aria-hidden="true">◉</span> Sistema
           </a>
         </nav>
 
         <div class="sidebar-note">
           <span class="note-kicker">Entorno</span>
-          <strong>Local · Fase 1</strong>
-          <p>Base estable para crecer módulo por módulo.</p>
+          <strong>Local · Núcleo ERP</strong>
+          <p>Administración, catálogo, inventario y POS organizados por áreas.</p>
         </div>
       </aside>
 
@@ -79,7 +76,7 @@
           <label class="search">
             <span aria-hidden="true">⌕</span>
             <span class="sr-only">Buscar módulos</span>
-            <input id="moduleSearch" type="search" placeholder="Buscar un módulo">
+            <input id="moduleSearch" type="search" placeholder="Buscar en el mapa del ERP">
           </label>
 
           <div class="topbar-actions">
@@ -94,8 +91,19 @@
           </div>
         </header>
 
+        <nav class="view-tabs" aria-label="Pestañas principales">
+          <a href="#inicio" data-view-link="inicio" class="active">Dashboard</a>
+          <a href="#empresas" data-view-link="empresas">Empresas</a>
+          <a href="#sucursales" data-view-link="sucursales">Sucursales</a>
+          <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
+          <a href="#productos" data-view-link="productos">Catálogo</a>
+          <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
+          <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
+          <a href="#sistema" data-view-link="sistema">Sistema</a>
+        </nav>
+
         <main>
-          <section class="hero" id="inicio">
+          <section class="hero app-view" id="inicio" data-view="inicio">
             <div class="hero-copy">
               <p class="eyebrow" id="currentDate">Centro de operaciones</p>
               <h1>Todo tu negocio,<br><span>en un solo lugar.</span></h1>
@@ -132,7 +140,7 @@
             </div>
           </section>
 
-          <section class="section" id="resumen" aria-labelledby="summaryTitle">
+          <section class="section app-view" id="resumen" data-view="inicio" aria-labelledby="summaryTitle">
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Datos conectados</p>
@@ -177,7 +185,7 @@
             </div>
           </section>
 
-          <section class="section companies-section" id="empresas" aria-labelledby="companiesTitle">
+          <section class="section companies-section app-view" id="empresas" data-view="empresas" aria-labelledby="companiesTitle" hidden>
             <div class="section-heading module-heading">
               <div>
                 <p class="eyebrow">Primer módulo funcional</p>
@@ -226,7 +234,7 @@
             </div>
           </section>
 
-          <section class="section branches-section" id="sucursales" aria-labelledby="branchesTitle">
+          <section class="section branches-section app-view" id="sucursales" data-view="sucursales" aria-labelledby="branchesTitle" hidden>
             <div class="section-heading module-heading">
               <div>
                 <p class="eyebrow">Estructura comercial</p>
@@ -283,7 +291,7 @@
             </div>
           </section>
 
-          <section class="section warehouses-section" id="bodegas" aria-labelledby="warehousesTitle">
+          <section class="section warehouses-section app-view" id="bodegas" data-view="bodegas" aria-labelledby="warehousesTitle" hidden>
             <div class="section-heading module-heading">
               <div>
                 <p class="eyebrow">Ubicaciones de inventario</p>
@@ -341,7 +349,7 @@
             </div>
           </section>
 
-          <section class="section products-section" id="productos" aria-labelledby="productsTitle">
+          <section class="section products-section app-view" id="productos" data-view="productos" aria-labelledby="productsTitle" hidden>
             <div class="section-heading module-heading">
               <div>
                 <p class="eyebrow">Catálogo comercial</p>
@@ -393,7 +401,19 @@
               </article>
             </div>
 
-            <div class="data-panel">
+            <div class="catalog-tabs" role="tablist" aria-label="Áreas del catálogo">
+              <button class="active" type="button" role="tab" data-catalog-tab="products" aria-selected="true">
+                Productos
+              </button>
+              <button type="button" role="tab" data-catalog-tab="categories" aria-selected="false">
+                Categorías
+              </button>
+              <button type="button" role="tab" data-catalog-tab="brands" aria-selected="false">
+                Marcas
+              </button>
+            </div>
+
+            <div class="data-panel catalog-panel" data-catalog-panel="products">
               <div class="data-toolbar">
                 <label class="field-search">
                   <span aria-hidden="true">⌕</span>
@@ -428,9 +448,35 @@
                 <p>Estamos leyendo el catálogo de la empresa activa.</p>
               </div>
             </div>
+
+            <div class="taxonomy-panel catalog-panel" data-catalog-panel="categories" hidden>
+              <div class="taxonomy-heading">
+                <div>
+                  <p class="eyebrow">Clasificación</p>
+                  <h3>Categorías del catálogo</h3>
+                </div>
+                <button class="primary-button compact" id="categoryPanelCreateButton" type="button">
+                  Crear nueva categoría <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+              <div class="taxonomy-grid" id="categoryList"></div>
+            </div>
+
+            <div class="taxonomy-panel catalog-panel" data-catalog-panel="brands" hidden>
+              <div class="taxonomy-heading">
+                <div>
+                  <p class="eyebrow">Fabricantes</p>
+                  <h3>Marcas registradas</h3>
+                </div>
+                <button class="primary-button compact" id="brandPanelCreateButton" type="button">
+                  Registrar nueva marca <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+              <div class="taxonomy-grid" id="brandList"></div>
+            </div>
           </section>
 
-          <section class="section pos-section" id="caja" aria-labelledby="posTitle">
+          <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
                 <p class="eyebrow">Operación de venta</p>
@@ -570,7 +616,7 @@
             </div>
           </section>
 
-          <section class="section module-section" id="modulos" aria-labelledby="modulesTitle">
+          <section class="section module-section app-view" id="modulos" data-view="modulos" aria-labelledby="modulesTitle" hidden>
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Arquitectura modular</p>
@@ -707,7 +753,7 @@
             </div>
           </section>
 
-          <section class="section" id="sistema" aria-labelledby="systemTitle">
+          <section class="section app-view" id="sistema" data-view="sistema" aria-labelledby="systemTitle" hidden>
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Infraestructura</p>

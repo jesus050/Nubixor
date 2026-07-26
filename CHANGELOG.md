@@ -48,6 +48,13 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   impuesto de cada producto vendido.
 - Descuento transaccional de existencias mediante movimientos de inventario,
   impidiendo ventas con stock insuficiente.
+- Navegación reorganizada como aplicación por vistas: Dashboard, Empresas,
+  Sucursales, Bodegas, Catálogo, Caja/POS, Mapa ERP y Sistema.
+- Barra de pestañas persistente y rutas con hash para abrir directamente cada
+  área sin recorrer una página vertical extensa.
+- Subpestañas de Productos, Categorías y Marcas con listados independientes.
+- Menú lateral agrupado por Administración, Inventario, Ventas, Planeación y
+  Control.
 
 ## [0.1.1] - 2026-07-26
 

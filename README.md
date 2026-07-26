@@ -69,6 +69,7 @@ en el puerto 4100.
 
 La interfaz incluye:
 
+- navegación independiente por pestañas y URL para cada área del sistema;
 - selector persistente de empresa activa;
 - listado, búsqueda y creación de empresas;
 - listado, búsqueda y creación de sucursales por empresa;
@@ -81,6 +82,10 @@ La interfaz incluye:
   de inventario;
 - métricas y salud de servicios en vivo;
 - directorio de los 15 módulos planeados con su estado real.
+
+Las rutas de interfaz usan fragmentos locales como `#empresas`, `#productos` y
+`#caja`, por lo que pueden guardarse como favoritos sin configurar rutas
+adicionales en el servidor.
 
 Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
 aún tienen únicamente modelo o API base se identifican como tales.
