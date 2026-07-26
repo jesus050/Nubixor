@@ -119,7 +119,7 @@ async function refreshStatus({ notify = false } = {}) {
 
   elements.systemScore.textContent = `${readyCount}/3`;
   elements.scoreRing.style.background =
-    `conic-gradient(#739b77 0deg ${readyCount * 120}deg, rgba(255,255,255,.09) ${readyCount * 120}deg)`;
+    `conic-gradient(#4fd2e9 0deg ${readyCount * 120}deg, rgba(255,255,255,.11) ${readyCount * 120}deg)`;
   elements.overallIndicator.classList.add(readyCount === 3 ? 'ready' : 'error');
   elements.overallLabel.textContent = readyCount === 3 ? 'Todo operativo' : 'Requiere atención';
   elements.lastChecked.textContent = new Intl.DateTimeFormat('es-CO', {

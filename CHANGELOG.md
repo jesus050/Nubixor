@@ -12,6 +12,8 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Navegación móvil, búsqueda de módulos, estados de carga y mensajes de error.
 - Compatibilidad al abrir `public/index.html` directamente mediante `file://`
   durante el desarrollo local.
+- Identidad visual basada en azul `#192584`, morado `#B541FA`, cian `#4FD2E9`
+  y gris `#74706D`, aplicada a navegación, acciones, tarjetas y estados.
 
 ## [0.1.1] - 2026-07-26
 
