@@ -4423,7 +4423,7 @@ footer {
 
 .inventory-kpi-grid {
   display: grid;
-  grid-template-columns: 1.25fr repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1.25fr repeat(4, minmax(0, 1fr));
   gap: 11px;
 }
 
@@ -4472,6 +4472,11 @@ footer {
 
 .inventory-kpi.warning {
   background: linear-gradient(145deg, white, #fff8e9);
+}
+
+.inventory-kpi.display {
+  border-color: rgba(181, 65, 250, 0.2);
+  background: linear-gradient(145deg, white, rgba(246, 237, 255, 0.72));
 }
 
 .inventory-command-bar {

@@ -124,7 +124,8 @@ const elements = {
   reloadInventoryButton: document.querySelector('#reloadInventoryButton'),
   inventoryValue: document.querySelector('#inventoryValue'),
   inventoryStockedProducts: document.querySelector('#inventoryStockedProducts'),
-  inventoryAvailableUnits: document.querySelector('#inventoryAvailableUnits'),
+  inventoryStorageUnits: document.querySelector('#inventoryStorageUnits'),
+  inventoryDisplayUnits: document.querySelector('#inventoryDisplayUnits'),
   inventoryReservedUnits: document.querySelector('#inventoryReservedUnits'),
   inventoryLowStock: document.querySelector('#inventoryLowStock'),
   inventoryMovementsMonth: document.querySelector('#inventoryMovementsMonth'),
@@ -710,6 +711,7 @@ let activeTenantId = readTenantPreference();
 
 const warehouseTypeLabels = {
   AVAILABLE: 'Disponible',
+  DISPLAY: 'Exhibición',
   QUARANTINE: 'Cuarentena',
   DAMAGED: 'Averías',
   TRANSIT: 'En tránsito',
@@ -2396,19 +2398,24 @@ async function syncPosWorkstation() {
     ? warehouses.filter((warehouse) =>
       warehouse.active &&
       warehouse.branch_id === session.branch_id &&
-      warehouse.warehouse_type === 'AVAILABLE')
+      ['DISPLAY', 'AVAILABLE'].includes(warehouse.warehouse_type))
     : [];
+  eligibleWarehouses.sort((left, right) => {
+    const leftPriority = left.warehouse_type === 'DISPLAY' ? 0 : 1;
+    const rightPriority = right.warehouse_type === 'DISPLAY' ? 0 : 1;
+    return leftPriority - rightPriority || left.name.localeCompare(right.name, 'es');
+  });
   elements.posWarehouseSelect.replaceChildren();
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = eligibleWarehouses.length
-    ? 'Selecciona una bodega'
-    : 'Sin bodegas disponibles';
+    ? 'Selecciona una ubicación'
+    : 'Sin ubicaciones disponibles';
   elements.posWarehouseSelect.append(placeholder);
   for (const warehouse of eligibleWarehouses) {
     const option = document.createElement('option');
     option.value = warehouse.id;
-    option.textContent = `${warehouse.name} · ${warehouse.code}`;
+    option.textContent = `${warehouse.name} · ${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`;
     elements.posWarehouseSelect.append(option);
   }
   elements.posWarehouseSelect.value = eligibleWarehouses.some(
@@ -2421,7 +2428,7 @@ async function syncPosWorkstation() {
     posCatalog = [];
     clearCart();
     setPosCatalogState(
-      'Abre un turno y selecciona una bodega',
+      'Abre un turno y selecciona una ubicación',
       'Los productos disponibles aparecerán aquí con sus existencias.',
     );
     return;
@@ -4319,8 +4326,10 @@ function setInventorySummary(summary = {}) {
     formatCurrency(summary.inventory_value || 0);
   elements.inventoryStockedProducts.textContent =
     `${summary.stocked_products || 0} productos con saldo`;
-  elements.inventoryAvailableUnits.textContent =
-    formatQuantity(summary.available_units || 0);
+  elements.inventoryStorageUnits.textContent =
+    formatQuantity(summary.storage_units || 0);
+  elements.inventoryDisplayUnits.textContent =
+    formatQuantity(summary.display_units || 0);
   elements.inventoryReservedUnits.textContent =
     `${formatQuantity(summary.reserved_units || 0)} reservadas`;
   elements.inventoryLowStock.textContent = String(summary.low_stock_balances || 0);
@@ -4395,7 +4404,8 @@ function renderInventoryBalances() {
     const name = document.createElement('strong');
     name.textContent = balance.name;
     const meta = document.createElement('small');
-    meta.textContent = `${balance.sku} · ${balance.warehouse_name}`;
+    meta.textContent = `${balance.sku} · ${balance.warehouse_name} · ` +
+      `${warehouseTypeLabels[balance.warehouse_type] || balance.warehouse_type}`;
     const branch = document.createElement('span');
     branch.textContent = balance.branch_name;
     identity.append(name, meta, branch);
@@ -4464,7 +4474,10 @@ function syncInventoryWarehouseFilter() {
   elements.inventoryWarehouseFilter.replaceChildren(new Option('Todas las bodegas', ''));
   for (const warehouse of warehouses.filter((item) => item.active)) {
     elements.inventoryWarehouseFilter.append(
-      new Option(`${warehouse.name} · ${warehouse.code}`, warehouse.id),
+      new Option(
+        `${warehouse.name} · ${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`,
+        warehouse.id,
+      ),
     );
   }
   if (warehouses.some((warehouse) => warehouse.id === selected)) {
@@ -4595,18 +4608,21 @@ function syncTransferWarehouses() {
       id: balance.warehouse_id,
       name: balance.warehouse_name,
       code: balance.warehouse_code,
+      type: balance.warehouse_type,
     }));
   fillInventorySelect(
     elements.transferSourceWarehouseId,
     'Selecciona origen',
     sources,
-    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+    (warehouse) => `${warehouse.name} · ` +
+      `${warehouseTypeLabels[warehouse.type] || warehouse.code}`,
   );
   fillInventorySelect(
     elements.transferDestinationWarehouseId,
     'Selecciona destino',
     warehouses.filter((warehouse) => warehouse.active),
-    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+    (warehouse) => `${warehouse.name} · ` +
+      `${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`,
   );
   updateTransferAvailability();
 }
@@ -6700,11 +6716,7 @@ async function completeSale() {
   elements.completeSaleButton.disabled = true;
   elements.completeSaleButton.textContent = 'Confirmando venta…';
   try {
-    const sellerCompanies = new Set(
-      [...saleCart.values()].map((item) => item.product.seller_company_id || activeTenantId),
-    );
-    const sharedCheckout = sellerCompanies.size > 1 ||
-      (sellerCompanies.size === 1 && !sellerCompanies.has(activeTenantId));
+    const sharedCheckout = posSaleTerms === 'IMMEDIATE';
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
       method: 'POST',
       headers: {

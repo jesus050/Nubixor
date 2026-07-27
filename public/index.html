@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-25">
-    <script src="./app.js?v=20260727-25" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-26">
+    <script src="./app.js?v=20260727-26" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -544,7 +544,7 @@
                 <button class="secondary-button" id="reloadInventoryButton" type="button">Sincronizar</button>
                 <button class="inventory-action-button transfer" id="newTransferButton" type="button">
                   <span aria-hidden="true">⇄</span>
-                  <span><small>Mover mercancía</small>Transferir</span>
+                  <span><small>Bodega ↔ exhibición</small>Mover unidades</span>
                 </button>
               </div>
             </div>
@@ -567,8 +567,13 @@
                   <small id="inventoryStockedProducts">0 productos con saldo</small>
                 </article>
                 <article class="inventory-kpi">
-                  <span>Unidades disponibles</span>
-                  <strong id="inventoryAvailableUnits">0</strong>
+                  <span>En bodega</span>
+                  <strong id="inventoryStorageUnits">0</strong>
+                  <small>Reserva y reposición</small>
+                </article>
+                <article class="inventory-kpi display">
+                  <span>En exhibición</span>
+                  <strong id="inventoryDisplayUnits">0</strong>
                   <small id="inventoryReservedUnits">0 reservadas</small>
                 </article>
                 <article class="inventory-kpi warning">
@@ -1281,9 +1286,9 @@
                     <kbd>/</kbd>
                   </label>
                   <label>
-                    <span>Bodega de salida</span>
+                    <span>Ubicación de venta</span>
                     <select id="posWarehouseSelect">
-                      <option value="">Selecciona una bodega</option>
+                      <option value="">Selecciona una ubicación</option>
                     </select>
                   </label>
                 </div>
@@ -2604,13 +2609,13 @@
         </label>
         <div class="form-grid">
           <label class="form-field">
-            <span>Bodega de origen <b>*</b></span>
+            <span>Ubicación de origen <b>*</b></span>
             <select id="transferSourceWarehouseId" name="sourceWarehouseId" required>
               <option value="">Selecciona origen</option>
             </select>
           </label>
           <label class="form-field">
-            <span>Bodega de destino <b>*</b></span>
+            <span>Ubicación de destino <b>*</b></span>
             <select id="transferDestinationWarehouseId" name="destinationWarehouseId" required>
               <option value="">Selecciona destino</option>
             </select>
@@ -3078,6 +3083,7 @@
           <span>Uso operativo</span>
           <select id="warehouseType" name="type">
             <option value="AVAILABLE">Inventario disponible</option>
+            <option value="DISPLAY">Exhibición y venta</option>
             <option value="QUARANTINE">Cuarentena</option>
             <option value="DAMAGED">Averías</option>
             <option value="TRANSIT">Mercancía en tránsito</option>

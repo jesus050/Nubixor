@@ -87,6 +87,10 @@ router.get('/summary', asyncHandler(async (req, res) => {
        COUNT(*) FILTER (WHERE ib.on_hand > 0)::integer active_balances,
        COALESCE(SUM(ib.on_hand), 0) total_units,
        COALESCE(SUM(GREATEST(ib.on_hand - ib.reserved, 0)), 0) available_units,
+       COALESCE(SUM(ib.on_hand) FILTER (WHERE w.warehouse_type = 'DISPLAY'), 0)
+         display_units,
+       COALESCE(SUM(ib.on_hand) FILTER (WHERE w.warehouse_type = 'AVAILABLE'), 0)
+         storage_units,
        COALESCE(SUM(ib.reserved), 0) reserved_units,
        COALESCE(SUM(ib.on_hand * p.cost), 0) inventory_value,
        COUNT(*) FILTER (WHERE ib.on_hand > 0 AND ib.on_hand - ib.reserved <= 5)::integer low_stock_balances,
@@ -127,6 +131,7 @@ router.get('/balances', asyncHandler(async (req, res) => {
        p.sku, p.name, p.cost, p.sale_price,
        c.name category_name, b.name brand_name,
        w.name warehouse_name, w.code warehouse_code,
+       w.warehouse_type,
        br.name branch_name,
        pi.public_url image_url, pi.alt_text image_alt
      FROM inventory_balances ib

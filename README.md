@@ -291,6 +291,11 @@ cada documento. Las transferencias exigen indicar la empresa cuya cuenta
 recibió el dinero y una referencia; ambos datos quedan disponibles en el
 archivo y en la exportación del reporte de ventas.
 
+La migración `028` crea una ubicación `Exhibición principal` para cada negocio.
+Inventario muestra por separado las unidades en bodega y en exhibición. La
+acción `Mover unidades` registra el traslado con salida y entrada enlazadas, sin
+alterar el total del producto; Caja & POS descuenta las ventas desde exhibición.
+
 Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
 bodega, caja y los impuestos iniciales. Consulte
 [`docs/multi-company-pos.md`](docs/multi-company-pos.md) antes de integrar

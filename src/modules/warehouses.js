@@ -27,7 +27,7 @@ router.post('/', asyncHandler(async (req, res) => {
   const normalizedName = typeof name === 'string' ? name.trim() : '';
   const normalizedCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
   const normalizedType = typeof type === 'string' ? type.trim().toUpperCase() : 'AVAILABLE';
-  const allowedTypes = ['AVAILABLE', 'QUARANTINE', 'DAMAGED', 'TRANSIT'];
+  const allowedTypes = ['AVAILABLE', 'DISPLAY', 'QUARANTINE', 'DAMAGED', 'TRANSIT'];
 
   if (!branchId || !normalizedName || !normalizedCode) {
     return res.status(422).json({ error: 'branchId, name y code son obligatorios.' });
