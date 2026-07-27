@@ -19,6 +19,9 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   conserva el medio de pago, el efectivo recibido y el cambio entregado.
 - El buscador POS permite agregar un producto inmediatamente al leer un código
   de barras o escribir un SKU exacto y presionar `Enter`.
+- Se refinó el CSS de Caja con una jerarquía más clara, catálogo y carrito con
+  mejor contraste, estados de interacción accesibles, espaciado consistente y
+  una adaptación más limpia para pantallas medianas y móviles.
 
 ### Añadido
 
