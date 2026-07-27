@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-17">
-    <script src="./app.js?v=20260726-17" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-18">
+    <script src="./app.js?v=20260726-18" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -1298,6 +1298,25 @@
                       <option value="CARD">Tarjeta</option>
                       <option value="TRANSFER">Transferencia</option>
                     </select>
+                  </div>
+                  <div class="cash-tender" id="posCashTender">
+                    <label for="posCashReceived">Efectivo recibido</label>
+                    <div class="cash-tender-input">
+                      <span>$</span>
+                      <input
+                        id="posCashReceived"
+                        type="number"
+                        min="0"
+                        step="100"
+                        inputmode="decimal"
+                        placeholder="0"
+                      >
+                    </div>
+                    <div class="cash-tender-suggestions" id="cashTenderSuggestions"></div>
+                    <div class="cash-change">
+                      <span>Cambio a entregar</span>
+                      <strong id="posCashChange">$0</strong>
+                    </div>
                   </div>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
@@ -3302,7 +3321,10 @@
         <div class="receipt-totals">
           <div><span>Subtotal</span><strong id="receiptSubtotal">$0</strong></div>
           <div><span>Impuestos incluidos</span><strong id="receiptTax">$0</strong></div>
-          <div><span>Total cobrado</span><strong id="receiptTotal">$0</strong></div>
+          <div class="receipt-grand-total"><span>Total cobrado</span><strong id="receiptTotal">$0</strong></div>
+          <div><span>Medio de pago</span><strong id="receiptPaymentMethod">—</strong></div>
+          <div id="receiptCashReceivedRow"><span>Efectivo recibido</span><strong id="receiptCashReceived">$0</strong></div>
+          <div id="receiptCashChangeRow"><span>Cambio entregado</span><strong id="receiptCashChange">$0</strong></div>
         </div>
         <div class="dialog-actions">
           <button class="secondary-button" id="printReceiptButton" type="button">

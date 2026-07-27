@@ -32,6 +32,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /MegaSuite Caja/);
   assert.match(response.text, /data-payment-method="CASH"/);
   assert.match(response.text, /id="posCategoryStrip"/);
+  assert.match(response.text, /Efectivo recibido/);
+  assert.match(response.text, /Cambio a entregar/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
@@ -214,6 +216,18 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     emptySale.body.error,
     'cashSessionId, warehouseId, paymentMethod e items son obligatorios.',
   );
+
+  const cashWithoutTender = await request(app)
+    .post('/api/pos/sales')
+    .set(headers)
+    .send({
+      cashSessionId: '00000000-0000-0000-0000-000000000001',
+      warehouseId: '00000000-0000-0000-0000-000000000002',
+      paymentMethod: 'CASH',
+      items: [{ productId: '00000000-0000-0000-0000-000000000003', quantity: 1 }],
+    })
+    .expect(422);
+  assert.match(cashWithoutTender.body.error, /efectivo recibido/i);
 });
 
 test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {

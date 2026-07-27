@@ -2608,7 +2608,7 @@ input:focus-visible {
   color: var(--color-ink);
 }
 
-.receipt-totals div:last-child {
+.receipt-totals .receipt-grand-total {
   padding-top: 10px;
   border-top: 1px solid var(--color-line);
   color: var(--color-ink);
@@ -8200,4 +8200,94 @@ footer {
   .cashier-terminal-brand small {
     display: none;
   }
+}
+
+.cash-tender {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(79, 210, 233, 0.45);
+  border-radius: 14px;
+  background: rgba(221, 248, 252, 0.55);
+}
+
+.cash-tender > label {
+  color: var(--color-ink);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.cash-tender-input {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(25, 37, 132, 0.16);
+  border-radius: 11px;
+  background: white;
+}
+
+.cash-tender-input span {
+  color: var(--color-purple-strong);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.cash-tender-input input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.cash-tender-suggestions {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cash-tender-suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.cash-tender-suggestions button {
+  min-height: 29px;
+  flex: 1 0 auto;
+  padding: 0 9px;
+  border: 1px solid rgba(25, 37, 132, 0.13);
+  border-radius: 9px;
+  background: white;
+  color: var(--color-ink);
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.cash-change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(25, 37, 132, 0.1);
+}
+
+.cash-change span {
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.cash-change strong {
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+.cash-change strong.short {
+  color: var(--color-purple-strong);
 }

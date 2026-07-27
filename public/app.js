@@ -360,6 +360,10 @@ const elements = {
   clearCartButton: document.querySelector('#clearCartButton'),
   posPaymentMethod: document.querySelector('#posPaymentMethod'),
   posPaymentButtons: document.querySelectorAll('[data-payment-method]'),
+  posCashTender: document.querySelector('#posCashTender'),
+  posCashReceived: document.querySelector('#posCashReceived'),
+  cashTenderSuggestions: document.querySelector('#cashTenderSuggestions'),
+  posCashChange: document.querySelector('#posCashChange'),
   posSaleError: document.querySelector('#posSaleError'),
   completeSaleButton: document.querySelector('#completeSaleButton'),
   posSaleLock: document.querySelector('#posSaleLock'),
@@ -369,6 +373,11 @@ const elements = {
   receiptSubtotal: document.querySelector('#receiptSubtotal'),
   receiptTax: document.querySelector('#receiptTax'),
   receiptTotal: document.querySelector('#receiptTotal'),
+  receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
+  receiptCashReceivedRow: document.querySelector('#receiptCashReceivedRow'),
+  receiptCashReceived: document.querySelector('#receiptCashReceived'),
+  receiptCashChangeRow: document.querySelector('#receiptCashChangeRow'),
+  receiptCashChange: document.querySelector('#receiptCashChange'),
   closeReceiptDialog: document.querySelector('#closeReceiptDialog'),
   printReceiptButton: document.querySelector('#printReceiptButton'),
   finishReceiptButton: document.querySelector('#finishReceiptButton'),
@@ -649,6 +658,12 @@ const warehouseTypeLabels = {
   QUARANTINE: 'Cuarentena',
   DAMAGED: 'Averías',
   TRANSIT: 'En tránsito',
+};
+
+const paymentMethodLabels = {
+  CASH: 'Efectivo',
+  CARD: 'Tarjeta',
+  TRANSFER: 'Transferencia',
 };
 
 function readTenantPreference() {
@@ -1767,6 +1782,52 @@ function calculateCartTotals() {
   };
 }
 
+function cashTenderOptions(total) {
+  if (total <= 0) return [];
+  const values = new Set([total]);
+  for (const denomination of [10000, 20000, 50000, 100000, 200000]) {
+    const rounded = Math.ceil(total / denomination) * denomination;
+    if (rounded >= total) values.add(rounded);
+  }
+  return [...values].sort((left, right) => left - right).slice(0, 4);
+}
+
+function updateCashSettlement(totals = calculateCartTotals(), { rebuild = false } = {}) {
+  const cashPayment = elements.posPaymentMethod.value === 'CASH';
+  elements.posCashTender.hidden = !cashPayment;
+  if (!cashPayment) return;
+
+  if (rebuild) {
+    elements.cashTenderSuggestions.replaceChildren();
+    for (const amount of cashTenderOptions(totals.total)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = amount === totals.total ? 'Exacto' : formatCurrency(amount);
+      button.addEventListener('click', () => {
+        elements.posCashReceived.value = String(amount);
+        updateCashSettlement(calculateCartTotals());
+      });
+      elements.cashTenderSuggestions.append(button);
+    }
+  }
+
+  const hasReceived = elements.posCashReceived.value !== '';
+  const received = Number(elements.posCashReceived.value);
+  const validReceived =
+    hasReceived && Number.isFinite(received) && received >= totals.total;
+  const difference = hasReceived && Number.isFinite(received) ? received - totals.total : 0;
+  elements.posCashChange.classList.toggle('short', hasReceived && difference < 0);
+  elements.posCashChange.textContent = hasReceived && difference < 0
+    ? `Faltan ${formatCurrency(Math.abs(difference))}`
+    : formatCurrency(difference);
+  if (totals.itemCount > 0 && !validReceived) {
+    elements.completeSaleButton.disabled = true;
+    elements.completeSaleButton.textContent = hasReceived && difference < 0
+      ? `Faltan ${formatCurrency(Math.abs(difference))}`
+      : 'Registra el efectivo recibido';
+  }
+}
+
 function renderPosCatalog() {
   const search = normalizeSearch(elements.posProductSearch.value.trim());
   const filtered = posCatalog.filter((product) => {
@@ -1936,11 +1997,13 @@ function renderCart() {
   elements.completeSaleButton.textContent = totals.itemCount
     ? `Cobrar ${formatCurrency(totals.total)} →`
     : 'Selecciona productos →';
+  updateCashSettlement(totals, { rebuild: true });
   elements.posSaleError.hidden = true;
 }
 
 function clearCart() {
   saleCart.clear();
+  elements.posCashReceived.value = '';
   renderCart();
   renderPosCatalog();
 }
@@ -6088,6 +6151,13 @@ function showReceipt(receipt) {
   elements.receiptSubtotal.textContent = formatCurrency(receipt.subtotal);
   elements.receiptTax.textContent = formatCurrency(receipt.tax_total);
   elements.receiptTotal.textContent = formatCurrency(receipt.total);
+  elements.receiptPaymentMethod.textContent =
+    paymentMethodLabels[receipt.payment_method] || receipt.payment_method;
+  const cashPayment = receipt.payment_method === 'CASH';
+  elements.receiptCashReceivedRow.hidden = !cashPayment;
+  elements.receiptCashChangeRow.hidden = !cashPayment;
+  elements.receiptCashReceived.textContent = formatCurrency(receipt.cash_received || 0);
+  elements.receiptCashChange.textContent = formatCurrency(receipt.cash_change || 0);
   elements.receiptDialog.showModal();
 }
 
@@ -6111,6 +6181,9 @@ async function completeSale() {
         cashSessionId: posSummary.openSession.id,
         warehouseId: elements.posWarehouseSelect.value,
         paymentMethod: elements.posPaymentMethod.value,
+        cashReceived: elements.posPaymentMethod.value === 'CASH'
+          ? Number(elements.posCashReceived.value)
+          : null,
         items: [...saleCart.values()].map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -6118,6 +6191,7 @@ async function completeSale() {
       }),
     });
     saleCart.clear();
+    elements.posCashReceived.value = '';
     await Promise.all([
       loadPos(),
       loadExecutiveSummary(),
@@ -6428,13 +6502,34 @@ elements.posWarehouseSelect.addEventListener('change', async () => {
   await loadPosCatalog().catch(() => {});
 });
 elements.posProductSearch.addEventListener('input', renderPosCatalog);
+elements.posProductSearch.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const query = normalizeSearch(elements.posProductSearch.value.trim());
+  if (!query) return;
+  const exactProduct = posCatalog.find((product) =>
+    normalizeSearch(product.sku) === query ||
+    normalizeSearch(product.barcode || '') === query);
+  if (!exactProduct) {
+    showToast('No encontramos un SKU o código de barras exacto.');
+    return;
+  }
+  addProductToCart(exactProduct);
+  elements.posProductSearch.value = '';
+  renderPosCatalog();
+  showToast(`${exactProduct.name} agregado a la venta.`);
+});
 elements.clearCartButton.addEventListener('click', clearCart);
+elements.posCashReceived.addEventListener('input', () => {
+  updateCashSettlement(calculateCartTotals());
+});
 elements.posPaymentButtons.forEach((button) => {
   button.addEventListener('click', () => {
     elements.posPaymentMethod.value = button.dataset.paymentMethod;
     elements.posPaymentButtons.forEach((option) => {
       option.classList.toggle('active', option === button);
     });
+    renderCart();
   });
 });
 document.addEventListener('keydown', (event) => {

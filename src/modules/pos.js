@@ -506,6 +506,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     cashSessionId,
     warehouseId,
     paymentMethod,
+    cashReceived,
     items,
   } = req.body;
   const normalizedPayment = typeof paymentMethod === 'string'
@@ -523,6 +524,15 @@ router.post('/sales', asyncHandler(async (req, res) => {
   }
   if (!allowedPayments.includes(normalizedPayment)) {
     return res.status(422).json({ error: 'El medio de pago no es válido.' });
+  }
+  const normalizedCashReceived = Number(cashReceived);
+  if (
+    normalizedPayment === 'CASH' &&
+    (!Number.isFinite(normalizedCashReceived) || normalizedCashReceived < 0)
+  ) {
+    return res.status(422).json({
+      error: 'Registra el efectivo recibido antes de confirmar la venta.',
+    });
   }
   if (items.length > 100 || items.some((item) =>
     !item || typeof item.productId !== 'string' || !UUID_PATTERN.test(item.productId) ||
@@ -612,15 +622,28 @@ router.post('/sales', asyncHandler(async (req, res) => {
     total = Math.round(total * 100) / 100;
     taxTotal = Math.round(taxTotal * 100) / 100;
     const subtotal = Math.round((total - taxTotal) * 100) / 100;
+    const tendered = normalizedPayment === 'CASH'
+      ? Math.round(normalizedCashReceived * 100) / 100
+      : null;
+    const change = normalizedPayment === 'CASH'
+      ? Math.round((tendered - total) * 100) / 100
+      : null;
+    if (normalizedPayment === 'CASH' && change < 0) {
+      throw new AppError(
+        'El efectivo recibido es menor que el total de la venta.',
+        422,
+        'INSUFFICIENT_CASH_RECEIVED',
+      );
+    }
 
     const saleResult = await client.query(
       `INSERT INTO sales(
          tenant_id, cash_session_id, warehouse_id, payment_method,
-         subtotal, tax_total, total, created_by
+         subtotal, tax_total, total, cash_received, cash_change, created_by
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING id, sequence_number, status, payment_method,
-                 subtotal, tax_total, total, created_at`,
+                 subtotal, tax_total, total, cash_received, cash_change, created_at`,
       [
         req.context.tenantId,
         cashSessionId,
@@ -629,6 +652,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
         subtotal,
         taxTotal,
         total,
+        tendered,
+        change,
         req.context.userId,
       ],
     );

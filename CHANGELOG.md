@@ -14,6 +14,11 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - La terminal incorpora filtros rápidos por categoría, búsqueda por nombre,
   SKU o código de barras, selector directo del medio de pago, vaciado del
   carrito y acceso rápido al buscador con la tecla `/`.
+- El cobro en efectivo registra el monto recibido, calcula el cambio, propone
+  valores rápidos y bloquea ventas con efectivo insuficiente. El comprobante
+  conserva el medio de pago, el efectivo recibido y el cambio entregado.
+- El buscador POS permite agregar un producto inmediatamente al leer un código
+  de barras o escribir un SKU exacto y presionar `Enter`.
 
 ### Añadido
 
