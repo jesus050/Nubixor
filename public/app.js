@@ -1,5 +1,10 @@
+if (window.location.protocol === 'file:') {
+  window.location.replace(
+    `http://localhost:4100/${window.location.search}${window.location.hash}`,
+  );
+}
+
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_USER_ID = '50000000-0000-0000-0000-000000000001';
 const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:4100' : '';
 
 function resolvePublicAsset(path) {
@@ -8,6 +13,36 @@ function resolvePublicAsset(path) {
 }
 
 const elements = {
+  authGate: document.querySelector('#authGate'),
+  appShell: document.querySelector('#appShell'),
+  authLoading: document.querySelector('#authLoading'),
+  setupAccessPanel: document.querySelector('#setupAccessPanel'),
+  setupAccessForm: document.querySelector('#setupAccessForm'),
+  setupAccessError: document.querySelector('#setupAccessError'),
+  setupAccessButton: document.querySelector('#setupAccessButton'),
+  setupEmail: document.querySelector('#setupEmail'),
+  loginAccessPanel: document.querySelector('#loginAccessPanel'),
+  loginAccessForm: document.querySelector('#loginAccessForm'),
+  loginAccessError: document.querySelector('#loginAccessError'),
+  loginAccessButton: document.querySelector('#loginAccessButton'),
+  loginEmail: document.querySelector('#loginEmail'),
+  activateAccessPanel: document.querySelector('#activateAccessPanel'),
+  activateAccessForm: document.querySelector('#activateAccessForm'),
+  activateAccessError: document.querySelector('#activateAccessError'),
+  activateAccessButton: document.querySelector('#activateAccessButton'),
+  accountTrigger: document.querySelector('#accountTrigger'),
+  accountMenu: document.querySelector('#accountMenu'),
+  accountInitials: document.querySelector('#accountInitials'),
+  accountName: document.querySelector('#accountName'),
+  accountRole: document.querySelector('#accountRole'),
+  accountMenuName: document.querySelector('#accountMenuName'),
+  accountMenuEmail: document.querySelector('#accountMenuEmail'),
+  logoutButton: document.querySelector('#logoutButton'),
+  activationLinkDialog: document.querySelector('#activationLinkDialog'),
+  activationLinkValue: document.querySelector('#activationLinkValue'),
+  closeActivationLinkDialog: document.querySelector('#closeActivationLinkDialog'),
+  finishActivationLinkButton: document.querySelector('#finishActivationLinkButton'),
+  copyActivationLinkButton: document.querySelector('#copyActivationLinkButton'),
   refreshButton: document.querySelector('#refreshButton'),
   overallIndicator: document.querySelector('#overallIndicator'),
   overallLabel: document.querySelector('#overallLabel'),
@@ -477,6 +512,7 @@ const elements = {
   userDetailPermissions: document.querySelector('#userDetailPermissions'),
   inviteUserButton: document.querySelector('#inviteUserButton'),
   editUserButton: document.querySelector('#editUserButton'),
+  resetUserAccessButton: document.querySelector('#resetUserAccessButton'),
   roleGrid: document.querySelector('#roleGrid'),
   roleDataState: document.querySelector('#roleDataState'),
   newRoleButton: document.querySelector('#newRoleButton'),
@@ -536,6 +572,9 @@ let accessPermissions = [];
 let selectedTeamUser = null;
 let editingTeamUser = null;
 let editingAccessRole = null;
+let currentUser = null;
+let csrfToken = null;
+let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
 const saleCart = new Map();
 let imageProduct = null;
 let imagePreviewUrl = null;
@@ -571,6 +610,246 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove('visible'), 2600);
 }
 
+function activeMembership() {
+  return currentUser?.memberships?.find((membership) =>
+    membership.tenantId === activeTenantId) || null;
+}
+
+function hasAnyPermission(...permissionCodes) {
+  const permissions = activeMembership()?.permissions || [];
+  return permissionCodes.some((permission) => permissions.includes(permission));
+}
+
+function accountInitials(name) {
+  return (name || 'MegaSuite')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function applyAccessVisibility() {
+  const viewPermissions = {
+    inicio: ['dashboard.view'],
+    empresas: [],
+    sucursales: ['branches.manage', 'dashboard.view', 'inventory.view', 'sales.operate'],
+    bodegas: ['warehouses.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
+    inventario: ['inventory.view', 'inventory.adjust'],
+    productos: ['catalog.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
+    compras: ['purchases.manage'],
+    'cuentas-pagar': ['payables.manage'],
+    caja: ['sales.operate'],
+    cartera: ['receivables.manage'],
+    usuarios: ['users.manage'],
+    modulos: ['dashboard.view'],
+    sistema: ['audit.view', 'users.manage'],
+  };
+  document.querySelectorAll('[data-view-link]').forEach((link) => {
+    const required = viewPermissions[link.dataset.viewLink] || [];
+    link.hidden = required.length > 0 && !hasAnyPermission(...required);
+  });
+  const membership = activeMembership();
+  elements.accountRole.textContent = membership?.roleName || 'Sin acceso a empresa';
+  elements.newCompanyButton.hidden = !hasAnyPermission('companies.manage');
+  elements.newBranchButton.hidden = !hasAnyPermission('branches.manage');
+  elements.newWarehouseButton.hidden = !hasAnyPermission('warehouses.manage');
+  elements.newAdjustmentButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newTransferButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newCountButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newCategoryButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.newBrandButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.newProductButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.categoryPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.brandPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.newPurchaseButton.hidden = !hasAnyPermission('purchases.manage');
+  elements.newSupplierButton.hidden = !hasAnyPermission('purchases.manage');
+  elements.supplierPanelCreateButton.hidden = !hasAnyPermission('purchases.manage');
+  elements.inviteUserButton.hidden = !hasAnyPermission('users.manage');
+  elements.newRoleButton.hidden = !hasAnyPermission('users.manage');
+}
+
+function renderAuthenticatedUser() {
+  const name = currentUser?.full_name || currentUser?.email || 'Usuario';
+  elements.accountInitials.textContent = accountInitials(name);
+  elements.accountName.textContent = name;
+  elements.accountMenuName.textContent = name;
+  elements.accountMenuEmail.textContent = currentUser?.email || '—';
+  applyAccessVisibility();
+}
+
+function showAuthGate({ setupRequired = false, initialEmail = '' } = {}) {
+  currentUser = null;
+  csrfToken = null;
+  elements.appShell.hidden = true;
+  elements.authGate.hidden = false;
+  elements.authLoading.hidden = true;
+  elements.setupAccessPanel.hidden = !setupRequired;
+  elements.loginAccessPanel.hidden = setupRequired;
+  elements.activateAccessPanel.hidden = true;
+  elements.accountMenu.hidden = true;
+  if (setupRequired) {
+    elements.setupEmail.value = initialEmail || 'admin@megasuite.local';
+    queueMicrotask(() => elements.setupEmail.focus());
+  } else {
+    queueMicrotask(() => elements.loginEmail.focus());
+  }
+}
+
+function showActivationGate() {
+  currentUser = null;
+  csrfToken = null;
+  elements.appShell.hidden = true;
+  elements.authGate.hidden = false;
+  elements.authLoading.hidden = true;
+  elements.setupAccessPanel.hidden = true;
+  elements.loginAccessPanel.hidden = true;
+  elements.activateAccessPanel.hidden = false;
+  queueMicrotask(() => elements.activateAccessForm.elements.password.focus());
+}
+
+async function completeAuthentication(user, nextCsrfToken) {
+  currentUser = user;
+  csrfToken = nextCsrfToken;
+  const memberships = user?.memberships || [];
+  if (!memberships.some((membership) => membership.tenantId === activeTenantId)) {
+    activeTenantId = memberships[0]?.tenantId || '';
+  }
+  saveTenantPreference(activeTenantId);
+  elements.authGate.hidden = true;
+  elements.appShell.hidden = false;
+  renderAuthenticatedUser();
+  showView(window.location.hash.replace(/^#/, '') || 'inicio', { scroll: false });
+  await refreshStatus();
+}
+
+async function submitSetupAccess(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.setupAccessForm);
+  elements.setupAccessError.hidden = true;
+  if (formData.get('password') !== formData.get('confirmPassword')) {
+    elements.setupAccessError.textContent = 'Las contraseñas no coinciden.';
+    elements.setupAccessError.hidden = false;
+    return;
+  }
+  elements.setupAccessButton.disabled = true;
+  elements.setupAccessButton.textContent = 'Protegiendo acceso…';
+  try {
+    const result = await getJson('/api/auth/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.get('email'),
+        password: formData.get('password'),
+      }),
+    });
+    await completeAuthentication(result.user, result.csrfToken);
+    showToast('Acceso principal configurado correctamente.');
+  } catch (error) {
+    elements.setupAccessError.textContent = error.message;
+    elements.setupAccessError.hidden = false;
+  } finally {
+    elements.setupAccessButton.disabled = false;
+    elements.setupAccessButton.textContent = 'Proteger y entrar →';
+  }
+}
+
+async function submitLoginAccess(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.loginAccessForm);
+  elements.loginAccessError.hidden = true;
+  elements.loginAccessButton.disabled = true;
+  elements.loginAccessButton.textContent = 'Verificando…';
+  try {
+    const result = await getJson('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: formData.get('email'),
+        password: formData.get('password'),
+        remember: formData.get('remember') === 'on',
+      }),
+    });
+    elements.loginAccessForm.reset();
+    await completeAuthentication(result.user, result.csrfToken);
+    showToast(`Bienvenido, ${result.user.full_name}.`);
+  } catch (error) {
+    elements.loginAccessError.textContent = error.message;
+    elements.loginAccessError.hidden = false;
+  } finally {
+    elements.loginAccessButton.disabled = false;
+    elements.loginAccessButton.textContent = 'Iniciar sesión →';
+  }
+}
+
+async function submitActivateAccess(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.activateAccessForm);
+  elements.activateAccessError.hidden = true;
+  if (formData.get('password') !== formData.get('confirmPassword')) {
+    elements.activateAccessError.textContent = 'Las contraseñas no coinciden.';
+    elements.activateAccessError.hidden = false;
+    return;
+  }
+  elements.activateAccessButton.disabled = true;
+  elements.activateAccessButton.textContent = 'Activando…';
+  try {
+    const result = await getJson('/api/auth/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: pendingActivationToken,
+        password: formData.get('password'),
+      }),
+    });
+    pendingActivationToken = null;
+    window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash}`);
+    await completeAuthentication(result.user, result.csrfToken);
+    showToast('Cuenta activada. Tu acceso ya está listo.');
+  } catch (error) {
+    elements.activateAccessError.textContent = error.message;
+    elements.activateAccessError.hidden = false;
+  } finally {
+    elements.activateAccessButton.disabled = false;
+    elements.activateAccessButton.textContent = 'Activar y entrar →';
+  }
+}
+
+async function logout() {
+  elements.logoutButton.disabled = true;
+  try {
+    await getJson('/api/auth/logout', { method: 'POST' });
+  } catch {
+    // Aunque la sesión ya haya vencido, la interfaz debe volver al acceso.
+  } finally {
+    elements.logoutButton.disabled = false;
+    showAuthGate();
+  }
+}
+
+async function startApplication() {
+  if (pendingActivationToken) {
+    showActivationGate();
+    return;
+  }
+  try {
+    const status = await getJson('/api/auth/status');
+    if (status.authenticated) {
+      await completeAuthentication(status.user, status.csrfToken);
+    } else {
+      showAuthGate(status);
+    }
+  } catch (error) {
+    elements.authLoading.replaceChildren();
+    const title = document.createElement('strong');
+    title.textContent = 'No pudimos conectar con MegaSuite';
+    const detail = document.createElement('span');
+    detail.textContent = error.message;
+    elements.authLoading.append(title, detail);
+  }
+}
+
 function setServiceState(dot, result, state, message) {
   dot.classList.remove('ok', 'error');
   if (state) dot.classList.add(state);
@@ -579,15 +858,26 @@ function setServiceState(dot, result, state, message) {
 
 async function getJson(url, options = {}) {
   const { headers = {}, ...requestOptions } = options;
+  const requestHeaders = { Accept: 'application/json', ...headers };
+  if (activeTenantId && !requestHeaders['x-tenant-id'] && !url.startsWith('/api/auth')) {
+    requestHeaders['x-tenant-id'] = activeTenantId;
+  }
+  if (csrfToken && !['GET', 'HEAD'].includes((requestOptions.method || 'GET').toUpperCase())) {
+    requestHeaders['x-csrf-token'] = csrfToken;
+  }
   const response = await fetch(`${API_BASE_URL}${url}`, {
     ...requestOptions,
-    headers: { Accept: 'application/json', ...headers },
+    credentials: 'include',
+    headers: requestHeaders,
   });
-  const body = await response.json();
+  const body = response.status === 204 ? null : await response.json();
   if (!response.ok) {
     const error = new Error(body.error || 'No fue posible consultar la API.');
     error.status = response.status;
     error.body = body;
+    if (response.status === 401 && !url.startsWith('/api/auth')) {
+      showAuthGate({ setupRequired: false });
+    }
     throw error;
   }
   return body;
@@ -1872,7 +2162,6 @@ async function submitCustomer(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
-        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify(Object.fromEntries(formData)),
     });
@@ -2962,7 +3251,6 @@ async function submitPayablePayment(event) {
 function accessRequestHeaders() {
   return {
     'x-tenant-id': activeTenantId,
-    'x-user-id': DEMO_USER_ID,
   };
 }
 
@@ -3096,6 +3384,7 @@ function renderUserDetail(user) {
     user.joined_at ? formatShortDate(user.joined_at) : 'Pendiente';
   elements.userDetailLastLogin.textContent =
     user.last_login_at ? formatShortDate(user.last_login_at) : 'Sin ingreso';
+  elements.resetUserAccessButton.hidden = user.status === 'SUSPENDED';
   elements.userDetailPermissionCount.textContent =
     `${permissions.length} ${permissions.length === 1 ? 'acceso' : 'accesos'}`;
   elements.userDetailPermissions.replaceChildren();
@@ -3283,6 +3572,55 @@ function closeUserDialog() {
   editingTeamUser = null;
 }
 
+function showActivationLink(token) {
+  const base = window.location.protocol === 'file:'
+    ? 'http://localhost:4100/'
+    : `${window.location.origin}${window.location.pathname}`;
+  const url = new URL(base);
+  url.searchParams.set('activate', token);
+  elements.activationLinkValue.value = url.toString();
+  elements.activationLinkDialog.showModal();
+}
+
+function closeActivationLinkDialog() {
+  elements.activationLinkDialog.close();
+}
+
+async function generateUserAccessLink() {
+  if (!selectedTeamUser) return;
+  elements.resetUserAccessButton.disabled = true;
+  try {
+    const result = await getJson(`/api/users/${selectedTeamUser.id}/access-link`, {
+      method: 'POST',
+      headers: {
+        ...accessRequestHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reason: selectedTeamUser.status === 'INVITED'
+          ? 'Reenvío de invitación'
+          : 'Recuperación de contraseña solicitada',
+      }),
+    });
+    showActivationLink(result.activationToken);
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.resetUserAccessButton.disabled = false;
+  }
+}
+
+async function copyActivationLink() {
+  try {
+    await navigator.clipboard.writeText(elements.activationLinkValue.value);
+    showToast('Enlace de activación copiado.');
+  } catch {
+    elements.activationLinkValue.select();
+    document.execCommand('copy');
+    showToast('Enlace de activación copiado.');
+  }
+}
+
 async function submitUser(event) {
   event.preventDefault();
   const formData = new FormData(elements.userForm);
@@ -3302,7 +3640,7 @@ async function submitUser(event) {
   elements.saveUserButton.textContent = editing ? 'Guardando…' : 'Invitando…';
   try {
     const targetId = editingTeamUser?.id;
-    await getJson(editing ? `/api/users/${targetId}` : '/api/users/invite', {
+    const savedUser = await getJson(editing ? `/api/users/${targetId}` : '/api/users/invite', {
       method: editing ? 'PATCH' : 'POST',
       headers: {
         ...accessRequestHeaders(),
@@ -3314,7 +3652,10 @@ async function submitUser(event) {
     editingTeamUser = null;
     await loadUsers();
     if (targetId) selectTeamUser(targetId);
-    showToast(editing ? 'Acceso actualizado correctamente.' : 'Invitación registrada.');
+    if (!editing && savedUser.activationToken) {
+      showActivationLink(savedUser.activationToken);
+    }
+    showToast(editing ? 'Acceso actualizado correctamente.' : 'Invitación preparada.');
   } catch (error) {
     elements.userFormError.textContent = error.message;
     elements.userFormError.hidden = false;
@@ -4324,17 +4665,22 @@ async function refreshTenantData() {
   }
 
   const results = await Promise.allSettled([
-    loadBranches(),
-    loadWarehouses(),
-    loadInventory(),
-    loadPhysicalCounts(),
-    loadCatalog(),
-    loadPurchases(),
-    loadPayables(),
-    loadPos(),
-    loadReceivables(),
-    loadUsers(),
-    loadExecutiveSummary(),
+    hasAnyPermission('dashboard.view', 'branches.manage', 'inventory.view', 'sales.operate')
+      ? loadBranches() : Promise.resolve([]),
+    hasAnyPermission('inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate')
+      ? loadWarehouses() : Promise.resolve([]),
+    hasAnyPermission('inventory.view', 'inventory.adjust')
+      ? loadInventory() : Promise.resolve([]),
+    hasAnyPermission('inventory.view', 'inventory.adjust')
+      ? loadPhysicalCounts() : Promise.resolve([]),
+    hasAnyPermission('inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate')
+      ? loadCatalog() : Promise.resolve([]),
+    hasAnyPermission('purchases.manage') ? loadPurchases() : Promise.resolve([]),
+    hasAnyPermission('payables.manage') ? loadPayables() : Promise.resolve([]),
+    hasAnyPermission('sales.operate') ? loadPos() : Promise.resolve([]),
+    hasAnyPermission('receivables.manage') ? loadReceivables() : Promise.resolve([]),
+    hasAnyPermission('users.manage') ? loadUsers() : Promise.resolve([]),
+    hasAnyPermission('dashboard.view') ? loadExecutiveSummary() : Promise.resolve({}),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -4342,7 +4688,9 @@ async function refreshTenantData() {
     !suppliers.some((supplier) => supplier.active) ||
     !products.length ||
     !branches.length;
-  await syncPosWorkstation().catch(() => {});
+  if (hasAnyPermission('sales.operate')) {
+    await syncPosWorkstation().catch(() => {});
+  }
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
   setMetric(elements.productCount, elements.productDetail, results[4], ['producto registrado', 'productos registrados']);
@@ -4419,6 +4767,12 @@ function resolveView(hash = window.location.hash) {
 }
 
 function showView(requestedView, { scroll = true } = {}) {
+  const requestedLink = [...document.querySelectorAll(`[data-view-link="${requestedView}"]`)]
+    .find((link) => !link.hidden);
+  if (currentUser && !requestedLink) {
+    requestedView = [...document.querySelectorAll('[data-view-link]')]
+      .find((link) => !link.hidden)?.dataset.viewLink || 'empresas';
+  }
   const view = resolveView(`#${requestedView}`);
   document.querySelectorAll('.app-view').forEach((section) => {
     section.hidden = section.dataset.view !== view;
@@ -4466,15 +4820,17 @@ async function submitCompany(event) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': DEMO_USER_ID,
+        'x-tenant-id': activeTenantId,
       },
       body: JSON.stringify(payload),
     });
     closeCompanyDialog();
+    currentUser = await getJson('/api/auth/me');
     activeTenantId = createdCompany.id;
     saleCart.clear();
     posCatalog = [];
     await loadCompanies();
+    renderAuthenticatedUser();
     elements.companyCount.textContent = String(companies.length);
     elements.companyDetail.textContent =
       `${companies.length} ${companies.length === 1 ? 'empresa activa' : 'empresas activas'}`;
@@ -4891,7 +5247,6 @@ async function submitOpenCash(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
-        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify({
         cashRegisterId: formData.get('cashRegisterId'),
@@ -4965,7 +5320,6 @@ async function submitCloseCash(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
-        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify({
         counts: cashCountLines(),
@@ -5012,7 +5366,6 @@ async function submitCashMovement(event) {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
-        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify(Object.fromEntries(formData)),
     });
@@ -5061,7 +5414,6 @@ async function completeSale() {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
-        'x-user-id': DEMO_USER_ID,
       },
       body: JSON.stringify({
         cashSessionId: posSummary.openSession.id,
@@ -5097,6 +5449,26 @@ document.querySelector('#currentDate').textContent = new Intl.DateTimeFormat('es
 }).format(new Date());
 
 elements.refreshButton.addEventListener('click', () => refreshStatus({ notify: true }));
+elements.setupAccessForm.addEventListener('submit', submitSetupAccess);
+elements.loginAccessForm.addEventListener('submit', submitLoginAccess);
+elements.activateAccessForm.addEventListener('submit', submitActivateAccess);
+elements.accountTrigger.addEventListener('click', () => {
+  elements.accountMenu.hidden = !elements.accountMenu.hidden;
+  elements.accountTrigger.setAttribute('aria-expanded', String(!elements.accountMenu.hidden));
+});
+elements.logoutButton.addEventListener('click', logout);
+elements.closeActivationLinkDialog.addEventListener('click', closeActivationLinkDialog);
+elements.finishActivationLinkButton.addEventListener('click', closeActivationLinkDialog);
+elements.copyActivationLinkButton.addEventListener('click', copyActivationLink);
+elements.activationLinkDialog.addEventListener('click', (event) => {
+  if (event.target === elements.activationLinkDialog) closeActivationLinkDialog();
+});
+document.addEventListener('click', (event) => {
+  if (!elements.accountMenu.hidden && !event.target.closest('.account-control')) {
+    elements.accountMenu.hidden = true;
+    elements.accountTrigger.setAttribute('aria-expanded', 'false');
+  }
+});
 elements.moduleSearch.addEventListener('input', () => {
   filterModules();
   if (elements.moduleSearch.value.trim() && resolveView() !== 'modulos') {
@@ -5118,6 +5490,7 @@ elements.companyContext.addEventListener('change', async () => {
   selectedTeamUser = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
+  renderAuthenticatedUser();
   await refreshTenantData();
   showToast('Contexto de empresa actualizado.');
 });
@@ -5254,6 +5627,7 @@ elements.reloadUsersButton.addEventListener('click', () => {
 });
 elements.inviteUserButton.addEventListener('click', openInviteUserDialog);
 elements.editUserButton.addEventListener('click', openEditUserDialog);
+elements.resetUserAccessButton.addEventListener('click', generateUserAccessLink);
 elements.closeUserDialog.addEventListener('click', closeUserDialog);
 elements.cancelUserButton.addEventListener('click', closeUserDialog);
 elements.userForm.addEventListener('submit', submitUser);
@@ -5407,12 +5781,4 @@ window.addEventListener('hashchange', () => {
   showView(window.location.hash.replace(/^#/, '') || 'inicio');
 });
 
-showView(window.location.hash.replace(/^#/, '') || 'inicio', { scroll: false });
-
-refreshStatus().catch(() => {
-  elements.refreshButton.classList.remove('loading');
-  elements.refreshButton.disabled = false;
-  elements.overallIndicator.classList.add('error');
-  elements.overallLabel.textContent = 'Sin conexión';
-  setServiceState(elements.apiDot, elements.apiResult, 'error', 'Sin respuesta');
-});
+startApplication();

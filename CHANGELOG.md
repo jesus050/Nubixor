@@ -6,6 +6,19 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Acceso local real sin contraseña predeterminada: configuración inicial única,
+  inicio y cierre de sesión.
+- Contraseñas derivadas con scrypt, sesiones revocables mediante cookies
+  `HttpOnly` y protección CSRF para operaciones de escritura.
+- Sesión normal de 12 horas y opción recordada de 7 días.
+- Bloqueo temporal tras cinco credenciales incorrectas.
+- Invitaciones con enlace personal de activación, vencimiento de 72 horas y
+  uso único.
+- Recuperación administrada de acceso; al definir una nueva contraseña se
+  invalidan las sesiones anteriores.
+- Protección transversal de módulos según permisos y validación de alcance
+  cuando una operación referencia una sucursal.
+- Empresas visibles limitadas a las membresías activas del usuario autenticado.
 - Dashboard ejecutivo real con ventas del día y mes, margen bruto mensual,
   saldos bajos, compras pendientes, posición de caja y flujo proyectado a 30
   días usando cartera y cuentas por pagar.

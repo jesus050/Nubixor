@@ -12,8 +12,9 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT id, tenant_id, name, code, address, active
      FROM branches
      WHERE tenant_id = $1
+       AND ($2::uuid IS NULL OR id = $2)
      ORDER BY name`,
-    [req.context.tenantId],
+    [req.context.tenantId, req.context.branchId],
   );
   res.json(result.rows);
 }));

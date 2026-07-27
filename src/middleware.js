@@ -8,7 +8,8 @@ export function requestContext(req, _res, next) {
     : randomUUID();
   req.context = {
     tenantId: req.header('x-tenant-id') || null,
-    userId: req.header('x-user-id') || null,
+    userId: null,
+    authenticated: false,
     requestId,
   };
   _res.setHeader('x-request-id', requestId);

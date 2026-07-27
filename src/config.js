@@ -64,6 +64,10 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 if (!['development', 'test', 'production'].includes(nodeEnv)) {
   throw new Error('NODE_ENV debe ser development, test o production.');
 }
+const corsOrigins = readCorsOrigins(process.env.CORS_ORIGINS);
+if (nodeEnv === 'production' && corsOrigins.includes('*')) {
+  throw new Error('CORS_ORIGINS debe declarar orígenes explícitos en producción.');
+}
 
 export const config = {
   nodeEnv,
@@ -83,7 +87,7 @@ export const config = {
     3000,
   ),
   redisUrl: readOptionalUrl('REDIS_URL', process.env.REDIS_URL, ['redis:', 'rediss:']),
-  corsOrigins: readCorsOrigins(process.env.CORS_ORIGINS),
+  corsOrigins,
   trustProxy: readBoolean('TRUST_PROXY', process.env.TRUST_PROXY),
   jsonBodyLimit: readBodyLimit(process.env.JSON_BODY_LIMIT),
 };

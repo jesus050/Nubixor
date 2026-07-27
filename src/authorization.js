@@ -136,19 +136,31 @@ export async function bootstrapTenantAccess(client, { tenantId, ownerUserId }) {
 }
 
 export function requirePermission(permissionCode) {
+  return requireAnyPermission([permissionCode]);
+}
+
+export function requireAnyPermission(permissionCodes) {
   return async function permissionGuard(req, _res, next) {
     try {
       const { tenantId, userId } = req.context || {};
+      if (!tenantId || !UUID_PATTERN.test(tenantId)) {
+        throw new AppError(
+          'Selecciona una empresa válida para continuar.',
+          400,
+          'TENANT_CONTEXT_REQUIRED',
+        );
+      }
       if (!userId || !UUID_PATTERN.test(userId)) {
         throw new AppError(
-          'Debes identificar al usuario para realizar esta acción.',
+          'Inicia sesión para realizar esta acción.',
           401,
           'USER_CONTEXT_REQUIRED',
         );
       }
       const result = await query(
         `SELECT u.id, u.full_name, u.email, tu.status membership_status,
-                r.id role_id, r.code role_code, r.name role_name
+                r.id role_id, r.code role_code, r.name role_name,
+                tu.branch_id
          FROM tenant_users tu
          JOIN users u ON u.id = tu.user_id
          JOIN roles r
@@ -158,12 +170,12 @@ export function requirePermission(permissionCode) {
          JOIN role_permissions rp
            ON rp.role_id = r.id
           AND rp.tenant_id = tu.tenant_id
-          AND rp.permission_code = $3
+          AND rp.permission_code = ANY($3::text[])
          WHERE tu.tenant_id = $1
            AND tu.user_id = $2
            AND tu.status = 'ACTIVE'
            AND u.status = 'ACTIVE'`,
-        [tenantId, userId, permissionCode],
+        [tenantId, userId, permissionCodes],
       );
       if (!result.rowCount) {
         throw new AppError(
@@ -173,9 +185,86 @@ export function requirePermission(permissionCode) {
         );
       }
       req.context.user = result.rows[0];
+      req.context.branchId = result.rows[0].branch_id || null;
+      const requestedBranchId = req.body?.branchId || req.query?.branchId || null;
+      const requestPath = `${req.baseUrl}${req.path}`;
+      if (result.rows[0].branch_id &&
+          req.method !== 'GET' &&
+          (['/api/companies', '/api/branches'].includes(requestPath) ||
+           requestPath.startsWith('/api/users'))) {
+        throw new AppError(
+          'Un acceso limitado a sucursal no puede cambiar la estructura empresarial.',
+          403,
+          'BRANCH_SCOPE_DENIED',
+        );
+      }
+      if (result.rows[0].branch_id && requestedBranchId &&
+          result.rows[0].branch_id !== requestedBranchId) {
+        throw new AppError(
+          'Tu acceso está limitado a otra sucursal.',
+          403,
+          'BRANCH_SCOPE_DENIED',
+        );
+      }
+      const warehouseIds = [
+        req.body?.warehouseId,
+        req.body?.sourceWarehouseId,
+        req.body?.destinationWarehouseId,
+      ].filter(Boolean);
+      if (result.rows[0].branch_id && warehouseIds.length) {
+        const scopedWarehouses = await query(
+          `SELECT COUNT(*)::integer count
+           FROM warehouses
+           WHERE tenant_id = $1
+             AND branch_id = $2
+             AND id = ANY($3::uuid[])`,
+          [tenantId, result.rows[0].branch_id, [...new Set(warehouseIds)]],
+        );
+        if (scopedWarehouses.rows[0].count !== new Set(warehouseIds).size) {
+          throw new AppError(
+            'Una de las bodegas está fuera de tu sucursal asignada.',
+            403,
+            'BRANCH_SCOPE_DENIED',
+          );
+        }
+      }
       next();
     } catch (error) {
       next(error);
     }
   };
+}
+
+export function authorizeApiRequest(req, res, next) {
+  const path = `${req.baseUrl}${req.path}`;
+  const read = ['GET', 'HEAD'].includes(req.method);
+  let permissions = null;
+
+  if (path === '/api/companies' && read) return next();
+  if (path.startsWith('/api/companies')) permissions = ['companies.manage'];
+  else if (path.startsWith('/api/branches')) {
+    permissions = read
+      ? ['dashboard.view', 'branches.manage', 'inventory.view', 'sales.operate']
+      : ['branches.manage'];
+  } else if (path.startsWith('/api/warehouses')) {
+    permissions = read
+      ? ['inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate']
+      : ['warehouses.manage'];
+  } else if (/^\/api\/(categories|brands|products|taxes)/.test(path)) {
+    permissions = read
+      ? ['inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate']
+      : ['catalog.manage'];
+  } else if (path.startsWith('/api/inventory')) {
+    permissions = read ? ['inventory.view'] : ['inventory.adjust'];
+  } else if (path.startsWith('/api/physical-counts')) {
+    permissions = read ? ['inventory.view', 'inventory.adjust'] : ['inventory.adjust'];
+  } else if (path.startsWith('/api/purchases')) permissions = ['purchases.manage'];
+  else if (path.startsWith('/api/pos')) permissions = ['sales.operate'];
+  else if (path.startsWith('/api/receivables')) permissions = ['receivables.manage'];
+  else if (path.startsWith('/api/payables')) permissions = ['payables.manage'];
+  else if (path.startsWith('/api/users')) permissions = ['users.manage'];
+  else if (path.startsWith('/api/dashboard')) permissions = ['dashboard.view'];
+
+  if (!permissions) return next();
+  return requireAnyPermission(permissions)(req, res, next);
 }

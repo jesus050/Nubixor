@@ -73,13 +73,22 @@ npm test
 
 ## Interfaz local
 
-Abra `http://localhost:4100` después de iniciar la aplicación. También puede
-abrir `public/index.html` directamente; en desarrollo consultará la API local
-en el puerto 4100.
+Abra `http://localhost:4100` después de iniciar la aplicación. Si abre
+`public/index.html` directamente, MegaSuite lo redirige a esa dirección local
+para que las cookies seguras de sesión funcionen correctamente.
 
 La interfaz incluye:
 
 - navegación independiente por pestañas y URL para cada área del sistema;
+- configuración inicial de contraseña disponible una sola vez y únicamente
+  desde el equipo local;
+- inicio y cierre de sesión con cookie `HttpOnly`, protección CSRF y sesiones
+  revocables de 12 horas o 7 días;
+- bloqueo temporal después de cinco intentos fallidos;
+- invitaciones activables mediante enlaces personales de un solo uso y 72
+  horas de duración;
+- recuperación administrada mediante un nuevo enlace que invalida las sesiones
+  anteriores;
 - selector persistente de empresa activa;
 - listado, búsqueda y creación de empresas;
 - listado, búsqueda y creación de sucursales por empresa;
@@ -123,10 +132,11 @@ Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
 `#productos`, `#caja`, `#cuentas-pagar` y `#usuarios`, por lo que pueden
 guardarse como favoritos sin configurar rutas adicionales en el servidor.
 
-La fase actual usa al administrador local sembrado para gestionar usuarios.
-La autorización del módulo ya se comprueba en el servidor mediante permisos;
-el inicio de sesión, recuperación de cuenta y aplicación de permisos a todos
-los módulos forman parte de la siguiente fase de fortalecimiento.
+La primera apertura solicita crear la contraseña del propietario sembrado
+`admin@megasuite.local`; MegaSuite no incluye una contraseña predeterminada.
+Después, las empresas visibles se limitan a las membresías del usuario y cada
+módulo comprueba en el servidor el permiso; las operaciones que indican una
+sucursal también se validan contra el alcance asignado.
 
 Los botones sólo se muestran para operaciones ya conectadas. Los módulos que
 aún tienen únicamente modelo o API base se identifican como tales.
@@ -202,7 +212,8 @@ productos. Para rutas empresariales:
 
 ```text
 x-tenant-id: 00000000-0000-0000-0000-000000000001
-x-user-id: UUID-del-usuario
+Cookie de sesión emitida por /api/auth/login
+x-csrf-token: requerido para operaciones de escritura
 ```
 
 La bodega representa una ubicación física. El tratamiento tributario pertenece
@@ -242,6 +253,7 @@ Referencias oficiales:
 
 La API desactiva `X-Powered-By`, aplica Helmet, limita cuerpos JSON, permite
 configurar CORS, no registra cuerpos/cabeceras/URLs de conexión y devuelve un
-`x-request-id` para correlación. Autenticación, autorización, rate limiting y
-aislamiento multiempresa reforzado pertenecen a fases posteriores y no deben
-considerarse resueltos todavía.
+`x-request-id` para correlación. La identidad ya no confía en `x-user-id`:
+requiere una sesión persistida, verificación CSRF y permisos por empresa. Aún
+quedan para una fase posterior rate limiting distribuido, segundo factor,
+recuperación por correo y endurecimiento de producción.

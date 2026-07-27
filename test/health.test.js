@@ -5,9 +5,10 @@ import { createApp } from '../src/app.js';
 import { createHealthRouter } from '../src/modules/health.js';
 
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const createUnsecuredApp = (options = {}) => createApp({ ...options, security: false });
 
 test('GET / sirve la interfaz local', async () => {
-  const response = await request(createApp()).get('/').expect(200);
+  const response = await request(createUnsecuredApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);
   assert.equal(response.headers['cache-control'], 'no-store');
   assert.match(response.text, /MegaSuite/);
@@ -48,6 +49,11 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Equipo y accesos/);
   assert.match(response.text, /Invitar persona/);
   assert.match(response.text, /Roles y permisos/);
+  assert.match(response.text, /Crea tu acceso principal/);
+  assert.match(response.text, /Entra a MegaSuite/);
+  assert.match(response.text, /Activa tu cuenta/);
+  assert.match(response.text, /Enlace personal de activación/);
+  assert.match(response.text, /Cerrar sesión/);
   assert.match(response.text, /Flujo estimado 30 días/);
   assert.match(response.text, /Movimientos e historial/);
   assert.match(response.text, /Registrar ingreso o salida/);
@@ -56,13 +62,13 @@ test('GET / sirve la interfaz local', async () => {
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
-  const response = await request(createApp()).get('/styles.css').expect(200);
+  const response = await request(createUnsecuredApp()).get('/styles.css').expect(200);
   assert.match(response.headers['content-type'], /^text\/css/);
   assert.match(response.text, /--color-ink/);
 });
 
 test('la interfaz abierta como archivo puede consultar la API en local', async () => {
-  const response = await request(createApp())
+  const response = await request(createUnsecuredApp())
     .get('/api/health')
     .set('Origin', 'null')
     .expect(200);
@@ -70,7 +76,7 @@ test('la interfaz abierta como archivo puede consultar la API en local', async (
 });
 
 test('POST /api/companies valida la razón social antes de consultar PostgreSQL', async () => {
-  const response = await request(createApp())
+  const response = await request(createUnsecuredApp())
     .post('/api/companies')
     .send({ legalName: '   ' })
     .expect(422);
@@ -78,12 +84,12 @@ test('POST /api/companies valida la razón social antes de consultar PostgreSQL'
 });
 
 test('POST /api/branches exige empresa y valida sus campos', async () => {
-  await request(createApp())
+  await request(createUnsecuredApp())
     .post('/api/branches')
     .send({ name: 'Principal', code: 'MAIN' })
     .expect(400);
 
-  const response = await request(createApp())
+  const response = await request(createUnsecuredApp())
     .post('/api/branches')
     .set('x-tenant-id', DEMO_TENANT_ID)
     .send({ name: '   ', code: '' })
@@ -92,14 +98,14 @@ test('POST /api/branches exige empresa y valida sus campos', async () => {
 });
 
 test('POST /api/warehouses valida la jerarquía mínima antes de consultar PostgreSQL', async () => {
-  const response = await request(createApp())
+  const response = await request(createUnsecuredApp())
     .post('/api/warehouses')
     .set('x-tenant-id', DEMO_TENANT_ID)
     .send({ name: 'Disponible', code: 'DISP' })
     .expect(422);
   assert.equal(response.body.error, 'branchId, name y code son obligatorios.');
 
-  const invalidBranch = await request(createApp())
+  const invalidBranch = await request(createUnsecuredApp())
     .post('/api/warehouses')
     .set('x-tenant-id', DEMO_TENANT_ID)
     .send({ branchId: 'sucursal-invalida', name: 'Disponible', code: 'DISP' })
@@ -108,7 +114,7 @@ test('POST /api/warehouses valida la jerarquía mínima antes de consultar Postg
 });
 
 test('el catálogo valida categorías, marcas y productos antes de consultar PostgreSQL', async () => {
-  const app = createApp();
+  const app = createUnsecuredApp();
   const headers = { 'x-tenant-id': DEMO_TENANT_ID };
 
   const category = await request(app)
@@ -141,7 +147,7 @@ test('el catálogo valida categorías, marcas y productos antes de consultar Pos
 });
 
 test('las imágenes y la caja validan entradas antes de consultar dependencias', async () => {
-  const app = createApp();
+  const app = createUnsecuredApp();
   const headers = { 'x-tenant-id': DEMO_TENANT_ID };
 
   const image = await request(app)
@@ -197,7 +203,7 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
 });
 
 test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   await request(application)
     .get('/api/receivables/summary')
     .expect(400);
@@ -222,7 +228,7 @@ test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL',
 });
 
 test('conteos físicos validan jornada, producto y cierre antes de consultar PostgreSQL', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   await request(application)
     .get('/api/physical-counts/summary')
     .expect(400);
@@ -247,7 +253,7 @@ test('conteos físicos validan jornada, producto y cierre antes de consultar Pos
 });
 
 test('inventario valida ajustes y transferencias antes de consultar PostgreSQL', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   await request(application)
     .get('/api/inventory/summary')
     .expect(400);
@@ -272,7 +278,7 @@ test('inventario valida ajustes y transferencias antes de consultar PostgreSQL',
 });
 
 test('compras valida proveedores, órdenes y recepciones antes de consultar PostgreSQL', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   await request(application)
     .get('/api/purchases/summary')
     .expect(400);
@@ -297,7 +303,7 @@ test('compras valida proveedores, órdenes y recepciones antes de consultar Post
 });
 
 test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQL', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   await request(application)
     .get('/api/payables/summary')
     .expect(400);
@@ -316,7 +322,7 @@ test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQ
 });
 
 test('usuarios exige identidad antes de consultar membresías y permisos', async () => {
-  const application = createApp();
+  const application = createUnsecuredApp();
   const response = await request(application)
     .get('/api/users/summary')
     .set('x-tenant-id', DEMO_TENANT_ID)
@@ -325,9 +331,41 @@ test('usuarios exige identidad antes de consultar membresías y permisos', async
 });
 
 test('dashboard ejecutivo exige una empresa activa', async () => {
-  await request(createApp())
+  await request(createUnsecuredApp())
     .get('/api/dashboard/executive')
     .expect(400);
+});
+
+test('las APIs operativas rechazan identidad enviada manualmente', async () => {
+  const response = await request(createApp())
+    .get('/api/companies')
+    .set('x-user-id', '50000000-0000-0000-0000-000000000001')
+    .expect(401);
+  assert.equal(response.body.code, 'AUTHENTICATION_REQUIRED');
+});
+
+test('inicio de sesión valida credenciales antes de consultar PostgreSQL', async () => {
+  const response = await request(createUnsecuredApp())
+    .post('/api/auth/login')
+    .send({})
+    .expect(422);
+  assert.equal(response.body.code, 'LOGIN_FIELDS_REQUIRED');
+});
+
+test('configuración inicial exige una contraseña fuerte', async () => {
+  const response = await request(createUnsecuredApp())
+    .post('/api/auth/bootstrap')
+    .send({ email: 'admin@megasuite.local', password: 'corta' })
+    .expect(422);
+  assert.equal(response.body.code, 'WEAK_PASSWORD');
+});
+
+test('activación de invitaciones exige una contraseña fuerte', async () => {
+  const response = await request(createUnsecuredApp())
+    .post('/api/auth/activate')
+    .send({ token: 'token-temporal-no-valido-1234567890', password: 'corta' })
+    .expect(422);
+  assert.equal(response.body.code, 'WEAK_PASSWORD');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

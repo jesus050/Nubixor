@@ -15,8 +15,9 @@ router.get('/', asyncHandler(async (req, res) => {
      FROM warehouses w
      JOIN branches b ON b.id = w.branch_id
      WHERE w.tenant_id = $1
+       AND ($2::uuid IS NULL OR w.branch_id = $2)
      ORDER BY b.name, w.name`,
-    [req.context.tenantId],
+    [req.context.tenantId, req.context.branchId],
   );
   res.json(result.rows);
 }));

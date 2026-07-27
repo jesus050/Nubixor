@@ -5,6 +5,7 @@ import { requirePermission } from '../authorization.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
+import { createUserAccessToken } from '../authentication.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -268,6 +269,10 @@ router.post('/invite', asyncHandler(async (req, res) => {
       },
       reason: normalizedText(req.body.reason, 300) || 'Invitación desde Usuarios',
     });
+    const activationToken = await createUserAccessToken(client, {
+      userId: user.rows[0].id,
+      createdBy: req.context.userId,
+    });
     return {
       ...user.rows[0],
       role_id: role.id,
@@ -275,9 +280,46 @@ router.post('/invite', asyncHandler(async (req, res) => {
       role_name: role.name,
       branch_id: branchId,
       membership_status: 'INVITED',
+      activationToken,
     };
   });
   res.status(201).json(invited);
+}));
+
+router.post('/:id/access-link', asyncHandler(async (req, res) => {
+  const userId = uuidOrNull(req.params.id, 'El usuario');
+  const result = await withTransaction(async (client) => {
+    const membership = await client.query(
+      `SELECT u.id, u.email, u.full_name, tu.status
+       FROM tenant_users tu
+       JOIN users u ON u.id = tu.user_id
+       WHERE tu.tenant_id = $1 AND tu.user_id = $2
+       FOR UPDATE`,
+      [req.context.tenantId, userId],
+    );
+    if (!membership.rowCount || membership.rows[0].status === 'SUSPENDED') {
+      throw new AppError(
+        'Activa la membresía antes de generar un acceso.',
+        409,
+        'USER_ACCESS_LINK_UNAVAILABLE',
+      );
+    }
+    const activationToken = await createUserAccessToken(client, {
+      userId,
+      createdBy: req.context.userId,
+    });
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'user.access_link_created',
+      entityType: 'tenant_user',
+      entityId: userId,
+      after: { expiresInHours: 72 },
+      reason: normalizedText(req.body.reason, 300) || 'Recuperación de acceso',
+    });
+    return { ...membership.rows[0], activationToken };
+  });
+  res.status(201).json(result);
 }));
 
 router.patch('/:id', asyncHandler(async (req, res) => {

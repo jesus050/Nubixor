@@ -1,5 +1,27 @@
 # Ejemplos
 
+## Autenticación local
+
+En la primera apertura, `GET /api/auth/status` indica
+`"setupRequired": true`. La interfaz solicita definir la contraseña del
+propietario; no existe una clave predeterminada.
+
+El inicio de sesión crea una cookie `HttpOnly` y devuelve un token CSRF. Las
+operaciones de escritura posteriores requieren esa cookie y el encabezado
+`x-csrf-token`. Las rutas principales son:
+
+- `GET /api/auth/status`
+- `POST /api/auth/bootstrap`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
+- `POST /api/auth/activate`
+
+La invitación devuelve una sola vez `activationToken`. La interfaz construye
+un enlace local para que la persona establezca su contraseña. Un administrador
+puede regenerarlo con `POST /api/users/:id/access-link`; el enlace anterior
+queda invalidado.
+
 ## Salud
 
 ```bash
@@ -153,17 +175,17 @@ por encima del saldo pendiente y actualiza el estado a `PARTIAL` o `PAID`.
 
 ## Usuarios, roles y permisos
 
-El centro está disponible en `/#usuarios`. Durante esta fase local, las rutas
-protegidas requieren empresa y usuario:
+El centro está disponible en `/#usuarios`. Las rutas protegidas requieren la
+cookie de sesión y la empresa activa:
 
 ```bash
 curl http://localhost:4100/api/users/summary \
  -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
- -H 'x-user-id: 50000000-0000-0000-0000-000000000001'
+ -b cookies.txt
 
 curl http://localhost:4100/api/users/roles \
  -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
- -H 'x-user-id: 50000000-0000-0000-0000-000000000001'
+ -b cookies.txt
 ```
 
 Una invitación usa `POST /api/users/invite` con `fullName`, `email`, `roleId`
@@ -191,7 +213,7 @@ retiros:
 curl -X POST http://localhost:4100/api/pos/sessions/CASH_SESSION_ID/movements \
  -H 'Content-Type: application/json' \
  -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
- -H 'x-user-id: 50000000-0000-0000-0000-000000000001' \
+ -H 'x-csrf-token: CSRF_TOKEN' -b cookies.txt \
  -d '{"movementType":"EXPENSE","category":"Mensajería","amount":18000,"reference":"RC-18","notes":"Entrega urgente a cliente"}'
 ```
 
@@ -202,7 +224,7 @@ efectivo esperado, `notes` es obligatorio:
 curl -X POST http://localhost:4100/api/pos/sessions/CASH_SESSION_ID/close \
  -H 'Content-Type: application/json' \
  -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
- -H 'x-user-id: 50000000-0000-0000-0000-000000000001' \
+ -H 'x-csrf-token: CSRF_TOKEN' -b cookies.txt \
  -d '{"counts":[{"denomination":100000,"quantity":5},{"denomination":50000,"quantity":1}],"notes":"Arqueo confirmado"}'
 ```
 

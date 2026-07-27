@@ -9,11 +9,104 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-10">
-    <script src="./app.js?v=20260726-10" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-11">
+    <script src="./app.js?v=20260726-11" defer></script>
   </head>
   <body>
-    <div class="app-shell">
+    <main class="auth-gate" id="authGate">
+      <section class="auth-brand-panel">
+        <div class="auth-brand">
+          <span class="brand-mark" aria-hidden="true">M</span>
+          <span>MegaSuite</span>
+        </div>
+        <div>
+          <p class="eyebrow">Núcleo empresarial protegido</p>
+          <h1>Control operativo,<br><span>con acceso responsable.</span></h1>
+          <p>Empresas, caja, inventario y finanzas bajo una identidad verificable y permisos por rol.</p>
+        </div>
+        <div class="auth-trust-list">
+          <span><b>01</b> Sesiones revocables</span>
+          <span><b>02</b> Permisos por empresa</span>
+          <span><b>03</b> Acciones auditables</span>
+        </div>
+      </section>
+      <section class="auth-form-panel">
+        <div class="auth-form-card" id="setupAccessPanel" hidden>
+          <p class="eyebrow">Configuración inicial local</p>
+          <h2>Crea tu acceso principal</h2>
+          <p class="auth-form-copy">Define la contraseña del propietario. Este paso solo estará disponible una vez y desde este equipo.</p>
+          <form id="setupAccessForm">
+            <label class="form-field">
+              <span>Correo del propietario</span>
+              <input id="setupEmail" name="email" type="email" autocomplete="username" required>
+            </label>
+            <label class="form-field">
+              <span>Nueva contraseña</span>
+              <input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <label class="form-field">
+              <span>Confirmar contraseña</span>
+              <input name="confirmPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <p class="password-guidance">10 caracteres o más, incluyendo mayúscula, minúscula y número.</p>
+            <p class="form-error" id="setupAccessError" role="alert" hidden></p>
+            <button class="primary-button auth-submit" id="setupAccessButton" type="submit">
+              Proteger y entrar <span>→</span>
+            </button>
+          </form>
+        </div>
+        <div class="auth-form-card" id="loginAccessPanel" hidden>
+          <p class="eyebrow">Acceso seguro</p>
+          <h2>Entra a MegaSuite</h2>
+          <p class="auth-form-copy">Usa la cuenta asignada por el administrador de tu empresa.</p>
+          <form id="loginAccessForm">
+            <label class="form-field">
+              <span>Correo</span>
+              <input id="loginEmail" name="email" type="email" autocomplete="username" required>
+            </label>
+            <label class="form-field">
+              <span>Contraseña</span>
+              <input name="password" type="password" maxlength="128" autocomplete="current-password" required>
+            </label>
+            <label class="auth-remember">
+              <input name="remember" type="checkbox">
+              <span>Mantener la sesión en este equipo por 7 días</span>
+            </label>
+            <p class="form-error" id="loginAccessError" role="alert" hidden></p>
+            <button class="primary-button auth-submit" id="loginAccessButton" type="submit">
+              Iniciar sesión <span>→</span>
+            </button>
+          </form>
+        </div>
+        <div class="auth-form-card" id="activateAccessPanel" hidden>
+          <p class="eyebrow">Invitación verificada</p>
+          <h2>Activa tu cuenta</h2>
+          <p class="auth-form-copy">Crea tu contraseña personal para entrar con el rol y la sucursal que te asignaron.</p>
+          <form id="activateAccessForm">
+            <label class="form-field">
+              <span>Nueva contraseña</span>
+              <input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <label class="form-field">
+              <span>Confirmar contraseña</span>
+              <input name="confirmPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <p class="password-guidance">10 caracteres o más, incluyendo mayúscula, minúscula y número.</p>
+            <p class="form-error" id="activateAccessError" role="alert" hidden></p>
+            <button class="primary-button auth-submit" id="activateAccessButton" type="submit">
+              Activar y entrar <span>→</span>
+            </button>
+          </form>
+        </div>
+        <div class="auth-loading" id="authLoading">
+          <span class="auth-loading-mark">M</span>
+          <strong>Verificando acceso…</strong>
+        </div>
+        <p class="auth-local-note">MegaSuite local · tus datos permanecen en este entorno.</p>
+      </section>
+    </main>
+
+    <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">M</span>
@@ -103,7 +196,17 @@
               </select>
             </label>
             <span class="environment-badge">Local</span>
-            <div class="avatar" aria-label="MegaSuite local">MS</div>
+            <div class="account-control">
+              <button class="account-trigger" id="accountTrigger" type="button" aria-expanded="false">
+                <span class="avatar" id="accountInitials" aria-hidden="true">MS</span>
+                <span class="account-copy"><strong id="accountName">MegaSuite</strong><small id="accountRole">Sesión local</small></span>
+                <span aria-hidden="true">⌄</span>
+              </button>
+              <div class="account-menu" id="accountMenu" hidden>
+                <div><strong id="accountMenuName">—</strong><span id="accountMenuEmail">—</span></div>
+                <button id="logoutButton" type="button"><span aria-hidden="true">↗</span> Cerrar sesión</button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -1433,6 +1536,10 @@
                       <span aria-hidden="true">↗</span>
                       <span>Editar acceso<small>Rol, sucursal y estado</small></span>
                     </button>
+                    <button class="user-edit-button access-link-button" id="resetUserAccessButton" type="button">
+                      <span aria-hidden="true">⌁</span>
+                      <span>Generar enlace de acceso<small>Activación o recuperación · 72 horas</small></span>
+                    </button>
                   </div>
                 </aside>
               </div>
@@ -1782,6 +1889,27 @@
           <button class="primary-button compact" id="saveRoleButton" type="submit">Guardar rol</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="company-dialog activation-link-dialog" id="activationLinkDialog" aria-labelledby="activationLinkDialogTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Invitación preparada</p>
+            <h2 id="activationLinkDialogTitle">Comparte el acceso</h2>
+          </div>
+          <button class="icon-button" id="closeActivationLinkDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Entrega este enlace únicamente a la persona invitada. Podrá usarlo una vez durante las próximas 72 horas.</p>
+        <label class="form-field">
+          <span>Enlace personal de activación</span>
+          <textarea id="activationLinkValue" rows="4" readonly></textarea>
+        </label>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="finishActivationLinkButton" type="button">Cerrar</button>
+          <button class="primary-button compact" id="copyActivationLinkButton" type="button">Copiar enlace</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog class="company-dialog" id="payableDialog" aria-labelledby="payableDialogTitle">

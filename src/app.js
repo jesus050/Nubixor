@@ -5,6 +5,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { requestContext, requestLogger, notFound, errorHandler } from './middleware.js';
+import { requireAuthenticatedSession } from './authentication.js';
+import { authorizeApiRequest } from './authorization.js';
 import healthRouter from './modules/health.js';
 import companiesRouter from './modules/companies.js';
 import branchesRouter from './modules/branches.js';
@@ -21,12 +23,16 @@ import payablesRouter from './modules/payables.js';
 import usersRouter from './modules/users.js';
 import dashboardRouter from './modules/dashboard.js';
 import physicalCountsRouter from './modules/physical-counts.js';
+import authRouter from './modules/auth.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
 function corsOptions() {
-  if (config.corsOrigins.includes('*')) return {};
+  if (config.corsOrigins.includes('*')) {
+    return { origin: true, credentials: true };
+  }
   return {
+    credentials: true,
     origin(origin, callback) {
       const localFileAllowed = origin === 'null' && config.nodeEnv !== 'production';
       if (!origin || localFileAllowed || config.corsOrigins.includes(origin)) {
@@ -40,7 +46,7 @@ function corsOptions() {
   };
 }
 
-export function createApp({ health = healthRouter } = {}) {
+export function createApp({ health = healthRouter, security = true } = {}) {
   const application = express();
   if (config.trustProxy) application.set('trust proxy', 1);
 
@@ -69,6 +75,10 @@ export function createApp({ health = healthRouter } = {}) {
     },
   }));
   application.use('/api/health', health);
+  application.use('/api/auth', authRouter);
+  if (security) {
+    application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
+  }
   application.use('/api/companies', companiesRouter);
   application.use('/api/branches', branchesRouter);
   application.use('/api/warehouses', warehousesRouter);

@@ -3,8 +3,17 @@ import { query, withTransaction } from '../db.js';
 import { bootstrapTenantAccess } from '../authorization.js';
 import { asyncHandler } from '../shared/async-handler.js';
 const router = Router();
-router.get('/', asyncHandler(async (_req, res) => {
-  const result = await query('SELECT id, legal_name, trade_name, tax_id, status, created_at FROM tenants ORDER BY legal_name');
+router.get('/', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT t.id, t.legal_name, t.trade_name, t.tax_id, t.status, t.created_at
+     FROM tenants t
+     JOIN tenant_users tu ON tu.tenant_id = t.id
+     WHERE tu.user_id = $1
+       AND tu.status = 'ACTIVE'
+       AND t.status = 'ACTIVE'
+     ORDER BY t.legal_name`,
+    [req.context.userId],
+  );
   res.json(result.rows);
 }));
 router.post('/', asyncHandler(async (req, res) => {

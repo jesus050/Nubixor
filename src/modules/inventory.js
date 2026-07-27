@@ -73,16 +73,22 @@ router.get('/summary', asyncHandler(async (req, res) => {
        (
          SELECT COUNT(*)::integer
          FROM inventory_movements im
+         JOIN warehouses mw
+           ON mw.id = im.warehouse_id AND mw.tenant_id = im.tenant_id
          WHERE im.tenant_id = $1
            AND im.created_at >= date_trunc('month', CURRENT_DATE)
+           AND ($2::uuid IS NULL OR mw.branch_id = $2)
        ) movements_month
      FROM inventory_balances ib
      JOIN products p
        ON p.id = ib.product_id
       AND p.tenant_id = ib.tenant_id
       AND p.deleted_at IS NULL
-     WHERE ib.tenant_id = $1`,
-    [req.context.tenantId],
+     JOIN warehouses w
+       ON w.id = ib.warehouse_id AND w.tenant_id = ib.tenant_id
+     WHERE ib.tenant_id = $1
+       AND ($2::uuid IS NULL OR w.branch_id = $2)`,
+    [req.context.tenantId, req.context.branchId],
   );
   res.json(result.rows[0]);
 }));
@@ -123,8 +129,9 @@ router.get('/balances', asyncHandler(async (req, res) => {
      ) pi ON TRUE
      WHERE ib.tenant_id = $1
        AND ($2::uuid IS NULL OR ib.warehouse_id = $2)
+       AND ($3::uuid IS NULL OR w.branch_id = $3)
      ORDER BY p.name, w.name`,
-    [req.context.tenantId, warehouseId],
+    [req.context.tenantId, warehouseId, req.context.branchId],
   );
   res.json(result.rows);
 }));
@@ -151,9 +158,10 @@ router.get('/movements', asyncHandler(async (req, res) => {
      JOIN branches br ON br.id = w.branch_id
      WHERE im.tenant_id = $1
        AND ($2::uuid IS NULL OR im.warehouse_id = $2)
+       AND ($4::uuid IS NULL OR w.branch_id = $4)
      ORDER BY im.created_at DESC
      LIMIT $3`,
-    [req.context.tenantId, warehouseId, limit],
+    [req.context.tenantId, warehouseId, limit, req.context.branchId],
   );
   res.json(result.rows);
 }));

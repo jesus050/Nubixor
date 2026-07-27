@@ -35,8 +35,9 @@ router.get('/summary', asyncHandler(async (req, res) => {
        FROM cash_registers cr
        JOIN branches b ON b.id = cr.branch_id
        WHERE cr.tenant_id = $1 AND cr.active = TRUE
+         AND ($2::uuid IS NULL OR cr.branch_id = $2)
        ORDER BY b.name, cr.name`,
-      [req.context.tenantId],
+      [req.context.tenantId, req.context.branchId],
     );
     const session = await client.query(
       `SELECT cs.id, cs.cash_register_id, cs.status, cs.opening_amount,
@@ -75,9 +76,10 @@ router.get('/summary', asyncHandler(async (req, res) => {
          WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
        ) movements ON TRUE
        WHERE cs.tenant_id = $1 AND cs.status = 'OPEN'
+         AND ($2::uuid IS NULL OR cr.branch_id = $2)
        ORDER BY cs.opened_at DESC
        LIMIT 1`,
-      [req.context.tenantId],
+      [req.context.tenantId, req.context.branchId],
     );
     return {
       registers: registers.rows,
@@ -114,9 +116,10 @@ router.get('/sessions', asyncHandler(async (req, res) => {
        WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
      ) movements ON TRUE
      WHERE cs.tenant_id = $1
+       AND ($2::uuid IS NULL OR cr.branch_id = $2)
      ORDER BY cs.opened_at DESC
      LIMIT 60`,
-    [req.context.tenantId],
+    [req.context.tenantId, req.context.branchId],
   );
   res.json(result.rows);
 }));
@@ -165,8 +168,9 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
          FROM cash_movements
          WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
        ) movement_totals ON TRUE
-       WHERE cs.id = $1 AND cs.tenant_id = $2`,
-      [req.params.id, req.context.tenantId],
+       WHERE cs.id = $1 AND cs.tenant_id = $2
+         AND ($3::uuid IS NULL OR cr.branch_id = $3)`,
+      [req.params.id, req.context.tenantId, req.context.branchId],
     ),
     query(
       `SELECT id, movement_type, category, amount, reference, notes,
@@ -233,9 +237,10 @@ router.get('/catalog', asyncHandler(async (req, res) => {
        AND EXISTS(
          SELECT 1 FROM warehouses
          WHERE id = $2 AND tenant_id = $1 AND active = TRUE
+           AND ($3::uuid IS NULL OR branch_id = $3)
        )
      ORDER BY p.name`,
-    [req.context.tenantId, warehouseId],
+    [req.context.tenantId, warehouseId, req.context.branchId],
   );
   res.json(result.rows);
 }));
@@ -259,8 +264,9 @@ router.post('/sessions', asyncHandler(async (req, res) => {
         `SELECT id
          FROM cash_registers
          WHERE id = $1 AND tenant_id = $2 AND active = TRUE
+           AND ($3::uuid IS NULL OR branch_id = $3)
          FOR UPDATE`,
-        [cashRegisterId, req.context.tenantId],
+        [cashRegisterId, req.context.tenantId, req.context.branchId],
       );
       if (!register.rowCount) {
         throw new AppError('La caja no pertenece a la empresa activa.', 404, 'CASH_REGISTER_NOT_FOUND');
@@ -316,10 +322,12 @@ router.post('/sessions/:id/movements', asyncHandler(async (req, res) => {
   }
   const movement = await withTransaction(async (client) => {
     const session = await client.query(
-      `SELECT id FROM cash_sessions
-       WHERE id = $1 AND tenant_id = $2 AND status = 'OPEN'
-       FOR UPDATE`,
-      [req.params.id, req.context.tenantId],
+      `SELECT cs.id FROM cash_sessions cs
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
+       WHERE cs.id = $1 AND cs.tenant_id = $2 AND cs.status = 'OPEN'
+         AND ($3::uuid IS NULL OR cr.branch_id = $3)
+       FOR UPDATE OF cs`,
+      [req.params.id, req.context.tenantId, req.context.branchId],
     );
     if (!session.rowCount) {
       throw new AppError(
@@ -403,6 +411,7 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
               COALESCE(movements.expense, 0) expenses,
               COALESCE(movements.withdrawal, 0) withdrawals
        FROM cash_sessions cs
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
        LEFT JOIN LATERAL (
          SELECT COALESCE(SUM(total), 0) cash_sales
          FROM sales
@@ -420,8 +429,9 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
          WHERE cash_session_id = cs.id AND tenant_id = cs.tenant_id
        ) movements ON TRUE
        WHERE cs.id = $1 AND cs.tenant_id = $2 AND cs.status = 'OPEN'
+         AND ($3::uuid IS NULL OR cr.branch_id = $3)
        FOR UPDATE OF cs`,
-      [req.params.id, req.context.tenantId],
+      [req.params.id, req.context.tenantId, req.context.branchId],
     );
     if (!current.rowCount) {
       throw new AppError('No encontramos un turno de caja abierto.', 404, 'CASH_SESSION_NOT_FOUND');
@@ -533,8 +543,9 @@ router.post('/sales', asyncHandler(async (req, res) => {
        FROM cash_sessions cs
        JOIN cash_registers cr ON cr.id = cs.cash_register_id
        WHERE cs.id = $1 AND cs.tenant_id = $2 AND cs.status = 'OPEN'
+         AND ($3::uuid IS NULL OR cr.branch_id = $3)
        FOR UPDATE OF cs`,
-      [cashSessionId, req.context.tenantId],
+      [cashSessionId, req.context.tenantId, req.context.branchId],
     );
     if (!session.rowCount) {
       throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
