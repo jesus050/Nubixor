@@ -145,15 +145,14 @@ tomó como referencia la copia documentada con versión 1.17.3.
 7. Completado: autenticación, activación/recuperación de cuentas y aplicación
    transversal de permisos.
 8. Completado: auditoría consultable con detalle y exportación CSV.
-9. Reportes y exportaciones.
+9. Completado: reportes operativos y exportaciones CSV.
 10. Planner.
 11. Adaptador de Ticketera.
 12. Integraciones WooCommerce y canales comerciales.
 
 ## Siguiente fase recomendada
 
-Reportes operativos exportables y comparación orden–recepción–factura. La
-identidad, sesiones seguras, permisos y auditoría consultable ya están
-organizados; el siguiente bloque debe convertir ventas, inventario, compras,
-cartera y proveedores en reportes filtrables con Excel/PDF, y después cerrar
-la conciliación de compras en tres pasos.
+Comparación orden–recepción–factura y costo aterrizado de compras. La identidad,
+sesiones seguras, permisos, auditoría y reportes CSV ya están organizados; el
+siguiente bloque debe cerrar la conciliación de compras en tres pasos y
+distribuir fletes, seguros, aranceles y otros gastos sobre el costo recibido.

@@ -3,6 +3,7 @@ import { query } from '../db.js';
 import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
+import { csvCell } from '../shared/csv.js';
 
 const router = Router();
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -96,16 +97,6 @@ function buildWhere(tenantId, filters) {
   if (filters.dateFrom) add('ae.created_at >= ?::date', filters.dateFrom);
   if (filters.dateTo) add(`ae.created_at < (?::date + INTERVAL '1 day')`, filters.dateTo);
   return { clause: clauses.join('\n AND '), values };
-}
-
-function csvCell(value) {
-  let normalized = value == null
-    ? ''
-    : typeof value === 'object'
-      ? JSON.stringify(value)
-      : String(value);
-  if (/^[=+\-@\t\r]/.test(normalized)) normalized = `'${normalized}`;
-  return `"${normalized.replaceAll('"', '""')}"`;
 }
 
 router.get('/summary', asyncHandler(async (req, res) => {
@@ -271,5 +262,5 @@ router.get('/events/:id', asyncHandler(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
-export { parseFilters, csvCell };
+export { parseFilters };
 export default router;

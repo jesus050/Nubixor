@@ -538,6 +538,26 @@ const elements = {
   closeRoleDialog: document.querySelector('#closeRoleDialog'),
   cancelRoleButton: document.querySelector('#cancelRoleButton'),
   saveRoleButton: document.querySelector('#saveRoleButton'),
+  reportSalesMonth: document.querySelector('#reportSalesMonth'),
+  reportInventoryValue: document.querySelector('#reportInventoryValue'),
+  reportPendingPurchases: document.querySelector('#reportPendingPurchases'),
+  reportReceivables: document.querySelector('#reportReceivables'),
+  reportPayables: document.querySelector('#reportPayables'),
+  reportSearch: document.querySelector('#reportSearch'),
+  reportBranchFilter: document.querySelector('#reportBranchFilter'),
+  reportDateFrom: document.querySelector('#reportDateFrom'),
+  reportDateTo: document.querySelector('#reportDateTo'),
+  clearReportFilters: document.querySelector('#clearReportFilters'),
+  exportReportButton: document.querySelector('#exportReportButton'),
+  reportExportLabel: document.querySelector('#reportExportLabel'),
+  activeReportTitle: document.querySelector('#activeReportTitle'),
+  reportRecordCount: document.querySelector('#reportRecordCount'),
+  reportTableHead: document.querySelector('#reportTableHead'),
+  reportTableBody: document.querySelector('#reportTableBody'),
+  reportDataState: document.querySelector('#reportDataState'),
+  reportPreviousPage: document.querySelector('#reportPreviousPage'),
+  reportNextPage: document.querySelector('#reportNextPage'),
+  reportPageLabel: document.querySelector('#reportPageLabel'),
   auditToday: document.querySelector('#auditToday'),
   auditMonth: document.querySelector('#auditMonth'),
   auditWeek: document.querySelector('#auditWeek'),
@@ -606,6 +626,12 @@ let auditPagination = { page: 1, pageSize: 30, total: 0, totalPages: 1 };
 let selectedAuditEventId = null;
 let auditSearchTimer = null;
 let auditFacetsLoadedForTenant = null;
+let activeReportType = 'sales';
+let reportColumns = [];
+let reportItems = [];
+let reportPagination = { page: 1, pageSize: 50, total: 0, totalPages: 1 };
+let reportFacetsLoadedForTenant = null;
+let reportSearchTimer = null;
 let currentUser = null;
 let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
@@ -679,6 +705,7 @@ function applyAccessVisibility() {
     cartera: ['receivables.manage'],
     usuarios: ['users.manage'],
     modulos: ['dashboard.view'],
+    reportes: ['reports.view'],
     auditoria: ['audit.view'],
     sistema: ['audit.view', 'users.manage'],
   };
@@ -4696,6 +4723,7 @@ async function refreshTenantData() {
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
     showAuditError('Primero debes registrar o seleccionar una empresa.');
+    showReportsError('Primero debes registrar o seleccionar una empresa.');
     setExecutiveSummary();
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
@@ -4722,6 +4750,7 @@ async function refreshTenantData() {
     hasAnyPermission('dashboard.view') ? loadExecutiveSummary() : Promise.resolve({}),
     hasAnyPermission('audit.view') && !activeMembership()?.branchId
       ? loadAudit() : Promise.resolve({}),
+    hasAnyPermission('reports.view') ? loadReports() : Promise.resolve({}),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -4735,6 +4764,255 @@ async function refreshTenantData() {
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
   setMetric(elements.productCount, elements.productDetail, results[4], ['producto registrado', 'productos registrados']);
+}
+
+function reportQueryString({ includePage = true } = {}) {
+  const params = new URLSearchParams();
+  const filters = [
+    ['q', elements.reportSearch.value.trim()],
+    ['branchId', elements.reportBranchFilter.value],
+    ['dateFrom', elements.reportDateFrom.value],
+    ['dateTo', elements.reportDateTo.value],
+  ];
+  filters.forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  if (includePage) {
+    params.set('page', String(reportPagination.page));
+    params.set('pageSize', String(reportPagination.pageSize));
+  }
+  return params.toString();
+}
+
+function setReportOverview(overview = {}) {
+  elements.reportSalesMonth.textContent = formatCurrency(overview.sales_month || 0);
+  elements.reportInventoryValue.textContent = formatCurrency(overview.inventory_value || 0);
+  elements.reportPendingPurchases.textContent = formatCurrency(overview.pending_purchases || 0);
+  elements.reportReceivables.textContent = formatCurrency(overview.receivables || 0);
+  elements.reportPayables.textContent = formatCurrency(overview.payables || 0);
+}
+
+function renderReportFacets(facets) {
+  const current = elements.reportBranchFilter.value;
+  elements.reportBranchFilter.replaceChildren();
+  const all = document.createElement('option');
+  all.value = '';
+  all.textContent = facets.branchLocked ? 'Sucursal asignada' : 'Todas las sucursales';
+  elements.reportBranchFilter.append(all);
+  (facets.branches || []).forEach((branch) => {
+    const option = document.createElement('option');
+    option.value = branch.id;
+    option.textContent = `${branch.name} · ${branch.code}`;
+    elements.reportBranchFilter.append(option);
+  });
+  if ([...elements.reportBranchFilter.options].some((option) => option.value === current)) {
+    elements.reportBranchFilter.value = current;
+  }
+  if (facets.branchLocked && facets.branches?.length) {
+    elements.reportBranchFilter.value = facets.branches[0].id;
+    elements.reportBranchFilter.disabled = true;
+  } else {
+    elements.reportBranchFilter.disabled = false;
+  }
+}
+
+function reportNumber(value, maximumFractionDigits = 2) {
+  return new Intl.NumberFormat('es-CO', {
+    maximumFractionDigits,
+  }).format(Number(value || 0));
+}
+
+function formatReportValue(value, type) {
+  if (value == null || value === '') return '—';
+  if (type === 'currency') return formatCurrency(value);
+  if (type === 'number') return reportNumber(value, 4);
+  if (type === 'percent') return `${reportNumber(value, 1)} %`;
+  if (type === 'date') return formatShortDate(value);
+  if (type === 'dateTime') {
+    return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  }
+  if (type === 'status') return auditHumanLabel(value);
+  return String(value);
+}
+
+function renderReportTable() {
+  elements.reportTableHead.replaceChildren();
+  elements.reportTableBody.replaceChildren();
+  reportColumns.forEach(([, label]) => {
+    const heading = document.createElement('th');
+    heading.scope = 'col';
+    heading.textContent = label;
+    elements.reportTableHead.append(heading);
+  });
+
+  reportItems.forEach((item) => {
+    const row = document.createElement('tr');
+    reportColumns.forEach(([key, _label, type]) => {
+      const cell = document.createElement('td');
+      cell.className = `report-cell-${type}`;
+      const value = formatReportValue(item[key], type);
+      if (type === 'status') {
+        const badge = document.createElement('span');
+        badge.textContent = value;
+        cell.append(badge);
+      } else {
+        cell.textContent = value;
+      }
+      row.append(cell);
+    });
+    elements.reportTableBody.append(row);
+  });
+
+  elements.reportRecordCount.textContent =
+    `${reportPagination.total} ${reportPagination.total === 1 ? 'registro' : 'registros'}`;
+  elements.reportPageLabel.textContent =
+    `Página ${reportPagination.page} de ${reportPagination.totalPages}`;
+  elements.reportPreviousPage.disabled = reportPagination.page <= 1;
+  elements.reportNextPage.disabled = reportPagination.page >= reportPagination.totalPages;
+
+  if (!reportItems.length) {
+    elements.reportDataState.hidden = false;
+    elements.reportDataState.querySelector('strong').textContent = 'No hay datos para estos filtros';
+    elements.reportDataState.querySelector('p').textContent =
+      'Prueba con otra sucursal, amplía las fechas o limpia la búsqueda.';
+  } else {
+    elements.reportDataState.hidden = true;
+  }
+}
+
+function setReportType(type) {
+  activeReportType = type;
+  reportPagination.page = 1;
+  document.querySelectorAll('[data-report-type]').forEach((button) => {
+    const active = button.dataset.reportType === type;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  const inventorySelected = type === 'inventory';
+  elements.reportDateFrom.disabled = inventorySelected;
+  elements.reportDateTo.disabled = inventorySelected;
+  if (inventorySelected) {
+    elements.reportDateFrom.value = '';
+    elements.reportDateTo.value = '';
+  }
+  loadReports().catch(() => {});
+}
+
+function showReportsError(message) {
+  reportItems = [];
+  reportColumns = [];
+  reportPagination = { page: 1, pageSize: 50, total: 0, totalPages: 1 };
+  renderReportTable();
+  setReportOverview();
+  elements.reportDataState.hidden = false;
+  elements.reportDataState.querySelector('strong').textContent = 'Reportes no disponibles';
+  elements.reportDataState.querySelector('p').textContent = message;
+}
+
+async function loadReports() {
+  if (!activeTenantId) {
+    showReportsError('Selecciona una empresa para consultar sus reportes.');
+    return {};
+  }
+  elements.reportDataState.hidden = false;
+  elements.reportDataState.querySelector('strong').textContent = 'Preparando reporte';
+  elements.reportDataState.querySelector('p').textContent =
+    'Estamos consolidando la información solicitada.';
+  const branchQuery = elements.reportBranchFilter.value
+    ? `?branchId=${encodeURIComponent(elements.reportBranchFilter.value)}`
+    : '';
+  const needsFacets = reportFacetsLoadedForTenant !== activeTenantId;
+  try {
+    const [overview, facets, result] = await Promise.all([
+      getJson(`/api/reports/overview${branchQuery}`, {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      needsFacets
+        ? getJson('/api/reports/facets', {
+          headers: { 'x-tenant-id': activeTenantId },
+        })
+        : Promise.resolve(null),
+      getJson(`/api/reports/${activeReportType}?${reportQueryString()}`, {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    if (facets) {
+      renderReportFacets(facets);
+      reportFacetsLoadedForTenant = activeTenantId;
+    }
+    setReportOverview(overview);
+    reportColumns = result.report.columns;
+    reportItems = result.items;
+    reportPagination = result.pagination;
+    elements.activeReportTitle.textContent = result.report.name;
+    elements.reportExportLabel.textContent = result.report.name;
+    renderReportTable();
+    return result;
+  } catch (error) {
+    showReportsError(error.message);
+    throw error;
+  }
+}
+
+function scheduleReportReload() {
+  window.clearTimeout(reportSearchTimer);
+  reportSearchTimer = window.setTimeout(() => {
+    reportPagination.page = 1;
+    loadReports().catch(() => {});
+  }, 260);
+}
+
+function clearReportFilters() {
+  elements.reportSearch.value = '';
+  if (!elements.reportBranchFilter.disabled) elements.reportBranchFilter.value = '';
+  elements.reportDateFrom.value = '';
+  elements.reportDateTo.value = '';
+  reportPagination.page = 1;
+  loadReports().catch(() => {});
+}
+
+async function exportActiveReport() {
+  elements.exportReportButton.disabled = true;
+  try {
+    const queryString = reportQueryString({ includePage: false });
+    const response = await fetch(
+      `${API_BASE_URL}/api/reports/${activeReportType}/export.csv` +
+      `${queryString ? `?${queryString}` : ''}`,
+      {
+        credentials: 'include',
+        headers: {
+          Accept: 'text/csv',
+          'x-tenant-id': activeTenantId,
+        },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No fue posible exportar el reporte.');
+    }
+    const disposition = response.headers.get('content-disposition') || '';
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ||
+      `megasuite-${activeReportType}.csv`;
+    const url = URL.createObjectURL(await response.blob());
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = filename;
+    document.body.append(download);
+    download.click();
+    download.remove();
+    URL.revokeObjectURL(url);
+    showToast('Reporte exportado correctamente.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.exportReportButton.disabled = false;
+  }
 }
 
 function auditHumanLabel(value) {
@@ -5096,6 +5374,7 @@ const availableViews = new Set([
   'usuarios',
   'caja',
   'cartera',
+  'reportes',
   'modulos',
   'auditoria',
   'sistema',
@@ -5119,6 +5398,7 @@ const viewTitles = {
   usuarios: 'Usuarios y accesos',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
+  reportes: 'Reportes',
   modulos: 'Mapa del ERP',
   auditoria: 'Auditoría',
   sistema: 'Sistema',
@@ -5855,6 +6135,8 @@ elements.companyContext.addEventListener('change', async () => {
   selectedAuditEventId = null;
   auditEvents = [];
   auditFacetsLoadedForTenant = null;
+  reportItems = [];
+  reportFacetsLoadedForTenant = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   renderAuthenticatedUser();
@@ -6104,6 +6386,34 @@ elements.printReceiptButton.addEventListener('click', () => window.print());
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();
+});
+document.querySelectorAll('[data-report-type]').forEach((button) => {
+  button.addEventListener('click', () => setReportType(button.dataset.reportType));
+});
+elements.reportSearch.addEventListener('input', scheduleReportReload);
+[
+  elements.reportBranchFilter,
+  elements.reportDateFrom,
+  elements.reportDateTo,
+].forEach((filter) => filter.addEventListener('change', () => {
+  reportPagination.page = 1;
+  loadReports().catch(() => {});
+}));
+elements.clearReportFilters.addEventListener('click', clearReportFilters);
+elements.exportReportButton.addEventListener('click', exportActiveReport);
+elements.reportPreviousPage.addEventListener('click', () => {
+  if (reportPagination.page <= 1) return;
+  reportPagination.page -= 1;
+  loadReports().catch(() => {
+    reportPagination.page += 1;
+  });
+});
+elements.reportNextPage.addEventListener('click', () => {
+  if (reportPagination.page >= reportPagination.totalPages) return;
+  reportPagination.page += 1;
+  loadReports().catch(() => {
+    reportPagination.page -= 1;
+  });
 });
 elements.auditSearch.addEventListener('input', scheduleAuditReload);
 [

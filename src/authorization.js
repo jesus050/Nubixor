@@ -16,6 +16,7 @@ const ALL_PERMISSIONS = [
   'payables.manage',
   'users.manage',
   'audit.view',
+  'reports.view',
 ];
 
 const BASE_ROLES = [
@@ -45,6 +46,7 @@ const BASE_ROLES = [
       'inventory.adjust',
       'purchases.manage',
       'sales.operate',
+      'reports.view',
     ],
   },
   {
@@ -65,6 +67,7 @@ const BASE_ROLES = [
       'receivables.manage',
       'payables.manage',
       'audit.view',
+      'reports.view',
     ],
   },
 ];
@@ -272,6 +275,7 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/users')) permissions = ['users.manage'];
   else if (path.startsWith('/api/dashboard')) permissions = ['dashboard.view'];
   else if (path.startsWith('/api/audit')) permissions = ['audit.view'];
+  else if (path.startsWith('/api/reports')) permissions = ['reports.view'];
 
   if (!permissions) return next();
   return requireAnyPermission(permissions)(req, res, next);

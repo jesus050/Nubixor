@@ -26,6 +26,7 @@ export const permissionCatalog = [
   { code: 'payables.manage', group: 'Finanzas', name: 'Gestionar cuentas por pagar', description: 'Registra obligaciones y pagos.' },
   { code: 'users.manage', group: 'Seguridad', name: 'Gestionar usuarios y roles', description: 'Invita personas y define sus accesos.' },
   { code: 'audit.view', group: 'Seguridad', name: 'Consultar auditoría', description: 'Consulta trazabilidad de cambios.' },
+  { code: 'reports.view', group: 'General', name: 'Consultar reportes', description: 'Consulta y exporta reportes operativos y financieros.' },
 ];
 
 const permissionCodes = new Set(permissionCatalog.map((permission) => permission.code));

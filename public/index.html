@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-12">
-    <script src="./app.js?v=20260726-12" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-13">
+    <script src="./app.js?v=20260726-13" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -149,6 +149,10 @@
           <a class="nav-item" href="#cartera" data-view-link="cartera">
             <span aria-hidden="true">C</span> Cuentas por cobrar
           </a>
+          <p class="nav-label">Análisis</p>
+          <a class="nav-item" href="#reportes" data-view-link="reportes">
+            <span aria-hidden="true">R</span> Reportes
+          </a>
           <p class="nav-label">Planeación</p>
           <a class="nav-item" href="#modulos" data-view-link="modulos">
             <span aria-hidden="true">▦</span> Mapa del ERP
@@ -226,6 +230,7 @@
           <a href="#cartera" data-view-link="cartera">Cartera</a>
           <a href="#usuarios" data-view-link="usuarios">Usuarios</a>
           <a href="#auditoria" data-view-link="auditoria">Auditoría</a>
+          <a href="#reportes" data-view-link="reportes">Reportes</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
           <a href="#sistema" data-view-link="sistema">Sistema</a>
         </nav>
@@ -1568,6 +1573,97 @@
             </div>
           </section>
 
+          <section class="section reports-view app-view" id="reportes" data-view="reportes" aria-labelledby="reportsTitle" hidden>
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Análisis operativo</p>
+                <h2 id="reportsTitle">Centro de reportes</h2>
+              </div>
+              <p>Convierte ventas, existencias, compras y obligaciones en información lista para decidir o exportar.</p>
+            </div>
+
+            <div class="report-overview-grid">
+              <article><span>Ventas del mes</span><strong id="reportSalesMonth">$0</strong><small>Ventas POS completadas</small></article>
+              <article><span>Inventario valorizado</span><strong id="reportInventoryValue">$0</strong><small>Existencia actual al costo</small></article>
+              <article><span>Compras pendientes</span><strong id="reportPendingPurchases">$0</strong><small>Mercancía aún por recibir</small></article>
+              <article><span>Por cobrar</span><strong id="reportReceivables">$0</strong><small>Cartera abierta</small></article>
+              <article><span>Por pagar</span><strong id="reportPayables">$0</strong><small>Obligaciones abiertas</small></article>
+            </div>
+
+            <div class="report-type-switcher" role="tablist" aria-label="Tipos de reporte">
+              <button class="active" type="button" role="tab" aria-selected="true" data-report-type="sales">
+                <span>01</span><strong>Ventas</strong><small>Ingresos y margen</small>
+              </button>
+              <button type="button" role="tab" aria-selected="false" data-report-type="inventory">
+                <span>02</span><strong>Inventario</strong><small>Stock valorizado</small>
+              </button>
+              <button type="button" role="tab" aria-selected="false" data-report-type="purchases">
+                <span>03</span><strong>Compras</strong><small>Pedidos y recepción</small>
+              </button>
+              <button type="button" role="tab" aria-selected="false" data-report-type="receivables">
+                <span>04</span><strong>Cartera</strong><small>Clientes por edades</small>
+              </button>
+              <button type="button" role="tab" aria-selected="false" data-report-type="payables">
+                <span>05</span><strong>Proveedores</strong><small>Obligaciones por edades</small>
+              </button>
+            </div>
+
+            <div class="report-toolbar">
+              <label class="report-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="reportSearch" type="search" maxlength="120" placeholder="Buscar dentro del reporte">
+              </label>
+              <label>
+                <span>Sucursal</span>
+                <select id="reportBranchFilter"><option value="">Todas las sucursales</option></select>
+              </label>
+              <label>
+                <span>Desde</span>
+                <input id="reportDateFrom" type="date">
+              </label>
+              <label>
+                <span>Hasta</span>
+                <input id="reportDateTo" type="date">
+              </label>
+              <button class="report-clear-button" id="clearReportFilters" type="button">Restablecer</button>
+              <button class="report-export-button" id="exportReportButton" type="button">
+                <span aria-hidden="true">↓</span>
+                <span>Descargar CSV<small id="reportExportLabel">Ventas y margen</small></span>
+              </button>
+            </div>
+
+            <div class="report-table-card">
+              <div class="report-table-heading">
+                <div>
+                  <span class="panel-kicker">Reporte activo</span>
+                  <h3 id="activeReportTitle">Ventas y margen</h3>
+                </div>
+                <div class="report-table-meta">
+                  <span id="reportRecordCount">0 registros</span>
+                  <small>Datos de la empresa activa</small>
+                </div>
+              </div>
+              <div class="report-table-scroll">
+                <table class="report-table">
+                  <thead><tr id="reportTableHead"></tr></thead>
+                  <tbody id="reportTableBody"></tbody>
+                </table>
+              </div>
+              <div class="data-state" id="reportDataState">
+                <span class="state-spinner"></span>
+                <div><strong>Preparando reporte</strong><p>Estamos consolidando la información solicitada.</p></div>
+              </div>
+              <div class="report-pagination">
+                <button id="reportPreviousPage" type="button">← Anterior</button>
+                <span id="reportPageLabel">Página 1 de 1</span>
+                <button id="reportNextPage" type="button">Siguiente →</button>
+              </div>
+            </div>
+            <p class="report-footnote">
+              Los archivos exportados respetan los filtros visibles y admiten hasta 5.000 registros por descarga.
+            </p>
+          </section>
+
           <section class="section module-section app-view" id="modulos" data-view="modulos" aria-labelledby="modulesTitle" hidden>
             <div class="section-heading">
               <div>
@@ -1725,15 +1821,25 @@
                   <a class="module-action" href="#cuentas-pagar">Abrir obligaciones <span>→</span></a>
                 </div>
               </article>
-              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+              <article class="module-card" data-search="reportes ventas inventario compras cartera proveedores exportar csv análisis">
                 <span class="module-number">16</span>
+                <div class="module-symbol blue" aria-hidden="true">RE</div>
+                <h3>Reportes</h3>
+                <p>Análisis filtrable de ventas, margen, inventario, compras, cartera y proveedores.</p>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#reportes">Analizar operación <span>→</span></a>
+                </div>
+              </article>
+              <article class="module-card" data-search="planner planificación tareas calendario vision creativa">
+                <span class="module-number">17</span>
                 <div class="module-symbol green" aria-hidden="true">PL</div>
                 <h3>Planner</h3>
                 <p>Planeación de tareas, responsables, fechas y seguimiento visual.</p>
                 <span class="module-state planned">Fase futura</span>
               </article>
               <article class="module-card" data-search="tickets soporte solicitudes ticketera libre">
-                <span class="module-number">17</span>
+                <span class="module-number">18</span>
                 <div class="module-symbol blue" aria-hidden="true">TK</div>
                 <h3>Tickets</h3>
                 <p>Solicitudes internas, prioridades, responsables y tiempos de atención.</p>

@@ -63,6 +63,8 @@ npm test
   sucursal y estado de acceso.
 - `/#auditoria` abre la bitácora protegida, sus filtros, el detalle de cambios
   y la exportación CSV.
+- `/#reportes` abre análisis de ventas, margen, inventario, compras, cartera y
+  proveedores con filtros y descarga CSV.
 - `/#inventario` abre existencias valorizadas, kardex, ajustes, transferencias
   y la herramienta secundaria de conteo físico.
 - `/#conteos` se conserva como enlace compatible y redirige al módulo
@@ -118,6 +120,10 @@ La interfaz incluye:
 - acceso de auditoría restringido a roles con `audit.view` y alcance de empresa
   completa, evitando exponer trazabilidad global a usuarios limitados a una
   sucursal;
+- centro de reportes con cinco análisis operativos, filtro por sucursal y
+  fechas, búsqueda, paginación y exportación de hasta 5.000 registros;
+- permiso `reports.view` para Propietario, Administrador, Operaciones y Auditor,
+  respetando automáticamente el alcance de sucursal asignado;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
@@ -133,10 +139,11 @@ La interfaz incluye:
   inventario y órdenes de compra abiertas;
 - pulso ejecutivo con ventas del día y del mes, margen bruto, stock bajo,
   compras pendientes y flujo estimado a 30 días;
-- directorio de los 17 módulos previstos con su estado real.
+- directorio de los 18 módulos previstos con su estado real.
 
 Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
-`#productos`, `#caja`, `#cuentas-pagar`, `#usuarios` y `#auditoria`, por lo que pueden
+`#productos`, `#caja`, `#cuentas-pagar`, `#usuarios`, `#auditoria` y
+`#reportes`, por lo que pueden
 guardarse como favoritos sin configurar rutas adicionales en el servidor.
 
 La primera apertura solicita crear la contraseña del propietario sembrado

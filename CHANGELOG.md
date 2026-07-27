@@ -6,6 +6,15 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Centro de Reportes con análisis independientes de ventas y margen, inventario
+  valorizado, compras y recepciones, cartera por edades y proveedores por
+  edades.
+- Filtros compartidos por sucursal, fechas y texto libre, con paginación y
+  exportación CSV de hasta 5.000 registros.
+- Indicadores consolidados de ventas del mes, valor del inventario, compras
+  pendientes, cartera abierta y obligaciones abiertas.
+- Permiso `reports.view` para roles gerenciales, operativos y de auditoría, con
+  restricción automática al alcance de sucursal.
 - Centro de Auditoría independiente con resumen diario, semanal y mensual,
   responsables activos y tipos de acción.
 - Filtros combinables por texto, persona, entidad, acción y rango de fechas,
@@ -110,7 +119,7 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   de códigos por empresa.
 - Módulo funcional de bodegas con búsqueda, creación por sucursal y tipos de
   ubicación operativa.
-- Directorio visual de los 17 módulos previstos, diferenciando claramente lo
+- Directorio visual de los 18 módulos previstos, diferenciando claramente lo
   disponible, la base técnica preparada y las fases futuras.
 - Validación de la jerarquía empresa → sucursal → bodega en la API.
 - Catálogo funcional de productos con búsqueda, creación, precios, categoría,

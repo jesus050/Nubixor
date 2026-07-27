@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { createHealthRouter } from '../src/modules/health.js';
-import { csvCell } from '../src/modules/audit.js';
+import { csvCell } from '../src/shared/csv.js';
 
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const createUnsecuredApp = (options = {}) => createApp({ ...options, security: false });
@@ -59,6 +59,10 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Auditoría consultable/);
   assert.match(response.text, /Exportar CSV/);
   assert.match(response.text, /Estado anterior/);
+  assert.match(response.text, /data-view="reportes"/);
+  assert.match(response.text, /Centro de reportes/);
+  assert.match(response.text, /Inventario valorizado/);
+  assert.match(response.text, /Descargar CSV/);
   assert.match(response.text, /Flujo estimado 30 días/);
   assert.match(response.text, /Movimientos e historial/);
   assert.match(response.text, /Registrar ingreso o salida/);
@@ -373,6 +377,36 @@ test('auditoría valida fechas, paginación e identificadores antes de consultar
 test('la exportación de auditoría neutraliza fórmulas de hoja de cálculo', () => {
   assert.equal(csvCell('=HYPERLINK("https://example.test")'), '"\'=HYPERLINK(""https://example.test"")"');
   assert.equal(csvCell('texto, seguro'), '"texto, seguro"');
+  assert.equal(csvCell(new Date('2026-07-26T12:00:00Z')), '"2026-07-26T12:00:00.000Z"');
+});
+
+test('reportes valida tipo, fechas, sucursal y paginación antes de consultar PostgreSQL', async () => {
+  const application = createUnsecuredApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+
+  const invalidType = await request(application)
+    .get('/api/reports/desconocido')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidType.body.error, /tipo de reporte/i);
+
+  const invalidDate = await request(application)
+    .get('/api/reports/sales?dateFrom=2026-13-40')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidDate.body.error, /AAAA-MM-DD/);
+
+  const invalidBranch = await request(application)
+    .get('/api/reports/inventory?branchId=invalida')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidBranch.body.error, /UUID válido/i);
+
+  const invalidPage = await request(application)
+    .get('/api/reports/purchases?pageSize=201')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidPage.body.error, /paginación/i);
 });
 
 test('las APIs operativas rechazan identidad enviada manualmente', async () => {

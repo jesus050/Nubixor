@@ -283,3 +283,25 @@ curl 'http://localhost:4100/api/audit/export.csv?dateFrom=2026-07-01' \
  -b cookies.txt \
  -o auditoria.csv
 ```
+
+## Reportes operativos
+
+El centro está disponible en `/#reportes` para sesiones con `reports.view`.
+Los tipos aceptados son `sales`, `inventory`, `purchases`, `receivables` y
+`payables`:
+
+```bash
+curl 'http://localhost:4100/api/reports/sales?branchId=BRANCH_ID&dateFrom=2026-07-01&dateTo=2026-07-31&page=1&pageSize=50' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -b cookies.txt
+
+curl 'http://localhost:4100/api/reports/inventory/export.csv?q=USB' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -b cookies.txt \
+ -o inventario.csv
+```
+
+`GET /api/reports/overview` entrega los cinco indicadores consolidados y
+`GET /api/reports/facets` lista reportes y sucursales autorizadas. Los usuarios
+limitados a una sucursal reciben únicamente datos de esa sede, aunque omitan el
+filtro en la URL.
