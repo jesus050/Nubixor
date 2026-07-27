@@ -77,10 +77,11 @@ test(
            '022_checkout_membership_guards.sql',
            '023_checkout_payment_scope_guards.sql',
            '024_local_two_company_demo.sql',
-           '025_crative_internal_receipt_no_vat.sql'
+           '025_crative_internal_receipt_no_vat.sql',
+           '026_shared_demo_cash_register.sql'
          )`,
       );
-      assert.equal(migrations.rowCount, 5);
+      assert.equal(migrations.rowCount, 6);
 
       const crativeFiscalSetup = await client.query(
         `SELECT ctp.electronic_invoicing_required,

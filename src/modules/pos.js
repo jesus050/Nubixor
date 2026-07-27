@@ -171,7 +171,6 @@ router.get('/summary', asyncHandler(async (req, res) => {
            COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
          FROM sales
          WHERE cash_session_id = cs.id
-           AND tenant_id = cs.tenant_id
            AND status = 'COMPLETED'
        ) sales ON TRUE
        LEFT JOIN LATERAL (
@@ -220,7 +219,6 @@ router.get('/sessions', asyncHandler(async (req, res) => {
               COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales
        FROM sales
        WHERE cash_session_id = cs.id
-         AND tenant_id = cs.tenant_id
          AND status = 'COMPLETED'
      ) sales ON TRUE
      LEFT JOIN LATERAL (
@@ -270,7 +268,6 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
            COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
          FROM sales
          WHERE cash_session_id = cs.id
-           AND tenant_id = cs.tenant_id
            AND status = 'COMPLETED'
        ) sale_totals ON TRUE
        LEFT JOIN LATERAL (
@@ -294,17 +291,19 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
       [req.params.id, req.context.tenantId],
     ),
     query(
-      `SELECT s.id, s.sequence_number, s.payment_method, s.sale_terms,
+      `SELECT s.id, s.company_id, seller.trade_name company_name,
+              s.sequence_number, s.payment_method, s.sale_terms,
               s.total, s.status, s.created_at,
               COALESCE(c.name, 'Consumidor final') customer_name,
               COUNT(si.id)::integer item_count
        FROM sales s
+       JOIN tenants seller ON seller.id = s.company_id
        LEFT JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
        LEFT JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
-       WHERE s.cash_session_id = $1 AND s.tenant_id = $2
-       GROUP BY s.id, c.name
+       WHERE s.cash_session_id = $1
+       GROUP BY s.id, seller.trade_name, c.name
        ORDER BY s.created_at DESC`,
-      [req.params.id, req.context.tenantId],
+      [req.params.id],
     ),
     query(
       `SELECT denomination, quantity, total
@@ -364,6 +363,60 @@ router.get('/catalog', asyncHandler(async (req, res) => {
        )
      ORDER BY p.name`,
     [req.context.tenantId, warehouseId, req.context.branchId],
+  );
+  res.json(result.rows);
+}));
+
+router.get('/shared-catalog', asyncHandler(async (req, res) => {
+  const { cashSessionId } = req.query;
+  if (typeof cashSessionId !== 'string' || !UUID_PATTERN.test(cashSessionId)) {
+    return res.status(422).json({ error: 'cashSessionId debe ser un UUID válido.' });
+  }
+  const result = await query(
+    `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
+            p.seller_company_id, seller.trade_name seller_company_name,
+            crc.default_warehouse_id warehouse_id, warehouse.name warehouse_name,
+            c.id category_id, c.name category_name,
+            tc.name tax_name, tc.rate tax_rate,
+            COALESCE(ib.on_hand, 0) on_hand,
+            pi.public_url image_url, pi.alt_text image_alt
+     FROM cash_sessions session
+     JOIN cash_register_companies crc
+       ON crc.cash_register_id = session.cash_register_id AND crc.active = TRUE
+     JOIN tenant_users membership
+       ON membership.tenant_id = crc.company_id
+      AND membership.user_id = $3
+      AND membership.status = 'ACTIVE'
+     JOIN tenants seller ON seller.id = crc.company_id AND seller.status = 'ACTIVE'
+     JOIN warehouses warehouse
+       ON warehouse.id = crc.default_warehouse_id
+      AND warehouse.tenant_id = crc.company_id
+      AND warehouse.active = TRUE
+     JOIN products p
+       ON p.seller_company_id = crc.company_id
+      AND p.owner_company_id = crc.company_id
+      AND p.deleted_at IS NULL
+      AND p.active = TRUE
+      AND p.tax_review_status = 'REVIEWED'
+     LEFT JOIN categories c ON c.id = p.category_id AND c.tenant_id = p.tenant_id
+     LEFT JOIN tax_categories tc
+       ON tc.id = p.sales_tax_category_id AND tc.tenant_id = p.seller_company_id
+     LEFT JOIN inventory_balances ib
+       ON ib.product_id = p.id
+      AND ib.tenant_id = p.owner_company_id
+      AND ib.warehouse_id = crc.default_warehouse_id
+     LEFT JOIN LATERAL (
+       SELECT public_url, alt_text
+       FROM product_images
+       WHERE tenant_id = p.tenant_id AND product_id = p.id
+       ORDER BY is_primary DESC, created_at
+       LIMIT 1
+     ) pi ON TRUE
+     WHERE session.id = $1
+       AND session.tenant_id = $2
+       AND session.status = 'OPEN'
+     ORDER BY seller.trade_name, p.name`,
+    [cashSessionId, req.context.tenantId, req.context.userId],
   );
   res.json(result.rows);
 }));
@@ -539,7 +592,6 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
          SELECT COALESCE(SUM(total), 0) cash_sales
          FROM sales
          WHERE cash_session_id = cs.id
-           AND tenant_id = cs.tenant_id
            AND payment_method = 'CASH'
            AND status = 'COMPLETED'
        ) sales ON TRUE
@@ -620,6 +672,304 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
     return result.rows[0];
   });
   res.json(session);
+}));
+
+router.post('/sales/grouped', asyncHandler(async (req, res) => {
+  const {
+    cashSessionId,
+    paymentMethod,
+    cashReceived,
+    saleTerms = 'IMMEDIATE',
+    items,
+  } = req.body;
+  const normalizedPayment = typeof paymentMethod === 'string'
+    ? paymentMethod.trim().toUpperCase()
+    : '';
+  if (
+    typeof cashSessionId !== 'string' ||
+    !UUID_PATTERN.test(cashSessionId) ||
+    !['CASH', 'CARD', 'TRANSFER'].includes(normalizedPayment) ||
+    saleTerms !== 'IMMEDIATE' ||
+    !Array.isArray(items) ||
+    !items.length ||
+    items.length > 100 ||
+    items.some((item) =>
+      typeof item?.productId !== 'string' ||
+      !UUID_PATTERN.test(item.productId) ||
+      !Number.isFinite(Number(item.quantity)) ||
+      Number(item.quantity) <= 0)
+  ) {
+    return res.status(422).json({
+      error: 'La venta conjunta requiere turno, pago de contado y productos válidos.',
+    });
+  }
+  const consolidated = new Map();
+  for (const item of items) {
+    consolidated.set(
+      item.productId,
+      (consolidated.get(item.productId) || 0) + Number(item.quantity),
+    );
+  }
+  const normalizedCashReceived = Number(cashReceived);
+
+  const purchase = await withTransaction(async (client) => {
+    const session = await client.query(
+      `SELECT cs.id, cs.cash_register_id, cr.branch_id
+       FROM cash_sessions cs
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
+       WHERE cs.id = $1 AND cs.tenant_id = $2 AND cs.status = 'OPEN'
+       FOR UPDATE OF cs`,
+      [cashSessionId, req.context.tenantId],
+    );
+    if (!session.rowCount) {
+      throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
+    }
+
+    const productIds = [...consolidated.keys()];
+    const products = await client.query(
+      `SELECT p.id, p.sku, p.name, p.cost, p.sale_price,
+              p.owner_company_id, p.seller_company_id,
+              seller.trade_name seller_company_name,
+              crc.default_warehouse_id warehouse_id,
+              warehouse.branch_id warehouse_branch_id,
+              p.tax_category_id, tc.rate tax_rate,
+              profile.default_document_type
+       FROM products p
+       JOIN tenants seller ON seller.id = p.seller_company_id
+       JOIN cash_register_companies crc
+         ON crc.cash_register_id = $1
+        AND crc.company_id = p.seller_company_id
+        AND crc.active = TRUE
+       JOIN tenant_users membership
+         ON membership.tenant_id = p.seller_company_id
+        AND membership.user_id = $2
+        AND membership.status = 'ACTIVE'
+       JOIN warehouses warehouse
+         ON warehouse.id = crc.default_warehouse_id
+        AND warehouse.tenant_id = p.owner_company_id
+        AND warehouse.active = TRUE
+       JOIN tax_categories tc
+         ON tc.id = p.tax_category_id
+        AND tc.tenant_id = p.seller_company_id
+       JOIN company_tax_profiles profile
+         ON profile.company_id = p.seller_company_id AND profile.active = TRUE
+       WHERE p.id = ANY($3::uuid[])
+         AND p.deleted_at IS NULL
+         AND p.active = TRUE
+         AND p.tax_review_status = 'REVIEWED'
+       FOR SHARE OF p`,
+      [session.rows[0].cash_register_id, req.context.userId, productIds],
+    );
+    if (products.rowCount !== productIds.length) {
+      throw new AppError(
+        'Uno o más productos no están autorizados para esta caja.',
+        422,
+        'SHARED_SALE_PRODUCT_INVALID',
+      );
+    }
+
+    const groups = new Map();
+    let grandTotal = 0;
+    let grandTax = 0;
+    for (const product of products.rows) {
+      const quantity = consolidated.get(product.id);
+      const unitPrice = Number(product.sale_price);
+      const taxRate = Number(product.tax_rate);
+      const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
+      const taxAmount = taxRate > 0
+        ? Math.round((lineTotal * taxRate / (100 + taxRate)) * 100) / 100
+        : 0;
+      const line = { ...product, quantity, unitPrice, taxRate, lineTotal, taxAmount };
+      const group = groups.get(product.seller_company_id) || [];
+      group.push(line);
+      groups.set(product.seller_company_id, group);
+      grandTotal += lineTotal;
+      grandTax += taxAmount;
+    }
+    grandTotal = Math.round(grandTotal * 100) / 100;
+    grandTax = Math.round(grandTax * 100) / 100;
+    if (
+      normalizedPayment === 'CASH' &&
+      (!Number.isFinite(normalizedCashReceived) || normalizedCashReceived < grandTotal)
+    ) {
+      throw new AppError(
+        'El efectivo recibido es menor que el total de la compra.',
+        422,
+        'INSUFFICIENT_CASH_RECEIVED',
+      );
+    }
+
+    const receipts = [];
+    for (const [companyId, lines] of groups) {
+      const groupTotal = Math.round(
+        lines.reduce((sum, line) => sum + line.lineTotal, 0) * 100,
+      ) / 100;
+      const groupTax = Math.round(
+        lines.reduce((sum, line) => sum + line.taxAmount, 0) * 100,
+      ) / 100;
+      const groupSubtotal = Math.round((groupTotal - groupTax) * 100) / 100;
+      const firstLine = lines[0];
+      let resolution = null;
+      if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
+        const resolutionResult = await client.query(
+          `SELECT id, prefix
+           FROM billing_resolutions
+           WHERE company_id = $1 AND branch_id = $2 AND active = TRUE
+             AND CURRENT_DATE BETWEEN valid_from AND valid_until
+             AND current_number <= number_to
+           ORDER BY valid_until, created_at
+           LIMIT 1
+           FOR UPDATE`,
+          [companyId, firstLine.warehouse_branch_id],
+        );
+        resolution = resolutionResult.rows[0] || null;
+      }
+      const saleResult = await client.query(
+        `INSERT INTO sales(
+           tenant_id, company_id, seller_company_id, cash_session_id,
+           warehouse_id, payment_method, subtotal, tax_total, total,
+           cash_received, cash_change, created_by, sale_terms,
+           document_type, billing_resolution_id
+         )
+         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,0,$9,'IMMEDIATE',$10,$11)
+         RETURNING id, sequence_number, status, payment_method, subtotal,
+                   tax_total, total, document_type, created_at`,
+        [
+          companyId,
+          cashSessionId,
+          firstLine.warehouse_id,
+          normalizedPayment,
+          groupSubtotal,
+          groupTax,
+          groupTotal,
+          normalizedPayment === 'CASH' ? groupTotal : null,
+          req.context.userId,
+          firstLine.default_document_type,
+          resolution?.id || null,
+        ],
+      );
+      const sale = saleResult.rows[0];
+      let billingDocument = null;
+      if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
+        let documentNumber = null;
+        if (resolution) {
+          const numberResult = await client.query(
+            `UPDATE billing_resolutions
+             SET current_number = current_number + 1, updated_at = now()
+             WHERE id = $1 AND company_id = $2 AND current_number <= number_to
+             RETURNING current_number - 1 document_number`,
+            [resolution.id, companyId],
+          );
+          documentNumber = numberResult.rows[0]?.document_number || null;
+        }
+        const documentResult = await client.query(
+          `INSERT INTO electronic_documents(
+             company_id, sale_id, billing_resolution_id, document_type,
+             prefix, document_number, status, failure_reason
+           )
+           VALUES($1,$2,$3,'ELECTRONIC_INVOICE',$4,$5,'PENDING',$6)
+           RETURNING id, document_type, prefix, document_number, status, failure_reason`,
+          [
+            companyId,
+            sale.id,
+            resolution?.id || null,
+            resolution?.prefix || null,
+            documentNumber,
+            resolution
+              ? 'Pendiente de transmisión al proveedor tecnológico.'
+              : 'Falta configurar una resolución de facturación vigente.',
+          ],
+        );
+        billingDocument = documentResult.rows[0];
+      }
+      for (const line of lines) {
+        const balance = await client.query(
+          `UPDATE inventory_balances
+           SET on_hand = on_hand - $1, updated_at = now()
+           WHERE tenant_id = $2 AND product_id = $3 AND warehouse_id = $4
+             AND on_hand - reserved >= $1
+           RETURNING on_hand`,
+          [line.quantity, companyId, line.id, line.warehouse_id],
+        );
+        if (!balance.rowCount) {
+          throw new AppError(
+            `No hay existencias suficientes de ${line.name}.`,
+            409,
+            'INSUFFICIENT_STOCK',
+          );
+        }
+        await client.query(
+          `INSERT INTO sale_items(
+             tenant_id, sale_id, product_id, sku_snapshot, name_snapshot,
+             quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total
+           )
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [
+            companyId, sale.id, line.id, line.sku, line.name, line.quantity,
+            line.unitPrice, line.cost, line.taxRate, line.taxAmount, line.lineTotal,
+          ],
+        );
+        await client.query(
+          `INSERT INTO inventory_movements(
+             tenant_id, product_id, warehouse_id, movement_type, quantity,
+             unit_cost, reference_type, reference_id, reason, created_by
+           )
+           VALUES($1,$2,$3,'SALE',$4,$5,'SALE',$6,$7,$8)`,
+          [
+            companyId, line.id, line.warehouse_id, -line.quantity, line.cost,
+            sale.id, `Venta POS multiempresa #${sale.sequence_number}`,
+            req.context.userId,
+          ],
+        );
+      }
+      await writeAudit(client, {
+        tenantId: companyId,
+        userId: req.context.userId,
+        action: 'sale.completed',
+        entityType: 'sale',
+        entityId: sale.id,
+        after: { ...sale, items: lines.length, sharedCashSessionId: cashSessionId },
+        reason: 'Venta confirmada desde caja multiempresa',
+      });
+      receipts.push({
+        ...sale,
+        companyId,
+        companyName: firstLine.seller_company_name,
+        receiptNumber: billingDocument?.document_number
+          ? `${billingDocument.prefix || ''}${billingDocument.document_number}`
+          : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+        billingDocument,
+        customer: null,
+        items: lines.map((line) => ({
+          productId: line.id,
+          name: line.name,
+          sku: line.sku,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          taxRate: line.taxRate,
+          taxAmount: line.taxAmount,
+          lineTotal: line.lineTotal,
+        })),
+      });
+    }
+    return {
+      grouped: true,
+      receipts,
+      documentCount: receipts.length,
+      subtotal: Math.round((grandTotal - grandTax) * 100) / 100,
+      tax_total: grandTax,
+      total: grandTotal,
+      payment_method: normalizedPayment,
+      cash_received: normalizedPayment === 'CASH' ? normalizedCashReceived : null,
+      cash_change: normalizedPayment === 'CASH'
+        ? Math.round((normalizedCashReceived - grandTotal) * 100) / 100
+        : null,
+      sale_terms: 'IMMEDIATE',
+      customer: null,
+      items: receipts.flatMap((receipt) => receipt.items),
+    };
+  });
+  res.status(201).json(purchase);
 }));
 
 router.get('/sales/:id', asyncHandler(async (req, res) => {

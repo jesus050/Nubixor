@@ -8581,6 +8581,22 @@ footer {
   background: rgba(25, 37, 132, 0.18);
 }
 
+.cart-company-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 4px 0 2px;
+  padding: 7px 10px;
+  border: 1px solid rgba(79, 210, 233, 0.35);
+  border-radius: 9px;
+  background: rgba(221, 248, 252, 0.96);
+  color: var(--color-ink);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .cart-item {
   border-color: rgba(25, 37, 132, 0.08);
   box-shadow: 0 5px 14px rgba(25, 37, 132, 0.035);

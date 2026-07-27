@@ -2,16 +2,16 @@
 
 ## Estado
 
-La SUBFASE A implementa el modelo relacional, sus migraciones, las reglas de
-integridad y las pruebas iniciales. No implementa todavía:
+La base relacional y la primera operación visual multiempresa están activas.
+Una caja autorizada puede mostrar productos de varias empresas y dividir un
+cobro de contado en ventas y comprobantes legales separados. Aún no implementa:
 
-- el carrito visual multiempresa;
-- el endpoint de cobro agrupado;
 - la integración real con un proveedor de facturación electrónica;
 - reintentos de documentos externos;
 - cierre visual desglosado por empresa.
 
-El POS existente conserva su flujo de una sola empresa y sus datos históricos.
+El POS conserva sus datos históricos y mantiene el flujo tradicional para
+ventas de una sola empresa.
 
 ## Diagnóstico del modelo anterior
 
@@ -159,8 +159,8 @@ El catálogo anterior no se elimina.
 
 1. `tenant_id` y `company_id` coexistirán durante la transición. El código nuevo
    debe usar la identidad legal y mantener el filtro de seguridad.
-2. El turno `cash_sessions` anterior sigue siendo monoempresa. Las subfases B y
-   E migrarán la operación al modelo `checkout_sessions`.
+2. El turno físico continúa en `cash_sessions`; las ventas generadas desde un
+   cobro compartido conservan su empresa legal mediante `company_id`.
 3. Los clientes todavía pertenecen a una empresa. Antes del pago global debe
    definirse si se comparte una identidad maestra o se vinculan terceros.
 4. Los productos sin bodega quedan inactivos para el flujo nuevo.

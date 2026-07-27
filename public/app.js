@@ -1863,7 +1863,8 @@ function renderPosSalesHistory() {
       minute: '2-digit',
     }).format(new Date(sale.created_at));
     detail.textContent =
-      `${time} · ${sale.item_count} ${sale.item_count === 1 ? 'producto' : 'productos'} · ` +
+      `${sale.company_name ? `${sale.company_name} · ` : ''}${time} · ` +
+      `${sale.item_count} ${sale.item_count === 1 ? 'producto' : 'productos'} · ` +
       `${paymentMethodLabels[sale.payment_method] || sale.payment_method}`;
     identity.append(number, customer, detail);
 
@@ -1874,7 +1875,8 @@ function renderPosSalesHistory() {
     const viewButton = document.createElement('button');
     viewButton.type = 'button';
     viewButton.textContent = 'Ver comprobante';
-    viewButton.addEventListener('click', () => openHistoricalReceipt(sale.id, viewButton));
+    viewButton.addEventListener('click', () =>
+      openHistoricalReceipt(sale.id, sale.company_id, viewButton));
     result.append(amount, viewButton);
     row.append(identity, result);
     elements.posSalesHistoryList.append(row);
@@ -1890,13 +1892,13 @@ function closeSalesHistoryDialog() {
   elements.salesHistoryDialog.close();
 }
 
-async function openHistoricalReceipt(saleId, button) {
+async function openHistoricalReceipt(saleId, companyId, button) {
   const originalLabel = button.textContent;
   button.disabled = true;
   button.textContent = 'Consultando…';
   try {
     const receipt = await getJson(`/api/pos/sales/${saleId}`, {
-      headers: { 'x-tenant-id': activeTenantId },
+      headers: { 'x-tenant-id': companyId || activeTenantId },
     });
     closeSalesHistoryDialog();
     showReceipt(receipt);
@@ -2055,7 +2057,8 @@ function renderPosCatalog() {
   const search = normalizeSearch(elements.posProductSearch.value.trim());
   const filtered = posCatalog.filter((product) => {
     const searchable = normalizeSearch(
-      `${product.name} ${product.sku} ${product.barcode || ''} ${product.category_name || ''}`,
+      `${product.name} ${product.sku} ${product.barcode || ''} ${product.category_name || ''} ` +
+      `${product.seller_company_name || ''}`,
     );
     const matchesCategory =
       activePosCategory === 'ALL' || product.category_id === activePosCategory;
@@ -2090,9 +2093,11 @@ function renderPosCatalog() {
     const info = document.createElement('div');
     info.className = 'pos-product-info';
     const sku = document.createElement('small');
-    sku.textContent = product.category_name
-      ? `${product.category_name} · ${product.sku}`
-      : product.sku;
+    sku.textContent = [
+      product.seller_company_name,
+      product.category_name,
+      product.sku,
+    ].filter(Boolean).join(' · ');
     const name = document.createElement('strong');
     name.textContent = product.name;
     const price = document.createElement('b');
@@ -2175,7 +2180,21 @@ function renderCart() {
   elements.cartItems.replaceChildren();
   elements.cartEmpty.hidden = saleCart.size > 0;
 
-  for (const item of saleCart.values()) {
+  let currentSeller = null;
+  const cartLines = [...saleCart.values()].sort((left, right) =>
+    (left.product.seller_company_name || '').localeCompare(
+      right.product.seller_company_name || '',
+      'es',
+    ));
+  for (const item of cartLines) {
+    const sellerName = item.product.seller_company_name || getActiveCompany()?.trade_name || '';
+    if (sellerName && sellerName !== currentSeller) {
+      currentSeller = sellerName;
+      const companyHeading = document.createElement('div');
+      companyHeading.className = 'cart-company-heading';
+      companyHeading.textContent = `Vende ${sellerName}`;
+      elements.cartItems.append(companyHeading);
+    }
     const row = document.createElement('div');
     row.className = 'cart-item';
     const info = document.createElement('div');
@@ -2222,6 +2241,11 @@ function renderCart() {
     : 'Selecciona productos →';
   updateCashSettlement(totals, { rebuild: true });
   const creditSale = posSaleTerms === 'CREDIT';
+  const sellerCompanies = new Set(
+    [...saleCart.values()].map((item) => item.product.seller_company_id || activeTenantId),
+  );
+  const multiCompanySale = sellerCompanies.size > 1 ||
+    (sellerCompanies.size === 1 && !sellerCompanies.has(activeTenantId));
   elements.posPaymentPanel.hidden = creditSale;
   elements.posCreditTerms.hidden = !creditSale;
   if (creditSale) {
@@ -2231,7 +2255,10 @@ function renderCart() {
     elements.completeSaleButton.disabled =
       elements.completeSaleButton.disabled || !hasCustomer || !hasDueDate;
     if (totals.itemCount > 0) {
-      if (!hasCustomer) elements.completeSaleButton.textContent = 'Selecciona un cliente';
+      if (multiCompanySale) {
+        elements.completeSaleButton.disabled = true;
+        elements.completeSaleButton.textContent = 'Crédito: vende por empresa';
+      } else if (!hasCustomer) elements.completeSaleButton.textContent = 'Selecciona un cliente';
       else if (!hasDueDate) elements.completeSaleButton.textContent = 'Define el vencimiento';
       else elements.completeSaleButton.textContent =
         `Vender a crédito ${formatCurrency(totals.total)} →`;
@@ -2248,8 +2275,7 @@ function clearCart() {
 }
 
 async function loadPosCatalog() {
-  const warehouseId = elements.posWarehouseSelect.value;
-  if (!posSummary.openSession || !warehouseId) {
+  if (!posSummary.openSession) {
     posCatalog = [];
     renderPosCategories();
     setPosCatalogState(
@@ -2260,9 +2286,20 @@ async function loadPosCatalog() {
     return [];
   }
   try {
-    posCatalog = await getJson(`/api/pos/catalog?warehouseId=${encodeURIComponent(warehouseId)}`, {
+    posCatalog = await getJson(
+      `/api/pos/shared-catalog?cashSessionId=${encodeURIComponent(posSummary.openSession.id)}`,
+      {
       headers: { 'x-tenant-id': activeTenantId },
-    });
+      },
+    );
+    const sellers = new Set(posCatalog.map((product) => product.seller_company_id));
+    if (sellers.size > 1) {
+      elements.billingModeName.textContent = 'Cobro multiempresa';
+      elements.billingModeDetail.textContent =
+        'Puedes combinar productos; MegaSuite separa inventario, impuestos y comprobantes.';
+      elements.billingModeStatus.textContent = `${sellers.size} empresas activas`;
+      elements.billingModeStatus.className = 'table-status active';
+    }
     renderPosCategories();
     renderPosCatalog();
     renderCart();
@@ -6511,7 +6548,10 @@ async function submitCashMovement(event) {
 }
 
 function showReceipt(receipt) {
-  elements.receiptNumber.textContent = receipt.receiptNumber;
+  const groupedReceipts = Array.isArray(receipt.receipts) ? receipt.receipts : [];
+  elements.receiptNumber.textContent = receipt.grouped
+    ? `${receipt.documentCount} comprobantes`
+    : receipt.receiptNumber;
   const electronic = (receipt.sale_document_type || receipt.document_type) ===
     'ELECTRONIC_INVOICE';
   const billing = receipt.billingDocument || (
@@ -6522,19 +6562,28 @@ function showReceipt(receipt) {
       }
       : null
   );
-  elements.receiptDocumentType.textContent = electronic
-    ? 'Factura electrónica'
-    : 'Comprobante interno';
-  elements.receiptDocumentStatus.textContent = electronic
-    ? (billing?.status === 'ACCEPTED'
-      ? 'Aceptada por la DIAN'
-      : billing?.failure_reason || 'Pendiente de transmisión a la DIAN')
-    : 'Registrado localmente; no se envía a la DIAN';
+  elements.receiptDocumentType.textContent = receipt.grouped
+    ? 'Compra multiempresa'
+    : (electronic ? 'Factura electrónica' : 'Comprobante interno');
+  elements.receiptDocumentStatus.textContent = receipt.grouped
+    ? groupedReceipts
+      .map((item) => `${item.companyName}: ${item.receiptNumber}`)
+      .join(' · ')
+    : (electronic
+      ? (billing?.status === 'ACCEPTED'
+        ? 'Aceptada por la DIAN'
+        : billing?.failure_reason || 'Pendiente de transmisión a la DIAN')
+      : 'Registrado localmente; no se envía a la DIAN');
   elements.receiptLines.replaceChildren();
-  for (const item of receipt.items) {
+  const receiptLines = receipt.grouped
+    ? groupedReceipts.flatMap((group) =>
+      group.items.map((item) => ({ ...item, companyName: group.companyName })))
+    : receipt.items;
+  for (const item of receiptLines) {
     const line = document.createElement('div');
     const description = document.createElement('span');
-    description.textContent = `${item.quantity} × ${item.name}`;
+    description.textContent = `${item.companyName ? `${item.companyName} · ` : ''}` +
+      `${item.quantity} × ${item.name}`;
     const amount = document.createElement('strong');
     amount.textContent = formatCurrency(item.lineTotal);
     line.append(description, amount);
@@ -6569,7 +6618,12 @@ async function completeSale() {
   elements.completeSaleButton.disabled = true;
   elements.completeSaleButton.textContent = 'Confirmando venta…';
   try {
-    const receipt = await getJson('/api/pos/sales', {
+    const sellerCompanies = new Set(
+      [...saleCart.values()].map((item) => item.product.seller_company_id || activeTenantId),
+    );
+    const sharedCheckout = sellerCompanies.size > 1 ||
+      (sellerCompanies.size === 1 && !sellerCompanies.has(activeTenantId));
+    const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -6577,7 +6631,7 @@ async function completeSale() {
       },
       body: JSON.stringify({
         cashSessionId: posSummary.openSession.id,
-        warehouseId: elements.posWarehouseSelect.value,
+        ...(sharedCheckout ? {} : { warehouseId: elements.posWarehouseSelect.value }),
         paymentMethod: elements.posPaymentMethod.value,
         saleTerms: posSaleTerms,
         customerId: elements.posCustomerSelect.value || null,
