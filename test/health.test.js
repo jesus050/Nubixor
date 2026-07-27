@@ -39,7 +39,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Consumidor final/);
   assert.match(response.text, /data-sale-terms="CREDIT"/);
   assert.match(response.text, /La cuenta por cobrar se creará/);
-  assert.match(response.text, /Ventas del turno/);
+  assert.match(response.text, /Facturas y comprobantes/);
+  assert.match(response.text, /Cuenta que recibió/);
   assert.match(response.text, /id="posSalesHistoryList"/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);

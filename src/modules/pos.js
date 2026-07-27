@@ -421,6 +421,65 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
   res.json(result.rows);
 }));
 
+router.get('/documents', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT sale.id, sale.company_id, company.trade_name company_name,
+            sale.sequence_number, sale.created_at, sale.payment_method,
+            sale.subtotal, sale.tax_total, sale.total, sale.status,
+            sale.document_type, COALESCE(customer.name, 'Consumidor final') customer_name,
+            document.status electronic_status, document.prefix,
+            document.document_number,
+            payment.receiving_company_id,
+            receiver.trade_name receiving_company_name,
+            payment.reference payment_reference,
+            payment.reconciliation_status,
+            COUNT(item.id)::integer item_count
+     FROM sales sale
+     JOIN tenant_users membership
+       ON membership.tenant_id = sale.company_id
+      AND membership.user_id = $1
+      AND membership.status = 'ACTIVE'
+     JOIN tenants company ON company.id = sale.company_id
+     LEFT JOIN customers customer
+       ON customer.id = sale.customer_id AND customer.tenant_id = sale.tenant_id
+     LEFT JOIN electronic_documents document
+       ON document.sale_id = sale.id AND document.company_id = sale.company_id
+     LEFT JOIN sale_payment_records payment ON payment.sale_id = sale.id
+     LEFT JOIN tenants receiver ON receiver.id = payment.receiving_company_id
+     LEFT JOIN sale_items item
+       ON item.sale_id = sale.id AND item.tenant_id = sale.tenant_id
+     WHERE sale.status = 'COMPLETED'
+     GROUP BY sale.id, company.trade_name, customer.name, document.status,
+              document.prefix, document.document_number, payment.receiving_company_id,
+              receiver.trade_name, payment.reference, payment.reconciliation_status
+     ORDER BY sale.created_at DESC
+     LIMIT 300`,
+    [req.context.userId],
+  );
+  const items = result.rows.map((item) => ({
+    ...item,
+    receipt_number: item.document_number
+      ? `${item.prefix || ''}${item.document_number}`
+      : `POS-${String(item.sequence_number).padStart(6, '0')}`,
+  }));
+  const transferSummary = new Map();
+  for (const item of items.filter((sale) => sale.payment_method === 'TRANSFER')) {
+    const receiverId = item.receiving_company_id || item.company_id;
+    const current = transferSummary.get(receiverId) || {
+      company_id: receiverId,
+      company_name: item.receiving_company_name || item.company_name,
+      transfer_count: 0,
+      total_received: 0,
+    };
+    current.transfer_count += 1;
+    current.total_received = Math.round(
+      (current.total_received + Number(item.total)) * 100,
+    ) / 100;
+    transferSummary.set(receiverId, current);
+  }
+  res.json({ items, transferSummary: [...transferSummary.values()] });
+}));
+
 router.post('/sessions', asyncHandler(async (req, res) => {
   const { cashRegisterId, openingAmount = 0 } = req.body;
   const amount = Number(openingAmount);
@@ -679,6 +738,8 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     cashSessionId,
     paymentMethod,
     cashReceived,
+    transferReceivingCompanyId = null,
+    paymentReference = null,
     saleTerms = 'IMMEDIATE',
     items,
   } = req.body;
@@ -711,6 +772,19 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     );
   }
   const normalizedCashReceived = Number(cashReceived);
+  const normalizedPaymentReference = normalizedText(paymentReference, 120);
+  if (
+    normalizedPayment === 'TRANSFER' &&
+    (
+      typeof transferReceivingCompanyId !== 'string' ||
+      !UUID_PATTERN.test(transferReceivingCompanyId) ||
+      !normalizedPaymentReference
+    )
+  ) {
+    return res.status(422).json({
+      error: 'Selecciona la cuenta que recibió la transferencia y registra su referencia.',
+    });
+  }
 
   const purchase = await withTransaction(async (client) => {
     const session = await client.query(
@@ -788,6 +862,16 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     }
     grandTotal = Math.round(grandTotal * 100) / 100;
     grandTax = Math.round(grandTax * 100) / 100;
+    if (
+      normalizedPayment === 'TRANSFER' &&
+      !groups.has(transferReceivingCompanyId)
+    ) {
+      throw new AppError(
+        'La cuenta receptora debe pertenecer a una empresa incluida en la venta.',
+        422,
+        'TRANSFER_RECEIVER_INVALID',
+      );
+    }
     if (
       normalizedPayment === 'CASH' &&
       (!Number.isFinite(normalizedCashReceived) || normalizedCashReceived < grandTotal)
@@ -922,6 +1006,23 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           ],
         );
       }
+      if (normalizedPayment === 'TRANSFER') {
+        await client.query(
+          `INSERT INTO sale_payment_records(
+             sale_id, seller_company_id, receiving_company_id, payment_method,
+             amount, reference, reconciliation_status, recorded_by
+           )
+           VALUES($1,$2,$3,'TRANSFER',$4,$5,'CONFIRMED',$6)`,
+          [
+            sale.id,
+            companyId,
+            transferReceivingCompanyId,
+            groupTotal,
+            normalizedPaymentReference,
+            req.context.userId,
+          ],
+        );
+      }
       await writeAudit(client, {
         tenantId: companyId,
         userId: req.context.userId,
@@ -964,6 +1065,12 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       cash_change: normalizedPayment === 'CASH'
         ? Math.round((normalizedCashReceived - grandTotal) * 100) / 100
         : null,
+      receiving_company_name: normalizedPayment === 'TRANSFER'
+        ? receipts.find((receipt) => receipt.companyId === transferReceivingCompanyId)?.companyName
+        : null,
+      payment_reference: normalizedPayment === 'TRANSFER'
+        ? normalizedPaymentReference
+        : null,
       sale_terms: 'IMMEDIATE',
       customer: null,
       items: receipts.flatMap((receipt) => receipt.items),
@@ -987,7 +1094,9 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
               ai.id ar_invoice_id, ai.invoice_number, ai.status receivable_status,
               ed.id electronic_document_id, ed.status electronic_document_status,
               ed.prefix billing_prefix, ed.document_number billing_number,
-              ed.failure_reason billing_failure_reason
+              ed.failure_reason billing_failure_reason,
+              payment.reference payment_reference,
+              receiver.trade_name receiving_company_name
        FROM sales s
        JOIN cash_sessions cs ON cs.id = s.cash_session_id
        JOIN cash_registers cr ON cr.id = cs.cash_register_id
@@ -995,6 +1104,8 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
        LEFT JOIN ar_invoices ai ON ai.id = s.ar_invoice_id AND ai.tenant_id = s.tenant_id
        LEFT JOIN electronic_documents ed
          ON ed.sale_id = s.id AND ed.company_id = s.company_id
+       LEFT JOIN sale_payment_records payment ON payment.sale_id = s.id
+       LEFT JOIN tenants receiver ON receiver.id = payment.receiving_company_id
        WHERE s.id = $1 AND s.tenant_id = $2
          AND ($3::uuid IS NULL OR cr.branch_id = $3)`,
       [req.params.id, req.context.tenantId, req.context.branchId],
@@ -1039,6 +1150,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
     warehouseId,
     paymentMethod,
     cashReceived,
+    transferReceivingCompanyId = null,
+    paymentReference = null,
     customerId = null,
     saleTerms = 'IMMEDIATE',
     dueDate = null,
@@ -1086,6 +1199,18 @@ router.post('/sales', asyncHandler(async (req, res) => {
     });
   }
   const normalizedCashReceived = Number(cashReceived);
+  const normalizedPaymentReference = normalizedText(paymentReference, 120);
+  if (
+    normalizedPayment === 'TRANSFER' &&
+    (
+      transferReceivingCompanyId !== req.context.tenantId ||
+      !normalizedPaymentReference
+    )
+  ) {
+    return res.status(422).json({
+      error: 'Confirma la cuenta receptora y la referencia de la transferencia.',
+    });
+  }
   if (
     normalizedPayment === 'CASH' &&
     (!Number.isFinite(normalizedCashReceived) || normalizedCashReceived < 0)
@@ -1418,6 +1543,32 @@ router.post('/sales', asyncHandler(async (req, res) => {
       });
     }
 
+    let transferRecord = null;
+    if (normalizedPayment === 'TRANSFER') {
+      await client.query(
+        `INSERT INTO sale_payment_records(
+           sale_id, seller_company_id, receiving_company_id, payment_method,
+           amount, reference, reconciliation_status, recorded_by
+         )
+         VALUES($1,$2,$2,'TRANSFER',$3,$4,'CONFIRMED',$5)`,
+        [
+          sale.id,
+          req.context.tenantId,
+          total,
+          normalizedPaymentReference,
+          req.context.userId,
+        ],
+      );
+      const receiver = await client.query(
+        'SELECT trade_name FROM tenants WHERE id = $1',
+        [req.context.tenantId],
+      );
+      transferRecord = {
+        payment_reference: normalizedPaymentReference,
+        receiving_company_name: receiver.rows[0]?.trade_name || 'Empresa receptora',
+      };
+    }
+
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -1434,6 +1585,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
         ? `${billingDocument.prefix || ''}${billingDocument.document_number}`
         : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
       billingDocument,
+      ...transferRecord,
       customer: customer || null,
       receivable,
       items: lines.map((line) => ({

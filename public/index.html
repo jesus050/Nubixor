@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-24">
-    <script src="./app.js?v=20260727-24" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-25">
+    <script src="./app.js?v=20260727-25" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -1271,7 +1271,7 @@
                 <div class="pos-filters">
                   <button class="pos-history-button" id="openSalesHistoryButton" type="button">
                     <span aria-hidden="true">↺</span>
-                    Ventas del turno
+                    Comprobantes
                     <b id="posSaleHistoryCount">0</b>
                   </button>
                   <label class="field-search pos-search">
@@ -1377,6 +1377,18 @@
                       <span>Cambio a entregar</span>
                       <strong id="posCashChange">$0</strong>
                     </div>
+                  </div>
+                  <div class="transfer-details" id="posTransferDetails" hidden>
+                    <label>
+                      <span>Cuenta que recibió</span>
+                      <select id="posTransferCompany"></select>
+                    </label>
+                    <label>
+                      <span>Referencia o comprobante</span>
+                      <input id="posTransferReference" type="text" maxlength="120"
+                        placeholder="Ej. Bancolombia 845921">
+                    </label>
+                    <small>El reporte conservará quién facturó y en qué empresa entró el dinero.</small>
                   </div>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
@@ -3461,17 +3473,29 @@
       <div class="company-form">
         <div class="dialog-heading">
           <div>
-            <p class="eyebrow">Turno actual</p>
-            <h2 id="salesHistoryDialogTitle">Ventas realizadas</h2>
+            <p class="eyebrow">Archivo de ventas</p>
+            <h2 id="salesHistoryDialogTitle">Facturas y comprobantes</h2>
           </div>
           <button class="icon-button" id="closeSalesHistoryDialog" type="button" aria-label="Cerrar">×</button>
         </div>
         <p class="dialog-copy">
-          Consulta el detalle de cada venta y vuelve a imprimir su comprobante.
+          Filtra por negocio, consulta transferencias y vuelve a imprimir cada comprobante.
         </p>
+        <div class="document-filters">
+          <select id="posDocumentCompanyFilter" aria-label="Filtrar por negocio">
+            <option value="">Todos los negocios</option>
+          </select>
+          <select id="posDocumentPaymentFilter" aria-label="Filtrar por medio de pago">
+            <option value="">Todos los pagos</option>
+            <option value="TRANSFER">Transferencias</option>
+            <option value="CASH">Efectivo</option>
+            <option value="CARD">Tarjeta</option>
+          </select>
+        </div>
+        <div class="transfer-summary" id="posTransferSummary"></div>
         <div class="pos-sales-history" id="posSalesHistoryList"></div>
         <div class="data-state" id="posSalesHistoryEmpty">
-          <strong>Aún no hay ventas en este turno</strong>
+          <strong>No hay comprobantes con este filtro</strong>
           <p>Las ventas confirmadas aparecerán aquí.</p>
         </div>
         <div class="dialog-actions">
@@ -3505,6 +3529,7 @@
           <div class="receipt-grand-total"><span>Total de la venta</span><strong id="receiptTotal">$0</strong></div>
           <div><span>Cliente</span><strong id="receiptCustomer">Consumidor final</strong></div>
           <div><span>Medio de pago</span><strong id="receiptPaymentMethod">—</strong></div>
+          <div id="receiptTransferRow"><span>Transferencia recibida</span><strong id="receiptTransferReference">—</strong></div>
           <div id="receiptCreditRow"><span>Cuenta por cobrar</span><strong id="receiptCreditReference">—</strong></div>
           <div id="receiptCashReceivedRow"><span>Efectivo recibido</span><strong id="receiptCashReceived">$0</strong></div>
           <div id="receiptCashChangeRow"><span>Cambio entregado</span><strong id="receiptCashChange">$0</strong></div>

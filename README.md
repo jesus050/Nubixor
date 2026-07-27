@@ -285,6 +285,12 @@ tiempo. Si el carrito contiene productos de las dos empresas, MegaSuite realiza
 un único cobro operativo y genera una venta y un comprobante separados para
 cada empresa.
 
+El botón `Comprobantes` de Caja & POS abre el archivo de ventas de todos los
+negocios autorizados, permite filtrar por empresa o medio de pago y reimprimir
+cada documento. Las transferencias exigen indicar la empresa cuya cuenta
+recibió el dinero y una referencia; ambos datos quedan disponibles en el
+archivo y en la exportación del reporte de ventas.
+
 Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
 bodega, caja y los impuestos iniciales. Consulte
 [`docs/multi-company-pos.md`](docs/multi-company-pos.md) antes de integrar

@@ -395,6 +395,9 @@ const elements = {
   posCashReceived: document.querySelector('#posCashReceived'),
   cashTenderSuggestions: document.querySelector('#cashTenderSuggestions'),
   posCashChange: document.querySelector('#posCashChange'),
+  posTransferDetails: document.querySelector('#posTransferDetails'),
+  posTransferCompany: document.querySelector('#posTransferCompany'),
+  posTransferReference: document.querySelector('#posTransferReference'),
   posSaleError: document.querySelector('#posSaleError'),
   completeSaleButton: document.querySelector('#completeSaleButton'),
   posSaleLock: document.querySelector('#posSaleLock'),
@@ -403,6 +406,9 @@ const elements = {
   finishSalesHistoryButton: document.querySelector('#finishSalesHistoryButton'),
   posSalesHistoryList: document.querySelector('#posSalesHistoryList'),
   posSalesHistoryEmpty: document.querySelector('#posSalesHistoryEmpty'),
+  posDocumentCompanyFilter: document.querySelector('#posDocumentCompanyFilter'),
+  posDocumentPaymentFilter: document.querySelector('#posDocumentPaymentFilter'),
+  posTransferSummary: document.querySelector('#posTransferSummary'),
   receiptDialog: document.querySelector('#receiptDialog'),
   receiptNumber: document.querySelector('#receiptNumber'),
   receiptDocumentType: document.querySelector('#receiptDocumentType'),
@@ -413,6 +419,8 @@ const elements = {
   receiptTotal: document.querySelector('#receiptTotal'),
   receiptCustomer: document.querySelector('#receiptCustomer'),
   receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
+  receiptTransferRow: document.querySelector('#receiptTransferRow'),
+  receiptTransferReference: document.querySelector('#receiptTransferReference'),
   receiptCreditRow: document.querySelector('#receiptCreditRow'),
   receiptCreditReference: document.querySelector('#receiptCreditReference'),
   receiptCashReceivedRow: document.querySelector('#receiptCashReceivedRow'),
@@ -654,6 +662,8 @@ let products = [];
 let posSummary = { registers: [], openSession: null };
 let executiveSummary = {};
 let posCatalog = [];
+let posDocuments = [];
+let posTransferSummary = [];
 let posCustomers = [];
 let posSaleTerms = 'IMMEDIATE';
 let receivableCustomers = [];
@@ -1842,11 +1852,27 @@ function renderCashControl() {
 }
 
 function renderPosSalesHistory() {
-  const sales = posSummary.currentDetail?.sales || [];
+  const companyFilter = elements.posDocumentCompanyFilter.value;
+  const paymentFilter = elements.posDocumentPaymentFilter.value;
+  const sales = posDocuments.filter((sale) =>
+    (!companyFilter || sale.company_id === companyFilter) &&
+    (!paymentFilter || sale.payment_method === paymentFilter));
   elements.posSaleHistoryCount.textContent = String(sales.length);
-  elements.openSalesHistoryButton.disabled = !posSummary.openSession;
+  elements.openSalesHistoryButton.disabled = posDocuments.length === 0;
   elements.posSalesHistoryList.replaceChildren();
   elements.posSalesHistoryEmpty.hidden = sales.length > 0;
+  elements.posTransferSummary.replaceChildren();
+  for (const summary of posTransferSummary) {
+    const card = document.createElement('article');
+    const name = document.createElement('span');
+    name.textContent = `Recibido en ${summary.company_name}`;
+    const total = document.createElement('strong');
+    total.textContent = formatCurrency(summary.total_received);
+    const count = document.createElement('small');
+    count.textContent = `${summary.transfer_count} transferencias`;
+    card.append(name, total, count);
+    elements.posTransferSummary.append(card);
+  }
 
   for (const sale of sales) {
     const row = document.createElement('article');
@@ -1854,7 +1880,7 @@ function renderPosSalesHistory() {
     const identity = document.createElement('div');
     identity.className = 'pos-sale-history-identity';
     const number = document.createElement('strong');
-    number.textContent = `POS-${String(sale.sequence_number).padStart(6, '0')}`;
+    number.textContent = sale.receipt_number;
     const customer = document.createElement('span');
     customer.textContent = sale.customer_name;
     const detail = document.createElement('small');
@@ -1866,7 +1892,16 @@ function renderPosSalesHistory() {
       `${sale.company_name ? `${sale.company_name} · ` : ''}${time} · ` +
       `${sale.item_count} ${sale.item_count === 1 ? 'producto' : 'productos'} · ` +
       `${paymentMethodLabels[sale.payment_method] || sale.payment_method}`;
-    identity.append(number, customer, detail);
+    if (sale.payment_method === 'TRANSFER') {
+      const transfer = document.createElement('small');
+      transfer.className = 'sale-transfer-detail';
+      transfer.textContent =
+        `Recibido en ${sale.receiving_company_name || sale.company_name}` +
+        ` · ${sale.payment_reference || 'Sin referencia'}`;
+      identity.append(number, customer, detail, transfer);
+    } else {
+      identity.append(number, customer, detail);
+    }
 
     const result = document.createElement('div');
     result.className = 'pos-sale-history-result';
@@ -1957,16 +1992,30 @@ async function loadPos() {
   }
   try {
     const headers = { 'x-tenant-id': activeTenantId };
-    const [summary, sessions, customers] = await Promise.all([
+    const [summary, sessions, customers, documents] = await Promise.all([
       getJson('/api/pos/summary', { headers }),
       getJson('/api/pos/sessions', { headers }),
       getJson('/api/pos/customers', { headers }),
+      getJson('/api/pos/documents', { headers }),
     ]);
     const currentDetail = summary.openSession
       ? await getJson(`/api/pos/sessions/${summary.openSession.id}`, { headers })
       : null;
     posSummary = { ...summary, sessions, currentDetail };
     posCustomers = customers;
+    posDocuments = documents.items;
+    posTransferSummary = documents.transferSummary;
+    const previousCompanyFilter = elements.posDocumentCompanyFilter.value;
+    elements.posDocumentCompanyFilter.replaceChildren(new Option('Todos los negocios', ''));
+    for (const company of [...new Map(
+      posDocuments.map((sale) => [sale.company_id, sale.company_name]),
+    )]) {
+      elements.posDocumentCompanyFilter.append(new Option(company[1], company[0]));
+    }
+    if ([...elements.posDocumentCompanyFilter.options]
+      .some((option) => option.value === previousCompanyFilter)) {
+      elements.posDocumentCompanyFilter.value = previousCompanyFilter;
+    }
     syncPosCustomers();
     renderPos();
     renderPosSalesHistory();
@@ -2246,6 +2295,23 @@ function renderCart() {
   );
   const multiCompanySale = sellerCompanies.size > 1 ||
     (sellerCompanies.size === 1 && !sellerCompanies.has(activeTenantId));
+  const transferSale =
+    posSaleTerms === 'IMMEDIATE' && elements.posPaymentMethod.value === 'TRANSFER';
+  elements.posTransferDetails.hidden = !transferSale;
+  const previousReceiver = elements.posTransferCompany.value;
+  elements.posTransferCompany.replaceChildren();
+  for (const [companyId, companyName] of new Map(
+    [...saleCart.values()].map((item) => [
+      item.product.seller_company_id || activeTenantId,
+      item.product.seller_company_name || getActiveCompany()?.trade_name || 'Empresa activa',
+    ]),
+  )) {
+    elements.posTransferCompany.append(new Option(companyName, companyId));
+  }
+  if ([...elements.posTransferCompany.options]
+    .some((option) => option.value === previousReceiver)) {
+    elements.posTransferCompany.value = previousReceiver;
+  }
   elements.posPaymentPanel.hidden = creditSale;
   elements.posCreditTerms.hidden = !creditSale;
   if (creditSale) {
@@ -2263,6 +2329,15 @@ function renderCart() {
       else elements.completeSaleButton.textContent =
         `Vender a crédito ${formatCurrency(totals.total)} →`;
     }
+  } else if (transferSale && totals.itemCount > 0) {
+    const transferReady =
+      Boolean(elements.posTransferCompany.value) &&
+      Boolean(elements.posTransferReference.value.trim());
+    elements.completeSaleButton.disabled =
+      elements.completeSaleButton.disabled || !transferReady;
+    if (!transferReady) {
+      elements.completeSaleButton.textContent = 'Completa los datos de transferencia';
+    }
   }
   elements.posSaleError.hidden = true;
 }
@@ -2270,6 +2345,7 @@ function renderCart() {
 function clearCart() {
   saleCart.clear();
   elements.posCashReceived.value = '';
+  elements.posTransferReference.value = '';
   renderCart();
   renderPosCatalog();
 }
@@ -6595,6 +6671,12 @@ function showReceipt(receipt) {
   elements.receiptCustomer.textContent = receipt.customer?.name || 'Consumidor final';
   elements.receiptPaymentMethod.textContent =
     paymentMethodLabels[receipt.payment_method] || receipt.payment_method;
+  const transferPayment = receipt.payment_method === 'TRANSFER';
+  elements.receiptTransferRow.hidden = !transferPayment;
+  elements.receiptTransferReference.textContent = transferPayment
+    ? `${receipt.receiving_company_name || 'Cuenta registrada'} · ` +
+      `${receipt.payment_reference || 'Sin referencia'}`
+    : '—';
   const creditSale = receipt.sale_terms === 'CREDIT';
   elements.receiptCreditRow.hidden = !creditSale;
   elements.receiptCreditReference.textContent = creditSale
@@ -6640,6 +6722,12 @@ async function completeSale() {
           && posSaleTerms === 'IMMEDIATE'
           ? Number(elements.posCashReceived.value)
           : null,
+        transferReceivingCompanyId: elements.posPaymentMethod.value === 'TRANSFER'
+          ? elements.posTransferCompany.value
+          : null,
+        paymentReference: elements.posPaymentMethod.value === 'TRANSFER'
+          ? elements.posTransferReference.value.trim()
+          : null,
         items: [...saleCart.values()].map((item) => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -6648,6 +6736,7 @@ async function completeSale() {
     });
     saleCart.clear();
     elements.posCashReceived.value = '';
+    elements.posTransferReference.value = '';
     elements.posCustomerSelect.value = '';
     posSaleTerms = 'IMMEDIATE';
     elements.posSaleTermButtons.forEach((button) => {
@@ -6976,6 +7065,8 @@ elements.cashMovementDialog.addEventListener('click', (event) => {
 elements.openSalesHistoryButton.addEventListener('click', openSalesHistoryDialog);
 elements.closeSalesHistoryDialog.addEventListener('click', closeSalesHistoryDialog);
 elements.finishSalesHistoryButton.addEventListener('click', closeSalesHistoryDialog);
+elements.posDocumentCompanyFilter.addEventListener('change', renderPosSalesHistory);
+elements.posDocumentPaymentFilter.addEventListener('change', renderPosSalesHistory);
 elements.salesHistoryDialog.addEventListener('click', (event) => {
   if (event.target === elements.salesHistoryDialog) closeSalesHistoryDialog();
 });
@@ -7026,6 +7117,8 @@ elements.posCreditDueDate.addEventListener('change', renderCart);
 elements.posCashReceived.addEventListener('input', () => {
   updateCashSettlement(calculateCartTotals());
 });
+elements.posTransferCompany.addEventListener('change', renderCart);
+elements.posTransferReference.addEventListener('input', renderCart);
 elements.posPaymentButtons.forEach((button) => {
   button.addEventListener('click', () => {
     elements.posPaymentMethod.value = button.dataset.paymentMethod;

@@ -20,6 +20,8 @@ const reportDefinitions = {
       ['receipt_number', 'Comprobante', 'text'],
       ['branch_name', 'Sucursal', 'text'],
       ['payment_method', 'Medio de pago', 'status'],
+      ['receiving_company', 'Cuenta receptora', 'text'],
+      ['payment_reference', 'Referencia de pago', 'text'],
       ['units', 'Unidades', 'number'],
       ['revenue', 'Venta', 'currency'],
       ['cost', 'Costo', 'currency'],
@@ -31,6 +33,8 @@ const reportDefinitions = {
       SELECT s.id, s.created_at sale_date,
              'POS-' || LPAD(s.sequence_number::text, 8, '0') receipt_number,
              b.name branch_name, s.payment_method,
+             COALESCE(receiver.trade_name, '—') receiving_company,
+             COALESCE(payment.reference, '—') payment_reference,
              COALESCE(SUM(si.quantity), 0) units,
              s.total revenue,
              COALESCE(SUM(si.unit_cost * si.quantity), 0) cost,
@@ -42,6 +46,8 @@ const reportDefinitions = {
       JOIN warehouses w ON w.id = s.warehouse_id AND w.tenant_id = s.tenant_id
       JOIN branches b ON b.id = w.branch_id AND b.tenant_id = s.tenant_id
       LEFT JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
+      LEFT JOIN sale_payment_records payment ON payment.sale_id = s.id
+      LEFT JOIN tenants receiver ON receiver.id = payment.receiving_company_id
       WHERE s.tenant_id = $1
         AND s.status = 'COMPLETED'
         AND ($2::uuid IS NULL OR b.id = $2)
@@ -51,7 +57,7 @@ const reportDefinitions = {
           ('POS-' || LPAD(s.sequence_number::text, 8, '0')) ILIKE '%' || $5 || '%'
           OR b.name ILIKE '%' || $5 || '%'
           OR s.payment_method ILIKE '%' || $5 || '%')
-      GROUP BY s.id, b.name`,
+      GROUP BY s.id, b.name, receiver.trade_name, payment.reference`,
   },
   inventory: {
     name: 'Inventario valorizado',
