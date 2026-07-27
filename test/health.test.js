@@ -368,6 +368,17 @@ test('inventario valida ajustes y transferencias antes de consultar PostgreSQL',
     })
     .expect(422);
   assert.match(transfer.body.error, /deben ser diferentes/i);
+  const replenishment = await request(application)
+    .put('/api/inventory/replenishments/invalid')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      sourceWarehouseId: 'invalid',
+      displayWarehouseId: 'invalid',
+      minimumQuantity: 2,
+      maximumQuantity: 5,
+    })
+    .expect(422);
+  assert.match(replenishment.body.error, /UUID válidos/i);
 });
 
 test('compras valida proveedores, órdenes y recepciones antes de consultar PostgreSQL', async () => {

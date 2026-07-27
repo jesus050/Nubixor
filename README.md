@@ -112,6 +112,8 @@ La interfaz incluye:
 - inventario consolidado con valor al costo, disponibilidad y alertas de saldo;
 - kardex reciente, ajustes manuales justificados y transferencias
   transaccionales entre bodegas;
+- reposición de exhibición con mínimo y máximo por producto, alertas y
+  traslado sugerido desde la bodega de abastecimiento;
 - conteos físicos dentro de Inventario, visibles únicamente al programar una
   toma física;
 - directorio de proveedores con condiciones de facturación y pago;
@@ -295,6 +297,10 @@ La migración `028` crea una ubicación `Exhibición principal` para cada negoci
 Inventario muestra por separado las unidades en bodega y en exhibición. La
 acción `Mover unidades` registra el traslado con salida y entrada enlazadas, sin
 alterar el total del producto; Caja & POS descuenta las ventas desde exhibición.
+La migración `029` agrega reglas de reposición por producto: al alcanzar el
+mínimo, Inventario calcula cuánto debe trasladarse para recuperar el máximo,
+limitado por la existencia real de la bodega. La recomendación no cambia saldos
+hasta que el usuario confirma el traslado.
 
 Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
 bodega, caja y los impuestos iniciales. Consulte

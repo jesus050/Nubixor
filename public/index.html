@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-26">
-    <script src="./app.js?v=20260727-26" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-27">
+    <script src="./app.js?v=20260727-27" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -587,6 +587,26 @@
                   <small>Entradas, salidas y traslados</small>
                 </article>
               </div>
+
+              <section class="replenishment-panel" aria-labelledby="replenishmentTitle">
+                <div class="replenishment-heading">
+                  <div>
+                    <p class="eyebrow">Bodega → exhibición</p>
+                    <h3 id="replenishmentTitle">Reposición inteligente</h3>
+                    <p>MegaSuite recomienda cuánto mover; el saldo solo cambia cuando confirmas el traslado.</p>
+                  </div>
+                  <div class="replenishment-summary">
+                    <span><strong id="replenishmentAlertCount">0</strong> por reponer</span>
+                    <span><strong id="replenishmentReadyCount">0</strong> en nivel correcto</span>
+                  </div>
+                </div>
+                <div class="replenishment-list" id="replenishmentList"></div>
+                <div class="data-state compact-state" id="replenishmentState">
+                  <span class="data-state-symbol" aria-hidden="true">↥</span>
+                  <strong>Consultando niveles de exhibición</strong>
+                  <p>Estamos comparando las unidades visibles con la reserva de bodega.</p>
+                </div>
+              </section>
 
               <div class="inventory-command-bar">
                 <div>
@@ -2637,6 +2657,49 @@
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelTransferButton" type="button">Volver sin transferir</button>
           <button class="primary-button compact" id="saveTransferButton" type="submit">Confirmar traslado</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="replenishmentDialog" aria-labelledby="replenishmentDialogTitle">
+      <form class="company-form" id="replenishmentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Política de exhibición</p>
+            <h2 id="replenishmentDialogTitle">Configurar reposición</h2>
+          </div>
+          <button class="icon-button" id="closeReplenishmentDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <input id="replenishmentProductId" name="productId" type="hidden">
+        <div class="replenishment-product-context">
+          <span>Producto</span>
+          <strong id="replenishmentProductName">—</strong>
+          <small id="replenishmentProductSku">—</small>
+        </div>
+        <label class="form-field">
+          <span>Bodega que abastece <b>*</b></span>
+          <select id="replenishmentSourceWarehouseId" name="sourceWarehouseId" required></select>
+        </label>
+        <label class="form-field">
+          <span>Ubicación de exhibición <b>*</b></span>
+          <select id="replenishmentDisplayWarehouseId" name="displayWarehouseId" required></select>
+        </label>
+        <div class="form-grid two-columns">
+          <label class="form-field">
+            <span>Nivel mínimo <b>*</b></span>
+            <input id="replenishmentMinimumQuantity" name="minimumQuantity" type="number" min="0" step="0.0001" required>
+            <small>Al llegar aquí se genera la alerta.</small>
+          </label>
+          <label class="form-field">
+            <span>Nivel máximo <b>*</b></span>
+            <input id="replenishmentMaximumQuantity" name="maximumQuantity" type="number" min="0.0001" step="0.0001" required>
+            <small>La reposición intenta completar este nivel.</small>
+          </label>
+        </div>
+        <p class="form-error" id="replenishmentFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelReplenishmentButton" type="button">Cancelar</button>
+          <button class="primary-button" id="saveReplenishmentButton" type="submit">Guardar niveles</button>
         </div>
       </form>
     </dialog>

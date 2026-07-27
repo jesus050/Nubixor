@@ -138,6 +138,10 @@ const elements = {
   inventoryMovementCount: document.querySelector('#inventoryMovementCount'),
   inventoryMovementList: document.querySelector('#inventoryMovementList'),
   inventoryMovementState: document.querySelector('#inventoryMovementState'),
+  replenishmentAlertCount: document.querySelector('#replenishmentAlertCount'),
+  replenishmentReadyCount: document.querySelector('#replenishmentReadyCount'),
+  replenishmentList: document.querySelector('#replenishmentList'),
+  replenishmentState: document.querySelector('#replenishmentState'),
   newAdjustmentButton: document.querySelector('#newAdjustmentButton'),
   newTransferButton: document.querySelector('#newTransferButton'),
   openCountsPanelButton: document.querySelector('#openCountsPanelButton'),
@@ -159,6 +163,23 @@ const elements = {
   closeTransferDialog: document.querySelector('#closeTransferDialog'),
   cancelTransferButton: document.querySelector('#cancelTransferButton'),
   saveTransferButton: document.querySelector('#saveTransferButton'),
+  replenishmentDialog: document.querySelector('#replenishmentDialog'),
+  replenishmentForm: document.querySelector('#replenishmentForm'),
+  replenishmentFormError: document.querySelector('#replenishmentFormError'),
+  replenishmentProductId: document.querySelector('#replenishmentProductId'),
+  replenishmentProductName: document.querySelector('#replenishmentProductName'),
+  replenishmentProductSku: document.querySelector('#replenishmentProductSku'),
+  replenishmentSourceWarehouseId:
+    document.querySelector('#replenishmentSourceWarehouseId'),
+  replenishmentDisplayWarehouseId:
+    document.querySelector('#replenishmentDisplayWarehouseId'),
+  replenishmentMinimumQuantity:
+    document.querySelector('#replenishmentMinimumQuantity'),
+  replenishmentMaximumQuantity:
+    document.querySelector('#replenishmentMaximumQuantity'),
+  closeReplenishmentDialog: document.querySelector('#closeReplenishmentDialog'),
+  cancelReplenishmentButton: document.querySelector('#cancelReplenishmentButton'),
+  saveReplenishmentButton: document.querySelector('#saveReplenishmentButton'),
   activeCountTotal: document.querySelector('#activeCountTotal'),
   pendingCountItems: document.querySelector('#pendingCountItems'),
   countDiscrepancies: document.querySelector('#countDiscrepancies'),
@@ -675,6 +696,7 @@ let selectedPhysicalCount = null;
 let inventorySummary = {};
 let inventoryBalances = [];
 let inventoryMovements = [];
+let inventoryReplenishments = [];
 let suppliers = [];
 let purchases = [];
 let selectedPurchase = null;
@@ -4336,10 +4358,114 @@ function setInventorySummary(summary = {}) {
   elements.inventoryMovementsMonth.textContent = String(summary.movements_month || 0);
 }
 
+function renderReplenishments() {
+  const canAdjustInventory = hasAnyPermission('inventory.adjust');
+  const alerts = inventoryReplenishments.filter((item) => item.status !== 'OK');
+  const ready = inventoryReplenishments.filter((item) => item.status === 'OK');
+  elements.replenishmentAlertCount.textContent = String(alerts.length);
+  elements.replenishmentReadyCount.textContent = String(ready.length);
+  elements.replenishmentList.replaceChildren();
+  elements.replenishmentState.hidden = inventoryReplenishments.length > 0;
+  elements.replenishmentState.classList.remove('error');
+  if (!inventoryReplenishments.length) {
+    elements.replenishmentState.querySelector('strong').textContent =
+      'Aún no hay ubicaciones de exhibición';
+    elements.replenishmentState.querySelector('p').textContent =
+      'Crea una ubicación de tipo Exhibición para activar las recomendaciones.';
+    return;
+  }
+
+  const statusLabels = {
+    OUT: 'Agotado en exhibición',
+    LOW: 'Reposición necesaria',
+    OK: 'Nivel correcto',
+  };
+  for (const item of inventoryReplenishments) {
+    const card = document.createElement('article');
+    card.className = `replenishment-card status-${item.status.toLowerCase()}`;
+
+    const heading = document.createElement('div');
+    heading.className = 'replenishment-card-heading';
+    const identity = document.createElement('div');
+    const product = document.createElement('strong');
+    product.textContent = item.product_name;
+    const sku = document.createElement('small');
+    sku.textContent = `${item.sku} · ${item.display_warehouse_name}`;
+    identity.append(product, sku);
+    const status = document.createElement('span');
+    status.className = 'replenishment-status';
+    status.textContent = statusLabels[item.status] || item.status;
+    heading.append(identity, status);
+
+    const levels = document.createElement('div');
+    levels.className = 'replenishment-levels';
+    const displayLevel = document.createElement('div');
+    displayLevel.append(
+      Object.assign(document.createElement('span'), { textContent: 'Exhibición' }),
+      Object.assign(document.createElement('strong'), {
+        textContent: formatQuantity(item.display_available),
+      }),
+    );
+    const policy = document.createElement('div');
+    policy.append(
+      Object.assign(document.createElement('span'), { textContent: 'Mín. / Máx.' }),
+      Object.assign(document.createElement('strong'), {
+        textContent: `${formatQuantity(item.minimum_quantity)} / ` +
+          `${formatQuantity(item.maximum_quantity)}`,
+      }),
+    );
+    const sourceLevel = document.createElement('div');
+    sourceLevel.append(
+      Object.assign(document.createElement('span'), { textContent: 'En bodega' }),
+      Object.assign(document.createElement('strong'), {
+        textContent: formatQuantity(item.source_available),
+      }),
+    );
+    levels.append(displayLevel, policy, sourceLevel);
+
+    const footer = document.createElement('div');
+    footer.className = 'replenishment-card-actions';
+    const route = document.createElement('small');
+    route.textContent = item.source_warehouse_name
+      ? `Desde ${item.source_warehouse_name}`
+      : 'Sin bodega de abastecimiento';
+    const configure = document.createElement('button');
+    configure.type = 'button';
+    configure.className = 'replenishment-configure';
+    configure.textContent = 'Configurar';
+    configure.hidden = !canAdjustInventory;
+    configure.addEventListener('click', () => openReplenishmentDialog(item));
+    const replenish = document.createElement('button');
+    replenish.type = 'button';
+    replenish.className = 'replenishment-action';
+    const suggested = Number(item.suggested_quantity || 0);
+    replenish.disabled = item.status === 'OK' || suggested <= 0 || !item.source_warehouse_id;
+    replenish.hidden = !canAdjustInventory;
+    replenish.textContent = item.status === 'OK'
+      ? 'Nivel completo'
+      : suggested > 0
+        ? `Reponer ${formatQuantity(suggested)}`
+        : 'Sin saldo para reponer';
+    replenish.addEventListener('click', () => openTransferDialog({
+      productId: item.product_id,
+      sourceWarehouseId: item.source_warehouse_id,
+      destinationWarehouseId: item.display_warehouse_id,
+      quantity: suggested,
+      reason: `Reposición de exhibición · mínimo ${formatQuantity(item.minimum_quantity)} ` +
+        `· máximo ${formatQuantity(item.maximum_quantity)}`,
+    }));
+    footer.append(route, configure, replenish);
+    card.append(heading, levels, footer);
+    elements.replenishmentList.append(card);
+  }
+}
+
 function showInventoryError(message) {
   inventoryBalances = [];
   inventoryMovements = [];
+  inventoryReplenishments = [];
   setInventorySummary();
+  renderReplenishments();
   elements.inventoryBalanceList.replaceChildren();
   elements.inventoryMovementList.replaceChildren();
   elements.inventoryDataState.hidden = false;
@@ -4491,7 +4617,7 @@ async function loadInventory() {
     return [];
   }
   try {
-    const [summary, balances, movements] = await Promise.all([
+    const [summary, balances, movements, replenishments] = await Promise.all([
       getJson('/api/inventory/summary', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
@@ -4501,11 +4627,16 @@ async function loadInventory() {
       getJson('/api/inventory/movements?limit=40', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
+      getJson('/api/inventory/replenishments', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
     ]);
     inventoryBalances = balances;
     inventoryMovements = movements;
+    inventoryReplenishments = replenishments;
     setInventorySummary(summary);
     syncInventoryWarehouseFilter();
+    renderReplenishments();
     renderInventoryBalances();
     renderInventoryMovements();
     return balances;
@@ -4642,7 +4773,8 @@ function updateTransferAvailability() {
   }
 }
 
-function openTransferDialog() {
+function openTransferDialog(preset = null) {
+  const prepared = preset && typeof preset.productId === 'string' ? preset : null;
   const transferable = transferProducts();
   if (!transferable.length || warehouses.filter((warehouse) => warehouse.active).length < 2) {
     showToast('Necesitas existencias disponibles y al menos dos bodegas activas.');
@@ -4655,10 +4787,20 @@ function openTransferDialog() {
     'Selecciona un producto',
     transferable,
     (product) => `${product.name} · ${product.sku}`,
+    prepared?.productId,
   );
   syncTransferWarehouses();
+  if (prepared) {
+    elements.transferSourceWarehouseId.value = prepared.sourceWarehouseId;
+    updateTransferAvailability();
+    elements.transferDestinationWarehouseId.value = prepared.destinationWarehouseId;
+    elements.transferForm.elements.quantity.value = prepared.quantity;
+    elements.transferForm.elements.reason.value = prepared.reason;
+  }
   elements.transferDialog.showModal();
-  elements.transferProductId.focus();
+  (prepared
+    ? elements.transferForm.elements.quantity
+    : elements.transferProductId).focus();
 }
 
 function closeTransferDialog() {
@@ -4689,6 +4831,71 @@ async function submitTransfer(event) {
   } finally {
     elements.saveTransferButton.disabled = false;
     elements.saveTransferButton.textContent = 'Confirmar traslado';
+  }
+}
+
+function openReplenishmentDialog(item) {
+  elements.replenishmentForm.reset();
+  elements.replenishmentFormError.hidden = true;
+  elements.replenishmentProductId.value = item.product_id;
+  elements.replenishmentProductName.textContent = item.product_name;
+  elements.replenishmentProductSku.textContent = item.sku;
+  const branchWarehouses = warehouses.filter((warehouse) =>
+    warehouse.active && warehouse.branch_id === item.branch_id);
+  fillInventorySelect(
+    elements.replenishmentSourceWarehouseId,
+    'Selecciona la bodega',
+    branchWarehouses.filter((warehouse) => warehouse.warehouse_type === 'AVAILABLE'),
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+    item.source_warehouse_id,
+  );
+  fillInventorySelect(
+    elements.replenishmentDisplayWarehouseId,
+    'Selecciona la exhibición',
+    branchWarehouses.filter((warehouse) => warehouse.warehouse_type === 'DISPLAY'),
+    (warehouse) => `${warehouse.name} · ${warehouse.code}`,
+    item.display_warehouse_id,
+  );
+  elements.replenishmentMinimumQuantity.value = Number(item.minimum_quantity);
+  elements.replenishmentMaximumQuantity.value = Number(item.maximum_quantity);
+  elements.replenishmentDialog.showModal();
+  elements.replenishmentMinimumQuantity.focus();
+}
+
+function closeReplenishmentDialog() {
+  elements.replenishmentDialog.close();
+}
+
+async function submitReplenishmentRule(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.replenishmentForm);
+  const productId = formData.get('productId');
+  elements.replenishmentFormError.hidden = true;
+  elements.saveReplenishmentButton.disabled = true;
+  elements.saveReplenishmentButton.textContent = 'Guardando…';
+  try {
+    await getJson(`/api/inventory/replenishments/${productId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        sourceWarehouseId: formData.get('sourceWarehouseId'),
+        displayWarehouseId: formData.get('displayWarehouseId'),
+        minimumQuantity: Number(formData.get('minimumQuantity')),
+        maximumQuantity: Number(formData.get('maximumQuantity')),
+      }),
+    });
+    closeReplenishmentDialog();
+    await loadInventory();
+    showToast('Niveles de exhibición actualizados.');
+  } catch (error) {
+    elements.replenishmentFormError.textContent = error.message;
+    elements.replenishmentFormError.hidden = false;
+  } finally {
+    elements.saveReplenishmentButton.disabled = false;
+    elements.saveReplenishmentButton.textContent = 'Guardar niveles';
   }
 }
 
@@ -6884,7 +7091,7 @@ elements.adjustmentForm.addEventListener('submit', submitAdjustment);
 elements.adjustmentDialog.addEventListener('click', (event) => {
   if (event.target === elements.adjustmentDialog) closeAdjustmentDialog();
 });
-elements.newTransferButton.addEventListener('click', openTransferDialog);
+elements.newTransferButton.addEventListener('click', () => openTransferDialog());
 elements.closeTransferDialog.addEventListener('click', closeTransferDialog);
 elements.cancelTransferButton.addEventListener('click', closeTransferDialog);
 elements.transferForm.addEventListener('submit', submitTransfer);
@@ -6892,6 +7099,12 @@ elements.transferProductId.addEventListener('change', syncTransferWarehouses);
 elements.transferSourceWarehouseId.addEventListener('change', updateTransferAvailability);
 elements.transferDialog.addEventListener('click', (event) => {
   if (event.target === elements.transferDialog) closeTransferDialog();
+});
+elements.closeReplenishmentDialog.addEventListener('click', closeReplenishmentDialog);
+elements.cancelReplenishmentButton.addEventListener('click', closeReplenishmentDialog);
+elements.replenishmentForm.addEventListener('submit', submitReplenishmentRule);
+elements.replenishmentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.replenishmentDialog) closeReplenishmentDialog();
 });
 elements.reloadPurchasesButton.addEventListener('click', () => {
   loadPurchases()
