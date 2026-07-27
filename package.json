@@ -13,6 +13,7 @@
     "services:wait": "node scripts/wait-for-services.js",
     "setup:local": "npm run services:up && npm run services:wait && npm run migrate",
     "test": "node --test",
+    "test:integration": "node --test test/multi-company.integration.test.js",
     "check": "node --check src/server.js && node --check src/app.js && node --check src/migrate.js && node --test"
   },
   "dependencies": {

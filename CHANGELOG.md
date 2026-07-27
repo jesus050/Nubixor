@@ -31,6 +31,20 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Base relacional de Caja & POS multiempresa con autorización explícita de
+  empresas por caja física, membresía activa del cajero y saldos separados por
+  empresa durante el turno.
+- Identidad legal de productos mediante empresa propietaria, empresa vendedora,
+  bodega predeterminada y categoría tributaria, con claves foráneas que impiden
+  cruzar inventarios o impuestos entre empresas.
+- Modelo de carritos, líneas inmutables, ventas por empresa, pagos globales o
+  separados, asignaciones exactas y obligaciones interempresa.
+- Perfiles tributarios configurables, cuentas de facturación con credenciales
+  cifradas, resoluciones y documentos electrónicos aislados por empresa; no se
+  infieren obligaciones legales automáticamente.
+- Pruebas unitarias e integración con PostgreSQL real para agrupación por
+  vendedor, manipulación de identidad, autorización de caja, documentos,
+  inventarios y pagos multiempresa.
 - Centro de Reportes con análisis independientes de ventas y margen, inventario
   valorizado, compras y recepciones, cartera por edades y proveedores por
   edades.

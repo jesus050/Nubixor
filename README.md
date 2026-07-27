@@ -54,6 +54,18 @@ curl -i http://localhost:4100/api/health/ready
 npm test
 ```
 
+La prueba del modelo de caja multiempresa usa PostgreSQL real. Con los
+servicios y migraciones activos:
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/megasuite \
+  npm run test:integration
+```
+
+La prueba trabaja dentro de una transacción y ejecuta `ROLLBACK`; no conserva
+empresas, productos, ventas ni pagos de prueba. Si `DATABASE_URL` no está
+definida, `npm test` omite únicamente esta prueba de integración.
+
 - `/` abre el centro de operaciones local conectado a la API.
 - `/#cartera` abre el módulo de clientes, facturas por cobrar, vencimientos y
   aplicación de abonos.
@@ -141,6 +153,10 @@ La interfaz incluye:
   Cuentas por cobrar;
 - historial de ventas del turno con consulta de detalle y reimpresión del
   comprobante desde Caja;
+- fundamento relacional de caja multiempresa: empresas autorizadas por caja,
+  identidad propietaria/vendedora del producto, carrito agrupable por vendedor,
+  saldos por empresa, asignaciones de pago, obligaciones interempresa,
+  resoluciones y documentos tributarios separados;
 - comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
@@ -189,6 +205,7 @@ docker compose start postgres
 | `npm run services:down` | Detiene los contenedores sin borrar volúmenes |
 | `npm run setup:local` | Prepara servicios y migraciones |
 | `npm test` | Ejecuta las pruebas automáticas |
+| `npm run test:integration` | Prueba el aislamiento multiempresa sobre PostgreSQL real |
 | `npm run check` | Valida sintaxis y ejecuta pruebas |
 
 ## Docker completo
@@ -241,6 +258,20 @@ x-csrf-token: requerido para operaciones de escritura
 La bodega representa una ubicación física. El tratamiento tributario pertenece
 al producto y a la fotografía histórica de cada operación; no existen bodegas
 “con IVA” o “sin IVA”.
+
+## Caja multiempresa
+
+Las migraciones `021`, `022` y `023` incorporan la base segura del POS multiempresa
+sin cambiar todavía la experiencia visual de cobro. `tenants` sigue siendo la
+tabla física de empresas para conservar la API existente; la vista `companies`
+y los nuevos campos `company_id`, `owner_company_id` y `seller_company_id`
+expresan su función legal.
+
+El POS actual continúa procesando ventas de una sola empresa. El carrito visual
+multiempresa, el cobro agrupado y la emisión electrónica se implementarán sobre
+esta base en las subfases siguientes. Consulte
+[`docs/multi-company-pos.md`](docs/multi-company-pos.md) antes de integrar
+facturación o modificar las reglas de inventario.
 
 ## Documentación de integración
 
