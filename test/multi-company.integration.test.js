@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import { applyInventoryBalanceDelta } from '../src/modules/inventory.js';
 
 const connectionString =
   process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
@@ -181,6 +182,21 @@ test(
           ids.warehouseB,
         ],
       );
+      const initialBalance = await applyInventoryBalanceDelta(client, {
+        tenantId: ids.companyA,
+        productId: ids.productA,
+        warehouseId: ids.warehouseA,
+        quantity: 20,
+      });
+      assert.equal(Number(initialBalance.rows[0].on_hand), 20);
+
+      const correctedBalance = await applyInventoryBalanceDelta(client, {
+        tenantId: ids.companyA,
+        productId: ids.productA,
+        warehouseId: ids.warehouseA,
+        quantity: -5,
+      });
+      assert.equal(Number(correctedBalance.rows[0].on_hand), 15);
       await client.query(
         `INSERT INTO cash_registers(
            id, tenant_id, branch_id, name, code

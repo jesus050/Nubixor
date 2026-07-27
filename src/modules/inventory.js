@@ -60,6 +60,26 @@ async function lockInventoryReferences(client, tenantId, productId, warehouseIds
   }
 }
 
+export async function applyInventoryBalanceDelta(
+  client,
+  { tenantId, productId, warehouseId, quantity },
+) {
+  return client.query(
+    `INSERT INTO inventory_balances(
+       tenant_id, product_id, warehouse_id, on_hand
+     )
+     VALUES($1::uuid,$2::uuid,$3::uuid,$4::numeric)
+     ON CONFLICT(tenant_id, product_id, warehouse_id)
+     DO UPDATE SET
+       on_hand = inventory_balances.on_hand + EXCLUDED.on_hand,
+       updated_at = now()
+     WHERE inventory_balances.on_hand + EXCLUDED.on_hand
+       >= inventory_balances.reserved
+     RETURNING *`,
+    [tenantId, productId, warehouseId, quantity],
+  );
+}
+
 router.get('/summary', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT
@@ -210,18 +230,12 @@ router.post('/adjustments', asyncHandler(async (req, res) => {
         'NEGATIVE_AVAILABLE_STOCK',
       );
     }
-    const balance = await client.query(
-      `INSERT INTO inventory_balances(tenant_id, product_id, warehouse_id, on_hand)
-       SELECT $1, $2, $3, $4
-       WHERE $4 >= 0
-       ON CONFLICT(tenant_id, product_id, warehouse_id)
-       DO UPDATE SET
-         on_hand = inventory_balances.on_hand + EXCLUDED.on_hand,
-         updated_at = now()
-       WHERE inventory_balances.on_hand + EXCLUDED.on_hand >= inventory_balances.reserved
-       RETURNING *`,
-      [req.context.tenantId, productId, warehouseId, normalizedQuantity],
-    );
+    const balance = await applyInventoryBalanceDelta(client, {
+      tenantId: req.context.tenantId,
+      productId,
+      warehouseId,
+      quantity: normalizedQuantity,
+    });
     if (!balance.rowCount) {
       throw new AppError(
         'El ajuste dejaría existencias disponibles negativas.',

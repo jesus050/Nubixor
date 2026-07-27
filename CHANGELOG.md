@@ -57,6 +57,9 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Corregido
 
+- Los ajustes de inventario iniciales aceptan cantidades numéricas en
+  PostgreSQL sin conflicto de tipos y las salidas manuales descuentan
+  correctamente de un saldo existente.
 - Se evita que Safari muestre simultáneamente la pantalla de acceso y el menú
   interno cuando un elemento marcado como oculto también tiene estilos de
   visualización propios.
