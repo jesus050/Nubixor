@@ -692,6 +692,8 @@ function accountInitials(name) {
 
 function applyAccessVisibility() {
   const membership = activeMembership();
+  const cashierMode = membership?.roleCode === 'CASHIER';
+  elements.appShell.classList.toggle('cashier-mode', cashierMode);
   const viewPermissions = {
     inicio: ['dashboard.view'],
     empresas: [],
@@ -711,8 +713,7 @@ function applyAccessVisibility() {
   };
   document.querySelectorAll('[data-view-link]').forEach((link) => {
     const required = viewPermissions[link.dataset.viewLink] || [];
-    const cashierRestricted =
-      membership?.roleCode === 'CASHIER' && link.dataset.viewLink !== 'caja';
+    const cashierRestricted = cashierMode && link.dataset.viewLink !== 'caja';
     const branchAuditRestricted =
       link.dataset.viewLink === 'auditoria' && Boolean(membership?.branchId);
     link.hidden = cashierRestricted || branchAuditRestricted ||
@@ -1893,6 +1894,9 @@ function renderCart() {
   elements.cartTotal.textContent = formatCurrency(totals.total);
   elements.completeSaleButton.disabled =
     !posSummary.openSession || !elements.posWarehouseSelect.value || saleCart.size === 0;
+  elements.completeSaleButton.textContent = totals.itemCount
+    ? `Cobrar ${formatCurrency(totals.total)} →`
+    : 'Selecciona productos →';
   elements.posSaleError.hidden = true;
 }
 
@@ -6083,7 +6087,6 @@ async function completeSale() {
     elements.posSaleError.textContent = error.message;
     elements.posSaleError.hidden = false;
   } finally {
-    elements.completeSaleButton.textContent = 'Cobrar y descontar inventario →';
     renderCart();
   }
 }

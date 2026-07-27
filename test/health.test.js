@@ -27,7 +27,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Agregar al catálogo/);
   assert.match(response.text, /Adjuntar fotografía/);
   assert.match(response.text, /Abrir turno de caja/);
-  assert.match(response.text, /Cobrar y descontar inventario/);
+  assert.match(response.text, /Selecciona productos/);
+  assert.match(response.text, /Control e historial de caja/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);

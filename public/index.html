@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-15">
-    <script src="./app.js?v=20260726-15" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-16">
+    <script src="./app.js?v=20260726-16" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -1129,8 +1129,8 @@
           <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
-                <p class="eyebrow">Operación de venta</p>
-                <h2 id="posTitle">Caja &amp; POS</h2>
+                <p class="eyebrow">Terminal de venta</p>
+                <h2 id="posTitle">Caja</h2>
               </div>
               <span class="pos-state" id="cashStatus">Consultando caja</span>
             </div>
@@ -1178,31 +1178,14 @@
                 </div>
               </article>
 
-              <article class="pos-roadmap">
-                <p class="eyebrow">Flujo organizado</p>
-                <h3>Ruta segura hacia la primera venta</h3>
-                <ol class="pos-steps">
-                  <li class="complete">
-                    <span>01</span>
-                    <div><strong>Catálogo</strong><small>Productos, precios, imágenes e impuestos.</small></div>
-                  </li>
-                  <li class="complete">
-                    <span>02</span>
-                    <div><strong>Turno de caja</strong><small>Apertura, fondo inicial y cierre.</small></div>
-                  </li>
-                  <li class="complete">
-                    <span>03</span>
-                    <div><strong>Carrito y cobro</strong><small>Productos, cantidades y medio de pago.</small></div>
-                  </li>
-                  <li class="complete">
-                    <span>04</span>
-                    <div><strong>Salida de inventario</strong><small>Movimiento automático al confirmar.</small></div>
-                  </li>
-                </ol>
-              </article>
             </div>
 
-            <div class="cash-control-center">
+            <details class="cash-control-center">
+              <summary>
+                <span><strong>Control e historial de caja</strong><small>Movimientos, efectivo esperado y turnos anteriores</small></span>
+                <span class="cash-control-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div class="cash-control-content">
               <div class="cash-control-heading">
                 <div>
                   <p class="eyebrow">Control de efectivo</p>
@@ -1240,13 +1223,14 @@
                   </div>
                 </article>
               </div>
-            </div>
+              </div>
+            </details>
 
             <div class="pos-workstation" id="posSalePanel">
               <div class="pos-workstation-heading">
                 <div>
-                  <p class="eyebrow">Venta rápida</p>
-                  <h3>Registrar una venta</h3>
+                  <p class="eyebrow">Punto de venta</p>
+                  <h3>Nueva venta</h3>
                 </div>
                 <div class="pos-filters">
                   <label>
@@ -1301,7 +1285,7 @@
                   </label>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
-                    Cobrar y descontar inventario <span aria-hidden="true">→</span>
+                    Selecciona productos <span aria-hidden="true">→</span>
                   </button>
                 </aside>
               </div>

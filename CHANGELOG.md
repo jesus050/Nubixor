@@ -4,6 +4,14 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ## [Unreleased]
 
+### Cambiado
+
+- Caja & POS funciona como una terminal de venta: catálogo y carrito aparecen
+  primero, el turno se resume en una franja compacta y el control de efectivo
+  permanece plegado hasta que el usuario lo necesita.
+- La sesión del Cajero oculta completamente la navegación administrativa para
+  aprovechar toda la pantalla, y el botón de cobro muestra el total de la venta.
+
 ### Añadido
 
 - Centro de Reportes con análisis independientes de ventas y margen, inventario
