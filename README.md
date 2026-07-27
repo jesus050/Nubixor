@@ -274,10 +274,11 @@ numeración cuando encuentra una resolución vigente. La transmisión y la
 aceptación real por la DIAN requieren una cuenta de proveedor tecnológico,
 credenciales cifradas y resolución reales.
 
-La migración `024` deja dos escenarios locales:
+Las migraciones `024` y `025` dejan dos escenarios locales:
 
 - `MegaSuite Demo`: factura electrónica preparada, pendiente de conexión real.
-- `Crative`: comprobante interno, caja principal y dos productos vendibles.
+- `Crative`: comprobante interno, no cobra IVA, caja principal y dos productos
+  vendibles configurados al 0%.
 
 Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
 bodega, caja y los impuestos iniciales. Consulte

@@ -76,10 +76,34 @@ test(
            '021_multi_company_pos_foundation.sql',
            '022_checkout_membership_guards.sql',
            '023_checkout_payment_scope_guards.sql',
-           '024_local_two_company_demo.sql'
+           '024_local_two_company_demo.sql',
+           '025_crative_internal_receipt_no_vat.sql'
          )`,
       );
-      assert.equal(migrations.rowCount, 4);
+      assert.equal(migrations.rowCount, 5);
+
+      const crativeFiscalSetup = await client.query(
+        `SELECT ctp.electronic_invoicing_required,
+                ctp.default_document_type,
+                ctp.vat_responsibility,
+                COUNT(*) FILTER (
+                  WHERE p.active = TRUE
+                    AND p.tax_review_status = 'REVIEWED'
+                    AND tc.code = 'NOIVA'
+                    AND tc.rate = 0
+                )::integer AS products_without_vat
+         FROM company_tax_profiles ctp
+         LEFT JOIN products p ON p.tenant_id = ctp.company_id
+         LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
+         WHERE ctp.company_id = '21935393-1ae3-48f2-9467-13fa37620fe2'
+         GROUP BY ctp.electronic_invoicing_required,
+                  ctp.default_document_type,
+                  ctp.vat_responsibility`,
+      );
+      assert.equal(crativeFiscalSetup.rows[0].electronic_invoicing_required, false);
+      assert.equal(crativeFiscalSetup.rows[0].default_document_type, 'INTERNAL_RECEIPT');
+      assert.equal(crativeFiscalSetup.rows[0].vat_responsibility, 'NOT_RESPONSIBLE_FOR_VAT');
+      assert.equal(crativeFiscalSetup.rows[0].products_without_vat, 2);
 
       await client.query(
         `INSERT INTO users(id, email, full_name, status)
