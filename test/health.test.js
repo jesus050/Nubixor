@@ -37,6 +37,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Consumidor final/);
   assert.match(response.text, /data-sale-terms="CREDIT"/);
   assert.match(response.text, /La cuenta por cobrar se creará/);
+  assert.match(response.text, /Ventas del turno/);
+  assert.match(response.text, /id="posSalesHistoryList"/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
@@ -250,6 +252,12 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     })
     .expect(422);
   assert.match(invalidCreditSale.body.error, /requiere un cliente/i);
+
+  const invalidSaleDetail = await request(app)
+    .get('/api/pos/sales/invalid')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidSaleDetail.body.error, /UUID válido/i);
 });
 
 test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {

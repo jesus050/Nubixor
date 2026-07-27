@@ -270,10 +270,16 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
       [req.params.id, req.context.tenantId],
     ),
     query(
-      `SELECT id, sequence_number, payment_method, total, created_at
-       FROM sales
-       WHERE cash_session_id = $1 AND tenant_id = $2
-       ORDER BY created_at DESC`,
+      `SELECT s.id, s.sequence_number, s.payment_method, s.sale_terms,
+              s.total, s.status, s.created_at,
+              COALESCE(c.name, 'Consumidor final') customer_name,
+              COUNT(si.id)::integer item_count
+       FROM sales s
+       LEFT JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
+       LEFT JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
+       WHERE s.cash_session_id = $1 AND s.tenant_id = $2
+       GROUP BY s.id, c.name
+       ORDER BY s.created_at DESC`,
       [req.params.id, req.context.tenantId],
     ),
     query(
@@ -588,6 +594,58 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
     return result.rows[0];
   });
   res.json(session);
+}));
+
+router.get('/sales/:id', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    return res.status(422).json({ error: 'La venta debe tener un UUID válido.' });
+  }
+  const [saleResult, itemsResult] = await Promise.all([
+    query(
+      `SELECT s.id, s.sequence_number, s.status, s.payment_method,
+              s.subtotal, s.tax_total, s.total, s.cash_received, s.cash_change,
+              s.customer_id, s.sale_terms, s.due_date, s.created_at,
+              c.name customer_name, c.document_type, c.document_number,
+              ai.id ar_invoice_id, ai.invoice_number, ai.status receivable_status
+       FROM sales s
+       JOIN cash_sessions cs ON cs.id = s.cash_session_id
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
+       LEFT JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
+       LEFT JOIN ar_invoices ai ON ai.id = s.ar_invoice_id AND ai.tenant_id = s.tenant_id
+       WHERE s.id = $1 AND s.tenant_id = $2
+         AND ($3::uuid IS NULL OR cr.branch_id = $3)`,
+      [req.params.id, req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      `SELECT product_id, sku_snapshot sku, name_snapshot name, quantity,
+              unit_price "unitPrice", tax_rate "taxRate",
+              tax_amount "taxAmount", line_total "lineTotal"
+       FROM sale_items
+       WHERE sale_id = $1 AND tenant_id = $2
+       ORDER BY id`,
+      [req.params.id, req.context.tenantId],
+    ),
+  ]);
+  if (!saleResult.rowCount) {
+    throw new AppError('No encontramos la venta.', 404, 'SALE_NOT_FOUND');
+  }
+  const sale = saleResult.rows[0];
+  res.json({
+    ...sale,
+    receiptNumber: `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+    customer: sale.customer_id ? {
+      id: sale.customer_id,
+      name: sale.customer_name,
+      document_type: sale.document_type,
+      document_number: sale.document_number,
+    } : null,
+    receivable: sale.ar_invoice_id ? {
+      id: sale.ar_invoice_id,
+      invoice_number: sale.invoice_number,
+      status: sale.receivable_status,
+    } : null,
+    items: itemsResult.rows,
+  });
 }));
 
 router.post('/sales', asyncHandler(async (req, res) => {

@@ -26,6 +26,8 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   saldo pendiente y conserva el tercero en el comprobante.
 - Las ventas a crédito exigen cliente y vencimiento, descuentan inventario y
   crean en la misma transacción una factura conectada con Cuentas por cobrar.
+- Caja incorpora el historial del turno con cliente, productos, valor y medio
+  de pago, además de recuperación segura del comprobante para reimpresión.
 
 ### Añadido
 

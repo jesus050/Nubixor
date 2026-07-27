@@ -347,6 +347,8 @@ const elements = {
   cancelCashMovementButton: document.querySelector('#cancelCashMovementButton'),
   saveCashMovementButton: document.querySelector('#saveCashMovementButton'),
   posWarehouseSelect: document.querySelector('#posWarehouseSelect'),
+  openSalesHistoryButton: document.querySelector('#openSalesHistoryButton'),
+  posSaleHistoryCount: document.querySelector('#posSaleHistoryCount'),
   posProductSearch: document.querySelector('#posProductSearch'),
   posCategoryStrip: document.querySelector('#posCategoryStrip'),
   posProductGrid: document.querySelector('#posProductGrid'),
@@ -374,6 +376,11 @@ const elements = {
   posSaleError: document.querySelector('#posSaleError'),
   completeSaleButton: document.querySelector('#completeSaleButton'),
   posSaleLock: document.querySelector('#posSaleLock'),
+  salesHistoryDialog: document.querySelector('#salesHistoryDialog'),
+  closeSalesHistoryDialog: document.querySelector('#closeSalesHistoryDialog'),
+  finishSalesHistoryButton: document.querySelector('#finishSalesHistoryButton'),
+  posSalesHistoryList: document.querySelector('#posSalesHistoryList'),
+  posSalesHistoryEmpty: document.querySelector('#posSalesHistoryEmpty'),
   receiptDialog: document.querySelector('#receiptDialog'),
   receiptNumber: document.querySelector('#receiptNumber'),
   receiptLines: document.querySelector('#receiptLines'),
@@ -1726,6 +1733,73 @@ function renderCashControl() {
   }
 }
 
+function renderPosSalesHistory() {
+  const sales = posSummary.currentDetail?.sales || [];
+  elements.posSaleHistoryCount.textContent = String(sales.length);
+  elements.openSalesHistoryButton.disabled = !posSummary.openSession;
+  elements.posSalesHistoryList.replaceChildren();
+  elements.posSalesHistoryEmpty.hidden = sales.length > 0;
+
+  for (const sale of sales) {
+    const row = document.createElement('article');
+    row.className = 'pos-sale-history-row';
+    const identity = document.createElement('div');
+    identity.className = 'pos-sale-history-identity';
+    const number = document.createElement('strong');
+    number.textContent = `POS-${String(sale.sequence_number).padStart(6, '0')}`;
+    const customer = document.createElement('span');
+    customer.textContent = sale.customer_name;
+    const detail = document.createElement('small');
+    const time = new Intl.DateTimeFormat('es-CO', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(sale.created_at));
+    detail.textContent =
+      `${time} · ${sale.item_count} ${sale.item_count === 1 ? 'producto' : 'productos'} · ` +
+      `${paymentMethodLabels[sale.payment_method] || sale.payment_method}`;
+    identity.append(number, customer, detail);
+
+    const result = document.createElement('div');
+    result.className = 'pos-sale-history-result';
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(sale.total);
+    const viewButton = document.createElement('button');
+    viewButton.type = 'button';
+    viewButton.textContent = 'Ver comprobante';
+    viewButton.addEventListener('click', () => openHistoricalReceipt(sale.id, viewButton));
+    result.append(amount, viewButton);
+    row.append(identity, result);
+    elements.posSalesHistoryList.append(row);
+  }
+}
+
+function openSalesHistoryDialog() {
+  renderPosSalesHistory();
+  elements.salesHistoryDialog.showModal();
+}
+
+function closeSalesHistoryDialog() {
+  elements.salesHistoryDialog.close();
+}
+
+async function openHistoricalReceipt(saleId, button) {
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Consultando…';
+  try {
+    const receipt = await getJson(`/api/pos/sales/${saleId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    closeSalesHistoryDialog();
+    showReceipt(receipt);
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
 function showPosError(message) {
   posSummary = { registers: [], openSession: null, sessions: [], currentDetail: null };
   posCustomers = [];
@@ -1742,6 +1816,7 @@ function showPosError(message) {
   elements.closeCashButton.hidden = true;
   elements.newCashMovementButton.hidden = true;
   renderCashControl();
+  renderPosSalesHistory();
   syncCashRegisterOptions();
   syncPosCustomers();
 }
@@ -1784,6 +1859,7 @@ async function loadPos() {
     posCustomers = customers;
     syncPosCustomers();
     renderPos();
+    renderPosSalesHistory();
     return posSummary;
   } catch (error) {
     showPosError(error.message);
@@ -6579,6 +6655,12 @@ elements.cancelCashMovementButton.addEventListener('click', closeCashMovementDia
 elements.cashMovementForm.addEventListener('submit', submitCashMovement);
 elements.cashMovementDialog.addEventListener('click', (event) => {
   if (event.target === elements.cashMovementDialog) closeCashMovementDialog();
+});
+elements.openSalesHistoryButton.addEventListener('click', openSalesHistoryDialog);
+elements.closeSalesHistoryDialog.addEventListener('click', closeSalesHistoryDialog);
+elements.finishSalesHistoryButton.addEventListener('click', closeSalesHistoryDialog);
+elements.salesHistoryDialog.addEventListener('click', (event) => {
+  if (event.target === elements.salesHistoryDialog) closeSalesHistoryDialog();
 });
 elements.posWarehouseSelect.addEventListener('change', async () => {
   saleCart.clear();

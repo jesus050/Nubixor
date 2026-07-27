@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-20">
-    <script src="./app.js?v=20260726-20" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-21">
+    <script src="./app.js?v=20260726-21" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -1238,6 +1238,11 @@
                   <h3>Nueva venta</h3>
                 </div>
                 <div class="pos-filters">
+                  <button class="pos-history-button" id="openSalesHistoryButton" type="button">
+                    <span aria-hidden="true">↺</span>
+                    Ventas del turno
+                    <b id="posSaleHistoryCount">0</b>
+                  </button>
                   <label class="field-search pos-search">
                     <span aria-hidden="true">⌕</span>
                     <span class="sr-only">Buscar producto para vender</span>
@@ -3326,6 +3331,29 @@
           <button class="primary-button compact" id="saveCashMovementButton" type="submit">Registrar movimiento</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="company-dialog sales-history-dialog" id="salesHistoryDialog" aria-labelledby="salesHistoryDialogTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Turno actual</p>
+            <h2 id="salesHistoryDialogTitle">Ventas realizadas</h2>
+          </div>
+          <button class="icon-button" id="closeSalesHistoryDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Consulta el detalle de cada venta y vuelve a imprimir su comprobante.
+        </p>
+        <div class="pos-sales-history" id="posSalesHistoryList"></div>
+        <div class="data-state" id="posSalesHistoryEmpty">
+          <strong>Aún no hay ventas en este turno</strong>
+          <p>Las ventas confirmadas aparecerán aquí.</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="finishSalesHistoryButton" type="button">Volver a la venta</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog class="company-dialog receipt-dialog" id="receiptDialog" aria-labelledby="receiptDialogTitle">

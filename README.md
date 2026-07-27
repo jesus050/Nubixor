@@ -139,6 +139,8 @@ La interfaz incluye:
   como opción predeterminada;
 - ventas a crédito con vencimiento y generación transaccional de la factura en
   Cuentas por cobrar;
+- historial de ventas del turno con consulta de detalle y reimpresión del
+  comprobante desde Caja;
 - comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
