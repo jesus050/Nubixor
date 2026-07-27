@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-21">
-    <script src="./app.js?v=20260726-21" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-22">
+    <script src="./app.js?v=20260727-22" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -766,6 +766,9 @@
                 <button class="secondary-button" id="newBrandButton" type="button">
                   Registrar marca
                 </button>
+                <button class="secondary-button" id="newTaxButton" type="button">
+                  Configurar impuesto
+                </button>
                 <button class="primary-button compact" id="newProductButton" type="button">
                   Agregar producto <span aria-hidden="true">＋</span>
                 </button>
@@ -814,6 +817,9 @@
               </button>
               <button type="button" role="tab" data-catalog-tab="brands" aria-selected="false">
                 Marcas
+              </button>
+              <button type="button" role="tab" data-catalog-tab="taxes" aria-selected="false">
+                Impuestos
               </button>
             </div>
 
@@ -877,6 +883,20 @@
                 </button>
               </div>
               <div class="taxonomy-grid" id="brandList"></div>
+            </div>
+
+            <div class="taxonomy-panel catalog-panel" data-catalog-panel="taxes" hidden>
+              <div class="taxonomy-heading">
+                <div>
+                  <p class="eyebrow">Configuración tributaria</p>
+                  <h3>Impuestos de venta</h3>
+                  <p class="taxonomy-help">Cada empresa administra sus propias tarifas. Valida el tratamiento aplicable con tu contador.</p>
+                </div>
+                <button class="primary-button compact" id="taxPanelCreateButton" type="button">
+                  Crear nuevo impuesto <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+              <div class="taxonomy-grid" id="taxList"></div>
             </div>
           </section>
 
@@ -3107,6 +3127,88 @@
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelBrandButton" type="button">Volver sin guardar</button>
           <button class="primary-button compact" id="saveBrandButton" type="submit">Registrar marca</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="taxDialog" aria-labelledby="taxDialogTitle">
+      <form class="company-form" id="taxForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Configuración tributaria</p>
+            <h2 id="taxDialogTitle">Crear impuesto de venta</h2>
+          </div>
+          <button class="icon-button" id="closeTaxDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <p class="dialog-copy">
+          Registra una tarifa para la empresa activa. Esta configuración debe coincidir con sus obligaciones tributarias.
+        </p>
+
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Nombre <b>*</b></span>
+            <input name="name" type="text" maxlength="160" required placeholder="Ej. IVA 19%">
+          </label>
+          <label class="form-field">
+            <span>Código interno <b>*</b></span>
+            <input name="code" type="text" maxlength="30" required placeholder="Ej. IVA19">
+          </label>
+          <label class="form-field">
+            <span>Tratamiento <b>*</b></span>
+            <select id="taxTreatment" name="treatment" required>
+              <option value="TAXED">Gravado</option>
+              <option value="EXEMPT">Exento</option>
+              <option value="EXCLUDED">Excluido</option>
+              <option value="NON_TAXED">No gravado</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Tarifa (%) <b>*</b></span>
+            <input id="taxRate" name="rate" type="number" min="0" max="100" step="0.0001" value="19" required>
+          </label>
+          <label class="form-field">
+            <span>Código DIAN</span>
+            <input name="dianCode" type="text" maxlength="30" placeholder="Ej. 01">
+          </label>
+        </div>
+
+        <p class="form-error" id="taxFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelTaxButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveTaxButton" type="submit">Crear impuesto</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="productTaxDialog" aria-labelledby="productTaxDialogTitle">
+      <form class="company-form" id="productTaxForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Tratamiento del producto</p>
+            <h2 id="productTaxDialogTitle">Asignar impuesto</h2>
+          </div>
+          <button class="icon-button" id="closeProductTaxDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <p class="dialog-copy">
+          Producto: <strong id="taxProductName">—</strong>. El cambio quedará registrado en la auditoría.
+        </p>
+
+        <label class="form-field">
+          <span>Impuesto de venta <b>*</b></span>
+          <select id="assignedProductTaxId" name="taxCategoryId" required></select>
+        </label>
+        <label class="form-field">
+          <span>Motivo del cambio <b>*</b></span>
+          <textarea name="reason" maxlength="240" required placeholder="Ej. Clasificación tributaria validada para venta"></textarea>
+        </label>
+
+        <p class="form-error" id="productTaxFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelProductTaxButton" type="button">Volver sin guardar</button>
+          <button class="primary-button compact" id="saveProductTaxButton" type="submit">Guardar tratamiento</button>
         </div>
       </form>
     </dialog>

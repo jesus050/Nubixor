@@ -17,7 +17,7 @@ export const permissionCatalog = [
   { code: 'companies.manage', group: 'Administración', name: 'Gestionar empresas', description: 'Crea y actualiza empresas.' },
   { code: 'branches.manage', group: 'Administración', name: 'Gestionar sucursales', description: 'Administra sedes y sucursales.' },
   { code: 'warehouses.manage', group: 'Administración', name: 'Gestionar bodegas', description: 'Administra ubicaciones de inventario.' },
-  { code: 'catalog.manage', group: 'Inventario', name: 'Gestionar catálogo', description: 'Crea productos, categorías, marcas e imágenes.' },
+  { code: 'catalog.manage', group: 'Inventario', name: 'Gestionar catálogo', description: 'Crea productos, categorías, marcas, impuestos e imágenes.' },
   { code: 'inventory.view', group: 'Inventario', name: 'Consultar inventario', description: 'Consulta saldos y movimientos.' },
   { code: 'inventory.adjust', group: 'Inventario', name: 'Ajustar inventario', description: 'Realiza ajustes, transferencias y conteos.' },
   { code: 'purchases.manage', group: 'Abastecimiento', name: 'Gestionar compras', description: 'Crea órdenes y recibe mercancía.' },

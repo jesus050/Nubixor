@@ -203,14 +203,17 @@ const elements = {
   reloadProductsButton: document.querySelector('#reloadProductsButton'),
   newCategoryButton: document.querySelector('#newCategoryButton'),
   newBrandButton: document.querySelector('#newBrandButton'),
+  newTaxButton: document.querySelector('#newTaxButton'),
   newProductButton: document.querySelector('#newProductButton'),
   categoryCount: document.querySelector('#categoryCount'),
   brandCount: document.querySelector('#brandCount'),
   taxCount: document.querySelector('#taxCount'),
   categoryList: document.querySelector('#categoryList'),
   brandList: document.querySelector('#brandList'),
+  taxList: document.querySelector('#taxList'),
   categoryPanelCreateButton: document.querySelector('#categoryPanelCreateButton'),
   brandPanelCreateButton: document.querySelector('#brandPanelCreateButton'),
+  taxPanelCreateButton: document.querySelector('#taxPanelCreateButton'),
   categoryDialog: document.querySelector('#categoryDialog'),
   categoryForm: document.querySelector('#categoryForm'),
   categoryFormError: document.querySelector('#categoryFormError'),
@@ -223,6 +226,22 @@ const elements = {
   closeBrandDialog: document.querySelector('#closeBrandDialog'),
   cancelBrandButton: document.querySelector('#cancelBrandButton'),
   saveBrandButton: document.querySelector('#saveBrandButton'),
+  taxDialog: document.querySelector('#taxDialog'),
+  taxForm: document.querySelector('#taxForm'),
+  taxFormError: document.querySelector('#taxFormError'),
+  taxTreatment: document.querySelector('#taxTreatment'),
+  taxRate: document.querySelector('#taxRate'),
+  closeTaxDialog: document.querySelector('#closeTaxDialog'),
+  cancelTaxButton: document.querySelector('#cancelTaxButton'),
+  saveTaxButton: document.querySelector('#saveTaxButton'),
+  productTaxDialog: document.querySelector('#productTaxDialog'),
+  productTaxForm: document.querySelector('#productTaxForm'),
+  productTaxFormError: document.querySelector('#productTaxFormError'),
+  assignedProductTaxId: document.querySelector('#assignedProductTaxId'),
+  taxProductName: document.querySelector('#taxProductName'),
+  closeProductTaxDialog: document.querySelector('#closeProductTaxDialog'),
+  cancelProductTaxButton: document.querySelector('#cancelProductTaxButton'),
+  saveProductTaxButton: document.querySelector('#saveProductTaxButton'),
   productDialog: document.querySelector('#productDialog'),
   productForm: document.querySelector('#productForm'),
   productFormError: document.querySelector('#productFormError'),
@@ -670,6 +689,7 @@ const saleCart = new Map();
 let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
+let taxProduct = null;
 let imagePreviewUrl = null;
 let activeTenantId = readTenantPreference();
 
@@ -768,9 +788,11 @@ function applyAccessVisibility() {
   elements.newCountButton.hidden = !hasAnyPermission('inventory.adjust');
   elements.newCategoryButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newBrandButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.newTaxButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newProductButton.hidden = !hasAnyPermission('catalog.manage');
   elements.categoryPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.brandPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.taxPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newPurchaseButton.hidden = !hasAnyPermission('purchases.manage');
   elements.newSupplierButton.hidden = !hasAnyPermission('purchases.manage');
   elements.supplierPanelCreateButton.hidden = !hasAnyPermission('purchases.manage');
@@ -1041,9 +1063,11 @@ function syncCompanyContext(preferredTenantId = activeTenantId) {
   elements.newBranchButton.disabled = !activeCompany;
   elements.newCategoryButton.disabled = !activeCompany;
   elements.newBrandButton.disabled = !activeCompany;
+  elements.newTaxButton.disabled = !activeCompany;
   elements.newProductButton.disabled = !activeCompany;
   elements.categoryPanelCreateButton.disabled = !activeCompany;
   elements.brandPanelCreateButton.disabled = !activeCompany;
+  elements.taxPanelCreateButton.disabled = !activeCompany;
   syncWarehouseBranchOptions();
 }
 
@@ -1445,6 +1469,14 @@ function renderProducts() {
       ? `${product.tax_name} · ${Number(product.tax_rate)}%`
       : 'Pendiente';
     taxCell.append(taxStatus);
+    if (hasAnyPermission('catalog.manage')) {
+      const taxButton = document.createElement('button');
+      taxButton.className = 'tax-action';
+      taxButton.type = 'button';
+      taxButton.textContent = product.tax_name ? 'Cambiar tratamiento' : 'Configurar impuesto';
+      taxButton.addEventListener('click', () => openProductTaxDialog(product));
+      taxCell.append(taxButton);
+    }
     row.append(taxCell);
     elements.productTableBody.append(row);
   }
@@ -1496,6 +1528,47 @@ function renderTaxonomyList(container, records, type) {
 function renderTaxonomies() {
   renderTaxonomyList(elements.categoryList, categories, 'category');
   renderTaxonomyList(elements.brandList, brands, 'brand');
+  renderTaxList();
+}
+
+function taxTreatmentLabel(treatment) {
+  return {
+    TAXED: 'Gravado',
+    EXEMPT: 'Exento',
+    EXCLUDED: 'Excluido',
+    NON_TAXED: 'No gravado',
+    OTHER: 'Otro',
+  }[treatment] || treatment;
+}
+
+function renderTaxList() {
+  elements.taxList.replaceChildren();
+  if (!taxCategories.length) {
+    const empty = document.createElement('div');
+    empty.className = 'taxonomy-empty';
+    empty.textContent = 'Todavía no hay impuestos registrados para esta empresa.';
+    elements.taxList.append(empty);
+    return;
+  }
+  for (const tax of taxCategories) {
+    const card = document.createElement('article');
+    const symbol = document.createElement('span');
+    symbol.textContent = `${Number(tax.rate)}%`;
+    const content = document.createElement('div');
+    const code = document.createElement('small');
+    code.textContent = [tax.code, tax.dian_code ? `DIAN ${tax.dian_code}` : null]
+      .filter(Boolean)
+      .join(' · ');
+    const name = document.createElement('strong');
+    name.textContent = tax.name;
+    const description = document.createElement('p');
+    description.textContent = `${taxTreatmentLabel(tax.treatment)} · Tarifa ${Number(tax.rate)}%`;
+    content.append(code, name, description);
+    const status = document.createElement('b');
+    status.textContent = tax.active ? 'Disponible' : 'Inactivo';
+    card.append(symbol, content, status);
+    elements.taxList.append(card);
+  }
 }
 
 function showCatalogPanel(panelName) {
@@ -5947,6 +6020,127 @@ async function submitBrand(event) {
   }
 }
 
+function syncTaxRateField() {
+  const isTaxed = elements.taxTreatment.value === 'TAXED';
+  elements.taxRate.disabled = !isTaxed;
+  if (!isTaxed) elements.taxRate.value = '0';
+}
+
+function openTaxDialog() {
+  if (!getActiveCompany()) {
+    showToast('Primero registra o selecciona una empresa.');
+    return;
+  }
+  elements.taxForm.reset();
+  elements.taxTreatment.value = 'TAXED';
+  elements.taxRate.value = '19';
+  syncTaxRateField();
+  elements.taxFormError.hidden = true;
+  elements.taxDialog.showModal();
+  elements.taxForm.elements.name.focus();
+}
+
+function closeTaxDialog() {
+  elements.taxDialog.close();
+}
+
+async function submitTax(event) {
+  event.preventDefault();
+  elements.taxFormError.hidden = true;
+  elements.saveTaxButton.disabled = true;
+  elements.saveTaxButton.textContent = 'Creando impuesto…';
+  const formData = new FormData(elements.taxForm);
+
+  try {
+    await getJson('/api/taxes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        code: formData.get('code'),
+        treatment: formData.get('treatment'),
+        rate: elements.taxRate.value,
+        dianCode: formData.get('dianCode') || null,
+      }),
+    });
+    closeTaxDialog();
+    await loadCatalog();
+    showCatalogPanel('taxes');
+    showToast('Impuesto creado y disponible para los productos.');
+  } catch (error) {
+    elements.taxFormError.textContent = error.message;
+    elements.taxFormError.hidden = false;
+  } finally {
+    elements.saveTaxButton.disabled = false;
+    elements.saveTaxButton.textContent = 'Crear impuesto';
+  }
+}
+
+function openProductTaxDialog(product) {
+  if (!taxCategories.length) {
+    showCatalogPanel('taxes');
+    openTaxDialog();
+    showToast('Primero crea el impuesto que vas a asignar.');
+    return;
+  }
+  taxProduct = product;
+  elements.productTaxForm.reset();
+  replaceCatalogOptions(
+    elements.assignedProductTaxId,
+    'Selecciona un impuesto',
+    taxCategories,
+    (tax) => `${tax.name} · ${Number(tax.rate)}% · ${taxTreatmentLabel(tax.treatment)}`,
+  );
+  elements.assignedProductTaxId.value = product.sales_tax_category_id || '';
+  elements.taxProductName.textContent = product.name;
+  elements.productTaxForm.elements.reason.value = product.tax_name
+    ? 'Actualización de la clasificación tributaria'
+    : 'Clasificación tributaria inicial del producto';
+  elements.productTaxFormError.hidden = true;
+  elements.productTaxDialog.showModal();
+  elements.assignedProductTaxId.focus();
+}
+
+function closeProductTaxDialog() {
+  elements.productTaxDialog.close();
+  taxProduct = null;
+}
+
+async function submitProductTax(event) {
+  event.preventDefault();
+  if (!taxProduct) return;
+  elements.productTaxFormError.hidden = true;
+  elements.saveProductTaxButton.disabled = true;
+  elements.saveProductTaxButton.textContent = 'Guardando tratamiento…';
+  const formData = new FormData(elements.productTaxForm);
+
+  try {
+    await getJson(`/api/products/${taxProduct.id}/tax`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        taxCategoryId: formData.get('taxCategoryId'),
+        reason: formData.get('reason'),
+      }),
+    });
+    closeProductTaxDialog();
+    await loadCatalog();
+    showToast('Tratamiento tributario actualizado y auditado.');
+  } catch (error) {
+    elements.productTaxFormError.textContent = error.message;
+    elements.productTaxFormError.hidden = false;
+  } finally {
+    elements.saveProductTaxButton.disabled = false;
+    elements.saveProductTaxButton.textContent = 'Guardar tratamiento';
+  }
+}
+
 function openProductDialog() {
   if (!getActiveCompany()) {
     showToast('Primero registra o selecciona una empresa.');
@@ -6614,6 +6808,21 @@ elements.cancelBrandButton.addEventListener('click', closeBrandDialog);
 elements.brandForm.addEventListener('submit', submitBrand);
 elements.brandDialog.addEventListener('click', (event) => {
   if (event.target === elements.brandDialog) closeBrandDialog();
+});
+elements.newTaxButton.addEventListener('click', openTaxDialog);
+elements.taxPanelCreateButton.addEventListener('click', openTaxDialog);
+elements.taxTreatment.addEventListener('change', syncTaxRateField);
+elements.closeTaxDialog.addEventListener('click', closeTaxDialog);
+elements.cancelTaxButton.addEventListener('click', closeTaxDialog);
+elements.taxForm.addEventListener('submit', submitTax);
+elements.taxDialog.addEventListener('click', (event) => {
+  if (event.target === elements.taxDialog) closeTaxDialog();
+});
+elements.closeProductTaxDialog.addEventListener('click', closeProductTaxDialog);
+elements.cancelProductTaxButton.addEventListener('click', closeProductTaxDialog);
+elements.productTaxForm.addEventListener('submit', submitProductTax);
+elements.productTaxDialog.addEventListener('click', (event) => {
+  if (event.target === elements.productTaxDialog) closeProductTaxDialog();
 });
 elements.newProductButton.addEventListener('click', openProductDialog);
 elements.closeProductDialog.addEventListener('click', closeProductDialog);

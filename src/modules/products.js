@@ -29,6 +29,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,
+            p.sales_tax_category_id,
             c.name category_name, b.name brand_name,
             tc.name tax_name, tc.rate tax_rate,
             pi.public_url image_url, pi.alt_text image_alt
@@ -220,8 +221,15 @@ router.post('/:id/images', asyncHandler(async (req, res) => {
 
 router.patch('/:id/tax', asyncHandler(async (req, res) => {
   const { taxCategoryId, reason } = req.body;
-  if (!taxCategoryId || !reason) {
+  const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!taxCategoryId || !normalizedReason) {
     return res.status(422).json({ error: 'taxCategoryId y reason son obligatorios.' });
+  }
+  if (!UUID_PATTERN.test(req.params.id) || !UUID_PATTERN.test(taxCategoryId)) {
+    return res.status(422).json({ error: 'El producto y el impuesto deben tener UUID válidos.' });
+  }
+  if (normalizedReason.length > 240) {
+    return res.status(422).json({ error: 'El motivo no puede superar 240 caracteres.' });
   }
   const product = await withTransaction(async (client) => {
     const current = await client.query(
@@ -262,7 +270,7 @@ router.patch('/:id/tax', asyncHandler(async (req, res) => {
         current.rows[0].sales_tax_category_id,
         taxCategoryId,
         req.context.userId,
-        reason,
+        normalizedReason,
       ],
     );
     await writeAudit(client, {
@@ -273,7 +281,7 @@ router.patch('/:id/tax', asyncHandler(async (req, res) => {
       entityId: req.params.id,
       before: current.rows[0],
       after: updated.rows[0],
-      reason,
+      reason: normalizedReason,
     });
     return updated.rows[0];
   });

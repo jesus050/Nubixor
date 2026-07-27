@@ -42,6 +42,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
+  assert.match(response.text, /Crear impuesto de venta/);
+  assert.match(response.text, /Asignar impuesto/);
   assert.match(response.text, /data-view="cartera"/);
   assert.match(response.text, /Facturas y cuentas por cobrar/);
   assert.match(response.text, /Registrar abono/);
@@ -159,12 +161,36 @@ test('el catálogo valida categorías, marcas y productos antes de consultar Pos
     .expect(422);
   assert.equal(product.body.error, 'sku y name son obligatorios.');
 
+  const tax = await request(app)
+    .post('/api/taxes')
+    .set(headers)
+    .send({ code: '', name: ' ', treatment: '' })
+    .expect(422);
+  assert.equal(tax.body.error, 'code, name y treatment son obligatorios.');
+
+  const invalidTaxRate = await request(app)
+    .post('/api/taxes')
+    .set(headers)
+    .send({ code: 'EXCL', name: 'Excluido', treatment: 'EXCLUDED', rate: 19 })
+    .expect(422);
+  assert.match(invalidTaxRate.body.error, /deben usar tarifa 0/i);
+
   const invalidPrice = await request(app)
     .post('/api/products')
     .set(headers)
     .send({ sku: 'SKU-1', name: 'Producto', salePrice: -1 })
     .expect(422);
   assert.equal(invalidPrice.body.error, 'cost y salePrice deben ser valores positivos.');
+
+  const invalidProductTax = await request(app)
+    .patch('/api/products/invalid/tax')
+    .set(headers)
+    .send({ taxCategoryId: 'invalid', reason: 'Prueba' })
+    .expect(422);
+  assert.equal(
+    invalidProductTax.body.error,
+    'El producto y el impuesto deben tener UUID válidos.',
+  );
 });
 
 test('las imágenes y la caja validan entradas antes de consultar dependencias', async () => {
