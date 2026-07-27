@@ -113,6 +113,8 @@ La interfaz incluye:
   suspendido y alcance opcional por sucursal;
 - cinco roles base protegidos, roles personalizados y permisos explícitos por
   operación;
+- rol Cajero enfocado exclusivamente en Caja & POS; las consultas técnicas de
+  productos y existencias necesarias para cobrar permanecen internas al flujo;
 - protección del último propietario y creación automática de la estructura de
   acceso para cada empresa nueva;
 - centro de auditoría con resumen de actividad, filtros por responsable,

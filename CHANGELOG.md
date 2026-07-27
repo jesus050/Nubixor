@@ -21,6 +21,8 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Se evita que Safari muestre simultáneamente la pantalla de acceso y el menú
   interno cuando un elemento marcado como oculto también tiene estilos de
   visualización propios.
+- El rol base Cajero queda limitado a Caja & POS: ya no recibe permisos de
+  dashboard o inventario ni muestra otras áreas en la navegación.
 - Centro de Auditoría independiente con resumen diario, semanal y mensual,
   responsables activos y tipos de acción.
 - Filtros combinables por texto, persona, entidad, acción y rango de fechas,

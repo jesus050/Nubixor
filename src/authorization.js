@@ -52,9 +52,9 @@ const BASE_ROLES = [
   {
     code: 'CASHIER',
     name: 'Caja',
-    description: 'Opera caja, ventas y consulta existencias.',
+    description: 'Opera exclusivamente caja, ventas y cobros del punto de venta.',
     color: 'GREEN',
-    permissions: ['dashboard.view', 'inventory.view', 'sales.operate'],
+    permissions: ['sales.operate'],
   },
   {
     code: 'AUDITOR',

@@ -711,9 +711,11 @@ function applyAccessVisibility() {
   };
   document.querySelectorAll('[data-view-link]').forEach((link) => {
     const required = viewPermissions[link.dataset.viewLink] || [];
+    const cashierRestricted =
+      membership?.roleCode === 'CASHIER' && link.dataset.viewLink !== 'caja';
     const branchAuditRestricted =
       link.dataset.viewLink === 'auditoria' && Boolean(membership?.branchId);
-    link.hidden = branchAuditRestricted ||
+    link.hidden = cashierRestricted || branchAuditRestricted ||
       (required.length > 0 && !hasAnyPermission(...required));
   });
   elements.accountRole.textContent = membership?.roleName || 'Sin acceso a empresa';
