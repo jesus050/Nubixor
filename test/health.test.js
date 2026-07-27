@@ -74,6 +74,7 @@ test('GET /styles.css sirve los estilos locales', async () => {
   const response = await request(createUnsecuredApp()).get('/styles.css').expect(200);
   assert.match(response.headers['content-type'], /^text\/css/);
   assert.match(response.text, /--color-ink/);
+  assert.match(response.text, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
 });
 
 test('la interfaz abierta como archivo puede consultar la API en local', async () => {

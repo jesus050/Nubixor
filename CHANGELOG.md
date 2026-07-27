@@ -15,6 +15,12 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   pendientes, cartera abierta y obligaciones abiertas.
 - Permiso `reports.view` para roles gerenciales, operativos y de auditoría, con
   restricción automática al alcance de sucursal.
+
+### Corregido
+
+- Se evita que Safari muestre simultáneamente la pantalla de acceso y el menú
+  interno cuando un elemento marcado como oculto también tiene estilos de
+  visualización propios.
 - Centro de Auditoría independiente con resumen diario, semanal y mensual,
   responsables activos y tipos de acción.
 - Filtros combinables por texto, persona, entidad, acción y rango de fechas,
