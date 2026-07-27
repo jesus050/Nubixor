@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-11">
-    <script src="./app.js?v=20260726-11" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-12">
+    <script src="./app.js?v=20260726-12" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -157,6 +157,9 @@
           <a class="nav-item" href="#usuarios" data-view-link="usuarios">
             <span aria-hidden="true">U</span> Usuarios &amp; accesos
           </a>
+          <a class="nav-item" href="#auditoria" data-view-link="auditoria">
+            <span aria-hidden="true">A</span> Auditoría
+          </a>
           <a class="nav-item" href="#sistema" data-view-link="sistema">
             <span aria-hidden="true">◉</span> Sistema
           </a>
@@ -222,6 +225,7 @@
           <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
           <a href="#cartera" data-view-link="cartera">Cartera</a>
           <a href="#usuarios" data-view-link="usuarios">Usuarios</a>
+          <a href="#auditoria" data-view-link="auditoria">Auditoría</a>
           <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
           <a href="#sistema" data-view-link="sistema">Sistema</a>
         </nav>
@@ -1666,7 +1670,10 @@
                 <div class="module-symbol green" aria-hidden="true">AU</div>
                 <h3>Auditoría</h3>
                 <p>Registro protegido de acciones, cambios y motivos operativos.</p>
-                <span class="module-state build">Modelo preparado</span>
+                <div class="module-footer">
+                  <span class="module-state ready">Disponible</span>
+                  <a class="module-action" href="#auditoria">Revisar trazabilidad <span>→</span></a>
+                </div>
               </article>
               <article class="module-card" data-search="usuarios acceso cuenta equipo">
                 <span class="module-number">11</span>
@@ -1736,6 +1743,128 @@
             <div class="empty-search" id="emptySearch" hidden>
               <strong>No encontramos ese módulo</strong>
               <p>Prueba con empresas, bodegas, productos, inventario o compras.</p>
+            </div>
+          </section>
+
+          <section class="section app-view audit-view" id="auditoria" data-view="auditoria" aria-labelledby="auditTitle" hidden>
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Control y trazabilidad</p>
+                <h2 id="auditTitle">Auditoría consultable</h2>
+              </div>
+              <p>Revisa quién hizo cada acción, cuándo ocurrió y qué información cambió.</p>
+            </div>
+
+            <div class="audit-summary-grid" aria-label="Resumen de auditoría">
+              <article class="audit-summary-card purple">
+                <span>Eventos hoy</span>
+                <strong id="auditToday">0</strong>
+                <small>Actividad desde las 00:00</small>
+              </article>
+              <article class="audit-summary-card cyan">
+                <span>Últimos 30 días</span>
+                <strong id="auditMonth">0</strong>
+                <small id="auditWeek">0 en los últimos 7 días</small>
+              </article>
+              <article class="audit-summary-card blue">
+                <span>Personas activas</span>
+                <strong id="auditActors">0</strong>
+                <small>Con acciones registradas</small>
+              </article>
+              <article class="audit-summary-card white">
+                <span>Tipos de acción</span>
+                <strong id="auditActionTypes">0</strong>
+                <small id="auditTotal">0 eventos históricos</small>
+              </article>
+            </div>
+
+            <div class="audit-toolbar">
+              <label class="audit-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="auditSearch" type="search" maxlength="120" placeholder="Buscar acción, persona, entidad o motivo">
+              </label>
+              <label>
+                <span>Responsable</span>
+                <select id="auditActorFilter"><option value="">Todas las personas</option></select>
+              </label>
+              <label>
+                <span>Módulo</span>
+                <select id="auditEntityFilter"><option value="">Todos los módulos</option></select>
+              </label>
+              <label>
+                <span>Acción</span>
+                <select id="auditActionFilter"><option value="">Todas las acciones</option></select>
+              </label>
+              <label>
+                <span>Desde</span>
+                <input id="auditDateFrom" type="date">
+              </label>
+              <label>
+                <span>Hasta</span>
+                <input id="auditDateTo" type="date">
+              </label>
+              <div class="audit-toolbar-actions">
+                <button class="filter-reset-button" id="clearAuditFilters" type="button">
+                  Limpiar filtros
+                </button>
+                <button class="audit-export-button" id="exportAuditButton" type="button">
+                  <span aria-hidden="true">↓</span> Exportar CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="audit-workspace">
+              <div class="audit-feed-panel">
+                <div class="panel-heading">
+                  <div>
+                    <span class="panel-kicker">Bitácora protegida</span>
+                    <h3>Actividad reciente</h3>
+                  </div>
+                  <span class="record-count" id="auditRecordCount">0 eventos</span>
+                </div>
+                <div class="audit-feed" id="auditEventList"></div>
+                <div class="data-state" id="auditDataState">
+                  <span class="state-spinner"></span>
+                  <div><strong>Consultando actividad</strong><p>Estamos organizando los eventos más recientes.</p></div>
+                </div>
+                <button class="audit-more-button" id="auditLoadMore" type="button" hidden>
+                  Ver eventos anteriores <span>↓</span>
+                </button>
+              </div>
+
+              <aside class="audit-detail-panel" aria-live="polite">
+                <div class="audit-detail-empty" id="auditDetailEmpty">
+                  <span class="audit-detail-mark" aria-hidden="true">A</span>
+                  <strong>Selecciona un evento</strong>
+                  <p>Verás el responsable, el motivo y la comparación de datos antes y después.</p>
+                </div>
+                <div id="auditDetailContent" hidden>
+                  <div class="audit-detail-heading">
+                    <div>
+                      <span id="auditDetailAction">Acción</span>
+                      <h3 id="auditDetailEntity">Entidad</h3>
+                    </div>
+                    <span class="audit-event-id" id="auditDetailId">#0</span>
+                  </div>
+                  <dl class="audit-detail-meta">
+                    <div><dt>Responsable</dt><dd id="auditDetailActor">—</dd></div>
+                    <div><dt>Fecha y hora</dt><dd id="auditDetailDate">—</dd></div>
+                    <div><dt>Motivo</dt><dd id="auditDetailReason">Sin motivo registrado</dd></div>
+                  </dl>
+                  <div class="audit-change-block">
+                    <div class="audit-change-heading"><span>Antes</span><small>Estado anterior</small></div>
+                    <div class="audit-change-list before" id="auditBeforeData"></div>
+                  </div>
+                  <div class="audit-change-block">
+                    <div class="audit-change-heading"><span>Después</span><small>Estado resultante</small></div>
+                    <div class="audit-change-list after" id="auditAfterData"></div>
+                  </div>
+                  <details class="audit-metadata">
+                    <summary>Metadatos técnicos</summary>
+                    <div id="auditMetadata"></div>
+                  </details>
+                </div>
+              </aside>
             </div>
           </section>
 

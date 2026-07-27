@@ -24,6 +24,7 @@ import usersRouter from './modules/users.js';
 import dashboardRouter from './modules/dashboard.js';
 import physicalCountsRouter from './modules/physical-counts.js';
 import authRouter from './modules/auth.js';
+import auditRouter from './modules/audit.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
@@ -94,6 +95,7 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.use('/api/users', usersRouter);
   application.use('/api/dashboard', dashboardRouter);
   application.use('/api/physical-counts', physicalCountsRouter);
+  application.use('/api/audit', auditRouter);
 
   application.use(notFound);
   application.use(errorHandler);

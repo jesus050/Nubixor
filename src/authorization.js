@@ -188,6 +188,13 @@ export function requireAnyPermission(permissionCodes) {
       req.context.branchId = result.rows[0].branch_id || null;
       const requestedBranchId = req.body?.branchId || req.query?.branchId || null;
       const requestPath = `${req.baseUrl}${req.path}`;
+      if (result.rows[0].branch_id && requestPath.startsWith('/api/audit')) {
+        throw new AppError(
+          'La auditoría completa requiere acceso a toda la empresa.',
+          403,
+          'BRANCH_SCOPE_DENIED',
+        );
+      }
       if (result.rows[0].branch_id &&
           req.method !== 'GET' &&
           (['/api/companies', '/api/branches'].includes(requestPath) ||
@@ -264,6 +271,7 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/payables')) permissions = ['payables.manage'];
   else if (path.startsWith('/api/users')) permissions = ['users.manage'];
   else if (path.startsWith('/api/dashboard')) permissions = ['dashboard.view'];
+  else if (path.startsWith('/api/audit')) permissions = ['audit.view'];
 
   if (!permissions) return next();
   return requireAnyPermission(permissions)(req, res, next);

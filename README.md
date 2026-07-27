@@ -61,6 +61,8 @@ npm test
   de pagos parciales o totales.
 - `/#usuarios` abre el equipo de la empresa, sus roles, permisos, alcance por
   sucursal y estado de acceso.
+- `/#auditoria` abre la bitácora protegida, sus filtros, el detalle de cambios
+  y la exportación CSV.
 - `/#inventario` abre existencias valorizadas, kardex, ajustes, transferencias
   y la herramienta secundaria de conteo físico.
 - `/#conteos` se conserva como enlace compatible y redirige al módulo
@@ -111,6 +113,11 @@ La interfaz incluye:
   operación;
 - protección del último propietario y creación automática de la estructura de
   acceso para cada empresa nueva;
+- centro de auditoría con resumen de actividad, filtros por responsable,
+  módulo, acción y fechas, detalle antes/después y descarga CSV;
+- acceso de auditoría restringido a roles con `audit.view` y alcance de empresa
+  completa, evitando exponer trazabilidad global a usuarios limitados a una
+  sucursal;
 - categorías y marcas independientes por empresa;
 - listado, búsqueda y creación de productos con costo, precio e impuesto;
 - fotografías JPG, PNG o WEBP para productos, con límite de 2 MB;
@@ -129,7 +136,7 @@ La interfaz incluye:
 - directorio de los 17 módulos previstos con su estado real.
 
 Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
-`#productos`, `#caja`, `#cuentas-pagar` y `#usuarios`, por lo que pueden
+`#productos`, `#caja`, `#cuentas-pagar`, `#usuarios` y `#auditoria`, por lo que pueden
 guardarse como favoritos sin configurar rutas adicionales en el servidor.
 
 La primera apertura solicita crear la contraseña del propietario sembrado

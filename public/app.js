@@ -538,6 +538,35 @@ const elements = {
   closeRoleDialog: document.querySelector('#closeRoleDialog'),
   cancelRoleButton: document.querySelector('#cancelRoleButton'),
   saveRoleButton: document.querySelector('#saveRoleButton'),
+  auditToday: document.querySelector('#auditToday'),
+  auditMonth: document.querySelector('#auditMonth'),
+  auditWeek: document.querySelector('#auditWeek'),
+  auditActors: document.querySelector('#auditActors'),
+  auditActionTypes: document.querySelector('#auditActionTypes'),
+  auditTotal: document.querySelector('#auditTotal'),
+  auditSearch: document.querySelector('#auditSearch'),
+  auditActorFilter: document.querySelector('#auditActorFilter'),
+  auditEntityFilter: document.querySelector('#auditEntityFilter'),
+  auditActionFilter: document.querySelector('#auditActionFilter'),
+  auditDateFrom: document.querySelector('#auditDateFrom'),
+  auditDateTo: document.querySelector('#auditDateTo'),
+  clearAuditFilters: document.querySelector('#clearAuditFilters'),
+  exportAuditButton: document.querySelector('#exportAuditButton'),
+  auditRecordCount: document.querySelector('#auditRecordCount'),
+  auditEventList: document.querySelector('#auditEventList'),
+  auditDataState: document.querySelector('#auditDataState'),
+  auditLoadMore: document.querySelector('#auditLoadMore'),
+  auditDetailEmpty: document.querySelector('#auditDetailEmpty'),
+  auditDetailContent: document.querySelector('#auditDetailContent'),
+  auditDetailAction: document.querySelector('#auditDetailAction'),
+  auditDetailEntity: document.querySelector('#auditDetailEntity'),
+  auditDetailId: document.querySelector('#auditDetailId'),
+  auditDetailActor: document.querySelector('#auditDetailActor'),
+  auditDetailDate: document.querySelector('#auditDetailDate'),
+  auditDetailReason: document.querySelector('#auditDetailReason'),
+  auditBeforeData: document.querySelector('#auditBeforeData'),
+  auditAfterData: document.querySelector('#auditAfterData'),
+  auditMetadata: document.querySelector('#auditMetadata'),
   toast: document.querySelector('#toast'),
 };
 
@@ -572,6 +601,11 @@ let accessPermissions = [];
 let selectedTeamUser = null;
 let editingTeamUser = null;
 let editingAccessRole = null;
+let auditEvents = [];
+let auditPagination = { page: 1, pageSize: 30, total: 0, totalPages: 1 };
+let selectedAuditEventId = null;
+let auditSearchTimer = null;
+let auditFacetsLoadedForTenant = null;
 let currentUser = null;
 let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
@@ -631,6 +665,7 @@ function accountInitials(name) {
 }
 
 function applyAccessVisibility() {
+  const membership = activeMembership();
   const viewPermissions = {
     inicio: ['dashboard.view'],
     empresas: [],
@@ -644,13 +679,16 @@ function applyAccessVisibility() {
     cartera: ['receivables.manage'],
     usuarios: ['users.manage'],
     modulos: ['dashboard.view'],
+    auditoria: ['audit.view'],
     sistema: ['audit.view', 'users.manage'],
   };
   document.querySelectorAll('[data-view-link]').forEach((link) => {
     const required = viewPermissions[link.dataset.viewLink] || [];
-    link.hidden = required.length > 0 && !hasAnyPermission(...required);
+    const branchAuditRestricted =
+      link.dataset.viewLink === 'auditoria' && Boolean(membership?.branchId);
+    link.hidden = branchAuditRestricted ||
+      (required.length > 0 && !hasAnyPermission(...required));
   });
-  const membership = activeMembership();
   elements.accountRole.textContent = membership?.roleName || 'Sin acceso a empresa';
   elements.newCompanyButton.hidden = !hasAnyPermission('companies.manage');
   elements.newBranchButton.hidden = !hasAnyPermission('branches.manage');
@@ -4657,6 +4695,7 @@ async function refreshTenantData() {
     showUsersError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
+    showAuditError('Primero debes registrar o seleccionar una empresa.');
     setExecutiveSummary();
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
@@ -4681,6 +4720,8 @@ async function refreshTenantData() {
     hasAnyPermission('receivables.manage') ? loadReceivables() : Promise.resolve([]),
     hasAnyPermission('users.manage') ? loadUsers() : Promise.resolve([]),
     hasAnyPermission('dashboard.view') ? loadExecutiveSummary() : Promise.resolve({}),
+    hasAnyPermission('audit.view') && !activeMembership()?.branchId
+      ? loadAudit() : Promise.resolve({}),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -4694,6 +4735,327 @@ async function refreshTenantData() {
   setMetric(elements.branchCount, elements.branchDetail, results[0], ['sucursal', 'sucursales']);
   setMetric(elements.warehouseCount, elements.warehouseDetail, results[1], ['bodega registrada', 'bodegas registradas']);
   setMetric(elements.productCount, elements.productDetail, results[4], ['producto registrado', 'productos registrados']);
+}
+
+function auditHumanLabel(value) {
+  if (!value) return 'Sin identificar';
+  const words = String(value)
+    .replaceAll('.', ' ')
+    .replaceAll('_', ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .toLocaleLowerCase('es');
+  return words.charAt(0).toLocaleUpperCase('es') + words.slice(1);
+}
+
+function auditDateTime(value) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function auditFiltersQuery({ includePage = true } = {}) {
+  const params = new URLSearchParams();
+  const filters = [
+    ['q', elements.auditSearch.value.trim()],
+    ['actorId', elements.auditActorFilter.value],
+    ['entityType', elements.auditEntityFilter.value],
+    ['action', elements.auditActionFilter.value],
+    ['dateFrom', elements.auditDateFrom.value],
+    ['dateTo', elements.auditDateTo.value],
+  ];
+  filters.forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  if (includePage) {
+    params.set('page', String(auditPagination.page));
+    params.set('pageSize', String(auditPagination.pageSize));
+  }
+  return params.toString();
+}
+
+function setAuditSummary(summary = {}) {
+  elements.auditToday.textContent = String(summary.today || 0);
+  elements.auditMonth.textContent = String(summary.last_30_days || 0);
+  elements.auditWeek.textContent = `${summary.last_7_days || 0} en los últimos 7 días`;
+  elements.auditActors.textContent = String(summary.active_actors || 0);
+  elements.auditActionTypes.textContent = String(summary.action_types || 0);
+  elements.auditTotal.textContent =
+    `${summary.total || 0} ${(summary.total || 0) === 1 ? 'evento histórico' : 'eventos históricos'}`;
+}
+
+function fillAuditSelect(select, placeholder, rows, valueKey, labelFor) {
+  const current = select.value;
+  select.replaceChildren();
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = placeholder;
+  select.append(empty);
+  rows.forEach((row) => {
+    const option = document.createElement('option');
+    option.value = row[valueKey];
+    option.textContent = `${labelFor(row)} · ${row.event_count}`;
+    select.append(option);
+  });
+  if ([...select.options].some((option) => option.value === current)) {
+    select.value = current;
+  }
+}
+
+function renderAuditFacets(facets) {
+  fillAuditSelect(
+    elements.auditActorFilter,
+    'Todas las personas',
+    facets.actors || [],
+    'id',
+    (row) => row.full_name || row.email,
+  );
+  fillAuditSelect(
+    elements.auditEntityFilter,
+    'Todos los módulos',
+    facets.entities || [],
+    'entity_type',
+    (row) => auditHumanLabel(row.entity_type),
+  );
+  fillAuditSelect(
+    elements.auditActionFilter,
+    'Todas las acciones',
+    facets.actions || [],
+    'action',
+    (row) => auditHumanLabel(row.action),
+  );
+}
+
+function auditEventSymbol(action) {
+  const segment = String(action || 'A').split(/[._]/).filter(Boolean).at(-1) || 'A';
+  return segment.slice(0, 2).toUpperCase();
+}
+
+function renderAuditEvents() {
+  elements.auditEventList.replaceChildren();
+  elements.auditRecordCount.textContent =
+    `${auditPagination.total} ${auditPagination.total === 1 ? 'evento' : 'eventos'}`;
+  if (!auditEvents.length) {
+    const hasFilters = Boolean(
+      elements.auditSearch.value.trim() ||
+      elements.auditActorFilter.value ||
+      elements.auditEntityFilter.value ||
+      elements.auditActionFilter.value ||
+      elements.auditDateFrom.value ||
+      elements.auditDateTo.value,
+    );
+    elements.auditDataState.hidden = false;
+    elements.auditDataState.querySelector('strong').textContent = hasFilters
+      ? 'No hay eventos para estos filtros'
+      : 'La bitácora está lista';
+    elements.auditDataState.querySelector('p').textContent =
+      hasFilters
+        ? 'Amplía las fechas o limpia alguno de los criterios de búsqueda.'
+        : 'Las próximas operaciones importantes aparecerán aquí con su responsable y detalle.';
+  } else {
+    elements.auditDataState.hidden = true;
+  }
+
+  auditEvents.forEach((event) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'audit-event';
+    button.classList.toggle('active', String(event.id) === String(selectedAuditEventId));
+    button.dataset.auditEventId = event.id;
+
+    const symbol = document.createElement('span');
+    symbol.className = 'audit-event-symbol';
+    symbol.textContent = auditEventSymbol(event.action);
+
+    const main = document.createElement('span');
+    main.className = 'audit-event-main';
+    const title = document.createElement('strong');
+    title.textContent = auditHumanLabel(event.action);
+    const description = document.createElement('span');
+    const actor = event.actor_name || event.actor_email || 'Sistema';
+    const entity = auditHumanLabel(event.entity_type);
+    description.textContent = `${actor} · ${entity}${event.entity_id ? ` #${event.entity_id}` : ''}`;
+    main.append(title, description);
+
+    const time = document.createElement('span');
+    time.className = 'audit-event-time';
+    time.textContent = auditDateTime(event.created_at);
+    button.append(symbol, main, time);
+    button.addEventListener('click', () => showAuditDetail(event.id));
+    elements.auditEventList.append(button);
+  });
+
+  elements.auditLoadMore.hidden =
+    auditPagination.page >= auditPagination.totalPages || !auditEvents.length;
+}
+
+function displayAuditValue(value) {
+  if (value == null || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function renderAuditObject(container, data) {
+  container.replaceChildren();
+  const entries = data && typeof data === 'object' ? Object.entries(data) : [];
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'audit-change-empty';
+    empty.textContent = 'Sin información registrada';
+    container.append(empty);
+    return;
+  }
+  entries.forEach(([key, value]) => {
+    const row = document.createElement('div');
+    row.className = 'audit-change-row';
+    const label = document.createElement('span');
+    label.textContent = auditHumanLabel(key);
+    const content = document.createElement('span');
+    content.textContent = displayAuditValue(value);
+    row.append(label, content);
+    container.append(row);
+  });
+}
+
+async function showAuditDetail(eventId) {
+  selectedAuditEventId = eventId;
+  renderAuditEvents();
+  try {
+    const detail = await getJson(`/api/audit/events/${eventId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    if (String(selectedAuditEventId) !== String(eventId)) return;
+    elements.auditDetailEmpty.hidden = true;
+    elements.auditDetailContent.hidden = false;
+    elements.auditDetailAction.textContent = auditHumanLabel(detail.action);
+    elements.auditDetailEntity.textContent =
+      `${auditHumanLabel(detail.entity_type)}${detail.entity_id ? ` · ${detail.entity_id}` : ''}`;
+    elements.auditDetailId.textContent = `#${detail.id}`;
+    elements.auditDetailActor.textContent =
+      detail.actor_name || detail.actor_email || 'Sistema';
+    elements.auditDetailDate.textContent = auditDateTime(detail.created_at);
+    elements.auditDetailReason.textContent = detail.reason || 'Sin motivo registrado';
+    renderAuditObject(elements.auditBeforeData, detail.before_data);
+    renderAuditObject(elements.auditAfterData, detail.after_data);
+    renderAuditObject(elements.auditMetadata, detail.metadata);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function showAuditError(message) {
+  auditEvents = [];
+  auditPagination = { page: 1, pageSize: 30, total: 0, totalPages: 1 };
+  renderAuditEvents();
+  elements.auditDataState.hidden = false;
+  elements.auditDataState.querySelector('strong').textContent = 'Auditoría no disponible';
+  elements.auditDataState.querySelector('p').textContent = message;
+  setAuditSummary();
+}
+
+async function loadAudit({ append = false } = {}) {
+  if (!activeTenantId) {
+    showAuditError('Selecciona una empresa para consultar su trazabilidad.');
+    return {};
+  }
+  if (!append) {
+    auditPagination.page = 1;
+    elements.auditDataState.hidden = false;
+    elements.auditDataState.querySelector('strong').textContent = 'Consultando actividad';
+    elements.auditDataState.querySelector('p').textContent =
+      'Estamos organizando los eventos más recientes.';
+  }
+  try {
+    const needsFacets = auditFacetsLoadedForTenant !== activeTenantId;
+    const [summary, facets, page] = await Promise.all([
+      getJson('/api/audit/summary', { headers: { 'x-tenant-id': activeTenantId } }),
+      needsFacets
+        ? getJson('/api/audit/facets', { headers: { 'x-tenant-id': activeTenantId } })
+        : Promise.resolve(null),
+      getJson(`/api/audit/events?${auditFiltersQuery()}`, {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    setAuditSummary(summary);
+    if (facets) {
+      renderAuditFacets(facets);
+      auditFacetsLoadedForTenant = activeTenantId;
+    }
+    auditEvents = append ? [...auditEvents, ...page.items] : page.items;
+    auditPagination = page.pagination;
+    if (!append && selectedAuditEventId &&
+        !auditEvents.some((event) => String(event.id) === String(selectedAuditEventId))) {
+      selectedAuditEventId = null;
+      elements.auditDetailEmpty.hidden = false;
+      elements.auditDetailContent.hidden = true;
+    }
+    renderAuditEvents();
+    return page;
+  } catch (error) {
+    showAuditError(error.message);
+    throw error;
+  }
+}
+
+function scheduleAuditReload() {
+  window.clearTimeout(auditSearchTimer);
+  auditSearchTimer = window.setTimeout(() => {
+    loadAudit().catch(() => {});
+  }, 260);
+}
+
+function clearAuditFilters() {
+  elements.auditSearch.value = '';
+  elements.auditActorFilter.value = '';
+  elements.auditEntityFilter.value = '';
+  elements.auditActionFilter.value = '';
+  elements.auditDateFrom.value = '';
+  elements.auditDateTo.value = '';
+  loadAudit().catch(() => {});
+}
+
+async function exportAuditCsv() {
+  elements.exportAuditButton.disabled = true;
+  elements.exportAuditButton.textContent = 'Preparando archivo…';
+  try {
+    const queryString = auditFiltersQuery({ includePage: false });
+    const response = await fetch(
+      `${API_BASE_URL}/api/audit/export.csv${queryString ? `?${queryString}` : ''}`,
+      {
+        credentials: 'include',
+        headers: {
+          Accept: 'text/csv',
+          'x-tenant-id': activeTenantId,
+        },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No fue posible exportar la auditoría.');
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const download = document.createElement('a');
+    download.href = url;
+    download.download =
+      `megasuite-auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(download);
+    download.click();
+    download.remove();
+    URL.revokeObjectURL(url);
+    showToast('Auditoría exportada en CSV.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.exportAuditButton.disabled = false;
+    elements.exportAuditButton.replaceChildren();
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '↓';
+    elements.exportAuditButton.append(icon, ' Exportar CSV');
+  }
 }
 
 function filterModules() {
@@ -4735,6 +5097,7 @@ const availableViews = new Set([
   'caja',
   'cartera',
   'modulos',
+  'auditoria',
   'sistema',
 ]);
 
@@ -4757,6 +5120,7 @@ const viewTitles = {
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
   modulos: 'Mapa del ERP',
+  auditoria: 'Auditoría',
   sistema: 'Sistema',
 };
 
@@ -5488,6 +5852,9 @@ elements.companyContext.addEventListener('change', async () => {
   selectedPurchase = null;
   selectedPayable = null;
   selectedTeamUser = null;
+  selectedAuditEventId = null;
+  auditEvents = [];
+  auditFacetsLoadedForTenant = null;
   saveTenantPreference(activeTenantId);
   syncCompanyContext(activeTenantId);
   renderAuthenticatedUser();
@@ -5737,6 +6104,24 @@ elements.printReceiptButton.addEventListener('click', () => window.print());
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();
+});
+elements.auditSearch.addEventListener('input', scheduleAuditReload);
+[
+  elements.auditActorFilter,
+  elements.auditEntityFilter,
+  elements.auditActionFilter,
+  elements.auditDateFrom,
+  elements.auditDateTo,
+].forEach((filter) => filter.addEventListener('change', () => {
+  loadAudit().catch(() => {});
+}));
+elements.clearAuditFilters.addEventListener('click', clearAuditFilters);
+elements.exportAuditButton.addEventListener('click', exportAuditCsv);
+elements.auditLoadMore.addEventListener('click', () => {
+  auditPagination.page += 1;
+  loadAudit({ append: true }).catch(() => {
+    auditPagination.page = Math.max(1, auditPagination.page - 1);
+  });
 });
 elements.invoiceSearch.addEventListener('input', renderInvoiceList);
 elements.invoiceStatusFilter.addEventListener('change', renderInvoiceList);

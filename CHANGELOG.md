@@ -6,6 +6,13 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ### Añadido
 
+- Centro de Auditoría independiente con resumen diario, semanal y mensual,
+  responsables activos y tipos de acción.
+- Filtros combinables por texto, persona, entidad, acción y rango de fechas,
+  con paginación y detalle seguro de datos antes/después.
+- Exportación CSV de hasta 5.000 eventos según los filtros seleccionados.
+- Autorización `audit.view` y bloqueo explícito de la auditoría global para
+  membresías limitadas a una sucursal.
 - Acceso local real sin contraseña predeterminada: configuración inicial única,
   inicio y cierre de sesión.
 - Contraseñas derivadas con scrypt, sesiones revocables mediante cookies

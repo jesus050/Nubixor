@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { createHealthRouter } from '../src/modules/health.js';
+import { csvCell } from '../src/modules/audit.js';
 
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 const createUnsecuredApp = (options = {}) => createApp({ ...options, security: false });
@@ -54,6 +55,10 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Activa tu cuenta/);
   assert.match(response.text, /Enlace personal de activación/);
   assert.match(response.text, /Cerrar sesión/);
+  assert.match(response.text, /data-view="auditoria"/);
+  assert.match(response.text, /Auditoría consultable/);
+  assert.match(response.text, /Exportar CSV/);
+  assert.match(response.text, /Estado anterior/);
   assert.match(response.text, /Flujo estimado 30 días/);
   assert.match(response.text, /Movimientos e historial/);
   assert.match(response.text, /Registrar ingreso o salida/);
@@ -334,6 +339,40 @@ test('dashboard ejecutivo exige una empresa activa', async () => {
   await request(createUnsecuredApp())
     .get('/api/dashboard/executive')
     .expect(400);
+});
+
+test('auditoría valida fechas, paginación e identificadores antes de consultar PostgreSQL', async () => {
+  const application = createUnsecuredApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+
+  const invalidDate = await request(application)
+    .get('/api/audit/events?dateFrom=2026-99-99')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidDate.body.error, /AAAA-MM-DD/);
+
+  const invalidRange = await request(application)
+    .get('/api/audit/events?dateFrom=2026-08-01&dateTo=2026-07-01')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidRange.body.error, /fecha final/i);
+
+  const invalidPage = await request(application)
+    .get('/api/audit/events?pageSize=101')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidPage.body.error, /paginación/i);
+
+  const invalidId = await request(application)
+    .get('/api/audit/events/no-numerico')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidId.body.error, /identificador numérico/i);
+});
+
+test('la exportación de auditoría neutraliza fórmulas de hoja de cálculo', () => {
+  assert.equal(csvCell('=HYPERLINK("https://example.test")'), '"\'=HYPERLINK(""https://example.test"")"');
+  assert.equal(csvCell('texto, seguro'), '"texto, seguro"');
 });
 
 test('las APIs operativas rechazan identidad enviada manualmente', async () => {

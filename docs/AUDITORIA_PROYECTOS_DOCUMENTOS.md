@@ -144,7 +144,7 @@ tomó como referencia la copia documentada con versión 1.17.3.
 6. Completado: caja avanzada y dashboard ejecutivo de flujo.
 7. Completado: autenticación, activación/recuperación de cuentas y aplicación
    transversal de permisos.
-8. Auditoría consultable.
+8. Completado: auditoría consultable con detalle y exportación CSV.
 9. Reportes y exportaciones.
 10. Planner.
 11. Adaptador de Ticketera.
@@ -152,7 +152,8 @@ tomó como referencia la copia documentada con versión 1.17.3.
 
 ## Siguiente fase recomendada
 
-Auditoría consultable y exportaciones. La identidad, recuperación administrada,
-sesiones seguras y permisos del servidor ya están organizados. El siguiente
-paso es exponer la trazabilidad con filtros por usuario, módulo, acción y fecha;
-después se agregan exportaciones y comparación orden–recepción–factura.
+Reportes operativos exportables y comparación orden–recepción–factura. La
+identidad, sesiones seguras, permisos y auditoría consultable ya están
+organizados; el siguiente bloque debe convertir ventas, inventario, compras,
+cartera y proveedores en reportes filtrables con Excel/PDF, y después cerrar
+la conciliación de compras en tres pasos.

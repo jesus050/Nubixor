@@ -254,3 +254,32 @@ El cierre compara nuevamente el saldo real con la fotografía inicial. Si hubo
 ventas, compras u otros movimientos durante el conteo, se bloquea para evitar
 pisar inventario reciente. Cada diferencia aprobada crea un movimiento
 `COUNT_ADJUSTMENT` y un evento de auditoría.
+
+## Auditoría consultable
+
+La vista local está en `/#auditoria`. Todas las rutas requieren una sesión con
+el permiso `audit.view`, una empresa activa y alcance global de empresa:
+
+```bash
+curl 'http://localhost:4100/api/audit/events?page=1&pageSize=30&dateFrom=2026-07-01&action=cash.session_opened' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -b cookies.txt
+
+curl http://localhost:4100/api/audit/events/EVENT_ID \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -b cookies.txt
+```
+
+Los filtros disponibles son `q`, `actorId`, `entityType`, `action`,
+`dateFrom`, `dateTo`, `page` y `pageSize` (máximo 100). El resumen y las
+opciones para filtros se consultan en `/api/audit/summary` y
+`/api/audit/facets`.
+
+La descarga respeta los mismos filtros y entrega hasta 5.000 filas:
+
+```bash
+curl 'http://localhost:4100/api/audit/export.csv?dateFrom=2026-07-01' \
+ -H 'x-tenant-id: 00000000-0000-0000-0000-000000000001' \
+ -b cookies.txt \
+ -o auditoria.csv
+```
