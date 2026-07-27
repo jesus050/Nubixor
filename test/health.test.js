@@ -34,6 +34,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /id="posCategoryStrip"/);
   assert.match(response.text, /Efectivo recibido/);
   assert.match(response.text, /Cambio a entregar/);
+  assert.match(response.text, /Consumidor final/);
+  assert.match(response.text, /data-sale-terms="CREDIT"/);
+  assert.match(response.text, /La cuenta por cobrar se creará/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
@@ -228,6 +231,25 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     })
     .expect(422);
   assert.match(cashWithoutTender.body.error, /efectivo recibido/i);
+
+  const invalidPosCustomer = await request(app)
+    .post('/api/pos/customers')
+    .set(headers)
+    .send({ name: '   ' })
+    .expect(422);
+  assert.match(invalidPosCustomer.body.error, /nombre del cliente/i);
+
+  const invalidCreditSale = await request(app)
+    .post('/api/pos/sales')
+    .set(headers)
+    .send({
+      cashSessionId: '00000000-0000-0000-0000-000000000001',
+      warehouseId: '00000000-0000-0000-0000-000000000002',
+      saleTerms: 'CREDIT',
+      items: [{ productId: '00000000-0000-0000-0000-000000000003', quantity: 1 }],
+    })
+    .expect(422);
+  assert.match(invalidCreditSale.body.error, /requiere un cliente/i);
 });
 
 test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {

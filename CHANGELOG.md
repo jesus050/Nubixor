@@ -22,6 +22,10 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - Se refinó el CSS de Caja con una jerarquía más clara, catálogo y carrito con
   mejor contraste, estados de interacción accesibles, espaciado consistente y
   una adaptación más limpia para pantallas medianas y móviles.
+- Caja permite seleccionar o crear clientes sin abandonar la venta, muestra su
+  saldo pendiente y conserva el tercero en el comprobante.
+- Las ventas a crédito exigen cliente y vencimiento, descuentan inventario y
+  crean en la misma transacción una factura conectada con Cuentas por cobrar.
 
 ### Añadido
 

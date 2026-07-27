@@ -8595,3 +8595,126 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+.pos-customer {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 12px;
+  border: 1px solid rgba(25, 37, 132, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.pos-customer > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pos-customer label,
+.sale-terms > span,
+.credit-terms label {
+  color: var(--color-ink);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.pos-customer small,
+.credit-terms small {
+  color: var(--color-muted);
+  font-size: 8px;
+}
+
+.pos-customer-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 7px;
+}
+
+.pos-customer-picker select,
+.credit-terms input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: white;
+  color: var(--color-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pos-customer-picker button {
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--color-purple), var(--color-ink));
+  box-shadow: 0 8px 18px rgba(181, 65, 250, 0.2);
+  color: white;
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.sale-terms {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.sale-terms > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: white;
+}
+
+.sale-terms button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.sale-terms button.active {
+  background: var(--color-ink);
+  box-shadow: 0 7px 17px rgba(25, 37, 132, 0.18);
+  color: white;
+}
+
+.credit-terms {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(181, 65, 250, 0.22);
+  border-radius: 14px;
+  background: rgba(242, 229, 255, 0.55);
+}
+
+.credit-terms input:focus,
+.pos-customer-picker select:focus {
+  border-color: rgba(181, 65, 250, 0.45);
+  outline: 3px solid rgba(181, 65, 250, 0.08);
+}
+
+.pos-customer-picker button:focus-visible,
+.sale-terms button:focus-visible {
+  outline: 3px solid rgba(79, 210, 233, 0.5);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .pos-customer > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

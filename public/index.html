@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-19">
-    <script src="./app.js?v=20260726-18" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-20">
+    <script src="./app.js?v=20260726-20" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -1275,6 +1275,18 @@
                       <span id="cartItemCount">0 artículos</span>
                     </div>
                   </div>
+                  <div class="pos-customer">
+                    <div>
+                      <label for="posCustomerSelect">Cliente</label>
+                      <small id="posCustomerBalance">Consumidor final · venta sin cartera</small>
+                    </div>
+                    <div class="pos-customer-picker">
+                      <select id="posCustomerSelect">
+                        <option value="">Consumidor final</option>
+                      </select>
+                      <button id="posNewCustomerButton" type="button" aria-label="Crear cliente">＋</button>
+                    </div>
+                  </div>
                   <div class="cart-items" id="cartItems"></div>
                   <div class="cart-empty" id="cartEmpty">
                     <span aria-hidden="true">＋</span>
@@ -1286,7 +1298,19 @@
                     <div><span>Impuestos incluidos</span><strong id="cartTax">$0</strong></div>
                     <div class="cart-total"><span>Total</span><strong id="cartTotal">$0</strong></div>
                   </div>
-                  <div class="cart-payment">
+                  <div class="sale-terms">
+                    <span>Condición de venta</span>
+                    <div role="group" aria-label="Condición de venta">
+                      <button type="button" class="active" data-sale-terms="IMMEDIATE">Contado</button>
+                      <button type="button" data-sale-terms="CREDIT">Crédito</button>
+                    </div>
+                  </div>
+                  <div class="credit-terms" id="posCreditTerms" hidden>
+                    <label for="posCreditDueDate">Fecha de vencimiento</label>
+                    <input id="posCreditDueDate" type="date">
+                    <small>La cuenta por cobrar se creará al confirmar la venta.</small>
+                  </div>
+                  <div class="cart-payment" id="posPaymentPanel">
                     <span>Medio de pago</span>
                     <div class="payment-options" role="group" aria-label="Medio de pago">
                       <button type="button" class="active" data-payment-method="CASH">Efectivo</button>
@@ -3321,8 +3345,10 @@
         <div class="receipt-totals">
           <div><span>Subtotal</span><strong id="receiptSubtotal">$0</strong></div>
           <div><span>Impuestos incluidos</span><strong id="receiptTax">$0</strong></div>
-          <div class="receipt-grand-total"><span>Total cobrado</span><strong id="receiptTotal">$0</strong></div>
+          <div class="receipt-grand-total"><span>Total de la venta</span><strong id="receiptTotal">$0</strong></div>
+          <div><span>Cliente</span><strong id="receiptCustomer">Consumidor final</strong></div>
           <div><span>Medio de pago</span><strong id="receiptPaymentMethod">—</strong></div>
+          <div id="receiptCreditRow"><span>Cuenta por cobrar</span><strong id="receiptCreditReference">—</strong></div>
           <div id="receiptCashReceivedRow"><span>Efectivo recibido</span><strong id="receiptCashReceived">$0</strong></div>
           <div id="receiptCashChangeRow"><span>Cambio entregado</span><strong id="receiptCashChange">$0</strong></div>
         </div>

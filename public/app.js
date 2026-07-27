@@ -358,6 +358,13 @@ const elements = {
   cartTax: document.querySelector('#cartTax'),
   cartTotal: document.querySelector('#cartTotal'),
   clearCartButton: document.querySelector('#clearCartButton'),
+  posCustomerSelect: document.querySelector('#posCustomerSelect'),
+  posCustomerBalance: document.querySelector('#posCustomerBalance'),
+  posNewCustomerButton: document.querySelector('#posNewCustomerButton'),
+  posSaleTermButtons: document.querySelectorAll('[data-sale-terms]'),
+  posCreditTerms: document.querySelector('#posCreditTerms'),
+  posCreditDueDate: document.querySelector('#posCreditDueDate'),
+  posPaymentPanel: document.querySelector('#posPaymentPanel'),
   posPaymentMethod: document.querySelector('#posPaymentMethod'),
   posPaymentButtons: document.querySelectorAll('[data-payment-method]'),
   posCashTender: document.querySelector('#posCashTender'),
@@ -373,7 +380,10 @@ const elements = {
   receiptSubtotal: document.querySelector('#receiptSubtotal'),
   receiptTax: document.querySelector('#receiptTax'),
   receiptTotal: document.querySelector('#receiptTotal'),
+  receiptCustomer: document.querySelector('#receiptCustomer'),
   receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
+  receiptCreditRow: document.querySelector('#receiptCreditRow'),
+  receiptCreditReference: document.querySelector('#receiptCreditReference'),
   receiptCashReceivedRow: document.querySelector('#receiptCashReceivedRow'),
   receiptCashReceived: document.querySelector('#receiptCashReceived'),
   receiptCashChangeRow: document.querySelector('#receiptCashChangeRow'),
@@ -613,6 +623,8 @@ let products = [];
 let posSummary = { registers: [], openSession: null };
 let executiveSummary = {};
 let posCatalog = [];
+let posCustomers = [];
+let posSaleTerms = 'IMMEDIATE';
 let receivableCustomers = [];
 let receivableInvoices = [];
 let selectedReceivable = null;
@@ -649,6 +661,7 @@ let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
 const saleCart = new Map();
 let activePosCategory = 'ALL';
+let customerDialogSource = 'receivables';
 let imageProduct = null;
 let imagePreviewUrl = null;
 let activeTenantId = readTenantPreference();
@@ -664,6 +677,7 @@ const paymentMethodLabels = {
   CASH: 'Efectivo',
   CARD: 'Tarjeta',
   TRANSFER: 'Transferencia',
+  CREDIT: 'Crédito',
 };
 
 function readTenantPreference() {
@@ -1714,6 +1728,7 @@ function renderCashControl() {
 
 function showPosError(message) {
   posSummary = { registers: [], openSession: null, sessions: [], currentDetail: null };
+  posCustomers = [];
   elements.cashStatus.textContent = 'Caja no disponible';
   elements.cashStatus.className = 'pos-state error';
   elements.cashRegisterName.textContent = 'No pudimos consultar la caja';
@@ -1728,6 +1743,26 @@ function showPosError(message) {
   elements.newCashMovementButton.hidden = true;
   renderCashControl();
   syncCashRegisterOptions();
+  syncPosCustomers();
+}
+
+function syncPosCustomers(preferredCustomerId = elements.posCustomerSelect.value) {
+  elements.posCustomerSelect.replaceChildren(new Option('Consumidor final', ''));
+  for (const customer of posCustomers) {
+    const document = customer.document_number ? ` · ${customer.document_number}` : '';
+    elements.posCustomerSelect.append(new Option(`${customer.name}${document}`, customer.id));
+  }
+  if (posCustomers.some((customer) => customer.id === preferredCustomerId)) {
+    elements.posCustomerSelect.value = preferredCustomerId;
+  }
+  renderPosCustomerContext();
+}
+
+function renderPosCustomerContext() {
+  const customer = posCustomers.find((item) => item.id === elements.posCustomerSelect.value);
+  elements.posCustomerBalance.textContent = customer
+    ? `${customer.document_number || 'Sin documento'} · saldo ${formatCurrency(customer.outstanding || 0)}`
+    : 'Consumidor final · venta sin cartera';
 }
 
 async function loadPos() {
@@ -1737,14 +1772,17 @@ async function loadPos() {
   }
   try {
     const headers = { 'x-tenant-id': activeTenantId };
-    const [summary, sessions] = await Promise.all([
+    const [summary, sessions, customers] = await Promise.all([
       getJson('/api/pos/summary', { headers }),
       getJson('/api/pos/sessions', { headers }),
+      getJson('/api/pos/customers', { headers }),
     ]);
     const currentDetail = summary.openSession
       ? await getJson(`/api/pos/sessions/${summary.openSession.id}`, { headers })
       : null;
     posSummary = { ...summary, sessions, currentDetail };
+    posCustomers = customers;
+    syncPosCustomers();
     renderPos();
     return posSummary;
   } catch (error) {
@@ -1793,7 +1831,8 @@ function cashTenderOptions(total) {
 }
 
 function updateCashSettlement(totals = calculateCartTotals(), { rebuild = false } = {}) {
-  const cashPayment = elements.posPaymentMethod.value === 'CASH';
+  const cashPayment =
+    posSaleTerms === 'IMMEDIATE' && elements.posPaymentMethod.value === 'CASH';
   elements.posCashTender.hidden = !cashPayment;
   if (!cashPayment) return;
 
@@ -1998,6 +2037,22 @@ function renderCart() {
     ? `Cobrar ${formatCurrency(totals.total)} →`
     : 'Selecciona productos →';
   updateCashSettlement(totals, { rebuild: true });
+  const creditSale = posSaleTerms === 'CREDIT';
+  elements.posPaymentPanel.hidden = creditSale;
+  elements.posCreditTerms.hidden = !creditSale;
+  if (creditSale) {
+    const hasCustomer = Boolean(elements.posCustomerSelect.value);
+    const hasDueDate = Boolean(elements.posCreditDueDate.value);
+    elements.posCashTender.hidden = true;
+    elements.completeSaleButton.disabled =
+      elements.completeSaleButton.disabled || !hasCustomer || !hasDueDate;
+    if (totals.itemCount > 0) {
+      if (!hasCustomer) elements.completeSaleButton.textContent = 'Selecciona un cliente';
+      else if (!hasDueDate) elements.completeSaleButton.textContent = 'Define el vencimiento';
+      else elements.completeSaleButton.textContent =
+        `Vender a crédito ${formatCurrency(totals.total)} →`;
+    }
+  }
   elements.posSaleError.hidden = true;
 }
 
@@ -2311,11 +2366,12 @@ async function loadReceivables() {
   }
 }
 
-function openCustomerDialog() {
+function openCustomerDialog(source = 'receivables') {
   if (!activeTenantId) {
     showToast('Primero registra o selecciona una empresa.');
     return;
   }
+  customerDialogSource = source;
   elements.customerForm.reset();
   elements.customerFormError.hidden = true;
   elements.customerDialog.showModal();
@@ -2333,7 +2389,10 @@ async function submitCustomer(event) {
   elements.saveCustomerButton.disabled = true;
   elements.saveCustomerButton.textContent = 'Registrando cliente…';
   try {
-    await getJson('/api/receivables/customers', {
+    const endpoint = customerDialogSource === 'pos'
+      ? '/api/pos/customers'
+      : '/api/receivables/customers';
+    const customer = await getJson(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2342,8 +2401,17 @@ async function submitCustomer(event) {
       body: JSON.stringify(Object.fromEntries(formData)),
     });
     closeCustomerDialog();
-    await loadReceivables();
-    showToast('Cliente registrado y disponible para facturar.');
+    if (customerDialogSource === 'pos') {
+      posCustomers = await getJson('/api/pos/customers', {
+        headers: { 'x-tenant-id': activeTenantId },
+      });
+      syncPosCustomers(customer.id);
+      renderCart();
+      showToast('Cliente creado y seleccionado en la venta.');
+    } else {
+      await loadReceivables();
+      showToast('Cliente registrado y disponible para facturar.');
+    }
   } catch (error) {
     elements.customerFormError.textContent = error.message;
     elements.customerFormError.hidden = false;
@@ -6151,8 +6219,14 @@ function showReceipt(receipt) {
   elements.receiptSubtotal.textContent = formatCurrency(receipt.subtotal);
   elements.receiptTax.textContent = formatCurrency(receipt.tax_total);
   elements.receiptTotal.textContent = formatCurrency(receipt.total);
+  elements.receiptCustomer.textContent = receipt.customer?.name || 'Consumidor final';
   elements.receiptPaymentMethod.textContent =
     paymentMethodLabels[receipt.payment_method] || receipt.payment_method;
+  const creditSale = receipt.sale_terms === 'CREDIT';
+  elements.receiptCreditRow.hidden = !creditSale;
+  elements.receiptCreditReference.textContent = creditSale
+    ? `${receipt.receivable?.invoice_number || 'Generada'} · vence ${formatShortDate(receipt.due_date)}`
+    : '—';
   const cashPayment = receipt.payment_method === 'CASH';
   elements.receiptCashReceivedRow.hidden = !cashPayment;
   elements.receiptCashChangeRow.hidden = !cashPayment;
@@ -6181,7 +6255,11 @@ async function completeSale() {
         cashSessionId: posSummary.openSession.id,
         warehouseId: elements.posWarehouseSelect.value,
         paymentMethod: elements.posPaymentMethod.value,
+        saleTerms: posSaleTerms,
+        customerId: elements.posCustomerSelect.value || null,
+        dueDate: posSaleTerms === 'CREDIT' ? elements.posCreditDueDate.value : null,
         cashReceived: elements.posPaymentMethod.value === 'CASH'
+          && posSaleTerms === 'IMMEDIATE'
           ? Number(elements.posCashReceived.value)
           : null,
         items: [...saleCart.values()].map((item) => ({
@@ -6192,6 +6270,12 @@ async function completeSale() {
     });
     saleCart.clear();
     elements.posCashReceived.value = '';
+    elements.posCustomerSelect.value = '';
+    posSaleTerms = 'IMMEDIATE';
+    elements.posSaleTermButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.saleTerms === posSaleTerms);
+    });
+    renderPosCustomerContext();
     await Promise.all([
       loadPos(),
       loadExecutiveSummary(),
@@ -6520,6 +6604,26 @@ elements.posProductSearch.addEventListener('keydown', (event) => {
   showToast(`${exactProduct.name} agregado a la venta.`);
 });
 elements.clearCartButton.addEventListener('click', clearCart);
+elements.posCustomerSelect.addEventListener('change', () => {
+  renderPosCustomerContext();
+  renderCart();
+});
+elements.posNewCustomerButton.addEventListener('click', () => openCustomerDialog('pos'));
+elements.posSaleTermButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    posSaleTerms = button.dataset.saleTerms;
+    elements.posSaleTermButtons.forEach((option) => {
+      option.classList.toggle('active', option === button);
+    });
+    if (posSaleTerms === 'CREDIT' && !elements.posCreditDueDate.value) {
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+      elements.posCreditDueDate.value = isoDate(dueDate);
+    }
+    renderCart();
+  });
+});
+elements.posCreditDueDate.addEventListener('change', renderCart);
 elements.posCashReceived.addEventListener('input', () => {
   updateCashSettlement(calculateCartTotals());
 });
@@ -6602,7 +6706,7 @@ elements.reloadReceivablesButton.addEventListener('click', () => {
     .then(() => showToast('Cartera actualizada.'))
     .catch(() => showToast('No fue posible actualizar la cartera.'));
 });
-elements.newCustomerButton.addEventListener('click', openCustomerDialog);
+elements.newCustomerButton.addEventListener('click', () => openCustomerDialog('receivables'));
 elements.closeCustomerDialog.addEventListener('click', closeCustomerDialog);
 elements.cancelCustomerButton.addEventListener('click', closeCustomerDialog);
 elements.customerForm.addEventListener('submit', submitCustomer);

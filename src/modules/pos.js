@@ -7,6 +7,8 @@ import { writeAudit } from '../audit.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DOCUMENT_TYPES = new Set(['NIT', 'CC', 'CE', 'PASSPORT', 'OTHER']);
 const CASH_MOVEMENT_TYPES = new Set(['INCOME', 'EXPENSE', 'WITHDRAWAL']);
 const CASH_DENOMINATIONS = new Set([
   100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50,
@@ -27,6 +29,93 @@ function normalizedText(value, maxLength) {
   }
   return normalized;
 }
+
+function validDate(value) {
+  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+
+router.get('/customers', asyncHandler(async (req, res) => {
+  const search = normalizedText(req.query.search, 120);
+  const result = await query(
+    `SELECT c.id, c.name, c.document_type, c.document_number, c.email,
+            c.phone, c.active,
+            COALESCE(SUM(i.total - i.paid_amount)
+              FILTER (WHERE i.status IN ('ISSUED','PARTIAL')), 0) outstanding
+     FROM customers c
+     LEFT JOIN ar_invoices i
+       ON i.customer_id = c.id AND i.tenant_id = c.tenant_id
+     WHERE c.tenant_id = $1 AND c.active = TRUE
+       AND ($2::text IS NULL OR c.name ILIKE '%' || $2 || '%'
+         OR c.document_number ILIKE '%' || $2 || '%'
+         OR c.phone ILIKE '%' || $2 || '%')
+     GROUP BY c.id
+     ORDER BY c.name
+     LIMIT 300`,
+    [req.context.tenantId, search],
+  );
+  res.json(result.rows);
+}));
+
+router.post('/customers', asyncHandler(async (req, res) => {
+  const name = normalizedText(req.body.name, 160);
+  const documentType = normalizedText(req.body.documentType, 20)?.toUpperCase() || 'NIT';
+  const documentNumber = normalizedText(req.body.documentNumber, 40);
+  const email = normalizedText(req.body.email, 160);
+  const phone = normalizedText(req.body.phone, 40);
+  const address = normalizedText(req.body.address, 240);
+  if (!name) {
+    return res.status(422).json({ error: 'El nombre del cliente es obligatorio.' });
+  }
+  if (!DOCUMENT_TYPES.has(documentType)) {
+    return res.status(422).json({ error: 'El tipo de documento no es válido.' });
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(422).json({ error: 'El correo del cliente no es válido.' });
+  }
+  try {
+    const customer = await withTransaction(async (client) => {
+      const result = await client.query(
+        `INSERT INTO customers(
+           tenant_id, name, document_type, document_number, email, phone, address
+         )
+         VALUES($1,$2,$3,$4,$5,$6,$7)
+         RETURNING id, name, document_type, document_number, email, phone,
+                   address, active, created_at`,
+        [
+          req.context.tenantId,
+          name,
+          documentType,
+          documentNumber,
+          email,
+          phone,
+          address,
+        ],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'customer.created_from_pos',
+        entityType: 'customer',
+        entityId: result.rows[0].id,
+        after: result.rows[0],
+        reason: 'Cliente creado desde Caja & POS',
+      });
+      return { ...result.rows[0], outstanding: 0 };
+    });
+    res.status(201).json(customer);
+  } catch (error) {
+    if (error.code === '23505') {
+      throw new AppError(
+        'Ya existe un cliente con ese documento.',
+        409,
+        'CUSTOMER_DOCUMENT_EXISTS',
+      );
+    }
+    throw error;
+  }
+}));
 
 router.get('/summary', asyncHandler(async (req, res) => {
   const summary = await withTransaction(async (client) => {
@@ -507,14 +596,28 @@ router.post('/sales', asyncHandler(async (req, res) => {
     warehouseId,
     paymentMethod,
     cashReceived,
+    customerId = null,
+    saleTerms = 'IMMEDIATE',
+    dueDate = null,
     items,
   } = req.body;
-  const normalizedPayment = typeof paymentMethod === 'string'
+  const requestedPayment = typeof paymentMethod === 'string'
     ? paymentMethod.trim().toUpperCase()
     : '';
+  const normalizedTerms = typeof saleTerms === 'string'
+    ? saleTerms.trim().toUpperCase()
+    : '';
+  const normalizedPayment = normalizedTerms === 'CREDIT' ? 'CREDIT' : requestedPayment;
   const allowedPayments = ['CASH', 'CARD', 'TRANSFER'];
 
-  if (!cashSessionId || !warehouseId || !normalizedPayment || !Array.isArray(items) || !items.length) {
+  if (
+    !cashSessionId ||
+    !warehouseId ||
+    !normalizedTerms ||
+    (normalizedTerms === 'IMMEDIATE' && !requestedPayment) ||
+    !Array.isArray(items) ||
+    !items.length
+  ) {
     return res.status(422).json({
       error: 'cashSessionId, warehouseId, paymentMethod e items son obligatorios.',
     });
@@ -522,8 +625,22 @@ router.post('/sales', asyncHandler(async (req, res) => {
   if (![cashSessionId, warehouseId].every((id) => typeof id === 'string' && UUID_PATTERN.test(id))) {
     return res.status(422).json({ error: 'La caja y la bodega deben tener UUID válidos.' });
   }
-  if (!allowedPayments.includes(normalizedPayment)) {
+  if (!['IMMEDIATE', 'CREDIT'].includes(normalizedTerms)) {
+    return res.status(422).json({ error: 'El tipo de venta no es válido.' });
+  }
+  if (normalizedTerms === 'IMMEDIATE' && !allowedPayments.includes(normalizedPayment)) {
     return res.status(422).json({ error: 'El medio de pago no es válido.' });
+  }
+  if (customerId && (typeof customerId !== 'string' || !UUID_PATTERN.test(customerId))) {
+    return res.status(422).json({ error: 'El cliente no es válido.' });
+  }
+  if (
+    normalizedTerms === 'CREDIT' &&
+    (!customerId || !validDate(dueDate) || dueDate < new Date().toISOString().slice(0, 10))
+  ) {
+    return res.status(422).json({
+      error: 'La venta a crédito requiere un cliente y una fecha de vencimiento válida.',
+    });
   }
   const normalizedCashReceived = Number(cashReceived);
   if (
@@ -561,6 +678,23 @@ router.post('/sales', asyncHandler(async (req, res) => {
     );
     if (!session.rowCount) {
       throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
+    }
+    let customer = null;
+    if (customerId) {
+      const customerResult = await client.query(
+        `SELECT id, name, document_type, document_number
+         FROM customers
+         WHERE id = $1 AND tenant_id = $2 AND active = TRUE`,
+        [customerId, req.context.tenantId],
+      );
+      if (!customerResult.rowCount) {
+        throw new AppError(
+          'El cliente no pertenece a la empresa activa.',
+          404,
+          'CUSTOMER_NOT_FOUND',
+        );
+      }
+      customer = customerResult.rows[0];
     }
     const warehouse = await client.query(
       `SELECT id
@@ -639,11 +773,13 @@ router.post('/sales', asyncHandler(async (req, res) => {
     const saleResult = await client.query(
       `INSERT INTO sales(
          tenant_id, cash_session_id, warehouse_id, payment_method,
-         subtotal, tax_total, total, cash_received, cash_change, created_by
+         subtotal, tax_total, total, cash_received, cash_change, created_by,
+         customer_id, sale_terms, due_date
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING id, sequence_number, status, payment_method,
-                 subtotal, tax_total, total, cash_received, cash_change, created_at`,
+                 subtotal, tax_total, total, cash_received, cash_change,
+                 customer_id, sale_terms, due_date, created_at`,
       [
         req.context.tenantId,
         cashSessionId,
@@ -655,6 +791,9 @@ router.post('/sales', asyncHandler(async (req, res) => {
         tendered,
         change,
         req.context.userId,
+        customer?.id || null,
+        normalizedTerms,
+        normalizedTerms === 'CREDIT' ? dueDate : null,
       ],
     );
     const sale = saleResult.rows[0];
@@ -714,6 +853,67 @@ router.post('/sales', asyncHandler(async (req, res) => {
       );
     }
 
+    let receivable = null;
+    if (normalizedTerms === 'CREDIT') {
+      const invoiceResult = await client.query(
+        `INSERT INTO ar_invoices(
+           tenant_id, customer_id, branch_id, external_reference,
+           issue_date, due_date, subtotal, tax_total, total, notes, created_by
+         )
+         VALUES($1,$2,$3,$4,CURRENT_DATE,$5,$6,$7,$8,$9,$10)
+         RETURNING id, invoice_number, due_date, total, paid_amount, status`,
+        [
+          req.context.tenantId,
+          customer.id,
+          session.rows[0].branch_id,
+          `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+          dueDate,
+          subtotal,
+          taxTotal,
+          total,
+          `Venta a crédito originada en Caja & POS #${sale.sequence_number}`,
+          req.context.userId,
+        ],
+      );
+      receivable = invoiceResult.rows[0];
+      for (const line of lines) {
+        const lineSubtotal = Math.round((line.lineTotal - line.lineTax) * 100) / 100;
+        const netUnitPrice = Math.round((lineSubtotal / line.quantity) * 100) / 100;
+        await client.query(
+          `INSERT INTO ar_invoice_items(
+             tenant_id, invoice_id, description, quantity, unit_price, tax_rate,
+             subtotal, tax_amount, line_total
+           )
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            req.context.tenantId,
+            receivable.id,
+            `${line.name} · ${line.sku}`,
+            line.quantity,
+            netUnitPrice,
+            line.taxRate,
+            lineSubtotal,
+            line.lineTax,
+            line.lineTotal,
+          ],
+        );
+      }
+      await client.query(
+        `UPDATE sales SET ar_invoice_id = $1 WHERE id = $2`,
+        [receivable.id, sale.id],
+      );
+      sale.ar_invoice_id = receivable.id;
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'receivable.invoice_created_from_pos',
+        entityType: 'ar_invoice',
+        entityId: receivable.id,
+        after: { ...receivable, saleId: sale.id, customerId: customer.id },
+        reason: 'Cuenta por cobrar creada automáticamente desde Caja & POS',
+      });
+    }
+
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -727,6 +927,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
     return {
       ...sale,
       receiptNumber: `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+      customer: customer || null,
+      receivable,
       items: lines.map((line) => ({
         productId: line.id,
         sku: line.sku,

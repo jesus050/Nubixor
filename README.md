@@ -135,6 +135,10 @@ La interfaz incluye:
   historial de turnos;
 - venta rápida con carrito, medios de pago, comprobante y salida transaccional
   de inventario;
+- selección y creación rápida de clientes dentro de Caja, con consumidor final
+  como opción predeterminada;
+- ventas a crédito con vencimiento y generación transaccional de la factura en
+  Cuentas por cobrar;
 - comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
