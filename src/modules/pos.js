@@ -216,11 +216,13 @@ router.get('/catalog', asyncHandler(async (req, res) => {
     return res.status(422).json({ error: 'warehouseId debe ser un UUID válido.' });
   }
   const result = await query(
-    `SELECT p.id, p.sku, p.name, p.sale_price, p.tax_review_status,
+    `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
+            c.id category_id, c.name category_name,
             tc.name tax_name, tc.rate tax_rate,
             COALESCE(ib.on_hand, 0) on_hand,
             pi.public_url image_url, pi.alt_text image_alt
      FROM products p
+     LEFT JOIN categories c ON c.id = p.category_id AND c.tenant_id = p.tenant_id
      LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
      LEFT JOIN inventory_balances ib
        ON ib.product_id = p.id

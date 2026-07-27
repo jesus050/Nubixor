@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260726-16">
-    <script src="./app.js?v=20260726-16" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260726-17">
+    <script src="./app.js?v=20260726-17" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -188,6 +188,11 @@
           >
             <span></span><span></span>
           </button>
+
+          <div class="cashier-terminal-brand" aria-label="MegaSuite Caja">
+            <span aria-hidden="true">M</span>
+            <div><strong>MegaSuite Caja</strong><small>Terminal de venta</small></div>
+          </div>
 
           <label class="search">
             <span aria-hidden="true">⌕</span>
@@ -1233,19 +1238,22 @@
                   <h3>Nueva venta</h3>
                 </div>
                 <div class="pos-filters">
+                  <label class="field-search pos-search">
+                    <span aria-hidden="true">⌕</span>
+                    <span class="sr-only">Buscar producto para vender</span>
+                    <input id="posProductSearch" type="search" placeholder="Buscar nombre, SKU o código">
+                    <kbd>/</kbd>
+                  </label>
                   <label>
                     <span>Bodega de salida</span>
                     <select id="posWarehouseSelect">
                       <option value="">Selecciona una bodega</option>
                     </select>
                   </label>
-                  <label class="field-search pos-search">
-                    <span aria-hidden="true">⌕</span>
-                    <span class="sr-only">Buscar producto para vender</span>
-                    <input id="posProductSearch" type="search" placeholder="Buscar producto o SKU">
-                  </label>
                 </div>
               </div>
+
+              <div class="pos-category-strip" id="posCategoryStrip" aria-label="Filtrar productos por categoría"></div>
 
               <div class="sale-layout">
                 <div class="pos-catalog">
@@ -1262,7 +1270,10 @@
                       <small>Venta actual</small>
                       <h3 id="cartTitle">Carrito</h3>
                     </div>
-                    <span id="cartItemCount">0 artículos</span>
+                    <div>
+                      <button class="cart-clear" id="clearCartButton" type="button" hidden>Vaciar</button>
+                      <span id="cartItemCount">0 artículos</span>
+                    </div>
                   </div>
                   <div class="cart-items" id="cartItems"></div>
                   <div class="cart-empty" id="cartEmpty">
@@ -1275,14 +1286,19 @@
                     <div><span>Impuestos incluidos</span><strong id="cartTax">$0</strong></div>
                     <div class="cart-total"><span>Total</span><strong id="cartTotal">$0</strong></div>
                   </div>
-                  <label class="form-field cart-payment">
+                  <div class="cart-payment">
                     <span>Medio de pago</span>
-                    <select id="posPaymentMethod">
+                    <div class="payment-options" role="group" aria-label="Medio de pago">
+                      <button type="button" class="active" data-payment-method="CASH">Efectivo</button>
+                      <button type="button" data-payment-method="CARD">Tarjeta</button>
+                      <button type="button" data-payment-method="TRANSFER">Transferencia</button>
+                    </div>
+                    <select class="sr-only" id="posPaymentMethod" aria-label="Medio de pago">
                       <option value="CASH">Efectivo</option>
                       <option value="CARD">Tarjeta</option>
                       <option value="TRANSFER">Transferencia</option>
                     </select>
-                  </label>
+                  </div>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
                     Selecciona productos <span aria-hidden="true">→</span>

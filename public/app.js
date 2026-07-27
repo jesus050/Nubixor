@@ -348,6 +348,7 @@ const elements = {
   saveCashMovementButton: document.querySelector('#saveCashMovementButton'),
   posWarehouseSelect: document.querySelector('#posWarehouseSelect'),
   posProductSearch: document.querySelector('#posProductSearch'),
+  posCategoryStrip: document.querySelector('#posCategoryStrip'),
   posProductGrid: document.querySelector('#posProductGrid'),
   posCatalogState: document.querySelector('#posCatalogState'),
   cartItems: document.querySelector('#cartItems'),
@@ -356,7 +357,9 @@ const elements = {
   cartSubtotal: document.querySelector('#cartSubtotal'),
   cartTax: document.querySelector('#cartTax'),
   cartTotal: document.querySelector('#cartTotal'),
+  clearCartButton: document.querySelector('#clearCartButton'),
   posPaymentMethod: document.querySelector('#posPaymentMethod'),
+  posPaymentButtons: document.querySelectorAll('[data-payment-method]'),
   posSaleError: document.querySelector('#posSaleError'),
   completeSaleButton: document.querySelector('#completeSaleButton'),
   posSaleLock: document.querySelector('#posSaleLock'),
@@ -636,6 +639,7 @@ let currentUser = null;
 let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
 const saleCart = new Map();
+let activePosCategory = 'ALL';
 let imageProduct = null;
 let imagePreviewUrl = null;
 let activeTenantId = readTenantPreference();
@@ -1766,8 +1770,12 @@ function calculateCartTotals() {
 function renderPosCatalog() {
   const search = normalizeSearch(elements.posProductSearch.value.trim());
   const filtered = posCatalog.filter((product) => {
-    const searchable = normalizeSearch(`${product.name} ${product.sku}`);
-    return !search || searchable.includes(search);
+    const searchable = normalizeSearch(
+      `${product.name} ${product.sku} ${product.barcode || ''} ${product.category_name || ''}`,
+    );
+    const matchesCategory =
+      activePosCategory === 'ALL' || product.category_id === activePosCategory;
+    return matchesCategory && (!search || searchable.includes(search));
   });
   elements.posProductGrid.replaceChildren();
   elements.posCatalogState.hidden = filtered.length > 0;
@@ -1798,7 +1806,9 @@ function renderPosCatalog() {
     const info = document.createElement('div');
     info.className = 'pos-product-info';
     const sku = document.createElement('small');
-    sku.textContent = product.sku;
+    sku.textContent = product.category_name
+      ? `${product.category_name} · ${product.sku}`
+      : product.sku;
     const name = document.createElement('strong');
     name.textContent = product.name;
     const price = document.createElement('b');
@@ -1813,7 +1823,7 @@ function renderPosCatalog() {
     const currentQuantity = saleCart.get(product.id)?.quantity || 0;
     const addButton = document.createElement('button');
     addButton.type = 'button';
-    addButton.textContent = stock <= 0 ? 'Sin existencias' : 'Agregar';
+    addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
     addButton.disabled =
       stock <= 0 ||
       currentQuantity >= stock ||
@@ -1822,6 +1832,34 @@ function renderPosCatalog() {
     footer.append(stockLabel, addButton);
     card.append(visual, info, footer);
     elements.posProductGrid.append(card);
+  }
+}
+
+function renderPosCategories() {
+  const categoriesAvailable = [...new Map(
+    posCatalog
+      .filter((product) => product.category_id && product.category_name)
+      .map((product) => [product.category_id, product.category_name]),
+  )].sort((left, right) => left[1].localeCompare(right[1], 'es'));
+  if (
+    activePosCategory !== 'ALL' &&
+    !categoriesAvailable.some(([categoryId]) => categoryId === activePosCategory)
+  ) {
+    activePosCategory = 'ALL';
+  }
+  elements.posCategoryStrip.replaceChildren();
+  for (const [categoryId, categoryName] of [['ALL', 'Todos'], ...categoriesAvailable]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.posCategory = categoryId;
+    button.classList.toggle('active', categoryId === activePosCategory);
+    button.textContent = categoryName;
+    button.addEventListener('click', () => {
+      activePosCategory = categoryId;
+      renderPosCategories();
+      renderPosCatalog();
+    });
+    elements.posCategoryStrip.append(button);
   }
 }
 
@@ -1892,6 +1930,7 @@ function renderCart() {
   elements.cartSubtotal.textContent = formatCurrency(totals.subtotal);
   elements.cartTax.textContent = formatCurrency(totals.tax);
   elements.cartTotal.textContent = formatCurrency(totals.total);
+  elements.clearCartButton.hidden = totals.itemCount === 0;
   elements.completeSaleButton.disabled =
     !posSummary.openSession || !elements.posWarehouseSelect.value || saleCart.size === 0;
   elements.completeSaleButton.textContent = totals.itemCount
@@ -1910,6 +1949,7 @@ async function loadPosCatalog() {
   const warehouseId = elements.posWarehouseSelect.value;
   if (!posSummary.openSession || !warehouseId) {
     posCatalog = [];
+    renderPosCategories();
     setPosCatalogState(
       'Abre un turno y selecciona una bodega',
       'Los productos disponibles aparecerán aquí con sus existencias.',
@@ -1921,11 +1961,13 @@ async function loadPosCatalog() {
     posCatalog = await getJson(`/api/pos/catalog?warehouseId=${encodeURIComponent(warehouseId)}`, {
       headers: { 'x-tenant-id': activeTenantId },
     });
+    renderPosCategories();
     renderPosCatalog();
     renderCart();
     return posCatalog;
   } catch (error) {
     posCatalog = [];
+    renderPosCategories();
     setPosCatalogState('No pudimos cargar las existencias', error.message, true);
     renderCart();
     throw error;
@@ -6382,9 +6424,29 @@ elements.cashMovementDialog.addEventListener('click', (event) => {
 });
 elements.posWarehouseSelect.addEventListener('change', async () => {
   saleCart.clear();
+  activePosCategory = 'ALL';
   await loadPosCatalog().catch(() => {});
 });
 elements.posProductSearch.addEventListener('input', renderPosCatalog);
+elements.clearCartButton.addEventListener('click', clearCart);
+elements.posPaymentButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    elements.posPaymentMethod.value = button.dataset.paymentMethod;
+    elements.posPaymentButtons.forEach((option) => {
+      option.classList.toggle('active', option === button);
+    });
+  });
+});
+document.addEventListener('keydown', (event) => {
+  if (
+    event.key === '/' &&
+    document.body.dataset.activeView === 'caja' &&
+    !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+  ) {
+    event.preventDefault();
+    elements.posProductSearch.focus();
+  }
+});
 elements.completeSaleButton.addEventListener('click', completeSale);
 elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
 elements.printReceiptButton.addEventListener('click', () => window.print());

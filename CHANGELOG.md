@@ -11,6 +11,9 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   permanece plegado hasta que el usuario lo necesita.
 - La sesión del Cajero oculta completamente la navegación administrativa para
   aprovechar toda la pantalla, y el botón de cobro muestra el total de la venta.
+- La terminal incorpora filtros rápidos por categoría, búsqueda por nombre,
+  SKU o código de barras, selector directo del medio de pago, vaciado del
+  carrito y acceso rápido al buscador con la tecla `/`.
 
 ### Añadido
 

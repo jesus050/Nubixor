@@ -29,6 +29,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Abrir turno de caja/);
   assert.match(response.text, /Selecciona productos/);
   assert.match(response.text, /Control e historial de caja/);
+  assert.match(response.text, /MegaSuite Caja/);
+  assert.match(response.text, /data-payment-method="CASH"/);
+  assert.match(response.text, /id="posCategoryStrip"/);
   assert.match(response.text, /Pestañas principales/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
