@@ -4,10 +4,12 @@
 
 La base relacional y la primera operación visual multiempresa están activas.
 Una caja autorizada puede mostrar productos de varias empresas y dividir un
-cobro de contado en ventas y comprobantes legales separados. Aún no implementa:
+cobro de contado en ventas y comprobantes legales separados. El conector
+desacoplado, la configuración, la numeración y la cola auditable ya existen.
+Aún no implementa:
 
-- la integración real con un proveedor de facturación electrónica;
-- reintentos de documentos externos;
+- el adaptador HTTP del proveedor que finalmente se contrate;
+- el trabajador automático de reintentos de documentos externos;
 - cierre visual desglosado por empresa.
 
 El POS conserva sus datos históricos y mantiene el flujo tradicional para

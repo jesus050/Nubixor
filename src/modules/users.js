@@ -27,6 +27,7 @@ export const permissionCatalog = [
   { code: 'users.manage', group: 'Seguridad', name: 'Gestionar usuarios y roles', description: 'Invita personas y define sus accesos.' },
   { code: 'audit.view', group: 'Seguridad', name: 'Consultar auditoría', description: 'Consulta trazabilidad de cambios.' },
   { code: 'reports.view', group: 'General', name: 'Consultar reportes', description: 'Consulta y exporta reportes operativos y financieros.' },
+  { code: 'billing.manage', group: 'Control', name: 'Facturación electrónica', description: 'Configura proveedor, resoluciones y transmisiones.' },
 ];
 
 const permissionCodes = new Set(permissionCatalog.map((permission) => permission.code));

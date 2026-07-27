@@ -26,6 +26,7 @@ import physicalCountsRouter from './modules/physical-counts.js';
 import authRouter from './modules/auth.js';
 import auditRouter from './modules/audit.js';
 import reportsRouter from './modules/reports.js';
+import electronicBillingRouter from './modules/electronic-billing.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
@@ -98,6 +99,7 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.use('/api/physical-counts', physicalCountsRouter);
   application.use('/api/audit', auditRouter);
   application.use('/api/reports', reportsRouter);
+  application.use('/api/electronic-billing', electronicBillingRouter);
 
   application.use(notFound);
   application.use(errorHandler);

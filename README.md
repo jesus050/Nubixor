@@ -159,6 +159,9 @@ La interfaz incluye:
   identidad propietaria/vendedora del producto, carrito agrupable por vendedor,
   saldos por empresa, asignaciones de pago, obligaciones interempresa,
   resoluciones y documentos tributarios separados;
+- conector de facturación electrónica desacoplado por proveedor, con
+  credenciales cifradas, ambientes de prueba/producción, resoluciones,
+  cola idempotente y trazabilidad de intentos;
 - comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
@@ -240,6 +243,7 @@ Copie `.env.example` a `.env`; nunca confirme `.env` en Git.
 | `REDIS_URL` | URL `redis://` o `rediss://` |
 | `CORS_ORIGINS` | Origen o lista separada por comas; use `*` sólo en desarrollo |
 | `TRUST_PROXY` | Active detrás de un proxy confiable |
+| `ELECTRONIC_BILLING_ENCRYPTION_KEY` | Secreto del servidor para cifrar credenciales del proveedor |
 | `JSON_BODY_LIMIT` | Tamaño máximo del cuerpo JSON |
 
 La aplicación puede arrancar sin `DATABASE_URL` o `REDIS_URL`; la prueba de
@@ -301,6 +305,12 @@ La migración `029` agrega reglas de reposición por producto: al alcanzar el
 mínimo, Inventario calcula cuánto debe trasladarse para recuperar el máximo,
 limitado por la existencia real de la bodega. La recomendación no cambia saldos
 hasta que el usuario confirma el traslado.
+
+La migración `030` prepara la conexión con un proveedor tecnológico sin
+acoplar Caja a una API específica. El módulo Sistema permite configurar el
+ambiente, probar el simulador, registrar numeración autorizada y preparar
+documentos en una cola auditable. Las credenciales reales sólo pueden guardarse
+cuando el servidor define `ELECTRONIC_BILLING_ENCRYPTION_KEY`.
 
 Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
 bodega, caja y los impuestos iniciales. Consulte

@@ -55,6 +55,48 @@ const elements = {
   postgresResult: document.querySelector('#postgresResult'),
   redisDot: document.querySelector('#redisDot'),
   redisResult: document.querySelector('#redisResult'),
+  billingEnvironmentBadge: document.querySelector('#billingEnvironmentBadge'),
+  billingConnector: document.querySelector('.billing-connector'),
+  billingReadiness: document.querySelector('#billingReadiness'),
+  billingProviderName: document.querySelector('#billingProviderName'),
+  billingConnectionStatus: document.querySelector('#billingConnectionStatus'),
+  billingProviderEnvironment: document.querySelector('#billingProviderEnvironment'),
+  billingCredentialsStatus: document.querySelector('#billingCredentialsStatus'),
+  billingLastTest: document.querySelector('#billingLastTest'),
+  billingConnectionMessage: document.querySelector('#billingConnectionMessage'),
+  testBillingConnectionButton: document.querySelector('#testBillingConnectionButton'),
+  configureBillingConnectionButton:
+    document.querySelector('#configureBillingConnectionButton'),
+  billingResolutionName: document.querySelector('#billingResolutionName'),
+  billingResolutionStatus: document.querySelector('#billingResolutionStatus'),
+  billingResolutionValidity: document.querySelector('#billingResolutionValidity'),
+  billingResolutionNext: document.querySelector('#billingResolutionNext'),
+  billingResolutionRemaining: document.querySelector('#billingResolutionRemaining'),
+  newBillingResolutionButton: document.querySelector('#newBillingResolutionButton'),
+  billingPendingCount: document.querySelector('#billingPendingCount'),
+  billingAcceptedCount: document.querySelector('#billingAcceptedCount'),
+  billingRejectedCount: document.querySelector('#billingRejectedCount'),
+  billingDocumentList: document.querySelector('#billingDocumentList'),
+  billingDocumentState: document.querySelector('#billingDocumentState'),
+  billingConnectionDialog: document.querySelector('#billingConnectionDialog'),
+  billingConnectionForm: document.querySelector('#billingConnectionForm'),
+  billingConnectionFormError: document.querySelector('#billingConnectionFormError'),
+  billingProviderCode: document.querySelector('#billingProviderCode'),
+  billingProviderDisplayName: document.querySelector('#billingProviderDisplayName'),
+  billingProviderEnvironmentInput:
+    document.querySelector('#billingProviderEnvironmentInput'),
+  billingProviderBaseUrl: document.querySelector('#billingProviderBaseUrl'),
+  billingProviderCredentials: document.querySelector('#billingProviderCredentials'),
+  closeBillingConnectionDialog: document.querySelector('#closeBillingConnectionDialog'),
+  cancelBillingConnectionButton: document.querySelector('#cancelBillingConnectionButton'),
+  saveBillingConnectionButton: document.querySelector('#saveBillingConnectionButton'),
+  billingResolutionDialog: document.querySelector('#billingResolutionDialog'),
+  billingResolutionForm: document.querySelector('#billingResolutionForm'),
+  billingResolutionFormError: document.querySelector('#billingResolutionFormError'),
+  billingResolutionBranchId: document.querySelector('#billingResolutionBranchId'),
+  closeBillingResolutionDialog: document.querySelector('#closeBillingResolutionDialog'),
+  cancelBillingResolutionButton: document.querySelector('#cancelBillingResolutionButton'),
+  saveBillingResolutionButton: document.querySelector('#saveBillingResolutionButton'),
   companyContext: document.querySelector('#companyContext'),
   companyCount: document.querySelector('#companyCount'),
   companyDetail: document.querySelector('#companyDetail'),
@@ -720,6 +762,7 @@ let reportItems = [];
 let reportPagination = { page: 1, pageSize: 50, total: 0, totalPages: 1 };
 let reportFacetsLoadedForTenant = null;
 let reportSearchTimer = null;
+let electronicBillingOverview = null;
 let currentUser = null;
 let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
@@ -793,6 +836,7 @@ function applyAccessVisibility() {
   const membership = activeMembership();
   const cashierMode = membership?.roleCode === 'CASHIER';
   elements.appShell.classList.toggle('cashier-mode', cashierMode);
+  elements.billingConnector.hidden = !hasAnyPermission('billing.manage');
   const viewPermissions = {
     inicio: ['dashboard.view'],
     empresas: [],
@@ -808,7 +852,7 @@ function applyAccessVisibility() {
     modulos: ['dashboard.view'],
     reportes: ['reports.view'],
     auditoria: ['audit.view'],
-    sistema: ['audit.view', 'users.manage'],
+    sistema: ['audit.view', 'users.manage', 'billing.manage'],
   };
   document.querySelectorAll('[data-view-link]').forEach((link) => {
     const required = viewPermissions[link.dataset.viewLink] || [];
@@ -5352,6 +5396,245 @@ function setMetric(valueElement, detailElement, result, label) {
   detailElement.textContent = 'No disponible';
 }
 
+function renderElectronicBilling(overview = {}) {
+  electronicBillingOverview = overview;
+  const account = overview.account;
+  const readiness = overview.readiness || {};
+  const resolution = (overview.resolutions || []).find((item) =>
+    item.active && Number(item.remaining_numbers) > 0) || null;
+  elements.billingEnvironmentBadge.textContent = account
+    ? `${account.environment} · ${account.provider_code}`
+    : 'Sin conexión';
+  elements.billingProviderName.textContent =
+    account?.display_name || 'Pendiente de seleccionar';
+  elements.billingConnectionStatus.textContent =
+    account?.connection_status || 'BORRADOR';
+  elements.billingProviderEnvironment.textContent = account?.environment || '—';
+  elements.billingCredentialsStatus.textContent = account?.credentials_configured ||
+    account?.provider_code === 'SANDBOX'
+    ? 'Protegidas'
+    : 'No configuradas';
+  elements.billingLastTest.textContent = account?.last_tested_at
+    ? formatShortDate(account.last_tested_at)
+    : '—';
+  elements.billingConnectionMessage.textContent = account?.last_error ||
+    (account?.connection_status === 'READY'
+      ? 'La conexión está preparada para recibir un adaptador de transmisión.'
+      : 'Puedes usar SANDBOX para verificar el flujo antes de contratar al proveedor.');
+  elements.testBillingConnectionButton.disabled = !account;
+  Object.entries(readiness).forEach(([key, ready]) => {
+    elements.billingReadiness.querySelector(`[data-billing-check="${key}"]`)
+      ?.classList.toggle('ready', Boolean(ready));
+  });
+
+  elements.billingResolutionName.textContent = resolution
+    ? `${resolution.prefix} · ${resolution.number_from}–${resolution.number_to}`
+    : 'Sin resolución vigente';
+  elements.billingResolutionStatus.textContent = resolution ? 'VIGENTE' : 'PENDIENTE';
+  elements.billingResolutionValidity.textContent = resolution
+    ? `${formatShortDate(resolution.valid_from)} – ${formatShortDate(resolution.valid_until)}`
+    : '—';
+  elements.billingResolutionNext.textContent = resolution
+    ? `${resolution.prefix}${resolution.current_number}`
+    : '—';
+  elements.billingResolutionRemaining.textContent =
+    String(resolution?.remaining_numbers || 0);
+
+  const counts = overview.counts || {};
+  elements.billingPendingCount.textContent = String(counts.pending || 0);
+  elements.billingAcceptedCount.textContent = String(counts.accepted || 0);
+  elements.billingRejectedCount.textContent = String(counts.rejected || 0);
+  elements.billingDocumentList.replaceChildren();
+  elements.billingDocumentState.hidden = (overview.documents || []).length > 0;
+  for (const document of overview.documents || []) {
+    const row = window.document.createElement('article');
+    row.className = 'billing-document-row';
+    const identity = window.document.createElement('div');
+    const number = window.document.createElement('strong');
+    number.textContent = document.document_number
+      ? `${document.prefix || ''}${document.document_number}`
+      : `Venta #${document.sequence_number}`;
+    const type = window.document.createElement('small');
+    type.textContent = document.document_type;
+    identity.append(number, type);
+    const status = window.document.createElement('div');
+    status.append(
+      Object.assign(window.document.createElement('span'), { textContent: 'Estado' }),
+      Object.assign(window.document.createElement('strong'), {
+        textContent: document.transmission_status || document.status,
+      }),
+    );
+    const amount = window.document.createElement('div');
+    amount.append(
+      Object.assign(window.document.createElement('span'), { textContent: 'Total' }),
+      Object.assign(window.document.createElement('strong'), {
+        textContent: formatCurrency(document.total),
+      }),
+    );
+    const date = window.document.createElement('div');
+    date.append(
+      Object.assign(window.document.createElement('span'), { textContent: 'Creado' }),
+      Object.assign(window.document.createElement('strong'), {
+        textContent: formatShortDate(document.created_at),
+      }),
+    );
+    const queue = window.document.createElement('button');
+    queue.type = 'button';
+    queue.textContent = 'Preparar envío';
+    queue.disabled = !readiness.connectionReady || !readiness.resolutionReady ||
+      !['PENDING', 'REJECTED'].includes(document.status);
+    queue.addEventListener('click', () => queueElectronicDocument(document.id, queue));
+    row.append(identity, status, amount, date, queue);
+    elements.billingDocumentList.append(row);
+  }
+}
+
+async function loadElectronicBilling() {
+  if (!activeTenantId || !hasAnyPermission('billing.manage')) return null;
+  const overview = await getJson('/api/electronic-billing/overview', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderElectronicBilling(overview);
+  return overview;
+}
+
+function openBillingConnectionDialog() {
+  const account = electronicBillingOverview?.account;
+  elements.billingConnectionForm.reset();
+  elements.billingConnectionFormError.hidden = true;
+  elements.billingProviderCode.value = account?.provider_code || 'SANDBOX';
+  elements.billingProviderDisplayName.value =
+    account?.display_name || 'Simulador MegaSuite';
+  elements.billingProviderEnvironmentInput.value = account?.environment || 'TEST';
+  elements.billingProviderBaseUrl.value = account?.base_url || '';
+  elements.billingProviderCredentials.value = '';
+  elements.billingConnectionDialog.showModal();
+  elements.billingProviderCode.focus();
+}
+
+function closeBillingConnectionDialog() {
+  elements.billingConnectionDialog.close();
+}
+
+async function saveBillingConnection(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.billingConnectionForm);
+  let credentials;
+  const credentialText = formData.get('credentials').trim();
+  try {
+    credentials = credentialText ? JSON.parse(credentialText) : undefined;
+  } catch {
+    elements.billingConnectionFormError.textContent =
+      'Las credenciales deben usar JSON válido.';
+    elements.billingConnectionFormError.hidden = false;
+    return;
+  }
+  elements.saveBillingConnectionButton.disabled = true;
+  elements.billingConnectionFormError.hidden = true;
+  try {
+    await getJson('/api/electronic-billing/connection', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        providerCode: formData.get('providerCode'),
+        displayName: formData.get('displayName'),
+        environment: formData.get('environment'),
+        baseUrl: formData.get('baseUrl'),
+        ...(credentials ? { credentials } : {}),
+      }),
+    });
+    closeBillingConnectionDialog();
+    await loadElectronicBilling();
+    showToast('Conexión guardada sin exponer credenciales.');
+  } catch (error) {
+    elements.billingConnectionFormError.textContent = error.message;
+    elements.billingConnectionFormError.hidden = false;
+  } finally {
+    elements.saveBillingConnectionButton.disabled = false;
+  }
+}
+
+async function testBillingConnection() {
+  elements.testBillingConnectionButton.disabled = true;
+  elements.testBillingConnectionButton.textContent = 'Probando…';
+  try {
+    await getJson('/api/electronic-billing/connection/test', {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await loadElectronicBilling();
+    showToast('Conexión de prueba verificada.');
+  } catch (error) {
+    showToast(error.message);
+    await loadElectronicBilling().catch(() => {});
+  } finally {
+    elements.testBillingConnectionButton.disabled = false;
+    elements.testBillingConnectionButton.textContent = 'Probar conexión';
+  }
+}
+
+function openBillingResolutionDialog() {
+  elements.billingResolutionForm.reset();
+  elements.billingResolutionFormError.hidden = true;
+  fillInventorySelect(
+    elements.billingResolutionBranchId,
+    'Selecciona una sucursal',
+    branches.filter((branch) => branch.active),
+    (branch) => `${branch.name} · ${branch.code}`,
+  );
+  elements.billingResolutionDialog.showModal();
+  elements.billingResolutionBranchId.focus();
+}
+
+function closeBillingResolutionDialog() {
+  elements.billingResolutionDialog.close();
+}
+
+async function saveBillingResolution(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.billingResolutionForm);
+  elements.saveBillingResolutionButton.disabled = true;
+  elements.billingResolutionFormError.hidden = true;
+  try {
+    await getJson('/api/electronic-billing/resolutions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeBillingResolutionDialog();
+    await Promise.all([loadElectronicBilling(), loadPos()]);
+    showToast('Resolución registrada para la empresa activa.');
+  } catch (error) {
+    elements.billingResolutionFormError.textContent = error.message;
+    elements.billingResolutionFormError.hidden = false;
+  } finally {
+    elements.saveBillingResolutionButton.disabled = false;
+  }
+}
+
+async function queueElectronicDocument(documentId, button) {
+  button.disabled = true;
+  button.textContent = 'Preparando…';
+  try {
+    await getJson(`/api/electronic-billing/documents/${documentId}/queue`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await loadElectronicBilling();
+    showToast('Documento preparado en la cola de transmisión.');
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+    button.textContent = 'Preparar envío';
+  }
+}
+
 async function refreshStatus({ notify = false } = {}) {
   elements.refreshButton.classList.add('loading');
   elements.refreshButton.disabled = true;
@@ -5450,6 +5733,7 @@ async function refreshTenantData() {
     hasAnyPermission('audit.view') && !activeMembership()?.branchId
       ? loadAudit() : Promise.resolve({}),
     hasAnyPermission('reports.view') ? loadReports() : Promise.resolve({}),
+    hasAnyPermission('billing.manage') ? loadElectronicBilling() : Promise.resolve({}),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -7397,6 +7681,39 @@ elements.reportNextPage.addEventListener('click', () => {
   loadReports().catch(() => {
     reportPagination.page -= 1;
   });
+});
+elements.configureBillingConnectionButton.addEventListener(
+  'click',
+  openBillingConnectionDialog,
+);
+elements.testBillingConnectionButton.addEventListener('click', testBillingConnection);
+elements.closeBillingConnectionDialog.addEventListener(
+  'click',
+  closeBillingConnectionDialog,
+);
+elements.cancelBillingConnectionButton.addEventListener(
+  'click',
+  closeBillingConnectionDialog,
+);
+elements.billingConnectionForm.addEventListener('submit', saveBillingConnection);
+elements.billingConnectionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.billingConnectionDialog) closeBillingConnectionDialog();
+});
+elements.newBillingResolutionButton.addEventListener(
+  'click',
+  openBillingResolutionDialog,
+);
+elements.closeBillingResolutionDialog.addEventListener(
+  'click',
+  closeBillingResolutionDialog,
+);
+elements.cancelBillingResolutionButton.addEventListener(
+  'click',
+  closeBillingResolutionDialog,
+);
+elements.billingResolutionForm.addEventListener('submit', saveBillingResolution);
+elements.billingResolutionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.billingResolutionDialog) closeBillingResolutionDialog();
 });
 elements.auditSearch.addEventListener('input', scheduleAuditReload);
 [

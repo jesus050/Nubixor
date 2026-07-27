@@ -381,6 +381,27 @@ test('inventario valida ajustes y transferencias antes de consultar PostgreSQL',
   assert.match(replenishment.body.error, /UUID válidos/i);
 });
 
+test('facturación electrónica valida conexión, resolución y documento', async () => {
+  const application = createUnsecuredApp();
+  const connection = await request(application)
+    .put('/api/electronic-billing/connection')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ providerCode: '!', displayName: '', environment: 'INVALID' })
+    .expect(422);
+  assert.match(connection.body.error, /proveedor, nombre y ambiente/i);
+  const resolution = await request(application)
+    .post('/api/electronic-billing/resolutions')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ branchId: 'invalid', prefix: '', numberFrom: 0, numberTo: 0 })
+    .expect(422);
+  assert.match(resolution.body.error, /rango o vigencia/i);
+  const document = await request(application)
+    .post('/api/electronic-billing/documents/invalid/queue')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .expect(422);
+  assert.match(document.body.error, /UUID válido/i);
+});
+
 test('compras valida proveedores, órdenes y recepciones antes de consultar PostgreSQL', async () => {
   const application = createUnsecuredApp();
   await request(application)

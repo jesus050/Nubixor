@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-27">
-    <script src="./app.js?v=20260727-27" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-28">
+    <script src="./app.js?v=20260727-28" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -2122,6 +2122,76 @@
                 <span class="service-result" id="redisResult">Comprobando</span>
               </div>
             </div>
+
+            <section class="billing-connector" aria-labelledby="billingConnectorTitle">
+              <div class="billing-connector-heading">
+                <div>
+                  <p class="eyebrow">Preparación DIAN</p>
+                  <h3 id="billingConnectorTitle">Conector de facturación electrónica</h3>
+                  <p>Configuración aislada por empresa. Ninguna credencial se muestra nuevamente.</p>
+                </div>
+                <span class="billing-environment-badge" id="billingEnvironmentBadge">Sin conexión</span>
+              </div>
+
+              <div class="billing-readiness" id="billingReadiness">
+                <article data-billing-check="electronicMode"><span>01</span><strong>Modo electrónico</strong><small>Perfil tributario</small></article>
+                <article data-billing-check="providerConfigured"><span>02</span><strong>Proveedor</strong><small>Cuenta tecnológica</small></article>
+                <article data-billing-check="connectionReady"><span>03</span><strong>Conexión probada</strong><small>Ambiente habilitado</small></article>
+                <article data-billing-check="resolutionReady"><span>04</span><strong>Numeración</strong><small>Prefijo y vigencia</small></article>
+              </div>
+
+              <div class="billing-connector-grid">
+                <article class="billing-provider-card">
+                  <div class="billing-card-heading">
+                    <div><span>Proveedor tecnológico</span><h4 id="billingProviderName">Pendiente de seleccionar</h4></div>
+                    <span class="billing-status" id="billingConnectionStatus">BORRADOR</span>
+                  </div>
+                  <dl>
+                    <div><dt>Ambiente</dt><dd id="billingProviderEnvironment">—</dd></div>
+                    <div><dt>Credenciales</dt><dd id="billingCredentialsStatus">No configuradas</dd></div>
+                    <div><dt>Última prueba</dt><dd id="billingLastTest">—</dd></div>
+                  </dl>
+                  <p id="billingConnectionMessage">Puedes usar el simulador para verificar el flujo antes de contratar al proveedor.</p>
+                  <div class="billing-card-actions">
+                    <button class="secondary-button" id="testBillingConnectionButton" type="button">Probar conexión</button>
+                    <button class="primary-button compact" id="configureBillingConnectionButton" type="button">Configurar proveedor</button>
+                  </div>
+                </article>
+
+                <article class="billing-resolution-card">
+                  <div class="billing-card-heading">
+                    <div><span>Numeración autorizada</span><h4 id="billingResolutionName">Sin resolución vigente</h4></div>
+                    <span class="billing-status" id="billingResolutionStatus">PENDIENTE</span>
+                  </div>
+                  <dl>
+                    <div><dt>Vigencia</dt><dd id="billingResolutionValidity">—</dd></div>
+                    <div><dt>Próximo número</dt><dd id="billingResolutionNext">—</dd></div>
+                    <div><dt>Disponibles</dt><dd id="billingResolutionRemaining">0</dd></div>
+                  </dl>
+                  <p>Registra únicamente la numeración autorizada y asociada al software en DIAN.</p>
+                  <div class="billing-card-actions">
+                    <button class="primary-button compact" id="newBillingResolutionButton" type="button">Registrar resolución</button>
+                  </div>
+                </article>
+              </div>
+
+              <div class="billing-document-monitor">
+                <div class="billing-monitor-heading">
+                  <div><span>Cola y respuestas</span><h4>Documentos electrónicos recientes</h4></div>
+                  <div class="billing-document-counts">
+                    <span><b id="billingPendingCount">0</b> pendientes</span>
+                    <span><b id="billingAcceptedCount">0</b> aceptados</span>
+                    <span><b id="billingRejectedCount">0</b> rechazados</span>
+                  </div>
+                </div>
+                <div class="billing-document-list" id="billingDocumentList"></div>
+                <div class="data-state compact-state" id="billingDocumentState">
+                  <span class="data-state-symbol" aria-hidden="true">DOC</span>
+                  <strong>Sin documentos electrónicos</strong>
+                  <p>Las ventas que deban facturarse aparecerán aquí.</p>
+                </div>
+              </div>
+            </section>
           </section>
         </main>
 
@@ -2131,6 +2201,79 @@
         </footer>
       </div>
     </div>
+
+    <dialog class="company-dialog" id="billingConnectionDialog" aria-labelledby="billingConnectionDialogTitle">
+      <form class="company-form" id="billingConnectionForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Proveedor tecnológico</p>
+            <h2 id="billingConnectionDialogTitle">Configurar conexión</h2>
+          </div>
+          <button class="icon-button" id="closeBillingConnectionDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Usa SANDBOX mientras eliges proveedor. Las credenciales reales requieren una llave de cifrado del servidor.</p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Código del proveedor <b>*</b></span>
+            <input id="billingProviderCode" name="providerCode" maxlength="40" required placeholder="SANDBOX">
+          </label>
+          <label class="form-field">
+            <span>Nombre visible <b>*</b></span>
+            <input id="billingProviderDisplayName" name="displayName" maxlength="120" required placeholder="Simulador MegaSuite">
+          </label>
+          <label class="form-field">
+            <span>Ambiente <b>*</b></span>
+            <select id="billingProviderEnvironmentInput" name="environment" required>
+              <option value="TEST">Pruebas / habilitación</option>
+              <option value="PRODUCTION">Producción</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>URL base del proveedor</span>
+            <input id="billingProviderBaseUrl" name="baseUrl" type="url" maxlength="500" placeholder="https://api.proveedor.com">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Credenciales en JSON</span>
+          <textarea id="billingProviderCredentials" name="credentials" rows="4" placeholder='{"apiKey":"..."}'></textarea>
+          <small>Opcional en SANDBOX. Si queda vacío se conservan las credenciales existentes.</small>
+        </label>
+        <p class="form-error" id="billingConnectionFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelBillingConnectionButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveBillingConnectionButton" type="submit">Guardar conexión</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="billingResolutionDialog" aria-labelledby="billingResolutionDialogTitle">
+      <form class="company-form" id="billingResolutionForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Numeración autorizada</p>
+            <h2 id="billingResolutionDialogTitle">Registrar resolución</h2>
+          </div>
+          <button class="icon-button" id="closeBillingResolutionDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Copia exactamente el prefijo, rango y vigencia autorizados. MegaSuite no inventa numeración tributaria.</p>
+        <label class="form-field">
+          <span>Sucursal <b>*</b></span>
+          <select id="billingResolutionBranchId" name="branchId" required></select>
+        </label>
+        <div class="form-grid">
+          <label class="form-field"><span>Prefijo <b>*</b></span><input name="prefix" maxlength="20" required placeholder="FE"></label>
+          <label class="form-field"><span>Número inicial <b>*</b></span><input name="numberFrom" type="number" min="1" step="1" required></label>
+          <label class="form-field"><span>Número final <b>*</b></span><input name="numberTo" type="number" min="1" step="1" required></label>
+          <label class="form-field"><span>Vigente desde <b>*</b></span><input name="validFrom" type="date" required></label>
+          <label class="form-field"><span>Vigente hasta <b>*</b></span><input name="validUntil" type="date" required></label>
+        </div>
+        <p class="form-error" id="billingResolutionFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelBillingResolutionButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveBillingResolutionButton" type="submit">Guardar resolución</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="company-dialog user-dialog" id="userDialog" aria-labelledby="userDialogTitle">
       <form class="company-form" id="userForm">

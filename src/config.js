@@ -90,4 +90,6 @@ export const config = {
   corsOrigins,
   trustProxy: readBoolean('TRUST_PROXY', process.env.TRUST_PROXY),
   jsonBodyLimit: readBodyLimit(process.env.JSON_BODY_LIMIT),
+  electronicBillingEncryptionKey:
+    process.env.ELECTRONIC_BILLING_ENCRYPTION_KEY?.trim() || null,
 };

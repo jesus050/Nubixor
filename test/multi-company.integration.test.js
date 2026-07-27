@@ -81,10 +81,12 @@ test(
            '026_shared_demo_cash_register.sql',
            '027_sale_payment_records.sql',
            '028_display_inventory_locations.sql',
-           '029_display_replenishment_rules.sql'
+           '029_display_replenishment_rules.sql',
+           '030_electronic_billing_connector.sql',
+           '031_demo_billing_sandbox.sql'
          )`,
       );
-      assert.equal(migrations.rowCount, 9);
+      assert.equal(migrations.rowCount, 11);
 
       const crativeFiscalSetup = await client.query(
         `SELECT ctp.electronic_invoicing_required,
