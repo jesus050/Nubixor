@@ -2,7 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import express from 'express';
+import request from 'supertest';
 import { applyInventoryBalanceDelta } from '../src/modules/inventory.js';
+import companiesRouter from '../src/modules/companies.js';
+import posRouter from '../src/modules/pos.js';
+import { closeDatabase } from '../src/db.js';
 
 const connectionString =
   process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
@@ -70,10 +75,11 @@ test(
          WHERE name IN (
            '021_multi_company_pos_foundation.sql',
            '022_checkout_membership_guards.sql',
-           '023_checkout_payment_scope_guards.sql'
+           '023_checkout_payment_scope_guards.sql',
+           '024_local_two_company_demo.sql'
          )`,
       );
-      assert.equal(migrations.rowCount, 3);
+      assert.equal(migrations.rowCount, 4);
 
       await client.query(
         `INSERT INTO users(id, email, full_name, status)
@@ -555,6 +561,142 @@ test(
     } finally {
       client.release();
       await pool.end();
+    }
+  },
+);
+
+test(
+  'el alta guiada crea empresa, acceso, sucursal, bodega, caja e impuestos',
+  { skip: !connectionString },
+  async () => {
+    const pool = new pg.Pool({ connectionString });
+    const ownerId = randomUUID();
+    const email = `owner-${ownerId}@example.test`;
+    let companyId = null;
+    try {
+      await pool.query(
+        `INSERT INTO users(id, email, full_name, status)
+         VALUES($1,$2,'Propietario de prueba','ACTIVE')`,
+        [ownerId, email],
+      );
+      const application = express();
+      application.use(express.json());
+      application.use((req, _res, next) => {
+        req.context = {
+          tenantId: req.header('x-tenant-id') || null,
+          userId: ownerId,
+          authenticated: true,
+          requestId: randomUUID(),
+          branchId: null,
+        };
+        next();
+      });
+      application.use('/api/companies', companiesRouter);
+      application.use('/api/pos', posRouter);
+
+      const response = await request(application)
+        .post('/api/companies')
+        .send({
+          legalName: 'Empresa temporal integración',
+          tradeName: 'Temporal',
+          taxId: `TEST-${ownerId.slice(0, 18)}`,
+          billingMode: 'ELECTRONIC_INVOICE',
+        })
+        .expect(201);
+      companyId = response.body.id;
+      assert.equal(response.body.default_document_type, 'ELECTRONIC_INVOICE');
+      assert.equal(response.body.electronic_invoicing_required, true);
+      assert.equal(response.body.setup.standardTaxes, 3);
+
+      const setup = await pool.query(
+        `SELECT
+           (SELECT COUNT(*) FROM tenant_users WHERE tenant_id = $1) memberships,
+           (SELECT COUNT(*) FROM branches WHERE tenant_id = $1) branches,
+           (SELECT COUNT(*) FROM warehouses WHERE tenant_id = $1) warehouses,
+           (SELECT COUNT(*) FROM cash_registers WHERE tenant_id = $1) registers,
+           (SELECT COUNT(*) FROM tax_categories WHERE tenant_id = $1) taxes`,
+        [companyId],
+      );
+      assert.deepEqual(
+        {
+          memberships: Number(setup.rows[0].memberships),
+          branches: Number(setup.rows[0].branches),
+          warehouses: Number(setup.rows[0].warehouses),
+          registers: Number(setup.rows[0].registers),
+          taxes: Number(setup.rows[0].taxes),
+        },
+        { memberships: 1, branches: 1, warehouses: 1, registers: 1, taxes: 3 },
+      );
+
+      const tax = await pool.query(
+        `SELECT id FROM tax_categories WHERE tenant_id = $1 AND code = 'IVA19'`,
+        [companyId],
+      );
+      const product = await pool.query(
+        `INSERT INTO products(
+           tenant_id, sku, name, sales_tax_category_id, cost, sale_price,
+           tax_review_status, active
+         )
+         VALUES($1,'TEST-001','Producto de integración',$2,1000,2000,'REVIEWED',TRUE)
+         RETURNING id`,
+        [companyId, tax.rows[0].id],
+      );
+      await pool.query(
+        `INSERT INTO inventory_balances(
+           tenant_id, product_id, warehouse_id, on_hand, reserved
+         )
+         VALUES($1,$2,$3,5,0)`,
+        [companyId, product.rows[0].id, response.body.setup.warehouse.id],
+      );
+      const cashSession = await pool.query(
+        `INSERT INTO cash_sessions(
+           tenant_id, cash_register_id, opening_amount, opened_by
+         )
+         VALUES($1,$2,0,$3)
+         RETURNING id`,
+        [companyId, response.body.setup.register.id, ownerId],
+      );
+      const sale = await request(application)
+        .post('/api/pos/sales')
+        .set('x-tenant-id', companyId)
+        .send({
+          cashSessionId: cashSession.rows[0].id,
+          warehouseId: response.body.setup.warehouse.id,
+          paymentMethod: 'CARD',
+          saleTerms: 'IMMEDIATE',
+          items: [{ productId: product.rows[0].id, quantity: 1 }],
+        })
+        .expect(201);
+      assert.equal(sale.body.document_type, 'ELECTRONIC_INVOICE');
+      assert.equal(sale.body.billingDocument.status, 'PENDING');
+      assert.match(sale.body.billingDocument.failure_reason, /resolución/i);
+    } finally {
+      if (companyId) {
+        await pool.query('DELETE FROM audit_events WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM electronic_documents WHERE company_id = $1', [companyId]);
+        await pool.query('DELETE FROM sale_items WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_movements WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM sales WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM cash_sessions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_balances WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM products WHERE tenant_id = $1', [companyId]);
+        await pool.query(
+          `DELETE FROM cash_register_companies WHERE company_id = $1`,
+          [companyId],
+        );
+        await pool.query('DELETE FROM cash_registers WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM tax_categories WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM warehouses WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM branches WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM role_permissions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM tenant_users WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM roles WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [companyId]);
+        await pool.query('DELETE FROM tenants WHERE id = $1', [companyId]);
+      }
+      await pool.query('DELETE FROM users WHERE id = $1', [ownerId]);
+      await pool.end();
+      await closeDatabase();
     }
   },
 );

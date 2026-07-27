@@ -1565,6 +1565,77 @@ input:focus-visible {
   display: none;
 }
 
+.billing-mode-strip {
+  display: grid;
+  grid-template-columns: auto auto minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+  padding: 13px 16px;
+  border: 1px solid rgba(79, 210, 233, 0.42);
+  border-radius: 16px;
+  background: linear-gradient(110deg, rgba(79, 210, 233, 0.12), rgba(181, 65, 250, 0.08));
+}
+
+.billing-mode-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--color-ink);
+  color: var(--color-cyan);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.billing-mode-strip > div {
+  display: grid;
+  gap: 2px;
+}
+
+.billing-mode-strip small {
+  color: var(--color-muted);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.billing-mode-strip strong {
+  color: var(--color-ink);
+  font-size: 12px;
+}
+
+.billing-mode-strip p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.receipt-document-state {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 13px;
+  background: var(--color-surface-soft);
+}
+
+.receipt-document-state span,
+.receipt-document-state small {
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+.receipt-document-state strong {
+  color: var(--color-ink);
+  font-size: 12px;
+}
+
 .taxonomy-panel {
   min-height: 370px;
   padding: 24px;
@@ -5928,6 +5999,12 @@ footer {
   font-weight: 800;
 }
 
+.field-help {
+  color: var(--color-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .form-field b {
   color: var(--color-purple);
 }
@@ -8871,5 +8948,14 @@ footer {
     grid-template-columns: 1fr auto;
     align-items: center;
     justify-items: start;
+  }
+
+  .billing-mode-strip {
+    grid-template-columns: auto 1fr;
+  }
+
+  .billing-mode-strip p,
+  .billing-mode-strip > .table-status {
+    grid-column: 1 / -1;
   }
 }

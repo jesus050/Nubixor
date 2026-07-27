@@ -322,6 +322,9 @@ const elements = {
   cancelReceiptPurchaseButton: document.querySelector('#cancelReceiptPurchaseButton'),
   saveReceiptPurchaseButton: document.querySelector('#saveReceiptPurchaseButton'),
   cashStatus: document.querySelector('#cashStatus'),
+  billingModeName: document.querySelector('#billingModeName'),
+  billingModeDetail: document.querySelector('#billingModeDetail'),
+  billingModeStatus: document.querySelector('#billingModeStatus'),
   cashRegisterName: document.querySelector('#cashRegisterName'),
   cashBranchName: document.querySelector('#cashBranchName'),
   cashOpeningAmount: document.querySelector('#cashOpeningAmount'),
@@ -402,6 +405,8 @@ const elements = {
   posSalesHistoryEmpty: document.querySelector('#posSalesHistoryEmpty'),
   receiptDialog: document.querySelector('#receiptDialog'),
   receiptNumber: document.querySelector('#receiptNumber'),
+  receiptDocumentType: document.querySelector('#receiptDocumentType'),
+  receiptDocumentStatus: document.querySelector('#receiptDocumentStatus'),
   receiptLines: document.querySelector('#receiptLines'),
   receiptSubtotal: document.querySelector('#receiptSubtotal'),
   receiptTax: document.querySelector('#receiptTax'),
@@ -1110,6 +1115,18 @@ function renderCompanies() {
     row.append(createCell('Nombre comercial', company.trade_name));
     row.append(createCell('NIT', company.tax_id));
 
+    const billingCell = document.createElement('td');
+    billingCell.dataset.label = 'Facturación';
+    const billing = document.createElement('span');
+    const electronic = company.default_document_type === 'ELECTRONIC_INVOICE';
+    const connected = company.billing_account_configured && company.billing_resolution_configured;
+    billing.className = `table-status ${electronic && !connected ? 'pending' : 'active'}`;
+    billing.textContent = electronic
+      ? (connected ? 'DIAN conectada' : 'DIAN por conectar')
+      : 'Comprobante interno';
+    billingCell.append(billing);
+    row.append(billingCell);
+
     const statusCell = document.createElement('td');
     statusCell.dataset.label = 'Estado';
     const status = document.createElement('span');
@@ -1685,6 +1702,24 @@ async function loadExecutiveSummary() {
 function renderPos() {
   const session = posSummary.openSession;
   const firstRegister = posSummary.registers[0] || null;
+  const fiscal = posSummary.fiscalProfile || {};
+  const electronic = fiscal.default_document_type === 'ELECTRONIC_INVOICE';
+  const dianReady =
+    Boolean(fiscal.billing_account_configured) &&
+    Boolean(fiscal.billing_resolution_configured);
+  elements.billingModeName.textContent = electronic
+    ? 'Factura electrónica'
+    : 'Comprobante interno';
+  elements.billingModeDetail.textContent = electronic
+    ? (dianReady
+      ? 'La empresa tiene cuenta tecnológica y resolución vigentes.'
+      : 'Las ventas quedarán pendientes de envío hasta conectar proveedor y resolución DIAN.')
+    : 'Las ventas generan comprobante local y no se envían a la DIAN.';
+  elements.billingModeStatus.textContent = electronic
+    ? (dianReady ? 'DIAN lista' : 'Configuración pendiente')
+    : 'Operación local';
+  elements.billingModeStatus.className =
+    `table-status ${electronic && !dianReady ? 'pending' : 'active'}`;
   syncCashRegisterOptions();
 
   if (session) {
@@ -5785,6 +5820,7 @@ async function submitCompany(event) {
     legalName: formData.get('legalName'),
     tradeName: formData.get('tradeName') || null,
     taxId: formData.get('taxId') || null,
+    billingMode: formData.get('billingMode'),
   };
 
   try {
@@ -5807,7 +5843,7 @@ async function submitCompany(event) {
     elements.companyDetail.textContent =
       `${companies.length} ${companies.length === 1 ? 'empresa activa' : 'empresas activas'}`;
     await refreshTenantData();
-    showToast('Empresa creada correctamente.');
+    showToast('Empresa, sucursal, bodega, caja e impuestos creados correctamente.');
   } catch (error) {
     elements.companyFormError.textContent = error.message;
     elements.companyFormError.hidden = false;
@@ -6476,6 +6512,24 @@ async function submitCashMovement(event) {
 
 function showReceipt(receipt) {
   elements.receiptNumber.textContent = receipt.receiptNumber;
+  const electronic = (receipt.sale_document_type || receipt.document_type) ===
+    'ELECTRONIC_INVOICE';
+  const billing = receipt.billingDocument || (
+    receipt.electronic_document_id
+      ? {
+        status: receipt.electronic_document_status,
+        failure_reason: receipt.billing_failure_reason,
+      }
+      : null
+  );
+  elements.receiptDocumentType.textContent = electronic
+    ? 'Factura electrónica'
+    : 'Comprobante interno';
+  elements.receiptDocumentStatus.textContent = electronic
+    ? (billing?.status === 'ACCEPTED'
+      ? 'Aceptada por la DIAN'
+      : billing?.failure_reason || 'Pendiente de transmisión a la DIAN')
+    : 'Registrado localmente; no se envía a la DIAN';
   elements.receiptLines.replaceChildren();
   for (const item of receipt.items) {
     const line = document.createElement('div');

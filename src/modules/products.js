@@ -108,11 +108,11 @@ router.post('/', asyncHandler(async (req, res) => {
       }
 
       const result = await client.query(
-        `INSERT INTO products(
+         `INSERT INTO products(
            tenant_id, sku, name, barcode, category_id, brand_id,
-           sales_tax_category_id, cost, sale_price, tax_review_status
+           sales_tax_category_id, cost, sale_price, tax_review_status, active
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE)
          RETURNING *`,
         [
           req.context.tenantId,

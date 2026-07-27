@@ -119,6 +119,24 @@ router.post('/customers', asyncHandler(async (req, res) => {
 
 router.get('/summary', asyncHandler(async (req, res) => {
   const summary = await withTransaction(async (client) => {
+    const fiscalProfile = await client.query(
+      `SELECT ctp.electronic_invoicing_required, ctp.default_document_type,
+              ctp.taxpayer_type, ctp.vat_responsibility, ctp.tax_regime,
+              EXISTS(
+                SELECT 1 FROM electronic_billing_accounts account
+                WHERE account.company_id = ctp.company_id AND account.active = TRUE
+              ) billing_account_configured,
+              EXISTS(
+                SELECT 1 FROM billing_resolutions resolution
+                WHERE resolution.company_id = ctp.company_id
+                  AND resolution.active = TRUE
+                  AND CURRENT_DATE BETWEEN resolution.valid_from AND resolution.valid_until
+                  AND resolution.current_number <= resolution.number_to
+              ) billing_resolution_configured
+       FROM company_tax_profiles ctp
+       WHERE ctp.company_id = $1`,
+      [req.context.tenantId],
+    );
     const registers = await client.query(
       `SELECT cr.id, cr.name, cr.code, cr.branch_id, b.name branch_name, cr.active
        FROM cash_registers cr
@@ -173,6 +191,12 @@ router.get('/summary', asyncHandler(async (req, res) => {
     return {
       registers: registers.rows,
       openSession: session.rows[0] || null,
+      fiscalProfile: fiscalProfile.rows[0] || {
+        electronic_invoicing_required: false,
+        default_document_type: 'INTERNAL_RECEIPT',
+        billing_account_configured: false,
+        billing_resolution_configured: false,
+      },
     };
   });
   res.json(summary);
@@ -331,6 +355,8 @@ router.get('/catalog', asyncHandler(async (req, res) => {
        LIMIT 1
      ) pi ON TRUE
      WHERE p.tenant_id = $1 AND p.deleted_at IS NULL
+       AND p.active = TRUE
+       AND p.tax_review_status = 'REVIEWED'
        AND EXISTS(
          SELECT 1 FROM warehouses
          WHERE id = $2 AND tenant_id = $1 AND active = TRUE
@@ -605,13 +631,20 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
       `SELECT s.id, s.sequence_number, s.status, s.payment_method,
               s.subtotal, s.tax_total, s.total, s.cash_received, s.cash_change,
               s.customer_id, s.sale_terms, s.due_date, s.created_at,
-              c.name customer_name, c.document_type, c.document_number,
-              ai.id ar_invoice_id, ai.invoice_number, ai.status receivable_status
+              s.document_type sale_document_type,
+              c.name customer_name, c.document_type customer_document_type,
+              c.document_number customer_document_number,
+              ai.id ar_invoice_id, ai.invoice_number, ai.status receivable_status,
+              ed.id electronic_document_id, ed.status electronic_document_status,
+              ed.prefix billing_prefix, ed.document_number billing_number,
+              ed.failure_reason billing_failure_reason
        FROM sales s
        JOIN cash_sessions cs ON cs.id = s.cash_session_id
        JOIN cash_registers cr ON cr.id = cs.cash_register_id
        LEFT JOIN customers c ON c.id = s.customer_id AND c.tenant_id = s.tenant_id
        LEFT JOIN ar_invoices ai ON ai.id = s.ar_invoice_id AND ai.tenant_id = s.tenant_id
+       LEFT JOIN electronic_documents ed
+         ON ed.sale_id = s.id AND ed.company_id = s.company_id
        WHERE s.id = $1 AND s.tenant_id = $2
          AND ($3::uuid IS NULL OR cr.branch_id = $3)`,
       [req.params.id, req.context.tenantId, req.context.branchId],
@@ -632,12 +665,14 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
   const sale = saleResult.rows[0];
   res.json({
     ...sale,
-    receiptNumber: `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+    receiptNumber: sale.billing_number
+      ? `${sale.billing_prefix || ''}${sale.billing_number}`
+      : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
     customer: sale.customer_id ? {
       id: sale.customer_id,
       name: sale.customer_name,
-      document_type: sale.document_type,
-      document_number: sale.document_number,
+      document_type: sale.customer_document_type,
+      document_number: sale.customer_document_number,
     } : null,
     receivable: sale.ar_invoice_id ? {
       id: sale.ar_invoice_id,
@@ -737,6 +772,30 @@ router.post('/sales', asyncHandler(async (req, res) => {
     if (!session.rowCount) {
       throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
     }
+    const fiscalProfile = await client.query(
+      `SELECT electronic_invoicing_required, default_document_type
+       FROM company_tax_profiles
+       WHERE company_id = $1 AND active = TRUE
+       FOR SHARE`,
+      [req.context.tenantId],
+    );
+    const documentType =
+      fiscalProfile.rows[0]?.default_document_type || 'INTERNAL_RECEIPT';
+    let billingResolution = null;
+    if (documentType === 'ELECTRONIC_INVOICE') {
+      const resolution = await client.query(
+        `SELECT id, prefix
+         FROM billing_resolutions
+         WHERE company_id = $1 AND branch_id = $2 AND active = TRUE
+           AND CURRENT_DATE BETWEEN valid_from AND valid_until
+           AND current_number <= number_to
+         ORDER BY valid_until, created_at
+         LIMIT 1
+         FOR UPDATE`,
+        [req.context.tenantId, session.rows[0].branch_id],
+      );
+      billingResolution = resolution.rows[0] || null;
+    }
     let customer = null;
     if (customerId) {
       const customerResult = await client.query(
@@ -832,12 +891,13 @@ router.post('/sales', asyncHandler(async (req, res) => {
       `INSERT INTO sales(
          tenant_id, cash_session_id, warehouse_id, payment_method,
          subtotal, tax_total, total, cash_received, cash_change, created_by,
-         customer_id, sale_terms, due_date
+         customer_id, sale_terms, due_date, document_type, billing_resolution_id
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING id, sequence_number, status, payment_method,
                  subtotal, tax_total, total, cash_received, cash_change,
-                 customer_id, sale_terms, due_date, created_at`,
+                 customer_id, sale_terms, due_date, document_type,
+                 billing_resolution_id, created_at`,
       [
         req.context.tenantId,
         cashSessionId,
@@ -852,9 +912,45 @@ router.post('/sales', asyncHandler(async (req, res) => {
         customer?.id || null,
         normalizedTerms,
         normalizedTerms === 'CREDIT' ? dueDate : null,
+        documentType,
+        billingResolution?.id || null,
       ],
     );
     const sale = saleResult.rows[0];
+    let billingDocument = null;
+    if (documentType === 'ELECTRONIC_INVOICE') {
+      let billingNumber = null;
+      if (billingResolution) {
+        const number = await client.query(
+          `UPDATE billing_resolutions
+           SET current_number = current_number + 1, updated_at = now()
+           WHERE id = $1 AND company_id = $2 AND current_number <= number_to
+           RETURNING current_number - 1 document_number`,
+          [billingResolution.id, req.context.tenantId],
+        );
+        billingNumber = number.rows[0]?.document_number || null;
+      }
+      const document = await client.query(
+        `INSERT INTO electronic_documents(
+           company_id, sale_id, billing_resolution_id, document_type,
+           prefix, document_number, status, failure_reason
+         )
+         VALUES($1,$2,$3,$4,$5,$6,'PENDING',$7)
+         RETURNING id, document_type, prefix, document_number, status, failure_reason`,
+        [
+          req.context.tenantId,
+          sale.id,
+          billingResolution?.id || null,
+          documentType,
+          billingResolution?.prefix || null,
+          billingNumber,
+          billingResolution
+            ? 'Pendiente de transmisión al proveedor tecnológico.'
+            : 'Falta configurar una resolución de facturación vigente.',
+        ],
+      );
+      billingDocument = document.rows[0];
+    }
 
     for (const line of lines) {
       const balance = await client.query(
@@ -984,7 +1080,10 @@ router.post('/sales', asyncHandler(async (req, res) => {
 
     return {
       ...sale,
-      receiptNumber: `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+      receiptNumber: billingDocument?.document_number
+        ? `${billingDocument.prefix || ''}${billingDocument.document_number}`
+        : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
+      billingDocument,
       customer: customer || null,
       receivable,
       items: lines.map((line) => ({

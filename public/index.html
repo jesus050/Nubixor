@@ -9,8 +9,8 @@
     >
     <meta name="theme-color" content="#192584">
     <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-22">
-    <script src="./app.js?v=20260727-22" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260727-23">
+    <script src="./app.js?v=20260727-23" defer></script>
   </head>
   <body>
     <main class="auth-gate" id="authGate">
@@ -402,6 +402,7 @@
                       <th>Empresa</th>
                       <th>Nombre comercial</th>
                       <th>NIT</th>
+                      <th>Facturación</th>
                       <th>Estado</th>
                       <th>Creada</th>
                     </tr>
@@ -1158,6 +1159,16 @@
                 <h2 id="posTitle">Caja</h2>
               </div>
               <span class="pos-state" id="cashStatus">Consultando caja</span>
+            </div>
+
+            <div class="billing-mode-strip" id="billingModeStrip">
+              <span class="billing-mode-icon" aria-hidden="true">DOC</span>
+              <div>
+                <small>Documento de venta</small>
+                <strong id="billingModeName">Consultando configuración</strong>
+              </div>
+              <p id="billingModeDetail">MegaSuite está leyendo el perfil fiscal de la empresa activa.</p>
+              <span class="table-status pending" id="billingModeStatus">Verificando</span>
             </div>
 
             <div class="pos-layout">
@@ -2874,8 +2885,8 @@
         </div>
 
         <p class="dialog-copy">
-          Crea el registro principal de una empresa. Las sucursales y bodegas se
-          organizarán dentro de ella.
+          Crea la empresa con sucursal, bodega, caja e impuestos iniciales. Después podrás
+          ajustar cada dato desde su módulo.
         </p>
 
         <label class="form-field">
@@ -2914,6 +2925,17 @@
             >
           </label>
         </div>
+
+        <label class="form-field">
+          <span>Modo de facturación inicial <b>*</b></span>
+          <select name="billingMode" required>
+            <option value="INTERNAL_RECEIPT">Comprobante interno — sin envío a DIAN</option>
+            <option value="ELECTRONIC_INVOICE">Factura electrónica — requiere conexión DIAN</option>
+          </select>
+          <small class="field-help">
+            La opción electrónica queda en preparación hasta registrar resolución y credenciales del proveedor tecnológico.
+          </small>
+        </label>
 
         <p class="form-error" id="companyFormError" role="alert" hidden></p>
 
@@ -3471,6 +3493,11 @@
         <p class="receipt-message">
           La venta quedó registrada y las existencias fueron descontadas de la bodega seleccionada.
         </p>
+        <div class="receipt-document-state" id="receiptDocumentState">
+          <span>Documento</span>
+          <strong id="receiptDocumentType">Comprobante interno</strong>
+          <small id="receiptDocumentStatus">Registrado localmente</small>
+        </div>
         <div class="receipt-lines" id="receiptLines"></div>
         <div class="receipt-totals">
           <div><span>Subtotal</span><strong id="receiptSubtotal">$0</strong></div>

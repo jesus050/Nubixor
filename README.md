@@ -267,9 +267,20 @@ tabla física de empresas para conservar la API existente; la vista `companies`
 y los nuevos campos `company_id`, `owner_company_id` y `seller_company_id`
 expresan su función legal.
 
-El POS actual continúa procesando ventas de una sola empresa. El carrito visual
-multiempresa, el cobro agrupado y la emisión electrónica se implementarán sobre
-esta base en las subfases siguientes. Consulte
+El POS operativo continúa procesando una empresa activa por venta y toma el
+tipo documental desde `company_tax_profiles`. Si la empresa usa factura
+electrónica, MegaSuite crea el documento en estado `PENDING`; sólo asigna
+numeración cuando encuentra una resolución vigente. La transmisión y la
+aceptación real por la DIAN requieren una cuenta de proveedor tecnológico,
+credenciales cifradas y resolución reales.
+
+La migración `024` deja dos escenarios locales:
+
+- `MegaSuite Demo`: factura electrónica preparada, pendiente de conexión real.
+- `Crative`: comprobante interno, caja principal y dos productos vendibles.
+
+Al registrar una empresa desde la interfaz se crean automáticamente su sucursal,
+bodega, caja y los impuestos iniciales. Consulte
 [`docs/multi-company-pos.md`](docs/multi-company-pos.md) antes de integrar
 facturación o modificar las reglas de inventario.
 

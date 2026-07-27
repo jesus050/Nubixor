@@ -22,6 +22,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Centro de operaciones/);
   assert.match(response.text, /Primer módulo funcional/);
   assert.match(response.text, /Nueva empresa/);
+  assert.match(response.text, /Modo de facturación inicial/);
+  assert.match(response.text, /Factura electrónica — requiere conexión DIAN/);
   assert.match(response.text, /Habilitar bodega/);
   assert.match(response.text, /Roles &amp; permisos/);
   assert.match(response.text, /Agregar al catálogo/);
@@ -104,6 +106,12 @@ test('POST /api/companies valida la razón social antes de consultar PostgreSQL'
     .send({ legalName: '   ' })
     .expect(422);
   assert.equal(response.body.error, 'legalName es obligatorio.');
+
+  const billingMode = await request(createUnsecuredApp())
+    .post('/api/companies')
+    .send({ legalName: 'Empresa válida', billingMode: 'DESCONOCIDO' })
+    .expect(422);
+  assert.equal(billingMode.body.error, 'El modo de facturación no es válido.');
 });
 
 test('POST /api/branches exige empresa y valida sus campos', async () => {
