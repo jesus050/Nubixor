@@ -28,6 +28,7 @@ services:
 
   api:
     build: .
+    image: nubixor-api:v2
     restart: unless-stopped
     depends_on:
       postgres:
