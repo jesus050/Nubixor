@@ -619,15 +619,230 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
   color: #0f172a;
 }
 
-/* Toast & Dialogs */
-dialog {
-  border: 1px solid var(--color-line);
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
-  padding: 28px;
+/* ==========================================================================
+   APP DIALOGS & FORM GRIDS OVERHAUL
+   ========================================================================== */
+
+dialog, .app-dialog {
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25), 0 10px 25px -5px rgba(124, 58, 237, 0.08) !important;
+  padding: 0 !important;
+  background: transparent !important;
+  max-width: min(740px, calc(100vw - 32px)) !important;
+  width: 100% !important;
+  overflow: hidden !important;
 }
 
-dialog::backdrop {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
+dialog::backdrop, .app-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
+
+.dialog-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 24px !important;
+  padding: 32px !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.15) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.dialog-heading {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 20px !important;
+  margin-bottom: 24px !important;
+  padding-bottom: 18px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.dialog-heading h2, .dialog-heading h3 {
+  font-family: var(--font-display) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 4px 0 6px 0 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.dialog-heading p {
+  color: #64748b !important;
+  font-size: 13.5px !important;
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+.dialog-close {
+  width: 36px !important;
+  height: 36px !important;
+  flex: 0 0 36px !important;
+  border-radius: 10px !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.dialog-close:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Form Grid & Fields */
+.form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  margin-bottom: 24px !important;
+}
+
+.form-grid label,
+.form-grid .form-field,
+.dialog-card label,
+.dialog-card .form-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
+}
+
+.form-grid label > span,
+.form-grid .form-field > span,
+.dialog-card label > span,
+.dialog-card .form-field > span {
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  color: #334155 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  display: block !important;
+  margin-bottom: 2px !important;
+}
+
+.form-grid label.full,
+.form-grid .full,
+.dialog-card label.full,
+.dialog-card .full {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+}
+
+.form-grid input,
+.form-grid select,
+.dialog-card input,
+.dialog-card select {
+  width: 100% !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 0 14px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-grid textarea,
+.dialog-card textarea {
+  width: 100% !important;
+  min-height: 100px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus,
+.dialog-card input:focus,
+.dialog-card select:focus,
+.dialog-card textarea:focus {
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12) !important;
+  outline: none !important;
+}
+
+.dialog-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-top: 24px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+.dialog-actions button[type="submit"],
+.dialog-actions .audit-export-button,
+.dialog-actions .primary-button {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  padding: 11px 22px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  box-shadow: 0 6px 20px -2px rgba(124, 58, 237, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.dialog-actions button[type="submit"]:hover,
+.dialog-actions .audit-export-button:hover,
+.dialog-actions .primary-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 10px 25px -2px rgba(124, 58, 237, 0.45) !important;
+}
+
+.dialog-actions button[type="button"],
+.dialog-actions .filter-reset-button,
+.dialog-actions .secondary-button {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  padding: 11px 20px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.dialog-actions button[type="button"]:hover,
+.dialog-actions .filter-reset-button:hover,
+.dialog-actions .secondary-button:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
