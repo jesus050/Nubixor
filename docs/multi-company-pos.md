@@ -17,7 +17,7 @@ ventas de una sola empresa.
 
 ## Diagnóstico del modelo anterior
 
-MegaSuite ya aislaba por `tenant_id`:
+Nubixor ya aislaba por `tenant_id`:
 
 - empresas, membresías, roles y permisos;
 - sucursales y bodegas;
@@ -173,7 +173,7 @@ El catálogo anterior no se elimina.
 
 ## Configuración tributaria
 
-MegaSuite no decide automáticamente si una persona natural o jurídica debe
+Nubixor no decide automáticamente si una persona natural o jurídica debe
 facturar electrónicamente. Una persona natural también puede estar registrada
 ante la DIAN. Los campos de `company_tax_profiles` deben configurarse usando el
 RUT vigente y validarse con el contador.

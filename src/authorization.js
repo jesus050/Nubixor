@@ -10,14 +10,27 @@ const ALL_PERMISSIONS = [
   'catalog.manage',
   'inventory.view',
   'inventory.adjust',
+  'logistics.view',
+  'logistics.count',
+  'logistics.price',
+  'logistics.approve',
+  'logistics.labels',
   'purchases.manage',
   'sales.operate',
   'receivables.manage',
   'payables.manage',
+  'expenses.view',
+  'expenses.manage',
+  'expenses.approve',
+  'expenses.pay',
+  'parties.view',
+  'parties.manage',
   'users.manage',
   'audit.view',
   'reports.view',
   'billing.manage',
+  'accounting.manage',
+  'documents.manage',
 ];
 
 const BASE_ROLES = [
@@ -45,7 +58,15 @@ const BASE_ROLES = [
       'catalog.manage',
       'inventory.view',
       'inventory.adjust',
+      'logistics.view',
+      'logistics.count',
+      'logistics.price',
+      'logistics.labels',
       'purchases.manage',
+      'expenses.view',
+      'expenses.manage',
+      'parties.view',
+      'parties.manage',
       'sales.operate',
       'reports.view',
     ],
@@ -65,8 +86,11 @@ const BASE_ROLES = [
     permissions: [
       'dashboard.view',
       'inventory.view',
+      'logistics.view',
       'receivables.manage',
       'payables.manage',
+      'expenses.view',
+      'parties.view',
       'audit.view',
       'reports.view',
     ],
@@ -221,6 +245,9 @@ export function requireAnyPermission(permissionCodes) {
         req.body?.warehouseId,
         req.body?.sourceWarehouseId,
         req.body?.destinationWarehouseId,
+        ...(Array.isArray(req.body?.items)
+          ? req.body.items.map((item) => item?.warehouseId)
+          : []),
       ].filter(Boolean);
       if (result.rows[0].branch_id && warehouseIds.length) {
         const scopedWarehouses = await query(
@@ -237,6 +264,50 @@ export function requireAnyPermission(permissionCodes) {
             403,
             'BRANCH_SCOPE_DENIED',
           );
+        }
+      }
+      const validWarehouseIds = [...new Set(warehouseIds)]
+        .filter((warehouseId) => UUID_PATTERN.test(warehouseId));
+      if (
+        validWarehouseIds.length &&
+        !['OWNER', 'ADMIN'].includes(result.rows[0].role_code)
+      ) {
+        const requestRead = ['GET', 'HEAD'].includes(req.method);
+        let capability = requestRead ? 'can_view' : null;
+        if (!requestRead && requestPath.startsWith('/api/pos')) capability = 'can_sell';
+        else if (!requestRead && requestPath.includes('/receipts')) capability = 'can_receive';
+        else if (!requestRead && req.body?.sourceWarehouseId) capability = 'can_dispatch';
+        else if (!requestRead && req.body?.destinationWarehouseId) capability = 'can_receive';
+        else if (!requestRead && requestPath.startsWith('/api/inventory')) capability = 'can_adjust';
+        if (capability) {
+          const access = await query(
+            `SELECT warehouse.id,
+                    NOT EXISTS(
+                      SELECT 1 FROM warehouse_user_permissions configured
+                      WHERE configured.tenant_id = warehouse.tenant_id
+                        AND configured.warehouse_id = warehouse.id
+                    ) OR EXISTS(
+                      SELECT 1 FROM warehouse_user_permissions granted
+                      WHERE granted.tenant_id = warehouse.tenant_id
+                        AND granted.warehouse_id = warehouse.id
+                        AND granted.user_id = $2
+                        AND granted.${capability} = TRUE
+                    ) allowed
+             FROM warehouses warehouse
+             WHERE warehouse.tenant_id = $1
+               AND warehouse.id = ANY($3::uuid[])`,
+            [tenantId, userId, validWarehouseIds],
+          );
+          if (
+            access.rowCount !== validWarehouseIds.length ||
+            access.rows.some((warehouse) => !warehouse.allowed)
+          ) {
+            throw new AppError(
+              'No tienes el permiso requerido para operar esta bodega.',
+              403,
+              'WAREHOUSE_PERMISSION_DENIED',
+            );
+          }
         }
       }
       next();
@@ -261,10 +332,25 @@ export function authorizeApiRequest(req, res, next) {
     permissions = read
       ? ['inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate']
       : ['warehouses.manage'];
-  } else if (/^\/api\/(categories|brands|products|taxes)/.test(path)) {
+  } else if (/^\/api\/(categories|brands|products|product-structures|pricing|taxes|catalog-import)/.test(path)) {
     permissions = read
       ? ['inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate']
       : ['catalog.manage'];
+  } else if (path.startsWith('/api/inventory-advanced/warehouse-permissions')) {
+    permissions = ['users.manage', 'warehouses.manage'];
+  } else if (path.startsWith('/api/module-settings')) {
+    permissions = read
+      ? ['inventory.view', 'logistics.view', 'users.manage']
+      : ['users.manage'];
+  } else if (path.startsWith('/api/logistics')) {
+    permissions = read
+      ? ['logistics.view']
+      : [
+        'logistics.count',
+        'logistics.price',
+        'logistics.approve',
+        'logistics.labels',
+      ];
   } else if (path.startsWith('/api/inventory')) {
     permissions = read ? ['inventory.view'] : ['inventory.adjust'];
   } else if (path.startsWith('/api/physical-counts')) {
@@ -273,11 +359,27 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/pos')) permissions = ['sales.operate'];
   else if (path.startsWith('/api/receivables')) permissions = ['receivables.manage'];
   else if (path.startsWith('/api/payables')) permissions = ['payables.manage'];
+  else if (path.startsWith('/api/expenses')) {
+    permissions = read
+      ? ['expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay']
+      : ['expenses.manage', 'expenses.approve', 'expenses.pay'];
+  }
+  else if (path.startsWith('/api/third-parties')) {
+    permissions = read
+      ? ['parties.view', 'parties.manage']
+      : ['parties.manage'];
+  }
   else if (path.startsWith('/api/users')) permissions = ['users.manage'];
   else if (path.startsWith('/api/dashboard')) permissions = ['dashboard.view'];
   else if (path.startsWith('/api/audit')) permissions = ['audit.view'];
   else if (path.startsWith('/api/reports')) permissions = ['reports.view'];
   else if (path.startsWith('/api/electronic-billing')) permissions = ['billing.manage'];
+  else if (path.startsWith('/api/billing-workflow')) permissions = ['billing.manage'];
+  else if (path.startsWith('/api/secure-files')) {
+    permissions = read
+      ? ['documents.manage', 'audit.view', 'accounting.manage']
+      : ['documents.manage'];
+  }
 
   if (!permissions) return next();
   return requireAnyPermission(permissions)(req, res, next);

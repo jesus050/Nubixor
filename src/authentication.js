@@ -404,3 +404,176 @@ export async function activateUserWithToken(req, res, { token, password }) {
     return { user: user.rows[0], ...auth };
   });
 }
+
+async function deliverPasswordReset({ email, fullName, resetUrl }) {
+  if (!config.passwordResetWebhookUrl) return false;
+  const response = await fetch(config.passwordResetWebhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.passwordResetWebhookSecret
+        ? { Authorization: `Bearer ${config.passwordResetWebhookSecret}` }
+        : {}),
+    },
+    body: JSON.stringify({
+      type: 'PASSWORD_RESET',
+      recipient: { email, name: fullName },
+      resetUrl,
+      expiresInMinutes: 30,
+    }),
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) {
+    throw new Error(`El proveedor de correo respondió ${response.status}.`);
+  }
+  return true;
+}
+
+export async function requestPasswordReset(req, { email }) {
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!normalizedEmail || normalizedEmail.length > 320) {
+    throw new AppError('Escribe un correo válido.', 422, 'INVALID_EMAIL');
+  }
+  const reset = await withTransaction(async (client) => {
+    const ipHash = digest(req.ip || req.socket.remoteAddress || 'unknown');
+    const emailHash = digest(normalizedEmail);
+    await client.query(
+      `DELETE FROM auth_recovery_attempts
+       WHERE created_at < now() - interval '7 days'`,
+    );
+    const attempts = await client.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE requester_ip_hash = $1)::integer ip_count,
+         COUNT(*) FILTER (WHERE email_hash = $2)::integer email_count
+       FROM auth_recovery_attempts
+       WHERE created_at > now() - interval '1 hour'`,
+      [ipHash, emailHash],
+    );
+    await client.query(
+      `INSERT INTO auth_recovery_attempts(requester_ip_hash, email_hash)
+       VALUES($1,$2)`,
+      [ipHash, emailHash],
+    );
+    if (attempts.rows[0].ip_count >= 10 ||
+        attempts.rows[0].email_count >= 5) return null;
+    const userResult = await client.query(
+      `SELECT id, email, full_name
+       FROM users
+       WHERE lower(email) = $1 AND status = 'ACTIVE'
+       FOR UPDATE`,
+      [normalizedEmail],
+    );
+    if (!userResult.rowCount) return null;
+    const user = userResult.rows[0];
+    const recent = await client.query(
+      `SELECT COUNT(*)::integer count
+       FROM user_access_tokens
+       WHERE user_id = $1 AND purpose = 'RESET_PASSWORD'
+         AND created_at > now() - interval '1 hour'`,
+      [user.id],
+    );
+    if (recent.rows[0].count >= 3) return null;
+    await client.query(
+      `UPDATE user_access_tokens
+       SET used_at = now()
+       WHERE user_id = $1 AND purpose = 'RESET_PASSWORD' AND used_at IS NULL`,
+      [user.id],
+    );
+    const token = randomBytes(32).toString('base64url');
+    const created = await client.query(
+      `INSERT INTO user_access_tokens(
+         user_id, purpose, token_hash, expires_at, requested_ip_hash,
+         requested_user_agent, delivery_status
+       )
+       VALUES($1,'RESET_PASSWORD',$2,now() + interval '30 minutes',$3,$4,$5)
+       RETURNING id`,
+      [
+        user.id,
+        digest(token),
+        ipHash,
+        req.header('user-agent')?.slice(0, 500) || null,
+        config.passwordResetWebhookUrl ? 'PENDING' : 'NOT_REQUIRED',
+      ],
+    );
+    return { ...user, token, requestId: created.rows[0].id };
+  });
+  if (!reset) return { accepted: true };
+
+  const baseUrl = config.publicBaseUrl || `http://localhost:${config.port}`;
+  const resetUrl = `${baseUrl.replace(/\/$/, '')}/?reset=${encodeURIComponent(reset.token)}`;
+  if (config.passwordResetWebhookUrl) {
+    try {
+      await deliverPasswordReset({
+        email: reset.email,
+        fullName: reset.full_name,
+        resetUrl,
+      });
+      await query(
+        `UPDATE user_access_tokens
+         SET delivery_status = 'SENT', delivered_at = now()
+         WHERE id = $1`,
+        [reset.requestId],
+      );
+    } catch {
+      await query(
+        `UPDATE user_access_tokens SET delivery_status = 'FAILED' WHERE id = $1`,
+        [reset.requestId],
+      );
+    }
+  }
+  return {
+    accepted: true,
+    ...(config.nodeEnv !== 'production' ? { resetUrl } : {}),
+  };
+}
+
+export async function resetPasswordWithToken(req, res, { token, password }) {
+  if (typeof token !== 'string' || token.length < 32) {
+    throw new AppError(
+      'El enlace de recuperación no es válido.',
+      422,
+      'INVALID_PASSWORD_RESET_TOKEN',
+    );
+  }
+  const passwordHash = await hashPassword(password);
+  return withTransaction(async (client) => {
+    const access = await client.query(
+      `SELECT id, user_id
+       FROM user_access_tokens
+       WHERE token_hash = $1 AND purpose = 'RESET_PASSWORD'
+         AND used_at IS NULL AND expires_at > now()
+       FOR UPDATE`,
+      [digest(token)],
+    );
+    if (!access.rowCount) {
+      throw new AppError(
+        'El enlace venció o ya fue utilizado.',
+        410,
+        'PASSWORD_RESET_TOKEN_EXPIRED',
+      );
+    }
+    const user = await client.query(
+      `UPDATE users
+       SET password_hash = $1, password_changed_at = now(),
+           failed_login_attempts = 0, locked_until = NULL
+       WHERE id = $2 AND status = 'ACTIVE'
+       RETURNING id, email, full_name`,
+      [passwordHash, access.rows[0].user_id],
+    );
+    if (!user.rowCount) {
+      throw new AppError('La cuenta ya no está activa.', 410, 'USER_NOT_ACTIVE');
+    }
+    await client.query(
+      `UPDATE user_access_tokens SET used_at = now()
+       WHERE user_id = $1 AND purpose = 'RESET_PASSWORD' AND used_at IS NULL`,
+      [access.rows[0].user_id],
+    );
+    await client.query(
+      `UPDATE auth_sessions SET revoked_at = now()
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [access.rows[0].user_id],
+    );
+    const auth = await createSession(client, req, res, user.rows[0].id);
+    return { user: user.rows[0], ...auth };
+  });
+}

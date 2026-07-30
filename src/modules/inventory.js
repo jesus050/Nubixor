@@ -8,7 +8,16 @@ import { AppError } from '../shared/errors.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MOVEMENT_LIMIT = 100;
+const INCIDENT_TYPES = new Set([
+  'CUSTOMER_RETURN',
+  'SUPPLIER_RETURN',
+  'DAMAGE',
+  'LOSS',
+  'QUARANTINE',
+  'QUARANTINE_RELEASE',
+]);
 
 router.use(requireTenant);
 
@@ -18,6 +27,12 @@ function isUuid(value) {
 
 function normalizeReason(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function validDate(value) {
+  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 function validateInventoryReference(productId, warehouseId) {
@@ -58,6 +73,80 @@ async function lockInventoryReferences(client, tenantId, productId, warehouseIds
       'INVENTORY_WAREHOUSE_NOT_FOUND',
     );
   }
+}
+
+async function ensureIncidentWarehouse(
+  client,
+  { tenantId, branchId, warehouseType },
+) {
+  const existing = await client.query(
+    `SELECT id, name, warehouse_type
+     FROM warehouses
+     WHERE tenant_id = $1 AND branch_id = $2
+       AND warehouse_type = $3 AND active = TRUE
+     ORDER BY created_at
+     LIMIT 1`,
+    [tenantId, branchId, warehouseType],
+  );
+  if (existing.rowCount) return existing.rows[0];
+  const prefix = warehouseType === 'DAMAGED' ? 'AV' : 'CU';
+  const created = await client.query(
+    `INSERT INTO warehouses(
+       tenant_id, branch_id, name, code, warehouse_type
+     )
+     SELECT $1, branch.id,
+            CASE WHEN $3 = 'DAMAGED'
+              THEN 'Averías · ' || branch.name
+              ELSE 'Cuarentena · ' || branch.name
+            END,
+            $4 || '-' || upper(substr(replace(branch.id::text, '-', ''), 1, 8)),
+            $3
+     FROM branches branch
+     WHERE branch.id = $2 AND branch.tenant_id = $1
+     RETURNING id, name, warehouse_type`,
+    [tenantId, branchId, warehouseType, prefix],
+  );
+  if (!created.rowCount) {
+    throw new AppError(
+      'La sucursal de la novedad no pertenece a la empresa activa.',
+      404,
+      'INCIDENT_BRANCH_NOT_FOUND',
+    );
+  }
+  return created.rows[0];
+}
+
+async function ensureTransitWarehouse(client, { tenantId, branchId }) {
+  const existing = await client.query(
+    `SELECT id, name, warehouse_type
+     FROM warehouses
+     WHERE tenant_id = $1 AND branch_id = $2
+       AND warehouse_type = 'TRANSIT' AND active = TRUE
+     ORDER BY created_at
+     LIMIT 1`,
+    [tenantId, branchId],
+  );
+  if (existing.rowCount) return existing.rows[0];
+  const created = await client.query(
+    `INSERT INTO warehouses(
+       tenant_id, branch_id, name, code, warehouse_type
+     )
+     SELECT $1, branch.id, 'En tránsito · ' || branch.name,
+            'TR-' || upper(substr(replace(branch.id::text, '-', ''), 1, 8)),
+            'TRANSIT'
+     FROM branches branch
+     WHERE branch.id = $2 AND branch.tenant_id = $1
+     RETURNING id, name, warehouse_type`,
+    [tenantId, branchId],
+  );
+  if (!created.rowCount) {
+    throw new AppError(
+      'La sucursal de despacho no pertenece a la empresa activa.',
+      404,
+      'TRANSFER_BRANCH_NOT_FOUND',
+    );
+  }
+  return created.rows[0];
 }
 
 export async function applyInventoryBalanceDelta(
@@ -375,6 +464,610 @@ router.get('/movements', asyncHandler(async (req, res) => {
     [req.context.tenantId, warehouseId, limit, req.context.branchId],
   );
   res.json(result.rows);
+}));
+
+router.get('/kardex', asyncHandler(async (req, res) => {
+  const productId = req.query.productId || null;
+  const warehouseId = req.query.warehouseId || null;
+  const dateFrom = req.query.dateFrom || null;
+  const dateTo = req.query.dateTo || null;
+  if ((productId && !isUuid(productId)) || (warehouseId && !isUuid(warehouseId))) {
+    throw new AppError(
+      'El producto o la bodega del kardex no son válidos.',
+      422,
+      'INVALID_KARDEX_REFERENCE',
+    );
+  }
+  if ((dateFrom && !validDate(dateFrom)) || (dateTo && !validDate(dateTo)) ||
+      (dateFrom && dateTo && dateTo < dateFrom)) {
+    throw new AppError(
+      'El período del kardex no es válido.',
+      422,
+      'INVALID_KARDEX_PERIOD',
+    );
+  }
+  const result = await query(
+    `WITH ordered AS (
+       SELECT movement.id, movement.product_id, movement.warehouse_id,
+              movement.movement_type, movement.quantity, movement.unit_cost,
+              movement.reference_type, movement.reference_id, movement.reason,
+              movement.created_at, product.sku, product.name product_name,
+              warehouse.name warehouse_name, warehouse.code warehouse_code,
+              branch.name branch_name,
+              SUM(movement.quantity) OVER (
+                PARTITION BY movement.product_id, movement.warehouse_id
+                ORDER BY movement.created_at, movement.id
+              ) running_quantity,
+              SUM(movement.quantity * movement.unit_cost) OVER (
+                PARTITION BY movement.product_id, movement.warehouse_id
+                ORDER BY movement.created_at, movement.id
+              ) running_value
+       FROM inventory_movements movement
+       JOIN products product
+         ON product.id = movement.product_id
+        AND product.tenant_id = movement.tenant_id
+       JOIN warehouses warehouse
+         ON warehouse.id = movement.warehouse_id
+        AND warehouse.tenant_id = movement.tenant_id
+       JOIN branches branch ON branch.id = warehouse.branch_id
+       WHERE movement.tenant_id = $1
+         AND ($2::uuid IS NULL OR movement.product_id = $2)
+         AND ($3::uuid IS NULL OR movement.warehouse_id = $3)
+         AND ($6::uuid IS NULL OR warehouse.branch_id = $6)
+     )
+     SELECT *
+     FROM ordered
+     WHERE ($4::date IS NULL OR created_at >= $4::date)
+       AND ($5::date IS NULL OR created_at < ($5::date + INTERVAL '1 day'))
+     ORDER BY created_at DESC, id DESC
+     LIMIT 500`,
+    [
+      req.context.tenantId,
+      productId,
+      warehouseId,
+      dateFrom,
+      dateTo,
+      req.context.branchId,
+    ],
+  );
+  res.json(result.rows);
+}));
+
+router.get('/incidents', asyncHandler(async (req, res) => {
+  const requestedLimit = Number(req.query.limit || 50);
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), 100)
+    : 50;
+  const result = await query(
+    `SELECT incident.id, incident.incident_type, incident.status,
+            incident.quantity, incident.unit_cost, incident.reason,
+            incident.reference, incident.created_at, incident.resolved_at,
+            product.id product_id, product.sku, product.name product_name,
+            source.id source_warehouse_id, source.name source_warehouse_name,
+            destination.id destination_warehouse_id,
+            destination.name destination_warehouse_name,
+            branch.name branch_name,
+            creator.full_name created_by_name
+     FROM inventory_incidents incident
+     JOIN products product
+       ON product.id = incident.product_id
+      AND product.tenant_id = incident.company_id
+     JOIN branches branch
+       ON branch.id = incident.branch_id
+      AND branch.tenant_id = incident.company_id
+     LEFT JOIN warehouses source
+       ON source.id = incident.source_warehouse_id
+      AND source.tenant_id = incident.company_id
+     LEFT JOIN warehouses destination
+       ON destination.id = incident.destination_warehouse_id
+      AND destination.tenant_id = incident.company_id
+     LEFT JOIN users creator ON creator.id = incident.created_by
+     WHERE incident.company_id = $1
+       AND ($2::uuid IS NULL OR incident.branch_id = $2)
+     ORDER BY incident.created_at DESC
+     LIMIT $3`,
+    [req.context.tenantId, req.context.branchId, limit],
+  );
+  res.json(result.rows);
+}));
+
+router.post('/incidents', asyncHandler(async (req, res) => {
+  const productId = req.body.productId;
+  const warehouseId = req.body.warehouseId;
+  const destinationWarehouseId = req.body.destinationWarehouseId || null;
+  const incidentType = typeof req.body.incidentType === 'string'
+    ? req.body.incidentType.trim().toUpperCase()
+    : '';
+  const quantity = Number(req.body.quantity);
+  const reason = normalizeReason(req.body.reason);
+  const reference = normalizeReason(req.body.reference).slice(0, 160) || null;
+  if (!isUuid(productId) || !isUuid(warehouseId) ||
+      (destinationWarehouseId && !isUuid(destinationWarehouseId)) ||
+      !INCIDENT_TYPES.has(incidentType)) {
+    throw new AppError(
+      'Selecciona un producto, una ubicación y un tipo de novedad válidos.',
+      422,
+      'INVALID_INVENTORY_INCIDENT',
+    );
+  }
+  if (!Number.isFinite(quantity) || quantity <= 0 || !reason) {
+    throw new AppError(
+      'La cantidad positiva y el motivo son obligatorios.',
+      422,
+      'INVALID_INVENTORY_INCIDENT_DETAIL',
+    );
+  }
+  if (incidentType === 'QUARANTINE_RELEASE' && !destinationWarehouseId) {
+    throw new AppError(
+      'Selecciona la ubicación disponible donde se liberará el producto.',
+      422,
+      'INCIDENT_DESTINATION_REQUIRED',
+    );
+  }
+
+  const result = await withTransaction(async (client) => {
+    const references = await client.query(
+      `SELECT product.cost,
+              warehouse.branch_id, warehouse.warehouse_type,
+              destination.branch_id destination_branch_id,
+              destination.warehouse_type destination_type
+       FROM products product
+       JOIN warehouses warehouse
+         ON warehouse.id = $3
+        AND warehouse.tenant_id = product.tenant_id
+        AND warehouse.active = TRUE
+       LEFT JOIN warehouses destination
+         ON destination.id = $4
+        AND destination.tenant_id = product.tenant_id
+        AND destination.active = TRUE
+       WHERE product.id = $2 AND product.tenant_id = $1
+         AND product.deleted_at IS NULL
+       FOR SHARE OF product, warehouse`,
+      [
+        req.context.tenantId,
+        productId,
+        warehouseId,
+        destinationWarehouseId,
+      ],
+    );
+    if (!references.rowCount ||
+        (destinationWarehouseId && !references.rows[0].destination_branch_id)) {
+      throw new AppError(
+        'El producto o alguna ubicación no pertenece a la empresa activa.',
+        404,
+        'INVENTORY_INCIDENT_REFERENCE_NOT_FOUND',
+      );
+    }
+    const detail = references.rows[0];
+    if (req.context.branchId && detail.branch_id !== req.context.branchId) {
+      throw new AppError(
+        'La novedad no corresponde a la sucursal asignada.',
+        403,
+        'INVENTORY_INCIDENT_BRANCH_DENIED',
+      );
+    }
+    if (incidentType === 'QUARANTINE_RELEASE' &&
+        (detail.warehouse_type !== 'QUARANTINE' ||
+          detail.destination_branch_id !== detail.branch_id ||
+          !['AVAILABLE', 'DISPLAY'].includes(detail.destination_type))) {
+      throw new AppError(
+        'La liberación debe salir de cuarentena hacia una ubicación disponible de la misma sucursal.',
+        422,
+        'INVALID_QUARANTINE_RELEASE_ROUTE',
+      );
+    }
+    let targetId = destinationWarehouseId;
+    if (incidentType === 'DAMAGE' || incidentType === 'QUARANTINE') {
+      const target = await ensureIncidentWarehouse(client, {
+        tenantId: req.context.tenantId,
+        branchId: detail.branch_id,
+        warehouseType: incidentType === 'DAMAGE' ? 'DAMAGED' : 'QUARANTINE',
+      });
+      targetId = target.id;
+    }
+
+    const removesFromSource = new Set([
+      'SUPPLIER_RETURN',
+      'DAMAGE',
+      'LOSS',
+      'QUARANTINE',
+      'QUARANTINE_RELEASE',
+    ]).has(incidentType);
+    if (removesFromSource) {
+      const source = await client.query(
+        `UPDATE inventory_balances
+         SET on_hand = on_hand - $4, updated_at = now()
+         WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3
+           AND on_hand - reserved >= $4
+         RETURNING *`,
+        [req.context.tenantId, productId, warehouseId, quantity],
+      );
+      if (!source.rowCount) {
+        throw new AppError(
+          'No hay unidades disponibles suficientes para registrar la novedad.',
+          409,
+          'INSUFFICIENT_INCIDENT_STOCK',
+        );
+      }
+    }
+    const addsToDestination = incidentType === 'CUSTOMER_RETURN' ||
+      ['DAMAGE', 'QUARANTINE', 'QUARANTINE_RELEASE'].includes(incidentType);
+    const effectiveDestination = incidentType === 'CUSTOMER_RETURN'
+      ? warehouseId
+      : targetId;
+    if (addsToDestination) {
+      await applyInventoryBalanceDelta(client, {
+        tenantId: req.context.tenantId,
+        productId,
+        warehouseId: effectiveDestination,
+        quantity,
+      });
+    }
+    const incident = await client.query(
+      `INSERT INTO inventory_incidents(
+         company_id, branch_id, product_id, source_warehouse_id,
+         destination_warehouse_id, incident_type, quantity, unit_cost,
+         reason, reference, created_by, resolved_by, resolved_at
+       )
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11,now())
+       RETURNING *`,
+      [
+        req.context.tenantId,
+        detail.branch_id,
+        productId,
+        incidentType === 'CUSTOMER_RETURN' ? null : warehouseId,
+        effectiveDestination,
+        incidentType,
+        quantity,
+        detail.cost,
+        reason,
+        reference,
+        req.context.userId,
+      ],
+    );
+    const movementRows = [];
+    if (removesFromSource) {
+      movementRows.push({
+        warehouseId,
+        movementType: incidentType === 'SUPPLIER_RETURN'
+          ? 'SUPPLIER_RETURN'
+          : incidentType === 'LOSS'
+            ? 'LOSS'
+            : incidentType === 'QUARANTINE_RELEASE'
+              ? 'QUARANTINE_RELEASE_OUT'
+              : `${incidentType}_OUT`,
+        quantity: -quantity,
+      });
+    }
+    if (addsToDestination) {
+      movementRows.push({
+        warehouseId: effectiveDestination,
+        movementType: incidentType === 'CUSTOMER_RETURN'
+          ? 'CUSTOMER_RETURN'
+          : incidentType === 'QUARANTINE_RELEASE'
+            ? 'QUARANTINE_RELEASE_IN'
+            : `${incidentType}_IN`,
+        quantity,
+      });
+    }
+    for (const movement of movementRows) {
+      await client.query(
+        `INSERT INTO inventory_movements(
+           tenant_id, product_id, warehouse_id, movement_type, quantity,
+           unit_cost, reference_type, reference_id, reason, created_by
+         )
+         VALUES($1,$2,$3,$4,$5,$6,'INVENTORY_INCIDENT',$7,$8,$9)`,
+        [
+          req.context.tenantId,
+          productId,
+          movement.warehouseId,
+          movement.movementType,
+          movement.quantity,
+          detail.cost,
+          incident.rows[0].id,
+          reason,
+          req.context.userId,
+        ],
+      );
+    }
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'inventory.incident_resolved',
+      entityType: 'inventory_incident',
+      entityId: incident.rows[0].id,
+      after: {
+        ...incident.rows[0],
+        movements: movementRows,
+      },
+      reason,
+    });
+    return incident.rows[0];
+  });
+  res.status(201).json(result);
+}));
+
+router.get('/transfer-orders', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT transfer.id, transfer.status, transfer.quantity,
+            transfer.unit_cost, transfer.reason, transfer.dispatch_reference,
+            transfer.reception_notes, transfer.dispatched_at,
+            transfer.received_at, transfer.cancelled_at,
+            product.id product_id, product.sku, product.name product_name,
+            source.name source_warehouse_name,
+            source.branch_id source_branch_id,
+            destination.name destination_warehouse_name,
+            destination.branch_id destination_branch_id,
+            source_branch.name source_branch_name,
+            destination_branch.name destination_branch_name
+     FROM inventory_transfer_orders transfer
+     JOIN products product
+       ON product.id = transfer.product_id
+      AND product.tenant_id = transfer.company_id
+     JOIN warehouses source
+       ON source.id = transfer.source_warehouse_id
+      AND source.tenant_id = transfer.company_id
+     JOIN warehouses destination
+       ON destination.id = transfer.destination_warehouse_id
+      AND destination.tenant_id = transfer.company_id
+     JOIN branches source_branch ON source_branch.id = source.branch_id
+     JOIN branches destination_branch ON destination_branch.id = destination.branch_id
+     WHERE transfer.company_id = $1
+       AND (
+         $2::uuid IS NULL OR source.branch_id = $2 OR destination.branch_id = $2
+       )
+     ORDER BY
+       CASE transfer.status WHEN 'DISPATCHED' THEN 0 ELSE 1 END,
+       transfer.dispatched_at DESC
+     LIMIT 100`,
+    [req.context.tenantId, req.context.branchId],
+  );
+  res.json(result.rows);
+}));
+
+router.post('/transfer-orders', asyncHandler(async (req, res) => {
+  const {
+    productId,
+    sourceWarehouseId,
+    destinationWarehouseId,
+  } = req.body;
+  const quantity = Number(req.body.quantity);
+  const reason = normalizeReason(req.body.reason);
+  const dispatchReference =
+    normalizeReason(req.body.dispatchReference).slice(0, 160) || null;
+  validateInventoryReference(productId, sourceWarehouseId);
+  if (!isUuid(destinationWarehouseId) ||
+      destinationWarehouseId === sourceWarehouseId ||
+      !Number.isFinite(quantity) || quantity <= 0 || !reason) {
+    throw new AppError(
+      'Selecciona ubicaciones diferentes, una cantidad positiva y el motivo.',
+      422,
+      'INVALID_TRANSFER_ORDER',
+    );
+  }
+  const result = await withTransaction(async (client) => {
+    const references = await client.query(
+      `SELECT product.cost,
+              source.branch_id source_branch_id,
+              destination.branch_id destination_branch_id
+       FROM products product
+       JOIN warehouses source
+         ON source.id = $3 AND source.tenant_id = product.tenant_id
+        AND source.active = TRUE
+       JOIN warehouses destination
+         ON destination.id = $4 AND destination.tenant_id = product.tenant_id
+        AND destination.active = TRUE
+       WHERE product.id = $2 AND product.tenant_id = $1
+         AND product.deleted_at IS NULL
+       FOR SHARE OF product, source, destination`,
+      [
+        req.context.tenantId,
+        productId,
+        sourceWarehouseId,
+        destinationWarehouseId,
+      ],
+    );
+    if (!references.rowCount) {
+      throw new AppError(
+        'El producto o las ubicaciones no pertenecen a la empresa activa.',
+        404,
+        'TRANSFER_ORDER_REFERENCE_NOT_FOUND',
+      );
+    }
+    const detail = references.rows[0];
+    if (req.context.branchId &&
+        detail.source_branch_id !== req.context.branchId) {
+      throw new AppError(
+        'Solo puedes despachar desde tu sucursal asignada.',
+        403,
+        'TRANSFER_DISPATCH_BRANCH_DENIED',
+      );
+    }
+    const transit = await ensureTransitWarehouse(client, {
+      tenantId: req.context.tenantId,
+      branchId: detail.source_branch_id,
+    });
+    const source = await client.query(
+      `UPDATE inventory_balances
+       SET on_hand = on_hand - $4, updated_at = now()
+       WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3
+         AND on_hand - reserved >= $4
+       RETURNING *`,
+      [req.context.tenantId, productId, sourceWarehouseId, quantity],
+    );
+    if (!source.rowCount) {
+      throw new AppError(
+        'No hay unidades disponibles suficientes para el despacho.',
+        409,
+        'INSUFFICIENT_DISPATCH_STOCK',
+      );
+    }
+    await applyInventoryBalanceDelta(client, {
+      tenantId: req.context.tenantId,
+      productId,
+      warehouseId: transit.id,
+      quantity,
+    });
+    const transfer = await client.query(
+      `INSERT INTO inventory_transfer_orders(
+         company_id, product_id, source_warehouse_id, transit_warehouse_id,
+         destination_warehouse_id, quantity, unit_cost, reason,
+         dispatch_reference, dispatched_by
+       )
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [
+        req.context.tenantId,
+        productId,
+        sourceWarehouseId,
+        transit.id,
+        destinationWarehouseId,
+        quantity,
+        detail.cost,
+        reason,
+        dispatchReference,
+        req.context.userId,
+      ],
+    );
+    await client.query(
+      `INSERT INTO inventory_movements(
+         tenant_id, product_id, warehouse_id, movement_type, quantity,
+         unit_cost, reference_type, reference_id, reason, created_by
+       )
+       VALUES
+         ($1,$2,$3,'TRANSFER_DISPATCH',-$5,$6,'TRANSFER_ORDER',$7,$8,$9),
+         ($1,$2,$4,'TRANSFER_TRANSIT',$5,$6,'TRANSFER_ORDER',$7,$8,$9)`,
+      [
+        req.context.tenantId,
+        productId,
+        sourceWarehouseId,
+        transit.id,
+        quantity,
+        detail.cost,
+        transfer.rows[0].id,
+        reason,
+        req.context.userId,
+      ],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'inventory.transfer_dispatched',
+      entityType: 'inventory_transfer_order',
+      entityId: transfer.rows[0].id,
+      after: transfer.rows[0],
+      reason,
+    });
+    return transfer.rows[0];
+  });
+  res.status(201).json(result);
+}));
+
+router.post('/transfer-orders/:transferId/receive', asyncHandler(async (req, res) => {
+  const { transferId } = req.params;
+  const notes = normalizeReason(req.body.receptionNotes);
+  if (!isUuid(transferId) || !notes) {
+    throw new AppError(
+      'La transferencia y las observaciones de recepción son obligatorias.',
+      422,
+      'INVALID_TRANSFER_RECEPTION',
+    );
+  }
+  const result = await withTransaction(async (client) => {
+    const transfer = await client.query(
+      `SELECT transfer.*, destination.branch_id destination_branch_id
+       FROM inventory_transfer_orders transfer
+       JOIN warehouses destination
+         ON destination.id = transfer.destination_warehouse_id
+        AND destination.tenant_id = transfer.company_id
+       WHERE transfer.id = $1 AND transfer.company_id = $2
+         AND transfer.status = 'DISPATCHED'
+       FOR UPDATE OF transfer`,
+      [transferId, req.context.tenantId],
+    );
+    if (!transfer.rowCount) {
+      throw new AppError(
+        'La transferencia no existe o ya fue procesada.',
+        404,
+        'TRANSFER_ORDER_NOT_PENDING',
+      );
+    }
+    const record = transfer.rows[0];
+    if (req.context.branchId &&
+        record.destination_branch_id !== req.context.branchId) {
+      throw new AppError(
+        'Solo la sucursal de destino puede confirmar la recepción.',
+        403,
+        'TRANSFER_RECEPTION_BRANCH_DENIED',
+      );
+    }
+    const transit = await client.query(
+      `UPDATE inventory_balances
+       SET on_hand = on_hand - $4, updated_at = now()
+       WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3
+         AND on_hand - reserved >= $4
+       RETURNING *`,
+      [
+        req.context.tenantId,
+        record.product_id,
+        record.transit_warehouse_id,
+        record.quantity,
+      ],
+    );
+    if (!transit.rowCount) {
+      throw new AppError(
+        'El saldo en tránsito no coincide; revisa el kardex antes de recibir.',
+        409,
+        'TRANSFER_TRANSIT_BALANCE_MISMATCH',
+      );
+    }
+    await applyInventoryBalanceDelta(client, {
+      tenantId: req.context.tenantId,
+      productId: record.product_id,
+      warehouseId: record.destination_warehouse_id,
+      quantity: record.quantity,
+    });
+    const updated = await client.query(
+      `UPDATE inventory_transfer_orders
+       SET status = 'RECEIVED', reception_notes = $3, received_by = $4,
+           received_at = now(), updated_at = now()
+       WHERE id = $1 AND company_id = $2
+       RETURNING *`,
+      [transferId, req.context.tenantId, notes, req.context.userId],
+    );
+    await client.query(
+      `INSERT INTO inventory_movements(
+         tenant_id, product_id, warehouse_id, movement_type, quantity,
+         unit_cost, reference_type, reference_id, reason, created_by
+       )
+       VALUES
+         ($1,$2,$3,'TRANSFER_TRANSIT_OUT',-$5,$6,'TRANSFER_ORDER',$7,$8,$9),
+         ($1,$2,$4,'TRANSFER_RECEIVED',$5,$6,'TRANSFER_ORDER',$7,$8,$9)`,
+      [
+        req.context.tenantId,
+        record.product_id,
+        record.transit_warehouse_id,
+        record.destination_warehouse_id,
+        record.quantity,
+        record.unit_cost,
+        transferId,
+        notes,
+        req.context.userId,
+      ],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'inventory.transfer_received',
+      entityType: 'inventory_transfer_order',
+      entityId: transferId,
+      before: record,
+      after: updated.rows[0],
+      reason: notes,
+    });
+    return updated.rows[0];
+  });
+  res.json(result);
 }));
 
 router.post('/adjustments', asyncHandler(async (req, res) => {

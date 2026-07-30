@@ -1,4 +1,4 @@
-# MegaSuite Platform
+# Nubixor Platform
 
 Núcleo de un ERP modular y multiempresa construido con Node.js 22, Express,
 PostgreSQL y Redis. La Fase 1 estabiliza el entorno, las migraciones, los logs,
@@ -71,14 +71,28 @@ definida, `npm test` omite únicamente esta prueba de integración.
   aplicación de abonos.
 - `/#cuentas-pagar` abre obligaciones con proveedores, vencimientos y registro
   de pagos parciales o totales.
+- `/#gastos` abre solicitudes de gastos operativos, centros de costos,
+  aprobaciones, soportes y pagos desde caja o bancos.
+- `/#terceros` abre el directorio unificado de clientes y proveedores, sus
+  saldos y la actividad comercial de la empresa activa.
 - `/#usuarios` abre el equipo de la empresa, sus roles, permisos, alcance por
   sucursal y estado de acceso.
 - `/#auditoria` abre la bitácora protegida, sus filtros, el detalle de cambios
   y la exportación CSV.
 - `/#reportes` abre análisis de ventas, margen, inventario, compras, cartera y
   proveedores con filtros y descarga CSV.
-- `/#inventario` abre existencias valorizadas, kardex, ajustes, transferencias
-  y la herramienta secundaria de conteo físico.
+- `/#inventario` abre existencias valorizadas, kardex, ajustes y conteos
+  físicos. Es el registro central de cuánto hay y cuánto vale.
+- `/#logistica` abre como módulo independiente la reposición, novedades,
+  traslados con recepción, ubicaciones internas, unidades y conversiones,
+  variantes, lotes, vencimientos, series, reservas, etiquetas, permisos por
+  bodega y cierres valorizados. También incorpora el flujo de recepción por
+  lotes inspirado en MegaMundo Logística: apertura del cargamento, escaneo
+  resiliente, productos provisionales, cierre de conteo, valoración, aprobación
+  de jefatura, carga de inventario, etiquetas, historial y exportación CSV.
+  Puede activarse o desactivarse por empresa
+  desde Sistema; al apagarlo se ocultan y bloquean sus operaciones, pero sus
+  datos permanecen guardados.
 - `/#conteos` se conserva como enlace compatible y redirige al módulo
   Inventario.
 - `/api/health` es una prueba de vida. Siempre responde sin consultar
@@ -90,7 +104,7 @@ definida, `npm test` omite únicamente esta prueba de integración.
 ## Interfaz local
 
 Abra `http://localhost:4100` después de iniciar la aplicación. Si abre
-`public/index.html` directamente, MegaSuite lo redirige a esa dirección local
+`public/index.html` directamente, Nubixor lo redirige a esa dirección local
 para que las cookies seguras de sesión funcionen correctamente.
 
 La interfaz incluye:
@@ -117,12 +131,19 @@ La interfaz incluye:
 - conteos físicos dentro de Inventario, visibles únicamente al programar una
   toma física;
 - directorio de proveedores con condiciones de facturación y pago;
+- registro canónico de terceros por empresa: una misma identidad puede ser
+  cliente, proveedor o ambas, conservando sus perfiles operativos para Caja,
+  Cartera, Compras, Gastos y Cuentas por pagar;
 - órdenes de compra con productos, fechas, costos, impuestos y seguimiento de
   cantidades pendientes;
 - recepciones parciales o totales que actualizan inventario, kardex y costo
   promedio de forma transaccional;
 - cuentas por pagar originadas en compras recibidas o registradas manualmente,
   con edades de vencimiento e historial de pagos;
+- gastos operativos separados de las compras de inventario, con categorías
+  contables, centros de costos, beneficiario, recurrencia y soporte privado;
+- aprobación o rechazo por permisos, pagos parciales desde una cuenta bancaria
+  o un turno abierto, asiento automático y bitácora de cada decisión;
 - equipo separado por empresa con invitaciones, estados activo/invitado/
   suspendido y alcance opcional por sucursal;
 - cinco roles base protegidos, roles personalizados y permisos explícitos por
@@ -162,6 +183,10 @@ La interfaz incluye:
 - conector de facturación electrónica desacoplado por proveedor, con
   credenciales cifradas, ambientes de prueba/producción, resoluciones,
   cola idempotente y trazabilidad de intentos;
+- adaptador Factus API V2 por empresa, con OAuth/refresh, consulta de rangos
+  reales, catálogos validados, pagos mixtos, crédito, impuestos excluidos,
+  CUFE/QR, manejo de límites y respuestas auditables; consulte
+  [`docs/FACTUS_V2.md`](docs/FACTUS_V2.md);
 - comprobante POS imprimible;
 - métricas y salud de servicios en vivo;
 - resumen financiero en el dashboard con cartera, cuentas por pagar, valor de
@@ -176,7 +201,7 @@ Las rutas de interfaz usan fragmentos locales como `#empresas`, `#inventario`,
 guardarse como favoritos sin configurar rutas adicionales en el servidor.
 
 La primera apertura solicita crear la contraseña del propietario sembrado
-`admin@megasuite.local`; MegaSuite no incluye una contraseña predeterminada.
+`admin@megasuite.local`; Nubixor no incluye una contraseña predeterminada.
 Después, las empresas visibles se limitan a las membresías del usuario y cada
 módulo comprueba en el servidor el permiso; las operaciones que indican una
 sucursal también se validan contra el alcance asignado.
@@ -275,19 +300,19 @@ expresan su función legal.
 
 El POS operativo continúa procesando una empresa activa por venta y toma el
 tipo documental desde `company_tax_profiles`. Si la empresa usa factura
-electrónica, MegaSuite crea el documento en estado `PENDING`; sólo asigna
+electrónica, Nubixor crea el documento en estado `PENDING`; sólo asigna
 numeración cuando encuentra una resolución vigente. La transmisión y la
 aceptación real por la DIAN requieren una cuenta de proveedor tecnológico,
 credenciales cifradas y resolución reales.
 
 Las migraciones `024`, `025` y `026` dejan dos escenarios locales:
 
-- `MegaSuite Demo`: factura electrónica preparada, pendiente de conexión real.
+- `Nubixor Demo`: factura electrónica preparada, pendiente de conexión real.
 - `Crative`: comprobante interno, no cobra IVA, caja principal y dos productos
   vendibles configurados al 0%.
 
 La caja principal queda autorizada para mostrar ambos catálogos al mismo
-tiempo. Si el carrito contiene productos de las dos empresas, MegaSuite realiza
+tiempo. Si el carrito contiene productos de las dos empresas, Nubixor realiza
 un único cobro operativo y genera una venta y un comprobante separados para
 cada empresa.
 
@@ -325,6 +350,10 @@ en `docs/AUDITORIA_PROYECTOS_DOCUMENTOS.md`.
 
 ## Despliegue
 
+La lista operativa completa para dominio, HTTPS, copias cifradas, recuperación
+de acceso y ventas reales controladas está en
+[`docs/PUESTA_EN_PRODUCCION.md`](docs/PUESTA_EN_PRODUCCION.md).
+
 ### VPS o Hostinger VPS
 
 Es la opción recomendada para desplegar este conjunto completo con Docker
@@ -351,6 +380,9 @@ Referencias oficiales:
 La API desactiva `X-Powered-By`, aplica Helmet, limita cuerpos JSON, permite
 configurar CORS, no registra cuerpos/cabeceras/URLs de conexión y devuelve un
 `x-request-id` para correlación. La identidad ya no confía en `x-user-id`:
-requiere una sesión persistida, verificación CSRF y permisos por empresa. Aún
-quedan para una fase posterior rate limiting distribuido, segundo factor,
-recuperación por correo y endurecimiento de producción.
+requiere una sesión persistida, verificación CSRF y permisos por empresa.
+La recuperación por correo usa tokens aleatorios, de un solo uso y con
+vencimiento; los archivos se almacenan fuera del directorio público y el
+despliegue productivo incluye HTTPS y copias cifradas. Para una fase posterior
+quedan el segundo factor, análisis antimalware de archivos y rate limiting
+distribuido para todos los puntos sensibles.

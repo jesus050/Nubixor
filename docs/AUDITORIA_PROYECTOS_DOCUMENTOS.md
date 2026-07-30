@@ -9,7 +9,7 @@ dentro de `Documents`. Se excluyeron dependencias instaladas, archivos `.env`,
 copias binarias, fotografías y material que no aporta lógica reutilizable.
 
 El objetivo no es copiar aplicaciones completas, sino rescatar reglas de
-negocio probadas y reconstruirlas sobre el modelo multiempresa de MegaSuite.
+negocio probadas y reconstruirlas sobre el modelo multiempresa de Nubixor.
 
 ## Fuentes directamente reutilizables
 
@@ -120,7 +120,7 @@ pero no deben mezclarse directamente con la base transaccional:
 - ABCDanza y Game Danza: aprendizaje y juego.
 - Pechebro: sitio visual.
 
-Pueden consumir APIs de MegaSuite en el futuro, pero no son fuentes de verdad
+Pueden consumir APIs de Nubixor en el futuro, pero no son fuentes de verdad
 para inventario, cartera o contabilidad.
 
 ## Duplicados detectados

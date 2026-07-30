@@ -8,13 +8,19 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "migrate": "node src/migrate.js",
+    "accounting:backfill": "node scripts/backfill-accounting.js",
+    "backup": "node scripts/backup.js",
+    "backup:restore": "node scripts/restore-backup.js",
     "services:up": "docker compose up -d postgres redis",
     "services:down": "docker compose down",
     "services:wait": "node scripts/wait-for-services.js",
     "setup:local": "npm run services:up && npm run services:wait && npm run migrate",
     "test": "node --test",
     "test:integration": "node --test test/multi-company.integration.test.js",
-    "check": "node --check src/server.js && node --check src/app.js && node --check src/migrate.js && node --test"
+    "check": "node --check src/server.js && node --check src/app.js && node --check src/migrate.js && node --test",
+    "deploy": "node scripts/deploy-hostinger.js update",
+    "deploy:status": "node scripts/deploy-hostinger.js status",
+    "deploy:restart": "node scripts/deploy-hostinger.js restart"
   },
   "dependencies": {
     "cors": "^2.8.5",

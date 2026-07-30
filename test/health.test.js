@@ -12,7 +12,7 @@ test('GET / sirve la interfaz local', async () => {
   const response = await request(createUnsecuredApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);
   assert.equal(response.headers['cache-control'], 'no-store');
-  assert.match(response.text, /MegaSuite/);
+  assert.match(response.text, /Nubixor/);
   assert.match(response.text, /href="\.\/styles\.css\?v=/);
   assert.match(response.text, /src="\.\/app\.js\?v=/);
   assert.doesNotMatch(
@@ -28,10 +28,18 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Roles &amp; permisos/);
   assert.match(response.text, /Agregar al catálogo/);
   assert.match(response.text, /Adjuntar fotografía/);
+  assert.match(response.text, /Colores o presentaciones/);
+  assert.match(response.text, /Combo o kit/);
+  assert.match(response.text, /Descontar componentes y armar/);
+  assert.match(response.text, /Combos listos para vender/);
+  assert.match(response.text, /Precios y promociones/);
+  assert.match(response.text, /Escala por cantidad/);
+  assert.match(response.text, /Precio por cliente/);
+  assert.match(response.text, /Nueva promoción/);
   assert.match(response.text, /Abrir turno de caja/);
   assert.match(response.text, /Selecciona productos/);
   assert.match(response.text, /Control e historial de caja/);
-  assert.match(response.text, /MegaSuite Caja/);
+  assert.match(response.text, /Nubixor Caja/);
   assert.match(response.text, /data-payment-method="CASH"/);
   assert.match(response.text, /id="posCategoryStrip"/);
   assert.match(response.text, /Efectivo recibido/);
@@ -40,9 +48,12 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-sale-terms="CREDIT"/);
   assert.match(response.text, /La cuenta por cobrar se creará/);
   assert.match(response.text, /Facturas y comprobantes/);
+  assert.match(response.text, /Devolver productos/);
+  assert.match(response.text, /Devolución controlada/);
   assert.match(response.text, /Cuenta que recibió/);
   assert.match(response.text, /id="posSalesHistoryList"/);
-  assert.match(response.text, /Pestañas principales/);
+  assert.match(response.text, /Áreas de Nubixor/);
+  assert.match(response.text, /nav-group-toggle/);
   assert.match(response.text, /data-view="productos"/);
   assert.match(response.text, /Áreas del catálogo/);
   assert.match(response.text, /Crear impuesto de venta/);
@@ -50,40 +61,107 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="cartera"/);
   assert.match(response.text, /Facturas y cuentas por cobrar/);
   assert.match(response.text, /Registrar abono/);
+  assert.match(response.text, /data-view="facturacion"/);
+  assert.match(response.text, /Cotizaciones y pedidos/);
+  assert.match(response.text, /CUFE, CUDE y QR solo se muestran/);
   assert.match(response.text, /data-view="inventario"/);
+  assert.match(response.text, /data-view="logistica"/);
+  assert.match(response.text, /data-tenant-module-link="LOGISTICS"/);
+  assert.match(response.text, /Módulo opcional/);
+  assert.match(response.text, /Capacidades opcionales/);
+  assert.match(response.text, /Activar o desactivar Logística/);
+  assert.match(response.text, /Recepciones/);
+  assert.match(response.text, /Lotes de mercancía/);
+  assert.match(response.text, /Escáner de bodega/);
+  assert.match(response.text, /Decisión de jefatura/);
+  assert.match(response.text, /Imprimir lote completo/);
+  assert.match(response.text, /Código de barras/);
+  assert.match(response.text, /Historial del lote/);
   assert.match(response.text, /Existencias actuales/);
   assert.match(response.text, /Programar toma física/);
   assert.match(response.text, /Aprobar y ajustar inventario/);
+  assert.match(response.text, /Operación logística/);
+  assert.match(response.text, /De la recepción a la exhibición/);
+  assert.match(response.text, /Trazabilidad/);
+  assert.match(response.text, /Maestros y gobierno/);
+  assert.match(response.text, /Permisos por bodega/);
+  assert.match(response.text, /Política del producto/);
+  assert.match(response.text, /Lote y vencimiento/);
+  assert.match(response.text, /Permiso por bodega/);
+  assert.match(response.text, /Cierre valorizado/);
   assert.match(response.text, /data-view="compras"/);
   assert.match(response.text, /Órdenes y recepciones/);
   assert.match(response.text, /Confirmar entrada a inventario/);
   assert.match(response.text, /data-view="cuentas-pagar"/);
   assert.match(response.text, /Facturas y cuentas por pagar/);
   assert.match(response.text, /Registrar pago/);
-  assert.match(response.text, /Dinero e inventario/);
+  assert.match(response.text, /data-view="gastos"/);
+  assert.match(response.text, /Gastos del negocio/);
+  assert.match(response.text, /Nuevo gasto/);
+  assert.match(response.text, /Centro de costos/);
+  assert.match(response.text, /Enviar para aprobación/);
+  assert.match(response.text, /Aprobar gasto/);
+  assert.match(response.text, /Cuenta de salida/);
+  assert.match(response.text, /Recursos comprometidos/);
+  assert.match(response.text, /data-view="terceros"/);
+  assert.match(response.text, /Directorio comercial central/);
+  assert.match(response.text, /Registrar tercero/);
+  assert.match(response.text, /Cliente y proveedor a la vez/);
   assert.match(response.text, /id="dashboardPayable"/);
   assert.match(response.text, /data-view="usuarios"/);
   assert.match(response.text, /Equipo y accesos/);
   assert.match(response.text, /Invitar persona/);
   assert.match(response.text, /Roles y permisos/);
   assert.match(response.text, /Crea tu acceso principal/);
-  assert.match(response.text, /Entra a MegaSuite/);
+  assert.match(response.text, /Entra a Nubixor/);
   assert.match(response.text, /Activa tu cuenta/);
+  assert.match(response.text, /¿Olvidaste tu contraseña\?/);
+  assert.match(response.text, /Recupera tu acceso/);
+  assert.match(response.text, /Perfil tributario/);
+  assert.match(response.text, /Soporte RUT/);
   assert.match(response.text, /Enlace personal de activación/);
   assert.match(response.text, /Cerrar sesión/);
   assert.match(response.text, /data-view="auditoria"/);
   assert.match(response.text, /Auditoría consultable/);
+  assert.match(response.text, /Preparación para auditoría/);
+  assert.match(response.text, /Conciliación, balances y expediente/);
+  assert.match(response.text, /Expediente mensual/);
+  assert.match(response.text, /Cierre bancario/);
+  assert.match(response.text, /Firmar validación/);
+  assert.match(response.text, /Descargar expediente/);
   assert.match(response.text, /Exportar CSV/);
   assert.match(response.text, /Estado anterior/);
   assert.match(response.text, /data-view="reportes"/);
   assert.match(response.text, /Centro de reportes/);
   assert.match(response.text, /Inventario valorizado/);
   assert.match(response.text, /Descargar CSV/);
-  assert.match(response.text, /Flujo estimado 30 días/);
+  assert.match(response.text, /Proyección a 30 días/);
+  assert.match(response.text, /El negocio, hoy\./);
+  assert.match(response.text, /Cartera vencida/);
+  assert.match(response.text, /Últimos siete días/);
   assert.match(response.text, /Movimientos e historial/);
   assert.match(response.text, /Registrar ingreso o salida/);
   assert.match(response.text, /Imprimir comprobante/);
   assert.match(response.text, /data-denomination="100000"/);
+});
+
+test('la configuración de módulos valida código y estado antes de consultar PostgreSQL', async () => {
+  const app = createUnsecuredApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+
+  const unknown = await request(app)
+    .patch('/api/module-settings/desconocido')
+    .set(headers)
+    .send({ enabled: true })
+    .expect(422);
+  assert.equal(unknown.body.code, 'INVALID_TENANT_MODULE');
+
+  const invalidState = await request(app)
+    .patch('/api/module-settings/LOGISTICS')
+    .set(headers)
+    .send({ enabled: 'sí' })
+    .expect(422);
+  assert.equal(invalidState.body.code, 'INVALID_TENANT_MODULE');
 });
 
 test('GET /styles.css sirve los estilos locales', async () => {
@@ -99,6 +177,22 @@ test('la interfaz abierta como archivo puede consultar la API en local', async (
     .set('Origin', 'null')
     .expect(200);
   assert.ok(['null', '*'].includes(response.headers['access-control-allow-origin']));
+});
+
+test('la interfaz local puede consultar la API desde su propio origen', async () => {
+  const response = await request(createUnsecuredApp())
+    .get('/api/health')
+    .set('Origin', 'http://localhost:4100')
+    .expect(200);
+  assert.equal(response.headers['access-control-allow-origin'], 'http://localhost:4100');
+});
+
+test('CORS rechaza orígenes externos no configurados', async () => {
+  const response = await request(createUnsecuredApp())
+    .get('/api/health')
+    .set('Origin', 'https://origen-no-autorizado.example')
+    .expect(403);
+  assert.equal(response.body.code, 'CORS_ORIGIN_DENIED');
 });
 
 test('POST /api/companies valida la razón social antes de consultar PostgreSQL', async () => {
@@ -200,6 +294,12 @@ test('el catálogo valida categorías, marcas y productos antes de consultar Pos
     invalidProductTax.body.error,
     'El producto y el impuesto deben tener UUID válidos.',
   );
+
+  const invalidLookup = await request(app)
+    .get('/api/products/lookup?q=x')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidLookup.body.error, /entre 2 y 120 caracteres/i);
 });
 
 test('las imágenes y la caja validan entradas antes de consultar dependencias', async () => {
@@ -293,6 +393,13 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     .set(headers)
     .expect(422);
   assert.match(invalidSaleDetail.body.error, /UUID válido/i);
+
+  const invalidReturn = await request(app)
+    .post('/api/pos/sales/invalid/returns')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.equal(invalidReturn.body.code, 'INVALID_RETURN_CONTEXT');
 });
 
 test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL', async () => {
@@ -379,6 +486,59 @@ test('inventario valida ajustes y transferencias antes de consultar PostgreSQL',
     })
     .expect(422);
   assert.match(replenishment.body.error, /UUID válidos/i);
+  const incident = await request(application)
+    .post('/api/inventory/incidents')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      incidentType: 'INVALID',
+      productId: 'invalid',
+      warehouseId: 'invalid',
+    })
+    .expect(422);
+  assert.match(incident.body.error, /tipo de novedad válidos/i);
+  const transferOrder = await request(application)
+    .post('/api/inventory/transfer-orders')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      productId: 'invalid',
+      sourceWarehouseId: 'invalid',
+      destinationWarehouseId: 'invalid',
+    })
+    .expect(422);
+  assert.match(transferOrder.body.error, /UUID válidos/i);
+  const reception = await request(application)
+    .post('/api/inventory/transfer-orders/invalid/receive')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ receptionNotes: '' })
+    .expect(422);
+  assert.match(reception.body.error, /observaciones de recepción/i);
+});
+
+test('inventario avanzado valida ubicaciones, series y reservas antes de consultar PostgreSQL', async () => {
+  const application = createUnsecuredApp();
+  const location = await request(application)
+    .post('/api/inventory-advanced/locations')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ warehouseId: 'invalid', code: '', name: '' })
+    .expect(422);
+  assert.match(location.body.error, /bodega no es válida/i);
+
+  const serial = await request(application)
+    .post('/api/inventory-advanced/serials')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      productId: '90000000-0000-0000-0000-000000000001',
+      warehouseId: '90000000-0000-0000-0000-000000000002',
+    })
+    .expect(422);
+  assert.match(serial.body.error, /número de serie/i);
+
+  const reservation = await request(application)
+    .post('/api/inventory-advanced/reservations')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ productId: 'invalid', warehouseId: 'invalid', quantity: 0 })
+    .expect(422);
+  assert.match(reservation.body.error, /producto no es válido/i);
 });
 
 test('facturación electrónica valida conexión, resolución y documento', async () => {
@@ -400,6 +560,67 @@ test('facturación electrónica valida conexión, resolución y documento', asyn
     .set('x-tenant-id', DEMO_TENANT_ID)
     .expect(422);
   assert.match(document.body.error, /UUID válido/i);
+  const sandbox = await request(application)
+    .post('/api/electronic-billing/documents/invalid/process-sandbox')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .expect(422);
+  assert.match(sandbox.body.error, /documento no es válido/i);
+  const contingency = await request(application)
+    .post('/api/electronic-billing/contingencies')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ reason: ' ' })
+    .expect(422);
+  assert.match(contingency.body.error, /causa de la contingencia/i);
+  const closeContingency = await request(application)
+    .post('/api/electronic-billing/contingencies/invalid/close')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ resolutionNotes: '' })
+    .expect(422);
+  assert.match(closeContingency.body.error, /cómo fue resuelta/i);
+});
+
+test('el flujo comercial valida cotizaciones, pedidos, notas y consultas', async () => {
+  const application = createUnsecuredApp();
+  const headers = { 'x-tenant-id': DEMO_TENANT_ID };
+  const quote = await request(application)
+    .post('/api/billing-workflow/quotes')
+    .set(headers)
+    .send({ branchId: 'invalid', validUntil: '2026-15-80', items: [] })
+    .expect(422);
+  assert.match(quote.body.error, /sucursal.*fecha de vigencia/i);
+
+  const order = await request(application)
+    .post('/api/billing-workflow/quotes/invalid/convert-order')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.match(order.body.error, /cotización no es válida/i);
+
+  const invoiceReady = await request(application)
+    .post('/api/billing-workflow/orders/invalid/ready-to-invoice')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.match(invoiceReady.body.error, /pedido no es válido/i);
+
+  const note = await request(application)
+    .post('/api/billing-workflow/notes')
+    .set(headers)
+    .send({})
+    .expect(422);
+  assert.match(note.body.error, /factura, tipo, causal/i);
+
+  const noteQueue = await request(application)
+    .post('/api/billing-workflow/notes/invalid/queue')
+    .set(headers)
+    .expect(422);
+  assert.match(noteQueue.body.error, /nota no es válida/i);
+
+  const documentStatus = await request(application)
+    .get('/api/billing-workflow/documents/invalid/status')
+    .set(headers)
+    .expect(422);
+  assert.match(documentStatus.body.error, /documento no es válido/i);
 });
 
 test('compras valida proveedores, órdenes y recepciones antes de consultar PostgreSQL', async () => {
@@ -488,6 +709,45 @@ test('auditoría valida fechas, paginación e identificadores antes de consultar
     .set(headers)
     .expect(422);
   assert.match(invalidId.body.error, /identificador numérico/i);
+
+  const invalidControlPeriod = await request(application)
+    .get('/api/audit/readiness?dateFrom=2026-07-30&dateTo=2026-07-01')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidControlPeriod.body.error, /período/i);
+
+  const invalidReview = await request(application)
+    .post('/api/audit/reviews')
+    .set(headers)
+    .send({
+      periodStart: '2026-07-01',
+      periodEnd: '2026-07-31',
+      reviewType: 'DESCONOCIDA',
+      status: 'APPROVED',
+      reviewerName: 'Contador de prueba',
+      professionalCard: 'TP-1',
+      notes: 'Revisión de prueba',
+    })
+    .expect(422);
+  assert.match(invalidReview.body.error, /tipo de validación/i);
+
+  const invalidAuxiliary = await request(application)
+    .get('/api/audit/accounting/auxiliary/invalid?dateFrom=2026-07-01&dateTo=2026-07-31')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidAuxiliary.body.error, /cuenta contable no es válida/i);
+
+  const invalidVoucher = await request(application)
+    .get('/api/audit/accounting/entries/invalid/voucher.html')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidVoucher.body.error, /comprobante no es válido/i);
+
+  const invalidMonth = await request(application)
+    .get('/api/audit/accounting/monthly-package.json?month=2026-99')
+    .set(headers)
+    .expect(422);
+  assert.match(invalidMonth.body.error, /AAAA-MM/i);
 });
 
 test('la exportación de auditoría neutraliza fórmulas de hoja de cálculo', () => {
@@ -555,6 +815,30 @@ test('activación de invitaciones exige una contraseña fuerte', async () => {
     .send({ token: 'token-temporal-no-valido-1234567890', password: 'corta' })
     .expect(422);
   assert.equal(response.body.code, 'WEAK_PASSWORD');
+});
+
+test('recuperación de contraseña valida correo, token y contraseña', async () => {
+  const invalidEmail = await request(createUnsecuredApp())
+    .post('/api/auth/password-recovery/request')
+    .send({ email: 'correo-invalido' })
+    .expect(422);
+  assert.equal(invalidEmail.body.code, 'INVALID_EMAIL');
+
+  const weakPassword = await request(createUnsecuredApp())
+    .post('/api/auth/password-recovery/complete')
+    .send({ token: 'token-temporal-no-valido-1234567890', password: 'corta' })
+    .expect(422);
+  assert.equal(weakPassword.body.code, 'WEAK_PASSWORD');
+});
+
+test('los archivos públicos y los identificadores inválidos quedan protegidos', async () => {
+  await request(createUnsecuredApp())
+    .get('/uploads/product-images/no-existe.webp')
+    .expect(404);
+  const invalidImage = await request(createUnsecuredApp())
+    .get('/api/assets/product-images/invalida')
+    .expect(422);
+  assert.equal(invalidImage.body.code, 'INVALID_IMAGE_ID');
 });
 
 test('GET /api/health funciona sin consultar dependencias', async () => {

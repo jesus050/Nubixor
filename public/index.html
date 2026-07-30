@@ -5,19 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta
       name="description"
-      content="Centro de operaciones local de MegaSuite, plataforma ERP modular y multiempresa."
+      content="Centro de operaciones de Nubixor, plataforma ERP modular y multiempresa."
     >
-    <meta name="theme-color" content="#192584">
-    <title>MegaSuite — Centro de operaciones</title>
-    <link rel="stylesheet" href="./styles.css?v=20260727-28">
-    <script src="./app.js?v=20260727-28" defer></script>
+    <meta name="theme-color" content="#071437">
+    <title>Nubixor — Centro de operaciones</title>
+    <link rel="icon" type="image/png" href="./assets/brand/nubixor-official-logo.png">
+    <link rel="apple-touch-icon" href="./assets/brand/nubixor-official-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css?v=20260730-REALTIME-v4">
+
+
+    <link rel="stylesheet" href="./brand.css?v=20260730-REALTIME-v3">
+    <script src="./app.js?v=20260730-REALTIME-v3" defer></script>
+
   </head>
   <body>
     <main class="auth-gate" id="authGate">
       <section class="auth-brand-panel">
         <div class="auth-brand">
-          <span class="brand-mark" aria-hidden="true">M</span>
-          <span>MegaSuite</span>
+          <img class="brand-mark" src="./assets/brand/nubixor-icon.png" alt="">
+          <span>Nubixor</span>
         </div>
         <div>
           <p class="eyebrow">Núcleo empresarial protegido</p>
@@ -32,7 +41,7 @@
       </section>
       <section class="auth-form-panel">
         <div class="auth-form-card" id="setupAccessPanel" hidden>
-          <p class="eyebrow">Configuración inicial local</p>
+          <p class="eyebrow">Configuración inicial del sistema</p>
           <h2>Crea tu acceso principal</h2>
           <p class="auth-form-copy">Define la contraseña del propietario. Este paso solo estará disponible una vez y desde este equipo.</p>
           <form id="setupAccessForm">
@@ -57,7 +66,7 @@
         </div>
         <div class="auth-form-card" id="loginAccessPanel" hidden>
           <p class="eyebrow">Acceso seguro</p>
-          <h2>Entra a MegaSuite</h2>
+          <h2>Entra a Nubixor</h2>
           <p class="auth-form-copy">Usa la cuenta asignada por el administrador de tu empresa.</p>
           <form id="loginAccessForm">
             <label class="form-field">
@@ -75,6 +84,48 @@
             <p class="form-error" id="loginAccessError" role="alert" hidden></p>
             <button class="primary-button auth-submit" id="loginAccessButton" type="submit">
               Iniciar sesión <span>→</span>
+            </button>
+            <button class="auth-link-button" id="forgotPasswordButton" type="button">
+              ¿Olvidaste tu contraseña?
+            </button>
+          </form>
+        </div>
+        <div class="auth-form-card" id="recoveryRequestPanel" hidden>
+          <p class="eyebrow">Recuperación protegida</p>
+          <h2>Recupera tu acceso</h2>
+          <p class="auth-form-copy">Enviaremos un enlace de un solo uso que vence en 30 minutos.</p>
+          <form id="recoveryRequestForm">
+            <label class="form-field">
+              <span>Correo</span>
+              <input id="recoveryEmail" name="email" type="email" autocomplete="email" required>
+            </label>
+            <p class="form-error" id="recoveryRequestError" role="alert" hidden></p>
+            <p class="auth-success" id="recoveryRequestSuccess" role="status" hidden></p>
+            <button class="primary-button auth-submit" id="recoveryRequestButton" type="submit">
+              Enviar enlace <span>→</span>
+            </button>
+            <button class="auth-link-button" id="backToLoginButton" type="button">
+              Volver al inicio de sesión
+            </button>
+          </form>
+        </div>
+        <div class="auth-form-card" id="resetPasswordPanel" hidden>
+          <p class="eyebrow">Enlace verificado</p>
+          <h2>Crea una nueva contraseña</h2>
+          <p class="auth-form-copy">Al guardar se cerrarán todas las sesiones anteriores de esta cuenta.</p>
+          <form id="resetPasswordForm">
+            <label class="form-field">
+              <span>Nueva contraseña</span>
+              <input name="password" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <label class="form-field">
+              <span>Confirmar contraseña</span>
+              <input name="confirmPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <p class="password-guidance">10 caracteres o más, incluyendo mayúscula, minúscula y número.</p>
+            <p class="form-error" id="resetPasswordError" role="alert" hidden></p>
+            <button class="primary-button auth-submit" id="resetPasswordButton" type="submit">
+              Cambiar contraseña <span>→</span>
             </button>
           </form>
         </div>
@@ -99,82 +150,159 @@
           </form>
         </div>
         <div class="auth-loading" id="authLoading">
-          <span class="auth-loading-mark">M</span>
+          <img class="auth-loading-mark" src="./assets/brand/nubixor-icon.png" alt="">
           <strong>Verificando acceso…</strong>
         </div>
-        <p class="auth-local-note">MegaSuite local · tus datos permanecen en este entorno.</p>
+        <p class="auth-local-note">Nubixor · Plataforma empresarial segura.</p>
       </section>
     </main>
 
     <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">M</span>
-          <span class="brand-name">MegaSuite</span>
+          <img class="brand-mark" src="./assets/brand/nubixor-icon.png" alt="">
+          <span class="brand-name">Nubixor</span>
         </div>
 
-        <nav class="main-nav">
-          <p class="nav-label">Principal</p>
+        <nav class="main-nav" aria-label="Áreas de Nubixor">
           <a class="nav-item active" href="#inicio" data-view-link="inicio" aria-current="page">
             <span aria-hidden="true">⌂</span> Dashboard
           </a>
-          <p class="nav-label">Administración</p>
-          <a class="nav-item" href="#empresas" data-view-link="empresas">
-            <span aria-hidden="true">E</span> Empresas
-          </a>
-          <a class="nav-item" href="#sucursales" data-view-link="sucursales">
-            <span aria-hidden="true">S</span> Sucursales
-          </a>
-          <p class="nav-label">Inventario</p>
-          <a class="nav-item" href="#bodegas" data-view-link="bodegas">
-            <span aria-hidden="true">B</span> Bodegas
-          </a>
-          <a class="nav-item" href="#inventario" data-view-link="inventario">
-            <span aria-hidden="true">I</span> Inventario
-          </a>
-          <a class="nav-item" href="#productos" data-view-link="productos">
-            <span aria-hidden="true">P</span> Catálogo
-          </a>
-          <p class="nav-label">Abastecimiento</p>
-          <a class="nav-item" href="#compras" data-view-link="compras">
-            <span aria-hidden="true">OC</span> Compras
-          </a>
-          <a class="nav-item" href="#cuentas-pagar" data-view-link="cuentas-pagar">
-            <span aria-hidden="true">CP</span> Cuentas por pagar
-          </a>
-          <p class="nav-label">Ventas</p>
-          <a class="nav-item" href="#caja" data-view-link="caja">
-            <span aria-hidden="true">$</span> Caja &amp; POS
-          </a>
-          <a class="nav-item" href="#cartera" data-view-link="cartera">
-            <span aria-hidden="true">C</span> Cuentas por cobrar
-          </a>
-          <p class="nav-label">Análisis</p>
-          <a class="nav-item" href="#reportes" data-view-link="reportes">
-            <span aria-hidden="true">R</span> Reportes
-          </a>
-          <p class="nav-label">Planeación</p>
-          <a class="nav-item" href="#modulos" data-view-link="modulos">
-            <span aria-hidden="true">▦</span> Mapa del ERP
-          </a>
-          <p class="nav-label">Control</p>
-          <a class="nav-item" href="#usuarios" data-view-link="usuarios">
-            <span aria-hidden="true">U</span> Usuarios &amp; accesos
-          </a>
-          <a class="nav-item" href="#auditoria" data-view-link="auditoria">
-            <span aria-hidden="true">A</span> Auditoría
-          </a>
-          <a class="nav-item" href="#sistema" data-view-link="sistema">
-            <span aria-hidden="true">◉</span> Sistema
-          </a>
+
+          <div class="nav-group" data-nav-group="administracion">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Administración</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#empresas" data-view-link="empresas">
+                <span aria-hidden="true">E</span> Empresas
+              </a>
+              <a class="nav-item" href="#sucursales" data-view-link="sucursales">
+                <span aria-hidden="true">S</span> Sucursales
+              </a>
+              <a class="nav-item" href="#terceros" data-view-link="terceros">
+                <span aria-hidden="true">T</span> Terceros
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="inventario">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Inventario</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#bodegas" data-view-link="bodegas">
+                <span aria-hidden="true">B</span> Bodegas
+              </a>
+              <a class="nav-item" href="#inventario" data-view-link="inventario">
+                <span aria-hidden="true">I</span> Existencias
+              </a>
+              <a class="nav-item" href="#productos" data-view-link="productos">
+                <span aria-hidden="true">P</span> Catálogo
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="logistica"
+            data-tenant-module="LOGISTICS">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Logística</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#logistica" data-view-link="logistica"
+                data-tenant-module-link="LOGISTICS">
+                <span aria-hidden="true">L</span> Operación logística
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="abastecimiento">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Abastecimiento</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#compras" data-view-link="compras">
+                <span aria-hidden="true">OC</span> Compras
+              </a>
+              <a class="nav-item" href="#cuentas-pagar" data-view-link="cuentas-pagar">
+                <span aria-hidden="true">CP</span> Cuentas por pagar
+              </a>
+              <a class="nav-item" href="#gastos" data-view-link="gastos">
+                <span aria-hidden="true">G</span> Gastos
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="ventas">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Ventas</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#caja" data-view-link="caja">
+                <span aria-hidden="true">$</span> Caja &amp; POS
+              </a>
+              <a class="nav-item" href="#cartera" data-view-link="cartera">
+                <span aria-hidden="true">C</span> Cuentas por cobrar
+              </a>
+              <a class="nav-item" href="#facturacion" data-view-link="facturacion">
+                <span aria-hidden="true">FE</span> Facturación
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="analisis">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Análisis</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#reportes" data-view-link="reportes">
+                <span aria-hidden="true">R</span> Reportes
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="planeacion">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Planeación</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#modulos" data-view-link="modulos">
+                <span aria-hidden="true">▦</span> Mapa del ERP
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-nav-group="control">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Control</span><i aria-hidden="true">⌄</i>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#usuarios" data-view-link="usuarios">
+                <span aria-hidden="true">U</span> Usuarios &amp; accesos
+              </a>
+              <a class="nav-item" href="#auditoria" data-view-link="auditoria">
+                <span aria-hidden="true">A</span> Auditoría
+              </a>
+              <a class="nav-item" href="#sistema" data-view-link="sistema">
+                <span aria-hidden="true">◉</span> Sistema
+              </a>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-note">
           <span class="note-kicker">Entorno</span>
-          <strong>Local · Núcleo ERP</strong>
+          <strong>Nubixor · Núcleo ERP</strong>
           <p>Administración, catálogo, inventario y POS organizados por áreas.</p>
         </div>
       </aside>
+      <button
+        class="sidebar-scrim"
+        id="sidebarScrim"
+        type="button"
+        aria-label="Cerrar menú de navegación"
+        tabindex="-1"
+      ></button>
 
       <div class="workspace">
         <header class="topbar">
@@ -189,9 +317,9 @@
             <span></span><span></span>
           </button>
 
-          <div class="cashier-terminal-brand" aria-label="MegaSuite Caja">
-            <span aria-hidden="true">M</span>
-            <div><strong>MegaSuite Caja</strong><small>Terminal de venta</small></div>
+          <div class="cashier-terminal-brand" aria-label="Nubixor Caja">
+            <img src="./assets/brand/nubixor-icon.png" alt="">
+            <div><strong>Nubixor Caja</strong><small>Terminal de venta</small></div>
           </div>
 
           <label class="search">
@@ -199,6 +327,11 @@
             <span class="sr-only">Buscar módulos</span>
             <input id="moduleSearch" type="search" placeholder="Buscar en el mapa del ERP">
           </label>
+          <button class="quick-lookup-trigger" id="quickLookupButton" type="button">
+            <span aria-hidden="true">⌕</span>
+            <span>Consultar producto</span>
+            <kbd id="quickLookupShortcut">⌘ K</kbd>
+          </button>
 
           <div class="topbar-actions">
             <label class="company-context">
@@ -211,7 +344,7 @@
             <div class="account-control">
               <button class="account-trigger" id="accountTrigger" type="button" aria-expanded="false">
                 <span class="avatar" id="accountInitials" aria-hidden="true">MS</span>
-                <span class="account-copy"><strong id="accountName">MegaSuite</strong><small id="accountRole">Sesión local</small></span>
+                <span class="account-copy"><strong id="accountName">Nubixor</strong><small id="accountRole">Usuario autenticado</small></span>
                 <span aria-hidden="true">⌄</span>
               </button>
               <div class="account-menu" id="accountMenu" hidden>
@@ -222,120 +355,166 @@
           </div>
         </header>
 
-        <nav class="view-tabs" aria-label="Pestañas principales">
-          <a href="#inicio" data-view-link="inicio" class="active">Dashboard</a>
-          <a href="#empresas" data-view-link="empresas">Empresas</a>
-          <a href="#sucursales" data-view-link="sucursales">Sucursales</a>
-          <a href="#bodegas" data-view-link="bodegas">Bodegas</a>
-          <a href="#inventario" data-view-link="inventario">Inventario</a>
-          <a href="#productos" data-view-link="productos">Catálogo</a>
-          <a href="#compras" data-view-link="compras">Compras</a>
-          <a href="#cuentas-pagar" data-view-link="cuentas-pagar">CxP</a>
-          <a href="#caja" data-view-link="caja">Caja &amp; POS</a>
-          <a href="#cartera" data-view-link="cartera">Cartera</a>
-          <a href="#usuarios" data-view-link="usuarios">Usuarios</a>
-          <a href="#auditoria" data-view-link="auditoria">Auditoría</a>
-          <a href="#reportes" data-view-link="reportes">Reportes</a>
-          <a href="#modulos" data-view-link="modulos">Mapa ERP</a>
-          <a href="#sistema" data-view-link="sistema">Sistema</a>
-        </nav>
-
         <main>
-          <section class="hero app-view" id="inicio" data-view="inicio">
-            <div class="hero-copy">
+          <section class="hero dashboard-hero app-view" id="inicio" data-view="inicio">
+            <div class="hero-copy dashboard-welcome">
               <p class="eyebrow" id="currentDate">Centro de operaciones</p>
-              <h1>Todo tu negocio,<br><span>en un solo lugar.</span></h1>
+              <h1>Decide con<br><span>datos reales.</span></h1>
               <p class="hero-description">
-                MegaSuite conecta empresas, inventario y operaciones sobre una
-                base preparada para crecer sin perder el control.
+                Ventas, liquidez, inventario y pendientes de
+                <strong id="dashboardCompanyName">la empresa activa</strong>
+                reunidos para empezar el día.
               </p>
               <div class="hero-actions">
-                <button class="primary-button" id="refreshButton" type="button">
-                  Comprobar servicios
-                  <span aria-hidden="true">↻</span>
+                <a class="dashboard-sale-action" href="#caja">
+                  Abrir punto de venta <span aria-hidden="true">→</span>
+                </a>
+                <button class="dashboard-refresh-action" id="refreshButton" type="button">
+                  Actualizar tablero <span aria-hidden="true">↻</span>
                 </button>
-                <a class="text-link" href="#modulos">Explorar módulos <span>→</span></a>
               </div>
             </div>
 
-            <div class="hero-panel" aria-label="Estado general de MegaSuite">
+            <div class="hero-panel dashboard-system-card" aria-label="Estado general de Nubixor">
               <div class="hero-panel-top">
-                <span>Estado general</span>
+                <span>Disponibilidad local</span>
                 <span class="live-indicator" id="overallIndicator">
                   <i></i><b id="overallLabel">Comprobando</b>
                 </span>
               </div>
-              <div class="score-ring" id="scoreRing">
-                <div>
-                  <strong id="systemScore">—</strong>
-                  <span>servicios listos</span>
+              <div class="dashboard-system-score">
+                <div class="score-ring" id="scoreRing">
+                  <div>
+                    <strong id="systemScore">—</strong>
+                    <span>servicios</span>
+                  </div>
                 </div>
-              </div>
-              <div class="hero-panel-foot">
-                <span>Última comprobación</span>
-                <strong id="lastChecked">Pendiente</strong>
+                <div>
+                  <small>Última sincronización</small>
+                  <strong id="lastChecked">Pendiente</strong>
+                  <span>API, base de datos y tareas rápidas.</span>
+                </div>
               </div>
             </div>
           </section>
 
-          <section class="section app-view" id="resumen" data-view="inicio" aria-labelledby="summaryTitle">
-            <div class="section-heading">
+          <section class="onboarding-center app-view" data-view="inicio"
+            id="onboardingCenter" aria-labelledby="onboardingTitle">
+            <div class="onboarding-intro">
               <div>
-                <p class="eyebrow">Datos conectados</p>
-                <h2 id="summaryTitle">Resumen de plataforma</h2>
+                <p class="eyebrow">Puesta en marcha guiada</p>
+                <h2 id="onboardingTitle">Prepara tu empresa sin saltarte pasos.</h2>
+                <p id="onboardingDescription">
+                  Nubixor revisa la empresa activa y te lleva al siguiente dato necesario.
+                </p>
               </div>
-              <p>Información consultada directamente desde la API local.</p>
+              <div class="onboarding-score" aria-label="Avance de configuración">
+                <div class="onboarding-score-ring" id="onboardingScoreRing">
+                  <strong id="onboardingPercent">0%</strong>
+                </div>
+                <span id="onboardingProgressCopy">Consultando configuración</span>
+              </div>
+            </div>
+            <div class="onboarding-demo-notice" id="onboardingDemoNotice" hidden>
+              <div>
+                <span>ENTORNO DE PRÁCTICA</span>
+                <strong>Nubixor — Estado operativo</strong>
+                <p>Registra tu empresa real antes de cargar productos, inventario o ventas.</p>
+              </div>
+              <a href="#empresas">Registrar empresa real →</a>
+            </div>
+            <div class="onboarding-steps" id="onboardingSteps"></div>
+          </section>
+
+          <section class="section app-view" id="resumen" data-view="inicio" aria-labelledby="summaryTitle">
+            <div class="section-heading dashboard-heading">
+              <div>
+                <p class="eyebrow">Panel ejecutivo</p>
+                <h2 id="summaryTitle">El negocio, hoy.</h2>
+              </div>
+              <p id="dashboardUpdatedAt">Información consultada en tiempo real desde la operación empresarial.</p>
             </div>
 
-            <div class="metric-grid">
-              <article class="metric-card">
-                <span class="metric-icon green" aria-hidden="true">E</span>
+            <div class="dashboard-command-grid">
+              <article class="dashboard-command-card dashboard-sales-card">
                 <div>
-                  <span>Empresas</span>
-                  <strong id="companyCount">—</strong>
-                  <small id="companyDetail">Consultando API</small>
+                  <p class="eyebrow">Ventas</p>
+                  <span class="dashboard-card-label">Resultado de hoy</span>
+                  <strong class="dashboard-primary-value" id="dashboardSalesToday">$0</strong>
+                  <span id="dashboardSalesCount">0 transacciones registradas</span>
+                </div>
+                <div class="dashboard-sales-secondary">
+                  <div><small>Ticket promedio</small><strong id="dashboardAverageTicket">$0</strong></div>
+                  <div><small>Acumulado del mes</small><strong id="dashboardSalesMonth">$0</strong></div>
+                  <div><small>Margen bruto</small><strong id="dashboardGrossMargin">$0</strong></div>
+                </div>
+                <div class="dashboard-trend">
+                  <div>
+                    <span>Últimos siete días</span>
+                    <strong id="dashboardSalesComparison">Sin base anterior</strong>
+                  </div>
+                  <div class="dashboard-trend-bars" id="dashboardSalesTrend" aria-label="Ventas de los últimos siete días"></div>
                 </div>
               </article>
-              <article class="metric-card">
-                <span class="metric-icon amber" aria-hidden="true">B</span>
+
+              <article class="dashboard-command-card dashboard-cash-card">
                 <div>
-                  <span>Bodegas</span>
-                  <strong id="warehouseCount">—</strong>
-                  <small id="warehouseDetail">Consultando API</small>
+                  <p class="eyebrow">Liquidez</p>
+                  <span class="dashboard-card-label">Proyección a 30 días</span>
+                  <strong class="dashboard-primary-value" id="dashboardCashProjection">$0</strong>
+                  <span id="dashboardCashProjectionDetail">Caja + cobros − pagos</span>
+                </div>
+                <div class="dashboard-cash-path">
+                  <a href="#cartera"><span>Por cobrar</span><strong id="dashboardReceivable">$0</strong></a>
+                  <i aria-hidden="true">+</i>
+                  <a href="#cuentas-pagar"><span>Por pagar</span><strong id="dashboardPayable">$0</strong></a>
                 </div>
               </article>
-              <article class="metric-card">
-                <span class="metric-icon blue" aria-hidden="true">P</span>
-                <div>
-                  <span>Productos</span>
-                  <strong id="productCount">—</strong>
-                  <small id="productDetail">Consultando API</small>
+
+              <aside class="dashboard-priorities" aria-labelledby="dashboardPrioritiesTitle">
+                <div class="dashboard-priorities-heading">
+                  <div><p class="eyebrow">Atención</p><h3 id="dashboardPrioritiesTitle">Prioridades</h3></div>
+                  <span id="dashboardPriorityCount">0 alertas</span>
                 </div>
-              </article>
-              <article class="metric-card">
-                <span class="metric-icon rose" aria-hidden="true">S</span>
-                <div>
-                  <span>Sucursales</span>
-                  <strong id="branchCount">—</strong>
-                  <small id="branchDetail">Consultando API</small>
+                <div class="dashboard-priority-list">
+                  <a href="#cartera" class="dashboard-priority-item">
+                    <span class="priority-icon danger" aria-hidden="true">C</span>
+                    <div><strong>Cartera vencida</strong><small id="dashboardOverdueReceivableCount">0 documentos</small></div>
+                    <b id="dashboardOverdueReceivable">$0</b>
+                  </a>
+                  <a href="#cuentas-pagar" class="dashboard-priority-item">
+                    <span class="priority-icon warning" aria-hidden="true">P</span>
+                    <div><strong>Pagos vencidos</strong><small id="dashboardOverduePayableCount">0 documentos</small></div>
+                    <b id="dashboardOverduePayable">$0</b>
+                  </a>
+                  <a href="#inventario" class="dashboard-priority-item">
+                    <span class="priority-icon stock" aria-hidden="true">I</span>
+                    <div><strong>Stock bajo</strong><small>Ubicaciones que requieren reposición</small></div>
+                    <b id="dashboardLowStock">0</b>
+                  </a>
+                  <a href="#compras" class="dashboard-priority-item">
+                    <span class="priority-icon purchase" aria-hidden="true">OC</span>
+                    <div><strong>Compras por recibir</strong><small>Valor pendiente de entrada</small></div>
+                    <b id="dashboardPendingPurchases">$0</b>
+                  </a>
                 </div>
-              </article>
+              </aside>
             </div>
 
             <div class="financial-snapshot">
               <div class="financial-snapshot-heading">
-                <div><p class="eyebrow">Posición operativa</p><h3>Dinero e inventario</h3></div>
+                <div><p class="eyebrow">Posición operativa</p><h3>Recursos comprometidos</h3></div>
                 <span>Empresa activa</span>
               </div>
               <div class="financial-snapshot-grid">
                 <a href="#cartera">
                   <span class="financial-symbol incoming" aria-hidden="true">↙</span>
-                  <div><small>Por cobrar</small><strong id="dashboardReceivable">$0</strong></div>
+                  <div><small>Cartera total</small><strong id="dashboardReceivableSnapshot">$0</strong></div>
                   <b>Clientes →</b>
                 </a>
                 <a href="#cuentas-pagar">
                   <span class="financial-symbol outgoing" aria-hidden="true">↗</span>
-                  <div><small>Por pagar</small><strong id="dashboardPayable">$0</strong></div>
+                  <div><small>Obligaciones totales</small><strong id="dashboardPayableSnapshot">$0</strong></div>
                   <b>Proveedores →</b>
                 </a>
                 <a href="#inventario">
@@ -351,20 +530,28 @@
               </div>
             </div>
 
-            <div class="executive-pulse">
-              <div class="executive-pulse-heading">
-                <div>
-                  <p class="eyebrow">Pulso ejecutivo</p>
-                  <h3>Lo que está pasando hoy</h3>
-                </div>
-                <span>Actualizado desde la operación real</span>
+            <div class="dashboard-footprint">
+              <div class="dashboard-footprint-heading">
+                <div><p class="eyebrow">Estructura habilitada</p><h3>Alcance de la operación</h3></div>
+                <span>Configuración activa</span>
               </div>
-              <div class="executive-pulse-grid">
-                <article><small>Ventas de hoy</small><strong id="dashboardSalesToday">$0</strong><span>Acumulado del día</span></article>
-                <article><small>Ventas del mes</small><strong id="dashboardSalesMonth">$0</strong><span id="dashboardGrossMargin">Margen $0</span></article>
-                <article><small>Stock bajo</small><strong id="dashboardLowStock">0</strong><span>Ubicaciones por reponer</span></article>
-                <article><small>Compras pendientes</small><strong id="dashboardPendingPurchases">$0</strong><span>Valor aún por recibir</span></article>
-                <article class="cash-projection-card"><small>Flujo estimado 30 días</small><strong id="dashboardCashProjection">$0</strong><span id="dashboardCashProjectionDetail">Caja + cobros − pagos</span></article>
+              <div class="metric-grid">
+                <article class="metric-card">
+                  <span class="metric-icon green" aria-hidden="true">E</span>
+                  <div><span>Empresas</span><strong id="companyCount">—</strong><small id="companyDetail">Consultando API</small></div>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-icon amber" aria-hidden="true">B</span>
+                  <div><span>Bodegas</span><strong id="warehouseCount">—</strong><small id="warehouseDetail">Consultando API</small></div>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-icon blue" aria-hidden="true">P</span>
+                  <div><span>Productos</span><strong id="productCount">—</strong><small id="productDetail">Consultando API</small></div>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-icon rose" aria-hidden="true">S</span>
+                  <div><span>Sucursales</span><strong id="branchCount">—</strong><small id="branchDetail">Consultando API</small></div>
+                </article>
               </div>
             </div>
           </section>
@@ -402,7 +589,9 @@
                       <th>Empresa</th>
                       <th>Nombre comercial</th>
                       <th>NIT</th>
+                      <th>Identidad</th>
                       <th>Facturación</th>
+                      <th>Tributación</th>
                       <th>Estado</th>
                       <th>Creada</th>
                     </tr>
@@ -542,19 +731,15 @@
               </div>
               <div class="heading-actions">
                 <button class="secondary-button" id="reloadInventoryButton" type="button">Sincronizar</button>
-                <button class="inventory-action-button transfer" id="newTransferButton" type="button">
-                  <span aria-hidden="true">⇄</span>
-                  <span><small>Bodega ↔ exhibición</small>Mover unidades</span>
-                </button>
               </div>
             </div>
 
             <div class="inventory-tabs" role="tablist" aria-label="Áreas de inventario">
               <button class="active" type="button" role="tab" data-inventory-tab="stock" aria-selected="true">
-                Existencias y movimientos
+                Resumen
               </button>
               <button type="button" role="tab" data-inventory-tab="counts" aria-selected="false">
-                Conteo físico
+                Conteos físicos
                 <span class="inventory-tab-badge" id="inventoryActiveCountBadge">0</span>
               </button>
             </div>
@@ -588,12 +773,13 @@
                 </article>
               </div>
 
-              <section class="replenishment-panel" aria-labelledby="replenishmentTitle">
+              <section class="replenishment-panel" id="inventoryReplenishmentPanel"
+                aria-labelledby="replenishmentTitle">
                 <div class="replenishment-heading">
                   <div>
                     <p class="eyebrow">Bodega → exhibición</p>
                     <h3 id="replenishmentTitle">Reposición inteligente</h3>
-                    <p>MegaSuite recomienda cuánto mover; el saldo solo cambia cuando confirmas el traslado.</p>
+                    <p>Nubixor recomienda cuánto mover; el saldo solo cambia cuando confirmas el traslado.</p>
                   </div>
                   <div class="replenishment-summary">
                     <span><strong id="replenishmentAlertCount">0</strong> por reponer</span>
@@ -608,7 +794,7 @@
                 </div>
               </section>
 
-              <div class="inventory-command-bar">
+              <div class="inventory-command-bar" id="inventoryCommandBar">
                 <div>
                   <strong>Controla el saldo sin perder el rastro</strong>
                   <p>Consulta existencias, corrige novedades justificadas o mueve mercancía entre bodegas.</p>
@@ -617,6 +803,10 @@
                   <button class="inventory-action-button adjust" id="newAdjustmentButton" type="button">
                     <span aria-hidden="true">±</span>
                     <span><small>Corregir novedad</small>Ajustar saldo</span>
+                  </button>
+                  <button class="inventory-action-button incident" id="newInventoryIncidentButton" type="button">
+                    <span aria-hidden="true">!</span>
+                    <span><small>Devolución o avería</small>Registrar novedad</span>
                   </button>
                   <button class="inventory-action-button count" id="openCountsPanelButton" type="button">
                     <span aria-hidden="true">⌗</span>
@@ -652,7 +842,12 @@
                 <aside class="inventory-movements-panel">
                   <div class="inventory-panel-heading">
                     <div><p class="eyebrow">Kardex reciente</p><h3>Últimos movimientos</h3></div>
-                    <span id="inventoryMovementCount">0</span>
+                    <div class="inventory-heading-tools">
+                      <span id="inventoryMovementCount">0</span>
+                      <button class="sync-link" id="openKardexButton" type="button">
+                        Kardex completo
+                      </button>
+                    </div>
                   </div>
                   <div class="inventory-movement-list" id="inventoryMovementList"></div>
                   <div class="data-state compact-state" id="inventoryMovementState">
@@ -661,6 +856,237 @@
                     <p>Las entradas y salidas aparecerán aquí.</p>
                   </div>
                 </aside>
+              </div>
+
+              <section class="inventory-incidents-panel" id="inventoryIncidentsPanel"
+                aria-labelledby="inventoryIncidentsTitle">
+                <div class="inventory-panel-heading">
+                  <div>
+                    <p class="eyebrow">Trazabilidad separada del ajuste manual</p>
+                    <h3 id="inventoryIncidentsTitle">Devoluciones, averías y cuarentena</h3>
+                  </div>
+                  <span id="inventoryIncidentCount">0 novedades</span>
+                </div>
+                <div class="inventory-incident-list" id="inventoryIncidentList"></div>
+                <div class="data-state compact-state" id="inventoryIncidentState">
+                  <span class="data-state-symbol" aria-hidden="true">!</span>
+                  <strong>Sin novedades registradas</strong>
+                  <p>Las devoluciones, pérdidas y unidades aisladas aparecerán aquí.</p>
+                </div>
+              </section>
+
+              <section class="inventory-transfer-orders-panel" id="inventoryTransferOrdersPanel"
+                aria-labelledby="inventoryTransferOrdersTitle">
+                <div class="inventory-panel-heading">
+                  <div>
+                    <p class="eyebrow">Despacho → tránsito → recepción</p>
+                    <h3 id="inventoryTransferOrdersTitle">Transferencias por aceptar</h3>
+                  </div>
+                  <span id="inventoryTransferOrderCount">0 pendientes</span>
+                </div>
+                <div class="inventory-transfer-order-list"
+                  id="inventoryTransferOrderList"></div>
+                <div class="data-state compact-state"
+                  id="inventoryTransferOrderState">
+                  <span class="data-state-symbol" aria-hidden="true">⇄</span>
+                  <strong>Sin despachos pendientes</strong>
+                  <p>Usa “Requiere recepción” al transferir entre sedes o responsables.</p>
+                </div>
+              </section>
+            </div>
+
+            <div class="inventory-panel inventory-operations-panel"
+              data-inventory-panel="operations" hidden>
+              <div class="inventory-flow-hero">
+                <div>
+                  <p class="eyebrow">Ruta diaria de mercancía</p>
+                  <h3>De la recepción a la exhibición</h3>
+                  <p>
+                    Inspirado en la operación de MegaMundo: cada producto entra
+                    por compras, se verifica, se ubica, se repone y conserva
+                    trazabilidad hasta su salida.
+                  </p>
+                </div>
+                <div class="inventory-flow-steps" aria-label="Flujo logístico">
+                  <span><b>01</b> Compra</span>
+                  <span><b>02</b> Recepción</span>
+                  <span><b>03</b> Verificación</span>
+                  <span><b>04</b> Ubicación</span>
+                  <span><b>05</b> Exhibición</span>
+                </div>
+              </div>
+
+              <div class="inventory-logistics-links">
+                <button type="button" data-view-target="compras">
+                  <span>OC</span><strong>Recibir una compra</strong>
+                  <small>Compara orden, factura y cantidades recibidas.</small>
+                </button>
+                <button type="button" data-inventory-route="counts">
+                  <span>⌗</span><strong>Verificar físicamente</strong>
+                  <small>Programa un conteo solamente cuando corresponda.</small>
+                </button>
+                <button type="button" data-inventory-route="advanced">
+                  <span>L</span><strong>Asignar lote o serie</strong>
+                  <small>Conserva vencimiento, garantía y trazabilidad.</small>
+                </button>
+                <button type="button" data-inventory-route="configuration">
+                  <span>⌖</span><strong>Organizar ubicaciones</strong>
+                  <small>Recepción, almacenamiento, picking y exhibición.</small>
+                </button>
+              </div>
+
+              <div class="inventory-operations-workspace"
+                id="inventoryOperationsWorkspace"></div>
+            </div>
+
+            <div class="inventory-panel advanced-inventory-panel"
+              data-inventory-panel="advanced" hidden>
+              <div class="advanced-inventory-hero">
+                <div>
+                  <p class="eyebrow">Trazabilidad especializada</p>
+                  <h3>Control físico de principio a fin</h3>
+                  <p>
+                    Organiza dónde está cada unidad, cómo se compra o vende,
+                    qué lote vence y quién puede manipular cada bodega.
+                  </p>
+                </div>
+                <button class="secondary-button" id="reloadAdvancedInventoryButton"
+                  type="button">Actualizar control</button>
+              </div>
+
+              <div class="advanced-inventory-kpis">
+                <article><span>Ubicaciones internas</span><strong id="advancedLocationCount">0</strong></article>
+                <article><span>Unidades configuradas</span><strong id="advancedUnitCount">0</strong></article>
+                <article><span>Lotes con saldo</span><strong id="advancedLotCount">0</strong></article>
+                <article class="warning"><span>Próximos a vencer</span><strong id="advancedExpiringCount">0</strong></article>
+                <article><span>Series rastreadas</span><strong id="advancedSerialCount">0</strong></article>
+                <article><span>Unidades reservadas</span><strong id="advancedReservedCount">0</strong></article>
+              </div>
+
+              <div class="advanced-action-grid" id="advancedTraceabilityActions"
+                aria-label="Acciones de trazabilidad">
+                <button type="button" data-advanced-inventory-action="tracking">
+                  <span>01</span><strong>Política del producto</strong>
+                  <small>Unidad base, mínimos, lotes, series y garantía.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="location">
+                  <span>02</span><strong>Ubicación interna</strong>
+                  <small>Zona, pasillo, estante, nivel y posición.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="unit">
+                  <span>03</span><strong>Unidad de medida</strong>
+                  <small>Unidades, peso, longitud, volumen y código DIAN.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="conversion">
+                  <span>04</span><strong>Conversión comercial</strong>
+                  <small>Ejemplo: una caja equivale a doce unidades.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="variant">
+                  <span>05</span><strong>Variante</strong>
+                  <small>Talla, color, presentación, SKU y precio propio.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="lot">
+                  <span>06</span><strong>Lote y vencimiento</strong>
+                  <small>Asigna existencias actuales a un lote trazable.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="serial">
+                  <span>07</span><strong>Número de serie</strong>
+                  <small>Identidad individual, garantía y ubicación.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="reservation">
+                  <span>08</span><strong>Reserva de stock</strong>
+                  <small>Separa unidades para pedidos u operaciones.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="label">
+                  <span>09</span><strong>Etiquetas</strong>
+                  <small>Prepara códigos de barras, precios, lotes y series.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="permission">
+                  <span>10</span><strong>Permiso por bodega</strong>
+                  <small>Ver, ajustar, despachar, recibir o vender.</small>
+                </button>
+                <button type="button" data-advanced-inventory-action="closure">
+                  <span>11</span><strong>Cierre valorizado</strong>
+                  <small>Fotografía inalterable de unidades y costo.</small>
+                </button>
+              </div>
+
+              <div class="advanced-inventory-board">
+                <section id="advancedLocationsBoard">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Mapa físico</p><h3>Ubicaciones</h3></div>
+                    <span id="advancedLocationRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedLocationList"></div>
+                </section>
+                <section id="advancedLotsBoard">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">FEFO y trazabilidad</p><h3>Lotes y series</h3></div>
+                    <span id="advancedLotRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedLotList"></div>
+                </section>
+                <section id="advancedReservationsBoard">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Disponibilidad comprometida</p><h3>Reservas</h3></div>
+                    <span id="advancedReservationRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedReservationList"></div>
+                </section>
+                <section id="advancedClosuresBoard">
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Evidencia contable</p><h3>Cierres</h3></div>
+                    <span id="advancedClosureRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedClosureList"></div>
+                </section>
+              </div>
+            </div>
+
+            <div class="inventory-panel advanced-inventory-panel inventory-configuration-panel"
+              data-inventory-panel="configuration" hidden>
+              <div class="advanced-inventory-hero configuration">
+                <div>
+                  <p class="eyebrow">Maestros y gobierno</p>
+                  <h3>Configura antes de operar</h3>
+                  <p>
+                    Define unidades, presentaciones, zonas, permisos y políticas
+                    una sola vez. El equipo de bodega trabaja después con reglas claras.
+                  </p>
+                </div>
+                <button class="secondary-button" type="button"
+                  data-inventory-route="advanced">Abrir trazabilidad</button>
+              </div>
+
+              <div class="inventory-configuration-note">
+                <span aria-hidden="true">i</span>
+                <p>
+                  <strong>Separación recomendada:</strong> los maestros cambian poco;
+                  lotes, series y reservas pertenecen a la operación diaria.
+                </p>
+              </div>
+
+              <div class="advanced-action-grid" id="advancedConfigurationActions"
+                aria-label="Configuración del inventario"></div>
+
+              <div class="advanced-inventory-board configuration-board"
+                id="advancedConfigurationBoard"></div>
+
+              <div class="advanced-inventory-board governance-board">
+                <section>
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Cola de impresión</p><h3>Etiquetas</h3></div>
+                    <span id="advancedLabelRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedLabelList"></div>
+                </section>
+                <section>
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Acceso operativo</p><h3>Permisos por bodega</h3></div>
+                    <span id="advancedPermissionRecordCount">0</span>
+                  </div>
+                  <div class="advanced-record-list" id="advancedPermissionList"></div>
+                </section>
               </div>
             </div>
 
@@ -671,7 +1097,7 @@
                   <div>
                     <p class="eyebrow">Proceso ocasional y controlado</p>
                     <h3>Inventario físico</h3>
-                    <p>Úsalo únicamente cuando programes una toma física. MegaSuite congela una fotografía del saldo esperado y audita cada diferencia al cierre.</p>
+                    <p>Úsalo únicamente cuando programes una toma física. Nubixor congela una fotografía del saldo esperado y audita cada diferencia al cierre.</p>
                   </div>
                 </div>
                 <div class="heading-actions">
@@ -779,6 +1205,433 @@
             </div>
           </section>
 
+          <section class="section logistics-section app-view" id="logistica"
+            data-view="logistica" data-tenant-module-view="LOGISTICS"
+            aria-labelledby="logisticsTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Módulo opcional</p>
+                <h2 id="logisticsTitle">Logística</h2>
+              </div>
+              <div class="heading-actions" id="logisticsHeadingActions">
+                <span class="module-live-status" id="logisticsViewStatus">
+                  <i aria-hidden="true"></i> Módulo activo
+                </span>
+                <button class="secondary-button" id="reloadLogisticsButton"
+                  type="button">Sincronizar operación</button>
+                <button class="inventory-action-button transfer" id="newTransferButton" type="button">
+                  <span aria-hidden="true">⇄</span>
+                  <span><small>Bodega ↔ exhibición</small>Mover unidades</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="logistics-scope-strip">
+              <span aria-hidden="true">L</span>
+              <p>
+                <strong>Inventario registra cuánto hay.</strong>
+                Logística controla cómo llega, dónde se ubica, qué se repone y
+                quién recibe cada traslado.
+              </p>
+            </div>
+
+            <div class="inventory-tabs logistics-tabs" role="tablist"
+              aria-label="Áreas de logística">
+              <button class="active" type="button" role="tab"
+                data-inventory-tab="flow" aria-selected="true">
+                Recepciones
+                <span class="inventory-tab-badge" id="logisticsWorkflowAlertBadge">0</span>
+              </button>
+              <button type="button" role="tab"
+                data-inventory-tab="labels" aria-selected="false">
+                Etiquetas
+                <span class="inventory-tab-badge" id="logisticsLabelTabBadge">0</span>
+              </button>
+              <button type="button" role="tab"
+                data-inventory-tab="operations" aria-selected="false">
+                Operación
+                <span class="inventory-tab-badge" id="inventoryOperationAlertBadge">0</span>
+              </button>
+              <button type="button" role="tab"
+                data-inventory-tab="advanced" aria-selected="false">
+                Trazabilidad
+                <span class="inventory-tab-badge" id="advancedInventoryAlertBadge">0</span>
+              </button>
+              <button type="button" role="tab"
+                data-inventory-tab="configuration" aria-selected="false">
+                Configuración logística
+              </button>
+            </div>
+
+            <div id="logisticsWorkspace">
+              <div class="inventory-panel logistics-flow-panel"
+                data-inventory-panel="flow">
+                <div class="logistics-flow-kpis">
+                  <article class="counting">
+                    <span>En recepción</span>
+                    <strong id="logisticsCountingCount">0</strong>
+                    <small>Escaneo y conteo físico</small>
+                  </article>
+                  <article class="pricing">
+                    <span>En valoración</span>
+                    <strong id="logisticsPricingCount">0</strong>
+                    <small>Costos y precios pendientes</small>
+                  </article>
+                  <article class="approval">
+                    <span>Por aprobar</span>
+                    <strong id="logisticsApprovalCount">0</strong>
+                    <small>Decisión de jefatura</small>
+                  </article>
+                  <article class="labels">
+                    <span>Etiquetas pendientes</span>
+                    <strong id="logisticsLabelsPending">0</strong>
+                    <small>Productos aprobados</small>
+                  </article>
+                  <article class="value">
+                    <span>Mercancía en proceso</span>
+                    <strong id="logisticsFlowValue">$0</strong>
+                    <small id="logisticsFlowUnits">0 unidades recibidas</small>
+                  </article>
+                </div>
+
+                <div class="logistics-process-rail" aria-label="Flujo de recepción">
+                  <div><span>01</span><strong>Recibir</strong><small>Pedido, factura y bodega</small></div>
+                  <i aria-hidden="true">→</i>
+                  <div><span>02</span><strong>Contar</strong><small>Escáner, cámara o SKU</small></div>
+                  <i aria-hidden="true">→</i>
+                  <div><span>03</span><strong>Valorar</strong><small>Costo, precio y margen</small></div>
+                  <i aria-hidden="true">→</i>
+                  <div><span>04</span><strong>Aprobar</strong><small>Jefatura bloquea el lote</small></div>
+                  <i aria-hidden="true">→</i>
+                  <div><span>05</span><strong>Etiquetar</strong><small>Carga e impresión trazable</small></div>
+                </div>
+
+                <div class="logistics-flow-toolbar">
+                  <div>
+                    <p class="eyebrow">Centro de recepción</p>
+                    <h3>Lotes de mercancía</h3>
+                    <p>Cada etapa tiene responsable, bloqueo y evidencia propia.</p>
+                  </div>
+                  <div class="heading-actions">
+                    <label class="field-search">
+                      <span aria-hidden="true">⌕</span>
+                      <span class="sr-only">Buscar lote logístico</span>
+                      <input id="logisticsBatchSearch" type="search"
+                        placeholder="Buscar lote, proveedor o factura">
+                    </label>
+                    <select id="logisticsBatchStatusFilter"
+                      aria-label="Filtrar lotes por estado">
+                      <option value="">Todos los estados</option>
+                      <option value="COUNTING">En recepción</option>
+                      <option value="PRICING">En valoración</option>
+                      <option value="APPROVAL">Por aprobar</option>
+                      <option value="COMPLETED">Completados</option>
+                    </select>
+                    <button class="primary-button compact" id="newLogisticsBatchButton"
+                      type="button">
+                      Nueva recepción <span aria-hidden="true">＋</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="logistics-flow-workspace">
+                  <aside class="logistics-batch-panel">
+                    <div class="inventory-panel-heading">
+                      <div><p class="eyebrow">Cola de trabajo</p><h3>Recepciones</h3></div>
+                      <span id="logisticsBatchCount">0 lotes</span>
+                    </div>
+                    <div class="logistics-batch-list" id="logisticsBatchList"></div>
+                    <div class="data-state compact-state" id="logisticsBatchState">
+                      <span class="data-state-symbol" aria-hidden="true">LR</span>
+                      <strong>Consultando recepciones</strong>
+                      <p>Cargando el flujo de la empresa activa.</p>
+                    </div>
+                  </aside>
+
+                  <section class="logistics-batch-detail">
+                    <div class="logistics-detail-empty" id="logisticsDetailEmpty">
+                      <span aria-hidden="true">⌁</span>
+                      <strong>Selecciona una recepción</strong>
+                      <p>Verás conteo, valoración, aprobación, etiquetas e historial.</p>
+                    </div>
+                    <div id="logisticsDetailContent" hidden>
+                      <div class="logistics-detail-heading">
+                        <div>
+                          <p class="eyebrow" id="logisticsDetailNumber">Lote</p>
+                          <h3 id="logisticsDetailTitle">—</h3>
+                          <span id="logisticsDetailMeta">—</span>
+                        </div>
+                        <span class="logistics-status" id="logisticsDetailStatus">En recepción</span>
+                      </div>
+
+                      <div class="logistics-detail-actions" id="logisticsDetailActions"></div>
+
+                      <form class="logistics-scan-card" id="logisticsScanForm">
+                        <div>
+                          <p class="eyebrow">Escáner de bodega</p>
+                          <h4>Registrar producto recibido</h4>
+                          <span id="logisticsConnectionState">Conexión disponible</span>
+                        </div>
+                        <label>
+                          <span>SKU o código de barras</span>
+                          <input id="logisticsScanSku" name="sku" required
+                            autocomplete="off" placeholder="Escanea y presiona Enter">
+                        </label>
+                        <label>
+                          <span>Cantidad física</span>
+                          <input name="quantity" type="number" min="0.0001"
+                            step="0.0001" value="1" required>
+                        </label>
+                        <label>
+                          <span>Cantidad esperada</span>
+                          <input name="expectedQuantity" type="number" min="0"
+                            step="0.0001" value="0">
+                        </label>
+                        <label class="logistics-new-product-check">
+                          <input name="createIfMissing" type="checkbox">
+                          <span>Crear provisional si el SKU no existe</span>
+                        </label>
+                        <label class="logistics-new-product-name" hidden>
+                          <span>Nombre del producto nuevo</span>
+                          <input name="productName" maxlength="220"
+                            placeholder="Nombre para revisión en Catálogo">
+                        </label>
+                        <button class="primary-button compact" type="submit">
+                          Registrar lectura <span aria-hidden="true">→</span>
+                        </button>
+                        <p class="form-error form-span-2" id="logisticsScanError"
+                          role="alert" hidden></p>
+                      </form>
+
+                      <div class="logistics-items-heading">
+                        <div><p class="eyebrow">Contenido</p><h4>Productos del lote</h4></div>
+                        <span id="logisticsItemCount">0 productos</span>
+                      </div>
+                      <div class="logistics-item-list" id="logisticsItemList"></div>
+
+                      <div class="logistics-history-panel">
+                        <div class="inventory-panel-heading">
+                          <div><p class="eyebrow">Evidencia</p><h4>Historial del lote</h4></div>
+                        </div>
+                        <div class="logistics-timeline" id="logisticsTimeline"></div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <div class="inventory-panel logistics-labels-panel"
+                data-inventory-panel="labels" hidden>
+                <div class="logistics-labels-hero">
+                  <div>
+                    <p class="eyebrow">Paso 5 · Después de aprobar</p>
+                    <h3>Imprimir etiquetas de productos</h3>
+                    <p>
+                      Elige un lote aprobado, revisa las cantidades y envía las
+                      etiquetas a una impresora térmica o convencional.
+                    </p>
+                  </div>
+                  <div class="logistics-labels-help">
+                    <span>1</span><p><strong>Selecciona el lote</strong><small>Solo aparecen lotes aprobados.</small></p>
+                    <i>→</i>
+                    <span>2</span><p><strong>Revisa las copias</strong><small>Una por cada unidad recibida.</small></p>
+                    <i>→</i>
+                    <span>3</span><p><strong>Imprime</strong><small>Elige tu impresora y papel.</small></p>
+                  </div>
+                </div>
+
+                <div class="logistics-labels-layout">
+                  <aside class="logistics-label-settings">
+                    <div class="inventory-panel-heading">
+                      <div><p class="eyebrow">Diseño</p><h3>Cómo se verá</h3></div>
+                    </div>
+                    <label>
+                      <span>Tamaño del papel</span>
+                      <select id="logisticsLabelSize">
+                        <option value="50x25">Térmica 50 × 25 mm</option>
+                        <option value="50x30">Térmica 50 × 30 mm</option>
+                        <option value="40x30">Térmica 40 × 30 mm</option>
+                        <option value="70x40">Grande 70 × 40 mm</option>
+                      </select>
+                    </label>
+                    <div class="logistics-label-options">
+                      <label><input id="logisticsLabelShowCompany" type="checkbox" checked> Empresa</label>
+                      <label><input id="logisticsLabelShowProduct" type="checkbox" checked> Producto</label>
+                      <label><input id="logisticsLabelShowPrice" type="checkbox" checked> Precio</label>
+                      <label><input id="logisticsLabelShowSku" type="checkbox" checked> SKU</label>
+                      <label><input id="logisticsLabelShowBarcode" type="checkbox" checked> Código de barras</label>
+                    </div>
+                    <label>
+                      <span>Texto inferior</span>
+                      <input id="logisticsLabelFooter" maxlength="80"
+                        value="Gracias por su compra">
+                    </label>
+                    <div class="logistics-label-preview-shell">
+                      <small>Vista previa aproximada</small>
+                      <div class="logistics-label-preview" id="logisticsLabelPreview">
+                        <b id="logisticsLabelPreviewCompany">Nubixor</b>
+                        <strong id="logisticsLabelPreviewProduct">Nombre del producto</strong>
+                        <em id="logisticsLabelPreviewPrice">$ 49.900</em>
+                        <span id="logisticsLabelPreviewBarcode">▌▐▌▌▐▐▌▐▌▐▐▌▌▐</span>
+                        <small id="logisticsLabelPreviewSku">SKU-0001</small>
+                        <i id="logisticsLabelPreviewFooter">Gracias por su compra</i>
+                      </div>
+                    </div>
+                    <button class="secondary-button compact" id="saveLogisticsLabelSettings"
+                      type="button">Guardar diseño para esta empresa</button>
+                  </aside>
+
+                  <section class="logistics-label-workspace">
+                    <div class="logistics-label-batches">
+                      <div class="inventory-panel-heading">
+                        <div><p class="eyebrow">Listos para etiquetar</p><h3>Lotes aprobados</h3></div>
+                        <span id="logisticsLabelBatchCount">0 lotes</span>
+                      </div>
+                      <div id="logisticsLabelBatchList"></div>
+                    </div>
+                    <div class="logistics-label-products">
+                      <div class="inventory-panel-heading">
+                        <div>
+                          <p class="eyebrow" id="logisticsLabelSelectedBatch">Selecciona un lote</p>
+                          <h3>Productos y copias</h3>
+                        </div>
+                        <button class="primary-button compact" id="printLogisticsBatchLabels"
+                          type="button" disabled>Imprimir lote completo</button>
+                      </div>
+                      <div class="logistics-label-empty" id="logisticsLabelEmpty">
+                        <span aria-hidden="true">▥</span>
+                        <strong>Primero selecciona un lote aprobado</strong>
+                        <p>Luego podrás imprimir todas las etiquetas o solamente un producto.</p>
+                      </div>
+                      <div class="logistics-label-product-list"
+                        id="logisticsLabelProductList"></div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <dialog class="company-dialog logistics-batch-dialog"
+            id="logisticsBatchDialog" aria-labelledby="logisticsBatchDialogTitle">
+            <form class="company-form" id="logisticsBatchForm">
+              <div class="dialog-heading">
+                <div>
+                  <p class="eyebrow">Nueva recepción logística</p>
+                  <h2 id="logisticsBatchDialogTitle">Abrir lote de mercancía</h2>
+                  <p>Define el contexto antes de entregar el lote al equipo de bodega.</p>
+                </div>
+                <button class="icon-button" id="closeLogisticsBatchDialog"
+                  type="button" aria-label="Cerrar">×</button>
+              </div>
+              <div class="form-grid">
+                <label class="form-field form-span-2">
+                  <span>Nombre del lote <b>*</b></span>
+                  <input name="title" maxlength="180" required
+                    placeholder="Ej. Importación julio · contenedor 04">
+                </label>
+                <label class="form-field">
+                  <span>Sucursal <b>*</b></span>
+                  <select id="logisticsBatchBranchId" name="branchId" required></select>
+                </label>
+                <label class="form-field">
+                  <span>Bodega de recepción <b>*</b></span>
+                  <select id="logisticsBatchWarehouseId" name="warehouseId" required></select>
+                </label>
+                <label class="form-field">
+                  <span>Proveedor</span>
+                  <select id="logisticsBatchSupplierId" name="supplierId"></select>
+                </label>
+                <label class="form-field">
+                  <span>Factura del proveedor</span>
+                  <input name="supplierInvoiceNumber" maxlength="100"
+                    placeholder="Número o referencia">
+                </label>
+                <label class="form-field">
+                  <span>Fecha de recepción</span>
+                  <input name="receivedOn" type="date">
+                </label>
+                <label class="form-field form-span-2">
+                  <span>Observaciones</span>
+                  <textarea name="notes" maxlength="2000" rows="3"
+                    placeholder="Condiciones del cargamento, transporte o empaque"></textarea>
+                </label>
+              </div>
+              <p class="form-error" id="logisticsBatchFormError"
+                role="alert" hidden></p>
+              <div class="dialog-actions">
+                <button class="secondary-button" id="cancelLogisticsBatchButton"
+                  type="button">Cancelar</button>
+                <button class="primary-button compact" id="saveLogisticsBatchButton"
+                  type="submit">Crear y empezar conteo</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog class="company-dialog advanced-inventory-dialog"
+            id="advancedInventoryDialog" aria-labelledby="advancedInventoryDialogTitle">
+            <form class="company-form" id="advancedInventoryForm">
+              <div class="dialog-heading">
+                <div>
+                  <p class="eyebrow" id="advancedInventoryDialogEyebrow">Inventario avanzado</p>
+                  <h2 id="advancedInventoryDialogTitle">Configurar control</h2>
+                  <p id="advancedInventoryDialogCopy">Completa la información operativa.</p>
+                </div>
+                <button class="icon-button" id="closeAdvancedInventoryDialog"
+                  type="button" aria-label="Cerrar">×</button>
+              </div>
+              <div class="advanced-form-grid" id="advancedInventoryFields"></div>
+              <p class="form-error" id="advancedInventoryFormError" role="alert" hidden></p>
+              <div class="dialog-actions">
+                <button class="secondary-button" id="cancelAdvancedInventoryButton"
+                  type="button">Cancelar</button>
+                <button class="primary-button compact" id="saveAdvancedInventoryButton"
+                  type="submit">Guardar configuración</button>
+              </div>
+            </form>
+          </dialog>
+
+          <dialog class="app-dialog kardex-dialog" id="kardexDialog">
+            <form method="dialog" class="dialog-card wide" id="kardexForm">
+              <div class="dialog-heading">
+                <div>
+                  <p class="panel-kicker">Trazabilidad valorizada</p>
+                  <h3>Kardex de inventario</h3>
+                  <p>Entradas, salidas, costo y saldo acumulado por ubicación.</p>
+                </div>
+                <button class="dialog-close" id="closeKardexDialog" type="button"
+                  aria-label="Cerrar">×</button>
+              </div>
+              <div class="kardex-filters">
+                <label><span>Producto</span><select id="kardexProduct">
+                  <option value="">Todos los productos</option>
+                </select></label>
+                <label><span>Bodega</span><select id="kardexWarehouse">
+                  <option value="">Todas las bodegas</option>
+                </select></label>
+                <label><span>Desde</span><input id="kardexDateFrom" type="date"></label>
+                <label><span>Hasta</span><input id="kardexDateTo" type="date"></label>
+                <button class="primary-button compact" id="loadKardexButton" type="submit">
+                  Consultar
+                </button>
+              </div>
+              <div class="table-wrap kardex-table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th>Fecha</th><th>Producto</th><th>Ubicación</th>
+                    <th>Movimiento</th><th>Cantidad</th><th>Costo</th>
+                    <th>Saldo</th><th>Valor acumulado</th>
+                  </tr></thead>
+                  <tbody id="kardexTableBody"></tbody>
+                </table>
+              </div>
+              <div class="data-state compact" id="kardexState">
+                <div><strong>Selecciona los filtros</strong>
+                  <p>Puedes consultar hasta 500 movimientos.</p></div>
+              </div>
+            </form>
+          </dialog>
+
           <section class="section products-section app-view" id="productos" data-view="productos" aria-labelledby="productsTitle" hidden>
             <div class="section-heading module-heading">
               <div>
@@ -794,6 +1647,10 @@
                 </button>
                 <button class="secondary-button" id="newTaxButton" type="button">
                   Configurar impuesto
+                </button>
+                <button class="secondary-button catalog-import-trigger"
+                  id="openCatalogImportButton" type="button">
+                  Carga masiva <span aria-hidden="true">↑</span>
                 </button>
                 <button class="primary-button compact" id="newProductButton" type="button">
                   Agregar producto <span aria-hidden="true">＋</span>
@@ -819,7 +1676,7 @@
                 </div>
               </article>
               <article>
-                <span class="catalog-symbol blue" aria-hidden="true">M</span>
+                <span class="catalog-symbol blue" aria-hidden="true">N</span>
                 <div>
                   <small>Fabricantes</small>
                   <strong id="brandCount">0 marcas</strong>
@@ -837,6 +1694,12 @@
             <div class="catalog-tabs" role="tablist" aria-label="Áreas del catálogo">
               <button class="active" type="button" role="tab" data-catalog-tab="products" aria-selected="true">
                 Productos
+              </button>
+              <button type="button" role="tab" data-catalog-tab="combos" aria-selected="false">
+                Combos
+              </button>
+              <button type="button" role="tab" data-catalog-tab="pricing" aria-selected="false">
+                Precios y promociones
               </button>
               <button type="button" role="tab" data-catalog-tab="categories" aria-selected="false">
                 Categorías
@@ -885,6 +1748,157 @@
               </div>
             </div>
 
+            <div class="catalog-panel combo-catalog-panel" data-catalog-panel="combos" hidden>
+              <div class="taxonomy-heading">
+                <div>
+                  <p class="eyebrow">Productos compuestos</p>
+                  <h3>Combos listos para vender</h3>
+                  <p>
+                    Revisa composición, impuesto y existencias. Para Caja debe
+                    existir inventario en Exhibición.
+                  </p>
+                </div>
+                <button class="primary-button compact" id="newComboProductButton"
+                  type="button">Crear producto para combo ＋</button>
+              </div>
+              <div class="combo-catalog-grid" id="comboCatalogGrid"></div>
+              <div class="data-state" id="comboCatalogState">
+                <span class="data-state-symbol" aria-hidden="true">▦</span>
+                <strong>Todavía no hay combos</strong>
+                <p>Crea un producto y define qué artículos contiene.</p>
+              </div>
+            </div>
+
+            <div class="catalog-panel pricing-catalog-panel"
+              data-catalog-panel="pricing" hidden>
+              <div class="pricing-intro">
+                <div>
+                  <p class="eyebrow">Política comercial</p>
+                  <h3>El precio correcto para cada venta</h3>
+                  <p>
+                    Combina precio unitario, listas por cliente, escalas por
+                    cantidad y promociones con fecha de inicio y finalización.
+                  </p>
+                </div>
+                <div class="pricing-order">
+                  <span>1</span> Cliente
+                  <span>2</span> Cantidad
+                  <span>3</span> Promoción
+                </div>
+              </div>
+
+              <div class="pricing-workspace">
+                <form class="pricing-card" id="productPriceForm">
+                  <div><p class="eyebrow">Escala por cantidad</p><h3>Nuevo precio</h3></div>
+                  <label class="form-field">
+                    <span>Producto</span>
+                    <select name="productId" id="pricingProductId" required></select>
+                  </label>
+                  <label class="form-field">
+                    <span>Lista del cliente</span>
+                    <select name="priceListId" id="pricingPriceListId" required></select>
+                  </label>
+                  <div class="form-grid">
+                    <label class="form-field">
+                      <span>Desde cuántas unidades</span>
+                      <input name="minQuantity" type="number" min="0.0001"
+                        step="0.0001" value="1" required>
+                    </label>
+                    <label class="form-field">
+                      <span>Precio por unidad</span>
+                      <input name="unitPrice" type="number" min="0"
+                        step="0.01" required>
+                    </label>
+                  </div>
+                  <p class="form-error" id="productPriceError" hidden></p>
+                  <button class="primary-button compact" type="submit">
+                    Guardar escala de precio
+                  </button>
+                </form>
+
+                <form class="pricing-card" id="customerPriceListForm">
+                  <div><p class="eyebrow">Segmentación</p><h3>Precio por cliente</h3></div>
+                  <label class="form-field">
+                    <span>Cliente</span>
+                    <select name="customerId" id="pricingCustomerId" required></select>
+                  </label>
+                  <label class="form-field">
+                    <span>Lista asignada</span>
+                    <select name="priceListId" id="customerPriceListId"></select>
+                  </label>
+                  <p class="form-guidance">
+                    Sin lista asignada se usa el precio unitario del producto.
+                  </p>
+                  <p class="form-error" id="customerPriceListError" hidden></p>
+                  <button class="secondary-button compact" type="submit">
+                    Asignar al cliente
+                  </button>
+                </form>
+
+                <form class="pricing-card promotion-card" id="promotionForm">
+                  <div><p class="eyebrow">Vigencia automática</p><h3>Nueva promoción</h3></div>
+                  <label class="form-field">
+                    <span>Producto</span>
+                    <select name="productId" id="promotionProductId" required></select>
+                  </label>
+                  <label class="form-field">
+                    <span>Nombre de campaña</span>
+                    <input name="name" maxlength="160" required
+                      placeholder="Ej. Fin de semana 15%">
+                  </label>
+                  <div class="form-grid">
+                    <label class="form-field">
+                      <span>Tipo</span>
+                      <select name="discountType">
+                        <option value="PERCENT">Porcentaje</option>
+                        <option value="FIXED_PRICE">Precio final</option>
+                      </select>
+                    </label>
+                    <label class="form-field">
+                      <span>Descuento o precio</span>
+                      <input name="discountValue" type="number" min="0"
+                        step="0.01" required>
+                    </label>
+                    <label class="form-field">
+                      <span>Cantidad mínima</span>
+                      <input name="minQuantity" type="number" min="0.0001"
+                        step="0.0001" value="1" required>
+                    </label>
+                    <span></span>
+                    <label class="form-field">
+                      <span>Comienza</span>
+                      <input name="startsAt" id="promotionStartsAt"
+                        type="datetime-local" required>
+                    </label>
+                    <label class="form-field">
+                      <span>Finaliza</span>
+                      <input name="endsAt" id="promotionEndsAt"
+                        type="datetime-local" required>
+                    </label>
+                  </div>
+                  <p class="form-error" id="promotionError" hidden></p>
+                  <button class="primary-button compact" type="submit">
+                    Programar promoción
+                  </button>
+                </form>
+              </div>
+
+              <div class="pricing-lists">
+                <section>
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Matriz vigente</p><h3>Precios configurados</h3></div>
+                  </div>
+                  <div id="productPriceList"></div>
+                </section>
+                <section>
+                  <div class="inventory-panel-heading">
+                    <div><p class="eyebrow">Calendario comercial</p><h3>Promociones</h3></div>
+                  </div>
+                  <div id="promotionList"></div>
+                </section>
+              </div>
+            </div>
+
             <div class="taxonomy-panel catalog-panel" data-catalog-panel="categories" hidden>
               <div class="taxonomy-heading">
                 <div>
@@ -923,6 +1937,130 @@
                 </button>
               </div>
               <div class="taxonomy-grid" id="taxList"></div>
+            </div>
+          </section>
+
+          <section class="section third-parties-section app-view" id="terceros"
+            data-view="terceros" aria-labelledby="thirdPartiesTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Directorio comercial central</p>
+                <h2 id="thirdPartiesTitle">Terceros</h2>
+                <p class="section-intro">
+                  Clientes, proveedores y beneficiarios organizados por empresa,
+                  sin duplicar identidad ni saldos.
+                </p>
+              </div>
+              <button class="party-create-button" id="newThirdPartyButton" type="button">
+                <span aria-hidden="true">＋</span>
+                <span><small>Nueva relación</small>Registrar tercero</span>
+              </button>
+            </div>
+
+            <div class="party-kpi-grid" aria-label="Resumen de terceros">
+              <article class="party-kpi featured">
+                <span>Directorio total</span>
+                <strong id="thirdPartyTotal">0</strong>
+                <small>Identidades consolidadas</small>
+              </article>
+              <article class="party-kpi">
+                <span>Clientes</span>
+                <strong id="thirdPartyCustomers">0</strong>
+                <small>Disponibles en Caja y Cartera</small>
+              </article>
+              <article class="party-kpi cyan">
+                <span>Proveedores</span>
+                <strong id="thirdPartySuppliers">0</strong>
+                <small>Disponibles en Compras y Gastos</small>
+              </article>
+              <article class="party-kpi">
+                <span>Doble relación</span>
+                <strong id="thirdPartyDual">0</strong>
+                <small>Cliente y proveedor a la vez</small>
+              </article>
+            </div>
+
+            <div class="party-toolbar">
+              <label class="field-search party-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="sr-only">Buscar terceros</span>
+                <input id="thirdPartySearch" type="search"
+                  placeholder="Nombre, documento, correo o razón social">
+              </label>
+              <select id="thirdPartyRoleFilter" aria-label="Filtrar por relación">
+                <option value="ALL">Todas las relaciones</option>
+                <option value="CUSTOMER">Clientes</option>
+                <option value="SUPPLIER">Proveedores</option>
+                <option value="BOTH">Cliente y proveedor</option>
+              </select>
+              <select id="thirdPartyStatusFilter" aria-label="Filtrar por estado">
+                <option value="ACTIVE">Activos</option>
+                <option value="ALL">Todos</option>
+                <option value="INACTIVE">Inactivos</option>
+              </select>
+              <button class="sync-link" id="reloadThirdPartiesButton" type="button">
+                Actualizar
+              </button>
+            </div>
+
+            <div class="party-workspace">
+              <aside class="party-list-panel">
+                <div class="party-list" id="thirdPartyList"></div>
+                <div class="data-state compact-state" id="thirdPartyDataState">
+                  <span class="data-state-symbol" aria-hidden="true">T</span>
+                  <strong>Consultando terceros</strong>
+                  <p>Estamos consolidando clientes y proveedores.</p>
+                </div>
+              </aside>
+
+              <div class="party-detail-panel">
+                <div class="party-detail-empty" id="thirdPartyDetailEmpty">
+                  <span aria-hidden="true">↙</span>
+                  <strong>Selecciona un tercero</strong>
+                  <p>Consulta su identidad, relaciones, saldos y actividad reciente.</p>
+                </div>
+                <div id="thirdPartyDetailContent" hidden>
+                  <div class="party-detail-heading">
+                    <div>
+                      <p class="eyebrow" id="thirdPartyDetailDocument">Tercero</p>
+                      <h3 id="thirdPartyDetailName">Nombre</h3>
+                      <div class="party-role-row" id="thirdPartyDetailRoles"></div>
+                    </div>
+                    <button class="secondary-button compact" id="editThirdPartyButton"
+                      type="button">Editar tercero</button>
+                  </div>
+                  <div class="party-identity-grid">
+                    <article>
+                      <span>Contacto</span>
+                      <strong id="thirdPartyDetailContact">—</strong>
+                      <small id="thirdPartyDetailAddress">Sin dirección</small>
+                    </article>
+                    <article>
+                      <span>Por cobrar</span>
+                      <strong id="thirdPartyDetailReceivable">$0</strong>
+                      <small>Cartera abierta</small>
+                    </article>
+                    <article>
+                      <span>Por pagar</span>
+                      <strong id="thirdPartyDetailPayable">$0</strong>
+                      <small>Obligaciones abiertas</small>
+                    </article>
+                    <article>
+                      <span>Compras y gastos</span>
+                      <strong id="thirdPartyDetailPurchases">$0</strong>
+                      <small>Histórico operativo</small>
+                    </article>
+                  </div>
+                  <div class="party-activity-heading">
+                    <div>
+                      <p class="eyebrow">Trazabilidad</p>
+                      <h3>Actividad reciente</h3>
+                    </div>
+                    <span id="thirdPartyActivityCount">0 movimientos</span>
+                  </div>
+                  <div class="party-activity-list" id="thirdPartyActivityList"></div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1177,6 +2315,154 @@
             </div>
           </section>
 
+          <section class="section expenses-section app-view" id="gastos" data-view="gastos"
+            aria-labelledby="expensesTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Control de salidas operativas</p>
+                <h2 id="expensesTitle">Gastos del negocio</h2>
+                <p class="module-heading-copy">
+                  Solicita, aprueba y paga gastos sin mezclarlos con la mercancía del inventario.
+                </p>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="newCostCenterButton" type="button">
+                  Centro de costos
+                </button>
+                <button class="secondary-button" id="newExpenseCategoryButton" type="button">
+                  Categoría
+                </button>
+                <button class="expense-create-button" id="newExpenseButton" type="button">
+                  <span aria-hidden="true">＋</span>
+                  <span><small>Registrar salida</small>Nuevo gasto</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="expense-kpi-grid" aria-label="Resumen de gastos">
+              <article class="expense-kpi featured">
+                <span>Gastos del mes</span>
+                <strong id="expenseMonthTotal">$0</strong>
+                <small>Operaciones vigentes</small>
+              </article>
+              <article class="expense-kpi pending">
+                <span>Por aprobar</span>
+                <strong id="expensePendingApproval">0</strong>
+                <small>Requieren decisión</small>
+              </article>
+              <article class="expense-kpi">
+                <span>Pendiente de pago</span>
+                <strong id="expensePendingPayment">$0</strong>
+                <small>Gastos aprobados</small>
+              </article>
+              <article class="expense-kpi recurring">
+                <span>Gastos recurrentes</span>
+                <strong id="expenseRecurringTotal">$0</strong>
+                <small>Servicios y compromisos</small>
+              </article>
+              <article class="expense-kpi warning">
+                <span>Sin soporte</span>
+                <strong id="expenseUnsupportedTotal">$0</strong>
+                <small>Revisión documental</small>
+              </article>
+            </div>
+
+            <div class="expense-center-strip" id="expenseCenterStrip"
+              aria-label="Centros de costos activos"></div>
+
+            <div class="expense-toolbar">
+              <label class="field-search">
+                <span aria-hidden="true">⌕</span>
+                <span class="sr-only">Buscar gastos</span>
+                <input id="expenseSearch" type="search"
+                  placeholder="Número, beneficiario, categoría o centro">
+              </label>
+              <label class="ar-status-filter">
+                <span>Estado</span>
+                <select id="expenseStatusFilter">
+                  <option value="ALL">Todos</option>
+                  <option value="SUBMITTED">Por aprobar</option>
+                  <option value="APPROVED">Aprobados</option>
+                  <option value="PARTIAL">Pago parcial</option>
+                  <option value="PAID">Pagados</option>
+                  <option value="REJECTED">Rechazados</option>
+                </select>
+              </label>
+              <button class="sync-link" id="reloadExpensesButton" type="button">
+                Actualizar gastos
+              </button>
+            </div>
+
+            <div class="expense-workspace">
+              <aside class="expense-list-panel">
+                <div class="ar-panel-heading">
+                  <div><p class="eyebrow">Solicitudes y comprobantes</p><h3>Movimientos</h3></div>
+                  <span id="expenseRecordCount">0</span>
+                </div>
+                <div class="expense-list" id="expenseList"></div>
+                <div class="data-state compact-state" id="expenseDataState">
+                  <span class="data-state-icon" aria-hidden="true">G</span>
+                  <strong>Consultando gastos</strong>
+                  <p>Estamos organizando las salidas de la empresa activa.</p>
+                </div>
+              </aside>
+
+              <div class="expense-detail-panel">
+                <div class="ar-detail-empty" id="expenseDetailEmpty">
+                  <span aria-hidden="true">↗</span>
+                  <strong>Selecciona un gasto</strong>
+                  <p>Consulta soporte, aprobación, centro de costos y pagos realizados.</p>
+                </div>
+                <div id="expenseDetailContent" hidden>
+                  <div class="expense-detail-heading">
+                    <div>
+                      <p class="eyebrow" id="expenseDetailNumber">Gasto</p>
+                      <h3 id="expenseDetailDescription">—</h3>
+                      <span id="expenseDetailBeneficiary">—</span>
+                    </div>
+                    <span class="expense-status" id="expenseDetailStatus">Pendiente</span>
+                  </div>
+                  <div class="expense-detail-facts">
+                    <div><span>Fecha</span><strong id="expenseDetailDate">—</strong></div>
+                    <div><span>Categoría</span><strong id="expenseDetailCategory">—</strong></div>
+                    <div><span>Centro de costos</span><strong id="expenseDetailCenter">—</strong></div>
+                    <div><span>Sucursal</span><strong id="expenseDetailBranch">—</strong></div>
+                    <div><span>Total</span><strong id="expenseDetailTotal">$0</strong></div>
+                    <div><span>Saldo</span><strong id="expenseDetailBalance">$0</strong></div>
+                  </div>
+                  <div class="expense-support-card">
+                    <div>
+                      <span>Soporte del gasto</span>
+                      <strong id="expenseDetailSupport">Sin archivo adjunto</strong>
+                      <small id="expenseDetailDocument">Sin número de comprobante</small>
+                    </div>
+                    <a id="expenseSupportLink" href="#" target="_blank" rel="noopener" hidden>
+                      Ver soporte
+                    </a>
+                  </div>
+                  <div class="expense-decision-card" id="expenseDecisionCard">
+                    <span>Control de aprobación</span>
+                    <strong id="expenseDecisionOwner">Esperando decisión</strong>
+                    <small id="expenseDecisionNotes">El gasto todavía no ha sido aprobado.</small>
+                  </div>
+                  <div class="expense-actions">
+                    <button class="secondary-button danger-soft" id="rejectExpenseButton"
+                      type="button">Rechazar</button>
+                    <button class="secondary-button" id="approveExpenseButton"
+                      type="button">Aprobar gasto</button>
+                    <button class="primary-button compact" id="payExpenseButton"
+                      type="button">Registrar pago</button>
+                  </div>
+                  <div class="ar-payments-heading">
+                    <div><p class="eyebrow">Tesorería</p><h3>Pagos aplicados</h3></div>
+                    <span id="expensePaymentCount">0 pagos</span>
+                  </div>
+                  <div class="expense-payment-list" id="expensePaymentList"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
@@ -1192,7 +2478,7 @@
                 <small>Documento de venta</small>
                 <strong id="billingModeName">Consultando configuración</strong>
               </div>
-              <p id="billingModeDetail">MegaSuite está leyendo el perfil fiscal de la empresa activa.</p>
+              <p id="billingModeDetail">Nubixor está leyendo el perfil fiscal de la empresa activa.</p>
               <span class="table-status pending" id="billingModeStatus">Verificando</span>
             </div>
 
@@ -1306,9 +2592,9 @@
                     <kbd>/</kbd>
                   </label>
                   <label>
-                    <span>Ubicación de venta</span>
+                    <span>Origen del inventario</span>
                     <select id="posWarehouseSelect">
-                      <option value="">Selecciona una ubicación</option>
+                      <option value="">Selecciona el origen</option>
                     </select>
                   </label>
                 </div>
@@ -1377,12 +2663,38 @@
                       <button type="button" class="active" data-payment-method="CASH">Efectivo</button>
                       <button type="button" data-payment-method="CARD">Tarjeta</button>
                       <button type="button" data-payment-method="TRANSFER">Transferencia</button>
+                      <button type="button" class="split-payment-toggle" id="toggleMixedPaymentButton">
+                        Dividir pago
+                      </button>
                     </div>
                     <select class="sr-only" id="posPaymentMethod" aria-label="Medio de pago">
                       <option value="CASH">Efectivo</option>
                       <option value="CARD">Tarjeta</option>
                       <option value="TRANSFER">Transferencia</option>
                     </select>
+                  </div>
+                  <div class="mixed-payment-panel" id="posMixedPaymentPanel" hidden>
+                    <div class="mixed-payment-heading">
+                      <div>
+                        <strong>Pago dividido</strong>
+                        <small>Distribuye el total entre varios medios.</small>
+                      </div>
+                      <b id="posMixedRemaining">$0 pendientes</b>
+                    </div>
+                    <div class="mixed-payment-grid">
+                      <label>
+                        <span>Efectivo aplicado</span>
+                        <input id="posMixedCashAmount" type="number" min="0" step="100" value="0">
+                      </label>
+                      <label>
+                        <span>Tarjeta</span>
+                        <input id="posMixedCardAmount" type="number" min="0" step="100" value="0">
+                      </label>
+                      <label>
+                        <span>Transferencia</span>
+                        <input id="posMixedTransferAmount" type="number" min="0" step="100" value="0">
+                      </label>
+                    </div>
                   </div>
                   <div class="cash-tender" id="posCashTender">
                     <label for="posCashReceived">Efectivo recibido</label>
@@ -1405,15 +2717,19 @@
                   </div>
                   <div class="transfer-details" id="posTransferDetails" hidden>
                     <label>
-                      <span>Cuenta que recibió</span>
-                      <select id="posTransferCompany"></select>
+                      <span>Cuenta que recibió la transferencia</span>
+                      <select id="posTransferBankAccount">
+                        <option value="">Selecciona una cuenta configurada</option>
+                      </select>
                     </label>
+                    <select class="sr-only" id="posTransferCompany"
+                      aria-label="Empresa que recibió la transferencia"></select>
                     <label>
                       <span>Referencia o comprobante</span>
                       <input id="posTransferReference" type="text" maxlength="120"
                         placeholder="Ej. Bancolombia 845921">
                     </label>
-                    <small>El reporte conservará quién facturó y en qué empresa entró el dinero.</small>
+                    <small id="posTransferAccountHelp">El reporte conservará el banco, la empresa receptora y la referencia.</small>
                   </div>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
@@ -1556,6 +2872,75 @@
                 </div>
               </aside>
             </div>
+          </section>
+
+          <section class="section billing-flow-section app-view" id="facturacion" data-view="facturacion" aria-labelledby="billingFlowTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Ciclo comercial y fiscal</p>
+                <h2 id="billingFlowTitle">Facturación</h2>
+                <p class="section-description">
+                  Cotiza, confirma pedidos y controla la respuesta electrónica sin consumir
+                  numeración DIAN antes de facturar.
+                </p>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="reloadBillingWorkflowButton" type="button">Actualizar estados</button>
+                <button class="secondary-button" id="newBillingNoteButton" type="button">Nueva nota</button>
+                <button class="primary-button compact" id="newQuoteButton" type="button">Crear cotización ＋</button>
+              </div>
+            </div>
+
+            <div class="billing-flow-path" aria-label="Flujo de facturación">
+              <div><span>01</span><strong>Cotización</strong><small>Documento comercial</small></div>
+              <i aria-hidden="true">→</i>
+              <div><span>02</span><strong>Pedido</strong><small>Compromiso confirmado</small></div>
+              <i aria-hidden="true">→</i>
+              <div><span>03</span><strong>Factura</strong><small>Numeración fiscal</small></div>
+              <i aria-hidden="true">→</i>
+              <div><span>04</span><strong>DIAN</strong><small>Validación previa</small></div>
+            </div>
+
+            <div class="billing-flow-kpis">
+              <article><span>Cotizaciones abiertas</span><strong id="billingFlowQuoteCount">0</strong></article>
+              <article><span>Pedidos por facturar</span><strong id="billingFlowOrderCount">0</strong></article>
+              <article><span>Notas pendientes</span><strong id="billingFlowNoteCount">0</strong></article>
+              <article class="accepted"><span>Facturas aceptadas</span><strong id="billingFlowAcceptedCount">0</strong></article>
+            </div>
+
+            <div class="billing-flow-grid">
+              <article class="billing-flow-panel">
+                <div class="billing-flow-panel-heading">
+                  <div><p class="eyebrow">Antes de facturar</p><h3>Cotizaciones y pedidos</h3></div>
+                  <span>No son documentos fiscales</span>
+                </div>
+                <div class="billing-flow-list" id="billingCommercialList"></div>
+                <div class="data-state" id="billingCommercialState">
+                  <strong>Cargando documentos comerciales</strong>
+                  <p>Estamos organizando cotizaciones y pedidos.</p>
+                </div>
+              </article>
+
+              <article class="billing-flow-panel">
+                <div class="billing-flow-panel-heading">
+                  <div><p class="eyebrow">Trazabilidad fiscal</p><h3>Facturas y notas</h3></div>
+                  <span>Estado reportado por proveedor</span>
+                </div>
+                <div class="billing-flow-list" id="billingFiscalList"></div>
+                <div class="data-state" id="billingFiscalState">
+                  <strong>Cargando documentos electrónicos</strong>
+                  <p>Consultando estados, CUFE y representación gráfica.</p>
+                </div>
+              </article>
+            </div>
+
+            <aside class="billing-truth-notice">
+              <span aria-hidden="true">✓</span>
+              <div>
+                <strong>Control fiscal verificable</strong>
+                <p>CUFE, CUDE y QR solo se muestran cuando fueron devueltos por el proveedor electrónico. Nubixor no inventa identificadores fiscales.</p>
+              </div>
+            </aside>
           </section>
 
           <section class="section users-section app-view" id="usuarios" data-view="usuarios" aria-labelledby="usersTitle" hidden>
@@ -2000,6 +3385,145 @@
               </article>
             </div>
 
+            <section class="audit-readiness" aria-labelledby="auditReadinessTitle">
+              <div class="audit-readiness-head">
+                <div>
+                  <p class="panel-kicker">Expediente de cumplimiento</p>
+                  <h3 id="auditReadinessTitle">Preparación para auditoría</h3>
+                  <p>Pruebas automáticas, evidencia sellada y validaciones del contador por período.</p>
+                </div>
+                <div class="audit-readiness-score" id="auditReadinessScore" data-status="LOADING">
+                  <strong>—</strong>
+                  <span>Comprobando</span>
+                </div>
+              </div>
+              <div class="audit-readiness-actions">
+                <label><span>Período desde</span><input id="auditPeriodFrom" type="date"></label>
+                <label><span>Hasta</span><input id="auditPeriodTo" type="date"></label>
+                <button class="filter-reset-button" id="runAuditControls" type="button">
+                  Ejecutar controles
+                </button>
+                <button class="audit-review-button" id="openAccountantReview" type="button">
+                  Firmar validación
+                </button>
+                <button class="audit-export-button" id="exportAuditEvidence" type="button">
+                  <span aria-hidden="true">↓</span> Descargar expediente
+                </button>
+              </div>
+              <div class="audit-control-grid" id="auditControlGrid">
+                <div class="data-state compact">
+                  <span class="state-spinner"></span>
+                  <div><strong>Verificando controles</strong><p>Conciliando operación, fiscalidad y trazabilidad.</p></div>
+                </div>
+              </div>
+              <div class="audit-readiness-note">
+                <strong>Resultado honesto y verificable</strong>
+                <span>Un control pendiente permanece visible; Nubixor no lo marca como aprobado sin evidencia.</span>
+              </div>
+            </section>
+
+            <section class="accounting-ledger" aria-labelledby="accountingLedgerTitle">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Doble partida automática</span>
+                  <h3 id="accountingLedgerTitle">Libro diario del período</h3>
+                  <p>Asientos generados por ventas, caja, cartera, compras y proveedores.</p>
+                </div>
+                <span class="accounting-balance-badge" id="accountingBalanceBadge"
+                  data-status="LOADING">Comprobando</span>
+              </div>
+              <div class="accounting-summary-grid">
+                <div><span>Asientos contabilizados</span><strong id="accountingPostedCount">0</strong></div>
+                <div><span>Total débito</span><strong id="accountingDebitTotal">$ 0</strong></div>
+                <div><span>Total crédito</span><strong id="accountingCreditTotal">$ 0</strong></div>
+                <div><span>Cuentas por validar</span><strong id="accountingPendingAccounts">0</strong></div>
+              </div>
+              <div class="accounting-entry-list" id="accountingEntryList">
+                <div class="data-state compact">
+                  <span class="state-spinner"></span>
+                  <div><strong>Cargando libro diario</strong><p>Verificando asientos del período.</p></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="accounting-control-center" aria-labelledby="accountingControlTitle">
+              <div class="panel-heading">
+                <div>
+                  <span class="panel-kicker">Cierre financiero</span>
+                  <h3 id="accountingControlTitle">Conciliación, balances y expediente</h3>
+                  <p>Compara extractos con el libro, revisa auxiliares y prepara la entrega mensual.</p>
+                </div>
+                <div class="heading-actions">
+                  <button class="secondary-button" id="newBankAccountButton" type="button">+ Cuenta bancaria</button>
+                  <button class="secondary-button" id="newBankTransactionButton" type="button">+ Movimiento</button>
+                  <button class="audit-export-button" id="downloadMonthlyPackageButton" type="button">↓ Expediente mensual</button>
+                </div>
+              </div>
+              <div class="accounting-control-kpis">
+                <article><span>Movimientos bancarios</span><strong id="bankTransactionCount">0</strong></article>
+                <article><span>Conciliados</span><strong id="bankMatchedCount">0</strong></article>
+                <article class="warning"><span>Sin conciliar</span><strong id="bankUnmatchedCount">0</strong></article>
+                <article><span>Balance de prueba</span><strong id="trialBalanceState">Comprobando</strong></article>
+              </div>
+              <div class="accounting-control-grid">
+                <article>
+                  <div class="panel-heading compact">
+                    <div><span class="panel-kicker">Extractos</span><h3>Conciliación bancaria</h3></div>
+                    <button class="accounting-row-action" id="completeBankReconciliationButton" type="button">Cerrar conciliación</button>
+                  </div>
+                  <div class="bank-transaction-list" id="bankTransactionList"></div>
+                </article>
+                <article>
+                  <div class="panel-heading compact">
+                    <div><span class="panel-kicker">Saldos contables</span><h3>Balance de prueba</h3></div>
+                  </div>
+                  <div class="trial-balance-list" id="trialBalanceList"></div>
+                </article>
+              </div>
+            </section>
+
+            <details class="accounting-governance" id="accountingGovernance">
+              <summary>
+                <span>
+                  <strong>Gobierno y configuración contable</strong>
+                  <small>Plan de cuentas, asignaciones y cierre de períodos</small>
+                </span>
+                <span class="accounting-governance-arrow" aria-hidden="true">⌄</span>
+              </summary>
+              <div class="accounting-governance-body">
+                <section>
+                  <div class="panel-heading compact">
+                    <div>
+                      <span class="panel-kicker">Control mensual</span>
+                      <h3>Períodos contables</h3>
+                    </div>
+                  </div>
+                  <div class="accounting-period-list" id="accountingPeriodList"></div>
+                </section>
+                <section>
+                  <div class="panel-heading compact">
+                    <div>
+                      <span class="panel-kicker">Matriz operativa</span>
+                      <h3>Asignación de cuentas</h3>
+                    </div>
+                  </div>
+                  <div class="accounting-mapping-list" id="accountingMappingList"></div>
+                </section>
+                <section class="accounting-accounts-section">
+                  <div class="panel-heading compact">
+                    <div>
+                      <span class="panel-kicker">Plan por empresa</span>
+                      <h3>Cuentas contables</h3>
+                    </div>
+                    <button class="audit-review-button" id="newAccountingAccount" type="button">
+                      + Crear cuenta
+                    </button>
+                  </div>
+                  <div class="accounting-account-list" id="accountingAccountList"></div>
+                </section>
+              </div>
+            </details>
+
             <div class="audit-toolbar">
               <label class="audit-search">
                 <span aria-hidden="true">⌕</span>
@@ -2088,6 +3612,186 @@
                 </div>
               </aside>
             </div>
+
+            <dialog class="app-dialog accounting-account-dialog" id="bankAccountDialog">
+              <form method="dialog" class="dialog-card" id="bankAccountForm">
+                <div class="dialog-heading"><div><p class="panel-kicker">Conciliación bancaria</p><h3>Nueva cuenta bancaria</h3></div>
+                  <button class="dialog-close" id="closeBankAccountDialog" type="button" aria-label="Cerrar">×</button></div>
+                <div class="form-grid">
+                  <label><span>Cuenta contable</span><select id="bankAccountingAccountId" required></select></label>
+                  <label><span>Banco</span><input id="bankName" maxlength="120" required></label>
+                  <label><span>Nombre de la cuenta</span><input id="bankAccountName" maxlength="120" required></label>
+                  <label><span>Número enmascarado</span><input id="bankMaskedAccount" maxlength="40" required placeholder="****1234"></label>
+                  <label><span>Saldo inicial</span><input id="bankOpeningBalance" type="number" step="0.01" value="0" required></label>
+                </div>
+                <p class="form-error" id="bankAccountError" hidden></p>
+                <div class="dialog-actions"><button class="secondary-button" id="cancelBankAccount" type="button">Cancelar</button>
+                  <button class="primary-button compact" id="saveBankAccount" type="submit">Crear cuenta</button></div>
+              </form>
+            </dialog>
+
+            <dialog class="app-dialog accounting-account-dialog" id="bankTransactionDialog">
+              <form method="dialog" class="dialog-card" id="bankTransactionForm">
+                <div class="dialog-heading"><div><p class="panel-kicker">Extracto bancario</p><h3>Registrar movimiento</h3></div>
+                  <button class="dialog-close" id="closeBankTransactionDialog" type="button" aria-label="Cerrar">×</button></div>
+                <div class="form-grid">
+                  <label><span>Cuenta bancaria</span><select id="bankTransactionAccountId" required></select></label>
+                  <label><span>Fecha</span><input id="bankTransactionDate" type="date" required></label>
+                  <label><span>Referencia</span><input id="bankTransactionReference" maxlength="120" required></label>
+                  <label><span>Valor</span><input id="bankTransactionAmount" type="number" step="0.01" required><small>Positivo para ingreso; negativo para salida.</small></label>
+                  <label><span>Saldo del extracto</span><input id="bankStatementBalance" type="number" step="0.01"></label>
+                </div>
+                <label><span>Descripción</span><textarea id="bankTransactionDescription" maxlength="500" rows="3" required></textarea></label>
+                <p class="form-error" id="bankTransactionError" hidden></p>
+                <div class="dialog-actions"><button class="secondary-button" id="cancelBankTransaction" type="button">Cancelar</button>
+                  <button class="primary-button compact" id="saveBankTransaction" type="submit">Registrar movimiento</button></div>
+              </form>
+            </dialog>
+
+            <dialog class="app-dialog accounting-account-dialog" id="bankReconciliationDialog">
+              <form method="dialog" class="dialog-card" id="bankReconciliationForm">
+                <div class="dialog-heading"><div><p class="panel-kicker">Cierre bancario</p><h3>Completar conciliación</h3></div>
+                  <button class="dialog-close" id="closeBankReconciliationDialog" type="button" aria-label="Cerrar">×</button></div>
+                <label><span>Cuenta bancaria</span><select id="bankReconciliationAccountId" required></select></label>
+                <label><span>Saldo final del extracto</span><input id="bankReconciliationBalance" type="number" step="0.01" required></label>
+                <label><span>Observaciones</span><textarea id="bankReconciliationNotes" maxlength="1000" rows="4" required></textarea></label>
+                <p class="form-error" id="bankReconciliationError" hidden></p>
+                <div class="dialog-actions"><button class="secondary-button" id="cancelBankReconciliation" type="button">Cancelar</button>
+                  <button class="primary-button compact" id="saveBankReconciliation" type="submit">Calcular y sellar</button></div>
+              </form>
+            </dialog>
+
+            <dialog class="app-dialog accounting-action-dialog" id="accountingActionDialog">
+              <form method="dialog" class="dialog-card" id="accountingActionForm">
+                <div class="dialog-heading">
+                  <div>
+                    <p class="panel-kicker" id="accountingActionKicker">Gobierno contable</p>
+                    <h3 id="accountingActionTitle">Confirmar acción</h3>
+                    <p id="accountingActionDescription"></p>
+                  </div>
+                  <button class="dialog-close" id="closeAccountingAction" type="button"
+                    aria-label="Cerrar">×</button>
+                </div>
+                <input id="accountingActionType" type="hidden">
+                <input id="accountingActionId" type="hidden">
+                <label id="accountingActionDateField" hidden>
+                  <span>Fecha contable</span>
+                  <input id="accountingActionDate" type="date">
+                </label>
+                <label>
+                  <span>Motivo y evidencia</span>
+                  <textarea id="accountingActionNotes" maxlength="1000" rows="4"
+                    placeholder="Explica la decisión y referencia su soporte." required></textarea>
+                </label>
+                <p class="form-error" id="accountingActionError" hidden></p>
+                <div class="dialog-actions">
+                  <button class="secondary-button" id="cancelAccountingAction" type="button">
+                    Volver
+                  </button>
+                  <button class="primary-button" id="saveAccountingAction" type="submit">
+                    Confirmar acción
+                  </button>
+                </div>
+              </form>
+            </dialog>
+
+            <dialog class="app-dialog accounting-account-dialog" id="accountingAccountDialog">
+              <form method="dialog" class="dialog-card" id="accountingAccountForm">
+                <div class="dialog-heading">
+                  <div>
+                    <p class="panel-kicker">Plan de cuentas</p>
+                    <h3>Crear cuenta contable</h3>
+                    <p>La cuenta quedará pendiente de revisión profesional.</p>
+                  </div>
+                  <button class="dialog-close" id="closeAccountingAccount" type="button"
+                    aria-label="Cerrar">×</button>
+                </div>
+                <div class="form-grid two-columns">
+                  <label><span>Código</span><input id="accountingAccountCode"
+                    maxlength="20" placeholder="Ej. 110520" required></label>
+                  <label><span>Nombre</span><input id="accountingAccountName"
+                    maxlength="160" required></label>
+                  <label><span>Tipo</span><select id="accountingAccountType" required>
+                    <option value="ASSET">Activo</option>
+                    <option value="LIABILITY">Pasivo</option>
+                    <option value="EQUITY">Patrimonio</option>
+                    <option value="INCOME">Ingreso</option>
+                    <option value="EXPENSE">Gasto</option>
+                  </select></label>
+                  <label><span>Naturaleza</span><select id="accountingNormalBalance" required>
+                    <option value="DEBIT">Débito</option>
+                    <option value="CREDIT">Crédito</option>
+                  </select></label>
+                </div>
+                <label><span>Motivo</span><textarea id="accountingAccountReason"
+                  maxlength="500" rows="3" required></textarea></label>
+                <p class="form-error" id="accountingAccountError" hidden></p>
+                <div class="dialog-actions">
+                  <button class="secondary-button" id="cancelAccountingAccount" type="button">
+                    Cancelar
+                  </button>
+                  <button class="primary-button" id="saveAccountingAccount" type="submit">
+                    Crear y dejar en revisión
+                  </button>
+                </div>
+              </form>
+            </dialog>
+
+            <dialog class="app-dialog audit-review-dialog" id="accountantReviewDialog">
+              <form method="dialog" class="dialog-card" id="accountantReviewForm">
+                <div class="dialog-heading">
+                  <div>
+                    <p class="eyebrow">Validación profesional</p>
+                    <h3>Firma del contador</h3>
+                    <p>Registra el criterio, la identificación profesional y el soporte revisado.</p>
+                  </div>
+                  <button class="dialog-close" id="closeAccountantReview" type="button" aria-label="Cerrar">×</button>
+                </div>
+                <div class="form-grid">
+                  <label>
+                    <span>Control revisado *</span>
+                    <select id="accountantReviewType" required>
+                      <option value="RUT">RUT y responsabilidades</option>
+                      <option value="TAXES">Impuestos y productos</option>
+                      <option value="BILLING_RESOLUTIONS">Resoluciones y facturación</option>
+                      <option value="ACCOUNTING_FLOW">Flujo contable</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Resultado *</span>
+                    <select id="accountantReviewStatus" required>
+                      <option value="APPROVED">Aprobado</option>
+                      <option value="OBSERVED">Con observaciones</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Nombre del contador *</span>
+                    <input id="accountantReviewerName" maxlength="160" required>
+                  </label>
+                  <label>
+                    <span>Documento</span>
+                    <input id="accountantReviewerDocument" maxlength="40">
+                  </label>
+                  <label>
+                    <span>Tarjeta profesional *</span>
+                    <input id="accountantProfessionalCard" maxlength="60" required>
+                  </label>
+                  <label>
+                    <span>Referencia del soporte</span>
+                    <input id="accountantEvidenceReference" maxlength="500" placeholder="Carpeta, acta, archivo o enlace interno">
+                  </label>
+                  <label class="full">
+                    <span>Conclusión y observaciones *</span>
+                    <textarea id="accountantReviewNotes" maxlength="2000" rows="4" required></textarea>
+                  </label>
+                </div>
+                <p class="form-error" id="accountantReviewError" hidden></p>
+                <div class="dialog-actions">
+                  <button class="filter-reset-button" id="cancelAccountantReview" type="button">Cancelar</button>
+                  <button class="audit-export-button" id="saveAccountantReview" type="submit">Guardar validación</button>
+                </div>
+              </form>
+            </dialog>
           </section>
 
           <section class="section app-view" id="sistema" data-view="sistema" aria-labelledby="systemTitle" hidden>
@@ -2103,7 +3807,7 @@
               <div class="service-row">
                 <div class="service-name">
                   <span class="service-dot" id="apiDot"></span>
-                  <div><strong>API MegaSuite</strong><small>Servidor Express</small></div>
+                  <div><strong>API Nubixor</strong><small>Servidor Express</small></div>
                 </div>
                 <span class="service-result" id="apiResult">Comprobando</span>
               </div>
@@ -2122,6 +3826,36 @@
                 <span class="service-result" id="redisResult">Comprobando</span>
               </div>
             </div>
+
+            <section class="tenant-module-settings" aria-labelledby="tenantModulesTitle">
+              <div class="tenant-module-settings-heading">
+                <div>
+                  <p class="eyebrow">Módulos por empresa</p>
+                  <h3 id="tenantModulesTitle">Capacidades opcionales</h3>
+                  <p>
+                    Activa únicamente lo que utiliza cada negocio. Desactivar un
+                    módulo oculta sus pantallas sin borrar la información guardada.
+                  </p>
+                </div>
+              </div>
+              <article class="tenant-module-card" data-module-setting="LOGISTICS">
+                <div class="tenant-module-icon" aria-hidden="true">L</div>
+                <div>
+                  <span>Operación especializada</span>
+                  <h4>Logística</h4>
+                  <p>Recepción, ubicación, exhibición, reposición, lotes, series y reservas.</p>
+                </div>
+                <div class="tenant-module-control">
+                  <strong id="logisticsModuleStatus">Consultando</strong>
+                  <label class="module-switch">
+                    <input id="logisticsModuleToggle" type="checkbox"
+                      aria-label="Activar o desactivar Logística">
+                    <span aria-hidden="true"></span>
+                  </label>
+                </div>
+              </article>
+              <p class="module-setting-message" id="moduleSettingMessage" hidden></p>
+            </section>
 
             <section class="billing-connector" aria-labelledby="billingConnectorTitle">
               <div class="billing-connector-heading">
@@ -2178,11 +3912,23 @@
               <div class="billing-document-monitor">
                 <div class="billing-monitor-heading">
                   <div><span>Cola y respuestas</span><h4>Documentos electrónicos recientes</h4></div>
-                  <div class="billing-document-counts">
-                    <span><b id="billingPendingCount">0</b> pendientes</span>
-                    <span><b id="billingAcceptedCount">0</b> aceptados</span>
-                    <span><b id="billingRejectedCount">0</b> rechazados</span>
+                  <div class="billing-monitor-tools">
+                    <div class="billing-document-counts">
+                      <span><b id="billingPendingCount">0</b> pendientes</span>
+                      <span><b id="billingAcceptedCount">0</b> aceptados</span>
+                      <span><b id="billingRejectedCount">0</b> rechazados</span>
+                    </div>
+                    <button class="billing-contingency-button" id="billingContingencyButton"
+                      type="button">Iniciar contingencia</button>
                   </div>
+                </div>
+                <div class="billing-contingency-strip" id="billingContingencyStrip" hidden>
+                  <div>
+                    <span>CONTINGENCIA ABIERTA</span>
+                    <strong id="billingContingencyReason">—</strong>
+                    <small id="billingContingencyStarted">—</small>
+                  </div>
+                  <button id="closeBillingContingencyButton" type="button">Cerrar y documentar</button>
                 </div>
                 <div class="billing-document-list" id="billingDocumentList"></div>
                 <div class="data-state compact-state" id="billingDocumentState">
@@ -2196,7 +3942,7 @@
         </main>
 
         <footer>
-          <span>MegaSuite · Entorno local</span>
+          <span>Nubixor · Entorno local</span>
           <span>Construido sobre una base modular y auditable.</span>
         </footer>
       </div>
@@ -2215,11 +3961,14 @@
         <div class="form-grid">
           <label class="form-field">
             <span>Código del proveedor <b>*</b></span>
-            <input id="billingProviderCode" name="providerCode" maxlength="40" required placeholder="SANDBOX">
+            <select id="billingProviderCode" name="providerCode" required>
+              <option value="FACTUS">Factus API V2</option>
+              <option value="SANDBOX">Simulador local</option>
+            </select>
           </label>
           <label class="form-field">
             <span>Nombre visible <b>*</b></span>
-            <input id="billingProviderDisplayName" name="displayName" maxlength="120" required placeholder="Simulador MegaSuite">
+            <input id="billingProviderDisplayName" name="displayName" maxlength="120" required placeholder="Simulador Nubixor">
           </label>
           <label class="form-field">
             <span>Ambiente <b>*</b></span>
@@ -2233,11 +3982,32 @@
             <input id="billingProviderBaseUrl" name="baseUrl" type="url" maxlength="500" placeholder="https://api.proveedor.com">
           </label>
         </div>
-        <label class="form-field">
-          <span>Credenciales en JSON</span>
-          <textarea id="billingProviderCredentials" name="credentials" rows="4" placeholder='{"apiKey":"..."}'></textarea>
-          <small>Opcional en SANDBOX. Si queda vacío se conservan las credenciales existentes.</small>
-        </label>
+        <fieldset class="factus-credential-fields" id="factusCredentialFields">
+          <legend>Credenciales Factus V2</legend>
+          <div class="form-grid">
+            <label class="form-field">
+              <span>Correo / usuario</span>
+              <input id="billingFactusUsername" name="factusUsername" type="email"
+                maxlength="200" autocomplete="off" placeholder="usuario@empresa.com">
+            </label>
+            <label class="form-field">
+              <span>Contraseña</span>
+              <input id="billingFactusPassword" name="factusPassword" type="password"
+                maxlength="500" autocomplete="new-password" placeholder="Pegar contraseña">
+            </label>
+            <label class="form-field">
+              <span>Client ID</span>
+              <input id="billingFactusClientId" name="factusClientId" type="password"
+                maxlength="500" autocomplete="off" placeholder="Pegar Client ID">
+            </label>
+            <label class="form-field">
+              <span>Client Secret</span>
+              <input id="billingFactusClientSecret" name="factusClientSecret" type="password"
+                maxlength="500" autocomplete="new-password" placeholder="Pegar Client Secret">
+            </label>
+          </div>
+          <small>Pega los cuatro valores directamente desde el correo de Factus. Al volver a abrir esta pantalla permanecerán ocultos; deja todos vacíos para conservar los existentes.</small>
+        </fieldset>
         <p class="form-error" id="billingConnectionFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelBillingConnectionButton" type="button">Cancelar</button>
@@ -2255,7 +4025,14 @@
           </div>
           <button class="icon-button" id="closeBillingResolutionDialog" type="button" aria-label="Cerrar">×</button>
         </div>
-        <p class="dialog-copy">Copia exactamente el prefijo, rango y vigencia autorizados. MegaSuite no inventa numeración tributaria.</p>
+        <p class="dialog-copy">Copia exactamente el prefijo, rango y vigencia autorizados. Nubixor no inventa numeración tributaria.</p>
+        <label class="form-field" id="factusRangeField">
+          <span>Rango asociado al software en Factus</span>
+          <select id="factusNumberingRangeSelect">
+            <option value="">Consultar rangos de la cuenta…</option>
+          </select>
+          <small>Los datos se consultan desde la cuenta Factus de la empresa activa.</small>
+        </label>
         <label class="form-field">
           <span>Sucursal <b>*</b></span>
           <select id="billingResolutionBranchId" name="branchId" required></select>
@@ -2266,6 +4043,8 @@
           <label class="form-field"><span>Número final <b>*</b></span><input name="numberTo" type="number" min="1" step="1" required></label>
           <label class="form-field"><span>Vigente desde <b>*</b></span><input name="validFrom" type="date" required></label>
           <label class="form-field"><span>Vigente hasta <b>*</b></span><input name="validUntil" type="date" required></label>
+          <label class="form-field"><span>ID del rango Factus</span><input name="providerNumberingRangeId" type="number" min="1" step="1" readonly></label>
+          <label class="form-field"><span>Tipo de documento Factus</span><input name="providerDocumentCode" maxlength="30" readonly></label>
         </div>
         <p class="form-error" id="billingResolutionFormError" role="alert" hidden></p>
         <div class="dialog-actions">
@@ -2529,6 +4308,395 @@
       </form>
     </dialog>
 
+    <dialog class="company-dialog expense-dialog" id="expenseDialog"
+      aria-labelledby="expenseDialogTitle">
+      <form class="company-form" id="expenseForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Solicitud de gasto</p>
+            <h2 id="expenseDialogTitle">Registrar gasto operativo</h2>
+          </div>
+          <button class="icon-button" id="closeExpenseDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Utiliza Compras para mercancía. Aquí registra servicios, consumos y salidas
+          que no aumentan inventario.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Sucursal <b>*</b></span>
+            <select id="expenseBranchId" name="branchId" required></select>
+          </label>
+          <label class="form-field">
+            <span>Centro de costos <b>*</b></span>
+            <select id="expenseCostCenterId" name="costCenterId" required></select>
+          </label>
+          <label class="form-field">
+            <span>Categoría <b>*</b></span>
+            <select id="expenseCategoryId" name="categoryId" required></select>
+          </label>
+          <label class="form-field">
+            <span>Proveedor registrado</span>
+            <select id="expenseSupplierId" name="supplierId">
+              <option value="">Otro beneficiario</option>
+            </select>
+          </label>
+          <label class="form-field" id="expenseBeneficiaryField">
+            <span>Beneficiario <b>*</b></span>
+            <input id="expenseBeneficiaryName" name="beneficiaryName" maxlength="160"
+              placeholder="Persona o entidad que recibe">
+          </label>
+          <label class="form-field">
+            <span>Factura o comprobante</span>
+            <input name="supplierDocumentNumber" maxlength="80"
+              placeholder="Número del soporte">
+          </label>
+          <label class="form-field">
+            <span>Fecha del gasto <b>*</b></span>
+            <input id="expenseIssueDate" name="issueDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha límite de pago</span>
+            <input id="expenseDueDate" name="dueDate" type="date">
+          </label>
+          <label class="form-field">
+            <span>Subtotal <b>*</b></span>
+            <input id="expenseSubtotal" name="subtotal" type="number" min="0"
+              step="0.01" required placeholder="0">
+          </label>
+          <label class="form-field">
+            <span>Impuestos</span>
+            <input id="expenseTaxTotal" name="taxTotal" type="number" min="0"
+              step="0.01" value="0">
+          </label>
+          <label class="form-field full">
+            <span>Soporte protegido</span>
+            <select id="expenseSupportDocumentId" name="supportDocumentId">
+              <option value="">Sin archivo adjunto</option>
+            </select>
+            <small>Los documentos cargados en Sistema aparecen en esta lista.</small>
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Concepto del gasto <b>*</b></span>
+          <textarea name="description" maxlength="500" rows="3" required
+            placeholder="Explica qué se pagó y para qué área"></textarea>
+        </label>
+        <div class="expense-recurring-fields">
+          <label class="supplier-check">
+            <input id="expenseRecurring" name="recurring" type="checkbox">
+            Se repite periódicamente
+          </label>
+          <label class="form-field" id="expenseRecurrenceField" hidden>
+            <span>Periodicidad</span>
+            <select id="expenseRecurrenceRule" name="recurrenceRule">
+              <option value="MONTHLY">Mensual</option>
+              <option value="BIMONTHLY">Bimestral</option>
+              <option value="QUARTERLY">Trimestral</option>
+              <option value="ANNUAL">Anual</option>
+            </select>
+          </label>
+        </div>
+        <div class="expense-draft-total">
+          <span>Total solicitado</span><strong id="expenseDraftTotal">$0</strong>
+        </div>
+        <p class="form-error" id="expenseFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelExpenseButton" type="button">
+            Volver sin registrar
+          </button>
+          <button class="primary-button compact" id="saveExpenseButton" type="submit">
+            Enviar para aprobación
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="expenseDecisionDialog"
+      aria-labelledby="expenseDecisionTitle">
+      <form class="company-form" id="expenseDecisionForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" id="expenseDecisionKicker">Control de gasto</p>
+            <h2 id="expenseDecisionTitle">Confirmar decisión</h2>
+          </div>
+          <button class="icon-button" id="closeExpenseDecisionDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="expenseDecisionCopy"></p>
+        <input id="expenseDecisionAction" type="hidden">
+        <label class="form-field">
+          <span>Motivo y evidencia <b>*</b></span>
+          <textarea id="expenseDecisionInput" maxlength="1000" rows="4" required
+            placeholder="Explica la decisión tomada"></textarea>
+        </label>
+        <p class="form-error" id="expenseDecisionError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelExpenseDecision" type="button">
+            Volver
+          </button>
+          <button class="primary-button compact" id="saveExpenseDecision" type="submit">
+            Confirmar
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="expensePaymentDialog"
+      aria-labelledby="expensePaymentTitle">
+      <form class="company-form" id="expensePaymentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Tesorería y caja</p>
+            <h2 id="expensePaymentTitle">Pagar gasto</h2>
+          </div>
+          <button class="icon-button" id="closeExpensePaymentDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          <strong id="expensePaymentNumber">—</strong> ·
+          <span id="expensePaymentBalance">$0 pendientes</span>
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Valor pagado <b>*</b></span>
+            <input id="expensePaymentAmount" name="amount" type="number"
+              min="0.01" step="0.01" required>
+          </label>
+          <label class="form-field">
+            <span>Fecha <b>*</b></span>
+            <input id="expensePaymentDate" name="paymentDate" type="date" required>
+          </label>
+          <label class="form-field">
+            <span>Medio de pago <b>*</b></span>
+            <select id="expensePaymentMethod" name="paymentMethod" required>
+              <option value="BANK_TRANSFER">Transferencia bancaria</option>
+              <option value="CARD">Tarjeta o débito bancario</option>
+              <option value="CHECK">Cheque</option>
+              <option value="CASH">Efectivo de caja</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label class="form-field" id="expenseBankAccountField">
+            <span>Cuenta de salida <b>*</b></span>
+            <select id="expenseBankAccountId" name="bankAccountId"></select>
+          </label>
+          <label class="form-field" id="expenseCashSessionField" hidden>
+            <span>Turno de caja <b>*</b></span>
+            <select id="expenseCashSessionId" name="cashSessionId"></select>
+          </label>
+          <label class="form-field">
+            <span>Referencia</span>
+            <input name="reference" maxlength="120"
+              placeholder="Transferencia, cheque o comprobante">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Observaciones</span>
+          <textarea name="notes" maxlength="500" rows="3"
+            placeholder="Cuenta, autorización o detalle del desembolso"></textarea>
+        </label>
+        <p class="form-error" id="expensePaymentError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelExpensePayment" type="button">
+            Volver sin pagar
+          </button>
+          <button class="primary-button compact" id="saveExpensePayment" type="submit">
+            Aplicar pago
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="costCenterDialog"
+      aria-labelledby="costCenterDialogTitle">
+      <form class="company-form" id="costCenterForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">Distribución interna</p>
+            <h2 id="costCenterDialogTitle">Nuevo centro de costos</h2></div>
+          <button class="icon-button" id="closeCostCenterDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="form-field"><span>Código <b>*</b></span>
+            <input name="code" maxlength="30" required placeholder="ADMIN"></label>
+          <label class="form-field"><span>Nombre <b>*</b></span>
+            <input name="name" maxlength="120" required
+              placeholder="Administración general"></label>
+          <label class="form-field"><span>Sucursal</span>
+            <select id="costCenterBranchId" name="branchId">
+              <option value="">Toda la empresa</option>
+            </select></label>
+          <label class="form-field"><span>Presupuesto mensual</span>
+            <input name="monthlyBudget" type="number" min="0" step="0.01"
+              placeholder="Sin límite"></label>
+        </div>
+        <p class="form-error" id="costCenterFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCostCenter" type="button">Volver</button>
+          <button class="primary-button compact" id="saveCostCenter" type="submit">
+            Crear centro
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="expenseCategoryDialog"
+      aria-labelledby="expenseCategoryDialogTitle">
+      <form class="company-form" id="expenseCategoryForm">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">Clasificación contable</p>
+            <h2 id="expenseCategoryDialogTitle">Nueva categoría de gasto</h2></div>
+          <button class="icon-button" id="closeExpenseCategoryDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="form-field"><span>Código <b>*</b></span>
+            <input name="code" maxlength="30" required placeholder="HONORARIOS"></label>
+          <label class="form-field"><span>Nombre <b>*</b></span>
+            <input name="name" maxlength="120" required placeholder="Honorarios"></label>
+          <label class="form-field full"><span>Cuenta contable <b>*</b></span>
+            <select id="expenseAccountingAccountId" name="accountingAccountId"
+              required></select></label>
+          <label class="form-field"><span>Aprobación especial desde</span>
+            <input name="approvalThreshold" type="number" min="0" step="0.01"
+              value="0"></label>
+          <label class="supplier-check">
+            <input name="requiresSupport" type="checkbox" checked>
+            Exigir soporte o número de comprobante
+          </label>
+        </div>
+        <p class="form-error" id="expenseCategoryFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelExpenseCategory" type="button">
+            Volver
+          </button>
+          <button class="primary-button compact" id="saveExpenseCategory" type="submit">
+            Crear categoría
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog party-dialog" id="thirdPartyDialog"
+      aria-labelledby="thirdPartyDialogTitle">
+      <form class="company-form" id="thirdPartyForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow" id="thirdPartyDialogEyebrow">Directorio comercial</p>
+            <h2 id="thirdPartyDialogTitle">Registrar tercero</h2>
+            <p id="thirdPartyDialogCopy">
+              Una sola identidad puede alimentar Caja, Cartera, Compras y Gastos.
+            </p>
+          </div>
+          <button class="icon-button" id="closeThirdPartyDialog" type="button"
+            aria-label="Cerrar">×</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Tipo de tercero <b>*</b></span>
+            <select name="partyType" required>
+              <option value="ORGANIZATION">Empresa u organización</option>
+              <option value="PERSON">Persona natural</option>
+            </select>
+          </label>
+          <label>
+            <span>Nombre o razón social <b>*</b></span>
+            <input name="name" maxlength="160" required
+              placeholder="Nombre completo o razón social">
+          </label>
+          <label>
+            <span>Nombre comercial</span>
+            <input name="tradeName" maxlength="160" placeholder="Cómo lo reconoces">
+          </label>
+          <label>
+            <span>Tipo de documento</span>
+            <select name="documentType">
+              <option value="NIT">NIT</option>
+              <option value="CC">Cédula de ciudadanía</option>
+              <option value="CE">Cédula de extranjería</option>
+              <option value="PASSPORT">Pasaporte</option>
+              <option value="OTHER">Otro</option>
+            </select>
+          </label>
+          <label>
+            <span>Número de documento</span>
+            <input name="documentNumber" maxlength="40" placeholder="Sin puntos ni guiones">
+          </label>
+          <label>
+            <span>Dígito de verificación</span>
+            <input name="verificationDigit" maxlength="2" inputmode="numeric" placeholder="DV">
+          </label>
+          <label>
+            <span>Correo</span>
+            <input name="email" type="email" maxlength="160"
+              placeholder="contacto@empresa.com">
+          </label>
+          <label>
+            <span>Teléfono</span>
+            <input name="phone" maxlength="40" placeholder="+57 300 000 0000">
+          </label>
+          <label class="form-span-2">
+            <span>Dirección</span>
+            <input name="address" maxlength="240" placeholder="Dirección principal">
+          </label>
+          <label>
+            <span>Código de municipio</span>
+            <input name="municipalityCode" maxlength="12"
+              placeholder="Validado para facturación">
+          </label>
+          <label>
+            <span>Plazo habitual de pago</span>
+            <input name="paymentTermsDays" type="number" min="0" max="3650"
+              value="0">
+          </label>
+        </div>
+        <fieldset class="party-role-fieldset">
+          <legend>Relación con la empresa <b>*</b></legend>
+          <label>
+            <input name="isCustomer" type="checkbox">
+            <span><strong>Cliente</strong><small>Ventas, POS y cuentas por cobrar</small></span>
+          </label>
+          <label>
+            <input name="isSupplier" type="checkbox">
+            <span><strong>Proveedor</strong><small>Compras, gastos y cuentas por pagar</small></span>
+          </label>
+        </fieldset>
+        <div class="supplier-checks">
+          <label class="supplier-check">
+            <input name="obligatedToInvoice" type="checkbox">
+            <span>Obligado a facturar</span>
+          </label>
+          <label class="supplier-check">
+            <input name="electronicInvoicer" type="checkbox">
+            <span>Facturador electrónico</span>
+          </label>
+          <label class="supplier-check" id="thirdPartyActiveField" hidden>
+            <input name="active" type="checkbox" checked>
+            <span>Tercero activo</span>
+          </label>
+        </div>
+        <label>
+          <span>Notas internas</span>
+          <textarea name="notes" maxlength="1000" rows="3"
+            placeholder="Condiciones comerciales, referencias o información útil"></textarea>
+        </label>
+        <label>
+          <span>Motivo del registro o cambio</span>
+          <input name="reason" maxlength="500"
+            placeholder="Deja evidencia para auditoría">
+        </label>
+        <p class="form-error" id="thirdPartyFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelThirdPartyButton"
+            type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveThirdPartyButton"
+            type="submit">Registrar tercero</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="company-dialog" id="supplierDialog" aria-labelledby="supplierDialogTitle">
       <form class="company-form" id="supplierForm">
         <div class="dialog-heading">
@@ -2703,6 +4871,72 @@
       </form>
     </dialog>
 
+    <dialog class="company-dialog" id="inventoryIncidentDialog"
+      aria-labelledby="inventoryIncidentDialogTitle">
+      <form class="company-form" id="inventoryIncidentForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Movimiento con causa definida</p>
+            <h2 id="inventoryIncidentDialogTitle">Registrar novedad de inventario</h2>
+          </div>
+          <button class="icon-button" id="closeInventoryIncidentDialog"
+            type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="inventoryIncidentGuidance">
+          La novedad generará movimientos de kardex y una evidencia independiente en auditoría.
+        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Tipo de novedad <b>*</b></span>
+            <select id="inventoryIncidentType" name="incidentType" required>
+              <option value="CUSTOMER_RETURN">Devolución de cliente</option>
+              <option value="SUPPLIER_RETURN">Devolución a proveedor</option>
+              <option value="DAMAGE">Avería</option>
+              <option value="LOSS">Pérdida o faltante confirmado</option>
+              <option value="QUARANTINE">Enviar a cuarentena</option>
+              <option value="QUARANTINE_RELEASE">Liberar de cuarentena</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Producto <b>*</b></span>
+            <select id="inventoryIncidentProductId" name="productId" required></select>
+          </label>
+          <label class="form-field">
+            <span id="inventoryIncidentWarehouseLabel">Ubicación <b>*</b></span>
+            <select id="inventoryIncidentWarehouseId" name="warehouseId" required></select>
+          </label>
+          <label class="form-field" id="inventoryIncidentDestinationField" hidden>
+            <span>Ubicación de liberación <b>*</b></span>
+            <select id="inventoryIncidentDestinationId"
+              name="destinationWarehouseId"></select>
+          </label>
+          <label class="form-field">
+            <span>Cantidad <b>*</b></span>
+            <input name="quantity" type="number" min="0.0001" step="0.0001"
+              required placeholder="0">
+          </label>
+          <label class="form-field">
+            <span>Referencia o soporte</span>
+            <input name="reference" maxlength="160"
+              placeholder="Venta, proveedor, acta o fotografía">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo verificable <b>*</b></span>
+          <textarea name="reason" maxlength="500" rows="3" required
+            placeholder="Describe qué ocurrió y quién confirmó la novedad"></textarea>
+        </label>
+        <p class="inventory-incident-impact" id="inventoryIncidentImpact"></p>
+        <p class="form-error" id="inventoryIncidentFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelInventoryIncidentButton"
+            type="button">Volver sin registrar</button>
+          <button class="primary-button compact" id="saveInventoryIncidentButton"
+            type="submit">Registrar y mover saldo</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="company-dialog" id="adjustmentDialog" aria-labelledby="adjustmentDialogTitle">
       <form class="company-form" id="adjustmentForm">
         <div class="dialog-heading">
@@ -2796,6 +5030,18 @@
           <span>Motivo del traslado <b>*</b></span>
           <textarea name="reason" maxlength="500" rows="3" required placeholder="Ej. Reposición de punto de venta o redistribución de existencias"></textarea>
         </label>
+        <label class="transfer-controlled-toggle">
+          <input id="transferRequiresReception" name="requiresReception" type="checkbox">
+          <span>
+            <strong>Requiere confirmación de recepción</strong>
+            <small>Las unidades quedarán “En tránsito” hasta que el destino las acepte.</small>
+          </span>
+        </label>
+        <label class="form-field" id="transferDispatchReferenceField" hidden>
+          <span>Guía o referencia de despacho</span>
+          <input name="dispatchReference" maxlength="160"
+            placeholder="Guía, remisión, transportadora o responsable">
+        </label>
         <p class="form-error" id="transferFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelTransferButton" type="button">Volver sin transferir</button>
@@ -2857,7 +5103,7 @@
           <button class="icon-button" id="closeCountDialog" type="button" aria-label="Cerrar">×</button>
         </div>
         <p class="dialog-copy">
-          MegaSuite tomará una fotografía del saldo actual de todos los productos
+          Nubixor tomará una fotografía del saldo actual de todos los productos
           en la bodega. Solo puede existir un conteo activo por bodega.
         </p>
         <label class="form-field">
@@ -3121,7 +5367,7 @@
             maxlength="160"
             autocomplete="organization"
             required
-            placeholder="Ej. MegaSuite Colombia S.A.S."
+            placeholder="Ej. Nubixor Colombia S.A.S."
           >
         </label>
 
@@ -3133,7 +5379,7 @@
               name="tradeName"
               type="text"
               maxlength="160"
-              placeholder="Ej. MegaSuite"
+              placeholder="Ej. Nubixor"
             >
           </label>
           <label class="form-field">
@@ -3166,6 +5412,121 @@
           <button class="secondary-button" id="cancelCompanyButton" type="button">Cancelar</button>
           <button class="primary-button compact" id="saveCompanyButton" type="submit">
             Crear empresa y continuar
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="taxProfileDialog" aria-labelledby="taxProfileDialogTitle">
+      <form class="company-form" id="taxProfileForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Validación independiente</p>
+            <h2 id="taxProfileDialogTitle">Perfil tributario</h2>
+          </div>
+          <button class="icon-button" id="closeTaxProfileDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="taxProfileCompanyName"></p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Tipo de contribuyente</span>
+            <select id="taxpayerType" required>
+              <option value="NATURAL_PERSON">Persona natural</option>
+              <option value="LEGAL_ENTITY">Persona jurídica</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Responsabilidad de IVA</span>
+            <select id="vatResponsibility" required>
+              <option value="NOT_RESPONSIBLE">No responsable</option>
+              <option value="RESPONSIBLE">Responsable</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Régimen tributario</span>
+            <select id="taxRegime" required>
+              <option value="ORDINARY">Ordinario</option>
+              <option value="SIMPLE">Simple</option>
+              <option value="NOT_APPLICABLE">No aplica</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Documento de venta</span>
+            <select id="taxDocumentType" required>
+              <option value="INTERNAL_RECEIPT">Comprobante interno</option>
+              <option value="EQUIVALENT_DOCUMENT">Documento equivalente</option>
+              <option value="ELECTRONIC_INVOICE">Factura electrónica</option>
+            </select>
+          </label>
+        </div>
+        <label class="auth-remember">
+          <input id="electronicInvoicingRequired" type="checkbox">
+          <span>Esta empresa está obligada a facturar electrónicamente</span>
+        </label>
+        <label class="form-field">
+          <span>Soporte RUT — documento tributario</span>
+          <input id="taxRutFile" type="file" accept=".pdf,image/jpeg,image/png,image/webp">
+          <small class="field-help">
+            Adjunta aquí el RUT en PDF o imagen. Este archivo no corresponde al logo del negocio.
+          </small>
+        </label>
+        <label class="form-field">
+          <span>Resultado de la revisión</span>
+          <select id="taxValidationStatus" required>
+            <option value="VALIDATED">Validado</option>
+            <option value="OBSERVED">Con observaciones</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Notas de validación</span>
+          <textarea id="taxValidationNotes" minlength="10" maxlength="1000" rows="4" required></textarea>
+        </label>
+        <p class="form-error" id="taxProfileError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelTaxProfileButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveTaxProfileButton" type="submit">Guardar validación</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog company-identity-dialog" id="companyIdentityDialog" aria-labelledby="companyIdentityDialogTitle">
+      <form class="company-form" id="companyIdentityForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Identidad visual</p>
+            <h2 id="companyIdentityDialogTitle">Logo del negocio</h2>
+          </div>
+          <button class="icon-button" id="closeCompanyIdentityDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="companyIdentityName"></p>
+        <div class="company-logo-editor">
+          <div class="company-logo-preview">
+            <img id="companyLogoPreview" alt="Vista previa del logo" hidden>
+            <span id="companyLogoPlaceholder" aria-hidden="true">LOGO</span>
+          </div>
+          <div class="company-logo-guidance">
+            <strong>Identidad independiente por empresa</strong>
+            <p>Se utilizará en comprobantes, impresiones y documentos locales de esta empresa.</p>
+            <small>PNG, JPG o WEBP · máximo 2 MB · se recomienda fondo transparente.</small>
+          </div>
+        </div>
+        <label class="form-field">
+          <span>Archivo del logo</span>
+          <input id="companyLogoFile" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <div class="identity-separation-note">
+          <span aria-hidden="true">✓</span>
+          <p>El logo se almacena separado del soporte RUT y de los logos de las demás empresas.</p>
+        </div>
+        <p class="form-error" id="companyIdentityError" role="alert" hidden></p>
+        <div class="dialog-actions company-identity-actions">
+          <button class="secondary-button danger-soft" id="removeCompanyLogoButton" type="button">
+            Quitar logo
+          </button>
+          <span class="dialog-action-spacer"></span>
+          <button class="secondary-button" id="cancelCompanyIdentityButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveCompanyLogoButton" type="submit">
+            Guardar identidad
           </button>
         </div>
       </form>
@@ -3531,6 +5892,288 @@
       </form>
     </dialog>
 
+    <dialog class="company-dialog catalog-import-dialog" id="catalogImportDialog"
+      aria-labelledby="catalogImportTitle">
+      <div class="company-form catalog-import-shell">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Inicio operativo seguro</p>
+            <h2 id="catalogImportTitle">Carga masiva de productos</h2>
+          </div>
+          <button class="icon-button" id="closeCatalogImportDialog"
+            type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="catalog-import-company">
+          <span aria-hidden="true">↥</span>
+          <div>
+            <small>La información se cargará únicamente en</small>
+            <strong id="catalogImportCompany">Empresa activa</strong>
+          </div>
+        </div>
+
+        <div class="catalog-import-steps">
+          <article>
+            <span>01</span>
+            <div>
+              <strong>Descarga la plantilla</strong>
+              <small>Incluye los códigos reales de bodega e impuesto de esta empresa.</small>
+            </div>
+            <button class="secondary-button compact" id="downloadCatalogTemplate"
+              type="button">Descargar CSV</button>
+          </article>
+          <article>
+            <span>02</span>
+            <div>
+              <strong>Completa y selecciona el archivo</strong>
+              <small>Hasta 1.000 productos. No uses símbolos de moneda.</small>
+            </div>
+            <label class="catalog-import-file">
+              <input id="catalogImportFile" type="file"
+                accept=".csv,text/csv,application/vnd.ms-excel">
+              <span id="catalogImportFileLabel">Seleccionar CSV</span>
+            </label>
+          </article>
+          <article>
+            <span>03</span>
+            <div>
+              <strong>Valida antes de guardar</strong>
+              <small>Nubixor no modificará datos mientras existan filas con errores.</small>
+            </div>
+            <button class="primary-button compact" id="previewCatalogImport"
+              type="button">Revisar archivo</button>
+          </article>
+        </div>
+
+        <div class="catalog-import-summary" id="catalogImportSummary" hidden>
+          <article><small>Filas</small><strong id="catalogImportTotal">0</strong></article>
+          <article><small>Nuevos</small><strong id="catalogImportCreates">0</strong></article>
+          <article><small>Actualiza</small><strong id="catalogImportUpdates">0</strong></article>
+          <article data-import-errors><small>Con error</small>
+            <strong id="catalogImportErrors">0</strong></article>
+        </div>
+
+        <div class="catalog-import-preview" id="catalogImportPreview" hidden>
+          <div class="catalog-import-preview-heading">
+            <div>
+              <strong>Vista previa</strong>
+              <small>La existencia representa el saldo objetivo en la bodega indicada.</small>
+            </div>
+            <span id="catalogImportStatus">Pendiente</span>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fila</th><th>Acción</th><th>Producto</th><th>Bodega</th>
+                  <th>Saldo actual → nuevo</th><th>Validación</th>
+                </tr>
+              </thead>
+              <tbody id="catalogImportTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="form-error" id="catalogImportError" role="alert" hidden></p>
+        <div class="catalog-import-safety">
+          <span aria-hidden="true">✓</span>
+          <p><strong>Operación atómica y auditable.</strong> Si una fila falla, no se
+            crea ni se actualiza ningún producto. Repetir el mismo archivo conserva
+            el saldo objetivo y evita duplicar existencias.</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelCatalogImport"
+            type="button">Volver sin importar</button>
+          <button class="primary-button compact" id="commitCatalogImport"
+            type="button" disabled>Importar productos</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="company-dialog quick-lookup-dialog" id="quickLookupDialog"
+      aria-labelledby="quickLookupTitle">
+      <div class="quick-lookup-shell">
+        <div class="quick-lookup-heading">
+          <div>
+            <p class="eyebrow">Consulta universal</p>
+            <h2 id="quickLookupTitle">Productos y existencias</h2>
+            <p id="quickLookupCompany">Empresa activa</p>
+          </div>
+          <button class="icon-button" id="closeQuickLookup" type="button"
+            aria-label="Cerrar consulta">×</button>
+        </div>
+        <label class="quick-lookup-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="quickLookupSearch" type="search" maxlength="120"
+            autocomplete="off" placeholder="Nombre, SKU, código de barras, categoría o marca">
+          <kbd>Esc</kbd>
+        </label>
+        <div class="quick-lookup-state" id="quickLookupState">
+          <span aria-hidden="true">P</span>
+          <strong>Consulta cualquier producto</strong>
+          <p>Escribe al menos dos caracteres para ver precio, impuesto y existencias.</p>
+        </div>
+        <div class="quick-lookup-results" id="quickLookupResults"></div>
+        <div class="quick-shortcut-guide">
+          <strong>Comandos rápidos</strong>
+          <div>
+            <span><kbd>Ctrl K</kbd><small>Windows · consulta global</small></span>
+            <span><kbd>⌘ K</kbd><small>Mac · consulta global</small></span>
+            <span><kbd>F2</kbd><small>Buscar o enfocar Caja</small></span>
+            <span><kbd>/</kbd><small>Buscar dentro de Caja</small></span>
+            <span><kbd>Enter</kbd><small>Agregar SKU exacto en Caja</small></span>
+            <span><kbd>Esc</kbd><small>Cerrar ventanas</small></span>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="company-dialog product-structure-dialog" id="productStructureDialog"
+      aria-labelledby="productStructureTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Organización comercial</p>
+            <h2 id="productStructureTitle">Variantes y combos</h2>
+            <p id="productStructureProduct">Selecciona cómo se vende este producto.</p>
+          </div>
+          <button class="icon-button" id="closeProductStructureDialog"
+            type="button" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="product-structure-choice" role="tablist"
+          aria-label="Tipo de organización del producto">
+          <button class="active" type="button" data-product-structure-tab="variants">
+            <span>🎨</span>
+            <strong>Colores o presentaciones</strong>
+            <small>Cada opción tiene su SKU, precio y existencias.</small>
+          </button>
+          <button type="button" data-product-structure-tab="combo">
+            <span>▦</span>
+            <strong>Combo o kit</strong>
+            <small>Reúne varios productos en uno solo.</small>
+          </button>
+        </div>
+
+        <section class="product-structure-panel" data-product-structure-panel="variants">
+          <div class="product-structure-explanation">
+            <span>Ejemplo</span>
+            <p>
+              <strong>Camiseta deportiva</strong> puede tener Rojo, Azul y Negro.
+              Cada color se controla y se vende por separado.
+            </p>
+          </div>
+          <div class="product-variant-list" id="productVariantList"></div>
+          <form class="product-variant-form" id="productVariantForm">
+            <div class="inventory-panel-heading">
+              <div><p class="eyebrow">Nueva opción</p><h3>Agregar color o presentación</h3></div>
+            </div>
+            <div class="form-grid">
+              <label class="form-field">
+                <span>Tipo de opción</span>
+                <select name="optionName" required>
+                  <option value="Color">Color</option>
+                  <option value="Talla">Talla</option>
+                  <option value="Presentación">Presentación</option>
+                  <option value="Material">Material</option>
+                  <option value="Estilo">Estilo</option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Valor <b>*</b></span>
+                <input name="optionValue" maxlength="120" required
+                  placeholder="Ej. Rojo, XL o 500 ml">
+              </label>
+              <label class="form-field">
+                <span>SKU propio <b>*</b></span>
+                <input name="sku" maxlength="60" required placeholder="CAM-ROJO-M">
+              </label>
+              <label class="form-field">
+                <span>Código de barras</span>
+                <input name="barcode" maxlength="80" placeholder="Opcional">
+              </label>
+              <label class="form-field">
+                <span>Costo</span>
+                <input name="cost" type="number" min="0" step="0.01">
+              </label>
+              <label class="form-field">
+                <span>Precio de venta</span>
+                <input name="salePrice" type="number" min="0" step="0.01">
+              </label>
+              <label class="form-field">
+                <span>Tomar unidades desde</span>
+                <select name="warehouseId" id="productVariantWarehouse"></select>
+              </label>
+              <label class="form-field">
+                <span>Unidades para esta opción</span>
+                <input name="initialQuantity" type="number" min="0"
+                  step="0.0001" value="0">
+              </label>
+            </div>
+            <p class="form-guidance">
+              Si el producto principal ya tiene inventario, puedes repartir aquí
+              las unidades correspondientes a esta opción.
+            </p>
+            <p class="form-error" id="productVariantError" hidden></p>
+            <div class="dialog-actions">
+              <button class="primary-button compact" id="saveProductVariant"
+                type="submit">Agregar opción</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="product-structure-panel" data-product-structure-panel="combo" hidden>
+          <div class="product-structure-explanation combo">
+            <span>Ejemplo</span>
+            <p>
+              <strong>Kit escolar</strong> puede consumir 2 cuadernos, 1 lápiz y
+              1 borrador cada vez que armes una unidad.
+            </p>
+          </div>
+          <form id="productComboForm">
+            <div class="inventory-panel-heading">
+              <div><p class="eyebrow">Composición</p><h3>Qué contiene el combo</h3></div>
+              <button class="secondary-button compact" id="addComboComponent"
+                type="button">Agregar producto ＋</button>
+            </div>
+            <div class="product-combo-components" id="productComboComponents"></div>
+            <p class="form-error" id="productComboError" hidden></p>
+            <div class="dialog-actions">
+              <button class="primary-button compact" id="saveProductCombo"
+                type="submit">Guardar composición</button>
+            </div>
+          </form>
+
+          <form class="product-combo-assembly" id="productComboAssemblyForm">
+            <div>
+              <p class="eyebrow">Producción interna</p>
+              <h3>Armar unidades del combo</h3>
+              <p>Nubixor descontará los componentes y agregará el combo terminado.</p>
+            </div>
+            <label class="form-field">
+              <span>Bodega</span>
+              <select name="warehouseId" id="productComboWarehouse" required></select>
+            </label>
+            <label class="form-field">
+              <span>Combos a armar</span>
+              <input name="quantity" type="number" min="0.0001"
+                step="0.0001" value="1" required>
+            </label>
+            <button class="primary-button compact" id="assembleProductCombo"
+              type="submit">Descontar componentes y armar</button>
+            <p class="form-error" id="productComboAssemblyError" hidden></p>
+          </form>
+
+          <div class="product-combo-history">
+            <div class="inventory-panel-heading">
+              <div><p class="eyebrow">Trazabilidad</p><h3>Últimos armados</h3></div>
+            </div>
+            <div id="productComboAssemblyList"></div>
+          </div>
+        </section>
+      </div>
+    </dialog>
+
     <dialog class="company-dialog" id="productImageDialog" aria-labelledby="productImageDialogTitle">
       <form class="company-form" id="productImageForm">
         <div class="dialog-heading">
@@ -3606,11 +6249,16 @@
           </div>
           <button class="icon-button" id="closeCloseCashDialog" type="button" aria-label="Cerrar">×</button>
         </div>
-        <p class="dialog-copy">Cuenta billetes y monedas. MegaSuite comparará el total físico con el efectivo esperado.</p>
+        <p class="dialog-copy">Cuenta billetes y monedas. Nubixor comparará el total físico con el efectivo esperado.</p>
         <div class="cash-close-preview">
           <div><span>Esperado</span><strong id="cashCloseExpected">$0</strong></div>
           <div><span>Contado</span><strong id="cashCloseCounted">$0</strong></div>
           <div><span>Diferencia</span><strong id="cashCloseDifference">$0</strong></div>
+        </div>
+        <div class="cash-close-payment-summary">
+          <div><span>Ventas del turno</span><strong id="cashCloseSalesTotal">$0</strong></div>
+          <div><span>Tarjeta</span><strong id="cashCloseCardTotal">$0</strong></div>
+          <div><span>Transferencias</span><strong id="cashCloseTransferTotal">$0</strong></div>
         </div>
         <div class="cash-denomination-grid" id="cashDenominationGrid">
           <label><span>$100.000</span><input type="number" min="0" step="1" value="0" data-denomination="100000"></label>
@@ -3635,6 +6283,37 @@
           <button class="primary-button compact" id="saveCloseCashButton" type="submit">Confirmar cierre</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="company-dialog cash-close-receipt-dialog" id="cashCloseReceiptDialog"
+      aria-labelledby="cashCloseReceiptTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Cierre diario conciliado</p>
+            <h2 id="cashCloseReceiptTitle">Turno cerrado</h2>
+          </div>
+          <button class="icon-button" id="closeCashCloseReceipt" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="cashCloseReceiptPeriod">—</p>
+        <div class="cash-close-receipt-grid">
+          <div><span>Ventas</span><strong id="cashCloseReceiptSales">$0</strong><small id="cashCloseReceiptCount">0 comprobantes</small></div>
+          <div><span>Efectivo esperado</span><strong id="cashCloseReceiptExpected">$0</strong></div>
+          <div><span>Efectivo contado</span><strong id="cashCloseReceiptCounted">$0</strong></div>
+          <div><span>Diferencia</span><strong id="cashCloseReceiptDifference">$0</strong></div>
+          <div><span>Tarjetas</span><strong id="cashCloseReceiptCards">$0</strong></div>
+          <div><span>Transferencias</span><strong id="cashCloseReceiptTransfers">$0</strong></div>
+        </div>
+        <div class="cash-close-count-proof">
+          <strong>Conteo por denominación</strong>
+          <div id="cashCloseReceiptDenominations"></div>
+        </div>
+        <p class="cash-close-receipt-note" id="cashCloseReceiptNote">Cierre sin diferencias.</p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="printCashCloseReceipt" type="button">Imprimir cierre</button>
+          <button class="primary-button compact" id="finishCashCloseReceipt" type="button">Finalizar jornada</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog class="company-dialog" id="cashMovementDialog" aria-labelledby="cashMovementDialogTitle">
@@ -3700,6 +6379,7 @@
           <select id="posDocumentPaymentFilter" aria-label="Filtrar por medio de pago">
             <option value="">Todos los pagos</option>
             <option value="TRANSFER">Transferencias</option>
+            <option value="MIXED">Pagos mixtos</option>
             <option value="CASH">Efectivo</option>
             <option value="CARD">Tarjeta</option>
           </select>
@@ -3718,6 +6398,7 @@
 
     <dialog class="company-dialog receipt-dialog" id="receiptDialog" aria-labelledby="receiptDialogTitle">
       <div class="company-form">
+        <img class="receipt-brand-logo" id="receiptBrandLogo" src="./assets/brand/nubixor-logo.png" alt="Nubixor">
         <div class="dialog-heading">
           <div>
             <p class="eyebrow">Venta confirmada</p>
@@ -3741,12 +6422,16 @@
           <div class="receipt-grand-total"><span>Total de la venta</span><strong id="receiptTotal">$0</strong></div>
           <div><span>Cliente</span><strong id="receiptCustomer">Consumidor final</strong></div>
           <div><span>Medio de pago</span><strong id="receiptPaymentMethod">—</strong></div>
+          <div class="receipt-payment-breakdown" id="receiptPaymentBreakdown" hidden></div>
           <div id="receiptTransferRow"><span>Transferencia recibida</span><strong id="receiptTransferReference">—</strong></div>
           <div id="receiptCreditRow"><span>Cuenta por cobrar</span><strong id="receiptCreditReference">—</strong></div>
           <div id="receiptCashReceivedRow"><span>Efectivo recibido</span><strong id="receiptCashReceived">$0</strong></div>
           <div id="receiptCashChangeRow"><span>Cambio entregado</span><strong id="receiptCashChange">$0</strong></div>
         </div>
         <div class="dialog-actions">
+          <button class="secondary-button danger-soft" id="openReturnDialogButton" type="button">
+            Devolver productos
+          </button>
           <button class="secondary-button" id="printReceiptButton" type="button">
             Imprimir comprobante
           </button>
@@ -3755,6 +6440,148 @@
           </button>
         </div>
       </div>
+    </dialog>
+
+    <dialog class="company-dialog return-dialog" id="returnDialog" aria-labelledby="returnDialogTitle">
+      <form class="company-form" id="returnForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Devolución controlada</p>
+            <h2 id="returnDialogTitle">Selecciona qué regresa</h2>
+          </div>
+          <button class="icon-button" id="closeReturnDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">
+          Nubixor conservará la venta original, reintegrará las unidades y registrará el reembolso.
+        </p>
+        <div class="return-items" id="returnItems"></div>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Medio de reembolso <b>*</b></span>
+            <select id="returnRefundMethod" required>
+              <option value="CASH">Efectivo</option>
+              <option value="CARD">Tarjeta</option>
+              <option value="TRANSFER">Transferencia</option>
+            </select>
+          </label>
+          <label class="form-field" id="returnBankAccountField" hidden>
+            <span>Cuenta de salida <b>*</b></span>
+            <select id="returnBankAccount"></select>
+          </label>
+          <label class="form-field" id="returnReferenceField" hidden>
+            <span>Referencia del reembolso <b>*</b></span>
+            <input id="returnRefundReference" maxlength="120"
+              placeholder="Transacción o autorización">
+          </label>
+          <label class="form-field" id="returnCorrectionField" hidden>
+            <span>Concepto DIAN validado <b>*</b></span>
+            <input id="returnCorrectionConcept" maxlength="20"
+              placeholder="Código configurado para la empresa">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo de la devolución <b>*</b></span>
+          <textarea id="returnReason" maxlength="500" rows="3" required
+            placeholder="Describe el motivo y el estado de los productos"></textarea>
+        </label>
+        <div class="return-summary">
+          <span>Valor estimado a devolver</span>
+          <strong id="returnEstimatedTotal">$0</strong>
+        </div>
+        <p class="form-error" id="returnFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelReturnButton" type="button">Volver</button>
+          <button class="primary-button compact" id="saveReturnButton" type="submit">
+            Confirmar devolución
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog billing-flow-dialog" id="quoteDialog" aria-labelledby="quoteDialogTitle">
+      <form class="company-form" id="quoteForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Documento comercial</p>
+            <h2 id="quoteDialogTitle">Nueva cotización</h2>
+          </div>
+          <button class="icon-button" id="closeQuoteDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">La cotización tendrá consecutivo propio y no consumirá numeración fiscal.</p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Sucursal <b>*</b></span>
+            <select id="quoteBranchId" name="branchId" required></select>
+          </label>
+          <label class="form-field">
+            <span>Cliente</span>
+            <select id="quoteCustomerId" name="customerId">
+              <option value="">Consumidor final / por definir</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Válida hasta <b>*</b></span>
+            <input id="quoteValidUntil" name="validUntil" type="date" required>
+          </label>
+        </div>
+        <div class="quote-lines-heading">
+          <div><strong>Productos cotizados</strong><small>Precio e impuesto se toman del catálogo revisado.</small></div>
+          <button class="secondary-button" id="addQuoteItemButton" type="button">Agregar línea ＋</button>
+        </div>
+        <div class="quote-item-list" id="quoteItems"></div>
+        <label class="form-field">
+          <span>Condiciones y observaciones</span>
+          <textarea name="notes" maxlength="2000" rows="3" placeholder="Vigencia, tiempos de entrega o condiciones comerciales"></textarea>
+        </label>
+        <p class="form-error" id="quoteFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelQuoteButton" type="button">Volver</button>
+          <button class="primary-button compact" id="saveQuoteButton" type="submit">Guardar cotización</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog billing-flow-dialog" id="billingNoteDialog" aria-labelledby="billingNoteDialogTitle">
+      <form class="company-form" id="billingNoteForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Ajuste fiscal</p>
+            <h2 id="billingNoteDialogTitle">Nueva nota crédito o débito</h2>
+          </div>
+          <button class="icon-button" id="closeBillingNoteDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy">Solo se habilitan facturas electrónicas aceptadas. La nota conserva el vínculo y la trazabilidad del documento original.</p>
+        <div class="form-grid">
+          <label class="form-field full">
+            <span>Factura aceptada <b>*</b></span>
+            <select id="billingNoteDocumentId" name="originalDocumentId" required></select>
+          </label>
+          <label class="form-field">
+            <span>Tipo <b>*</b></span>
+            <select name="noteType" required>
+              <option value="CREDIT_NOTE">Nota crédito</option>
+              <option value="DEBIT_NOTE">Nota débito</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Código causal <b>*</b></span>
+            <input name="reasonCode" maxlength="20" required placeholder="Ej. 1">
+          </label>
+          <label class="form-field">
+            <span>Valor total <b>*</b></span>
+            <input name="total" type="number" min="0.01" step="0.01" required placeholder="0">
+          </label>
+        </div>
+        <label class="form-field">
+          <span>Motivo detallado <b>*</b></span>
+          <textarea name="reason" maxlength="1000" rows="3" required placeholder="Explica la corrección o el cargo adicional"></textarea>
+        </label>
+        <p class="form-error" id="billingNoteFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelBillingNoteButton" type="button">Volver</button>
+          <button class="primary-button compact" id="saveBillingNoteButton" type="submit">Crear nota</button>
+        </div>
+      </form>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

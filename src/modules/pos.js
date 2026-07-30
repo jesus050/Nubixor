@@ -4,6 +4,12 @@ import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
+import {
+  postCashMovementAccounting,
+  postCashSessionClosingAccounting,
+  postCashSessionOpeningAccounting,
+  postSaleAccounting,
+} from '../accounting.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -13,6 +19,7 @@ const CASH_MOVEMENT_TYPES = new Set(['INCOME', 'EXPENSE', 'WITHDRAWAL']);
 const CASH_DENOMINATIONS = new Set([
   100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50,
 ]);
+const POS_STOCK_SOURCES = new Set(['DISPLAY', 'AVAILABLE']);
 
 router.use(requireTenant);
 
@@ -36,21 +43,239 @@ function validDate(value) {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
+function money(value) {
+  return Math.round(Number(value) * 100) / 100;
+}
+
+export function resolveCommercialPrice(product, quantity, pricing = {}) {
+  const basePrice = Number(product.sale_price);
+  const scale = (pricing.prices || [])
+    .filter((item) => Number(item.min_quantity) <= quantity)
+    .sort((left, right) => Number(right.min_quantity) - Number(left.min_quantity))[0];
+  let unitPrice = scale ? Number(scale.unit_price) : basePrice;
+  let source = scale ? 'PRICE_LIST' : 'BASE';
+  let label = scale?.price_list_name || 'Precio unitario';
+  for (const promotion of pricing.promotions || []) {
+    if (Number(promotion.min_quantity) > quantity) continue;
+    const promotionalPrice = promotion.discount_type === 'FIXED_PRICE'
+      ? Number(promotion.discount_value)
+      : money(unitPrice * (1 - Number(promotion.discount_value) / 100));
+    if (promotionalPrice <= unitPrice) {
+      unitPrice = promotionalPrice;
+      source = 'PROMOTION';
+      label = promotion.name;
+    }
+  }
+  return {
+    unitPrice: money(unitPrice),
+    basePrice: money(basePrice),
+    source,
+    label,
+    discountAmount: money(Math.max(0, basePrice - unitPrice)),
+  };
+}
+
+async function loadCommercialPricing(client, products, customerId = null) {
+  if (!products.length) return new Map();
+  const productIds = products.map((product) => product.id);
+  const prices = customerId
+    ? await client.query(
+      `SELECT price.product_id,price.min_quantity,price.unit_price,
+              list.name price_list_name
+       FROM sales_product_prices price
+       JOIN sales_price_lists list
+         ON list.tenant_id=price.tenant_id
+        AND list.id=price.price_list_id AND list.active=TRUE
+       JOIN customers customer
+         ON customer.tenant_id=price.tenant_id
+        AND customer.sales_price_list_id=price.price_list_id
+        AND customer.id=$2 AND customer.active=TRUE
+       WHERE price.product_id=ANY($1::uuid[]) AND price.active=TRUE`,
+      [productIds, customerId],
+    )
+    : { rows: [] };
+  const promotions = await client.query(
+    `SELECT product_id,name,discount_type,discount_value,min_quantity
+     FROM sales_promotions
+     WHERE product_id=ANY($1::uuid[]) AND active=TRUE
+       AND now() BETWEEN starts_at AND ends_at`,
+    [productIds],
+  );
+  const result = new Map();
+  for (const product of products) {
+    result.set(product.id, {
+      prices: prices.rows.filter((item) => item.product_id === product.id),
+      promotions: promotions.rows.filter((item) => item.product_id === product.id),
+    });
+  }
+  return result;
+}
+
+function normalizePosStockSource(value) {
+  const normalized = typeof value === 'string'
+    ? value.trim().toUpperCase()
+    : 'DISPLAY';
+  if (!POS_STOCK_SOURCES.has(normalized)) {
+    throw new AppError(
+      'La ubicación de salida debe ser Exhibición o Bodega.',
+      422,
+      'POS_STOCK_SOURCE_INVALID',
+    );
+  }
+  return normalized;
+}
+
+function normalizeSaleTenders(body, saleTotal) {
+  const supplied = Array.isArray(body.payments) ? body.payments : null;
+  const legacyMethod = typeof body.paymentMethod === 'string'
+    ? body.paymentMethod.trim().toUpperCase()
+    : '';
+  const candidates = supplied || [{
+    method: legacyMethod,
+    amount: saleTotal,
+    tenderedAmount: legacyMethod === 'CASH' ? body.cashReceived : null,
+    receivingCompanyId: body.transferReceivingCompanyId,
+    bankAccountId: body.transferBankAccountId,
+    reference: body.paymentReference,
+  }];
+  if (!candidates.length || candidates.length > 3) {
+    throw new AppError(
+      'Registra entre uno y tres medios de pago.',
+      422,
+      'INVALID_SALE_TENDERS',
+    );
+  }
+  const tenders = candidates.map((candidate) => {
+    const method = typeof candidate?.method === 'string'
+      ? candidate.method.trim().toUpperCase()
+      : '';
+    const amount = money(candidate?.amount);
+    const tenderedAmount = candidate?.tenderedAmount === null ||
+      candidate?.tenderedAmount === undefined ||
+      candidate?.tenderedAmount === ''
+      ? null
+      : money(candidate.tenderedAmount);
+    return {
+      method,
+      amount,
+      tenderedAmount,
+      receivingCompanyId: candidate?.receivingCompanyId || null,
+      bankAccountId: candidate?.bankAccountId || null,
+      reference: normalizedText(candidate?.reference, 120),
+    };
+  });
+  const methods = tenders.map((tender) => tender.method);
+  if (
+    new Set(methods).size !== methods.length ||
+    tenders.some((tender) =>
+      !['CASH', 'CARD', 'TRANSFER'].includes(tender.method) ||
+      !Number.isFinite(tender.amount) ||
+      tender.amount <= 0)
+  ) {
+    throw new AppError(
+      'Cada medio de pago debe aparecer una vez y tener un valor positivo.',
+      422,
+      'INVALID_SALE_TENDERS',
+    );
+  }
+  if (Math.abs(money(tenders.reduce((sum, tender) => sum + tender.amount, 0)) - saleTotal) >= 0.01) {
+    throw new AppError(
+      'La suma de los medios de pago debe ser igual al total de la venta.',
+      422,
+      'SALE_TENDERS_MISMATCH',
+    );
+  }
+  for (const tender of tenders) {
+    if (
+      tender.method === 'CASH' &&
+      (!Number.isFinite(tender.tenderedAmount) || tender.tenderedAmount < tender.amount)
+    ) {
+      throw new AppError(
+        'El efectivo recibido debe cubrir la parte pagada en efectivo.',
+        422,
+        'INSUFFICIENT_CASH_RECEIVED',
+      );
+    }
+    if (
+      tender.method === 'TRANSFER' &&
+      (
+        typeof tender.receivingCompanyId !== 'string' ||
+        !UUID_PATTERN.test(tender.receivingCompanyId) ||
+        typeof tender.bankAccountId !== 'string' ||
+        !UUID_PATTERN.test(tender.bankAccountId) ||
+        !tender.reference
+      )
+    ) {
+      throw new AppError(
+        'La transferencia requiere empresa receptora, cuenta bancaria y referencia.',
+        422,
+        'TRANSFER_ACCOUNT_REQUIRED',
+      );
+    }
+  }
+  return tenders;
+}
+
+function allocateTendersBySale(tenders, saleGroups) {
+  const remaining = tenders.map((tender, index) => ({
+    ...tender,
+    sourceIndex: index,
+    remaining: tender.amount,
+    change: tender.method === 'CASH'
+      ? money(tender.tenderedAmount - tender.amount)
+      : 0,
+  }));
+  const allocations = new Map();
+  for (const group of saleGroups) {
+    let groupRemaining = group.total;
+    const lines = [];
+    for (const tender of remaining) {
+      if (groupRemaining < 0.01 || tender.remaining < 0.01) continue;
+      const amount = money(Math.min(groupRemaining, tender.remaining));
+      lines.push({ ...tender, amount, tenderedAmount: amount, changeAmount: 0 });
+      tender.remaining = money(tender.remaining - amount);
+      groupRemaining = money(groupRemaining - amount);
+    }
+    if (groupRemaining >= 0.01) {
+      throw new AppError(
+        'No fue posible distribuir los pagos entre los comprobantes.',
+        422,
+        'SALE_TENDER_ALLOCATION_FAILED',
+      );
+    }
+    allocations.set(group.companyId, lines);
+  }
+  for (const tender of remaining.filter((item) => item.method === 'CASH')) {
+    const allocatedLines = [...allocations.values()]
+      .flat()
+      .filter((line) => line.sourceIndex === tender.sourceIndex);
+    const last = allocatedLines.at(-1);
+    if (last) {
+      last.changeAmount = tender.change;
+      last.tenderedAmount = money(last.amount + tender.change);
+    }
+  }
+  return allocations;
+}
+
 router.get('/customers', asyncHandler(async (req, res) => {
   const search = normalizedText(req.query.search, 120);
   const result = await query(
     `SELECT c.id, c.name, c.document_type, c.document_number, c.email,
-            c.phone, c.active,
+            c.phone, c.active,c.sales_price_list_id,
+            list.name price_list_name,
             COALESCE(SUM(i.total - i.paid_amount)
               FILTER (WHERE i.status IN ('ISSUED','PARTIAL')), 0) outstanding
      FROM customers c
+     LEFT JOIN sales_price_lists list
+       ON list.tenant_id=c.tenant_id AND list.id=c.sales_price_list_id
      LEFT JOIN ar_invoices i
        ON i.customer_id = c.id AND i.tenant_id = c.tenant_id
      WHERE c.tenant_id = $1 AND c.active = TRUE
        AND ($2::text IS NULL OR c.name ILIKE '%' || $2 || '%'
          OR c.document_number ILIKE '%' || $2 || '%'
          OR c.phone ILIKE '%' || $2 || '%')
-     GROUP BY c.id
+     GROUP BY c.id,list.name
      ORDER BY c.name
      LIMIT 300`,
     [req.context.tenantId, search],
@@ -117,6 +342,39 @@ router.post('/customers', asyncHandler(async (req, res) => {
   }
 }));
 
+router.get('/bank-accounts', asyncHandler(async (req, res) => {
+  const cashSessionId = req.query.cashSessionId;
+  if (typeof cashSessionId !== 'string' || !UUID_PATTERN.test(cashSessionId)) {
+    throw new AppError(
+      'Selecciona un turno de caja válido.',
+      422,
+      'INVALID_CASH_SESSION_ID',
+    );
+  }
+  const result = await query(
+    `SELECT account.id, account.tenant_id company_id,
+            company.trade_name company_name, account.bank_name,
+            account.account_name, account.masked_account, account.currency
+     FROM cash_sessions session
+     JOIN cash_register_companies register_company
+       ON register_company.cash_register_id = session.cash_register_id
+      AND register_company.active = TRUE
+     JOIN tenant_users membership
+       ON membership.tenant_id = register_company.company_id
+      AND membership.user_id = $3
+      AND membership.status = 'ACTIVE'
+     JOIN bank_accounts account
+       ON account.tenant_id = register_company.company_id
+      AND account.active = TRUE
+     JOIN tenants company ON company.id = account.tenant_id
+     WHERE session.id = $1 AND session.tenant_id = $2
+       AND session.status = 'OPEN'
+     ORDER BY company.trade_name, account.bank_name, account.account_name`,
+    [cashSessionId, req.context.tenantId, req.context.userId],
+  );
+  res.json(result.rows);
+}));
+
 router.get('/summary', asyncHandler(async (req, res) => {
   const summary = await withTransaction(async (client) => {
     const fiscalProfile = await client.query(
@@ -166,12 +424,16 @@ router.get('/summary', asyncHandler(async (req, res) => {
        JOIN branches b ON b.id = cr.branch_id
        LEFT JOIN LATERAL (
          SELECT
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales,
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CARD'), 0) card_sales,
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
-         FROM sales
-         WHERE cash_session_id = cs.id
-           AND status = 'COMPLETED'
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CASH'), 0) cash_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CARD'), 0) card_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'TRANSFER'), 0) transfer_sales
+         FROM sales sale
+         JOIN sale_payment_tenders tender
+           ON tender.sale_id = sale.id
+          AND tender.seller_company_id = sale.company_id
+          AND tender.reconciliation_status <> 'REVERSED'
+         WHERE sale.cash_session_id = cs.id
+           AND sale.status = 'COMPLETED'
        ) sales ON TRUE
        LEFT JOIN LATERAL (
          SELECT
@@ -209,18 +471,28 @@ router.get('/sessions', asyncHandler(async (req, res) => {
             b.name branch_name,
             COALESCE(sales.sale_count, 0)::integer sale_count,
             COALESCE(sales.sales_total, 0) sales_total,
-            COALESCE(sales.cash_sales, 0) cash_sales,
+            COALESCE(tenders.cash_sales, 0) cash_sales,
             COALESCE(movements.movement_count, 0)::integer movement_count
      FROM cash_sessions cs
      JOIN cash_registers cr ON cr.id = cs.cash_register_id
      JOIN branches b ON b.id = cr.branch_id
      LEFT JOIN LATERAL (
-       SELECT COUNT(*) sale_count, COALESCE(SUM(total), 0) sales_total,
-              COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales
+       SELECT COUNT(*) sale_count, COALESCE(SUM(total), 0) sales_total
        FROM sales
        WHERE cash_session_id = cs.id
          AND status = 'COMPLETED'
      ) sales ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT COALESCE(SUM(tender.amount), 0) cash_sales
+       FROM sales sale
+       JOIN sale_payment_tenders tender
+         ON tender.sale_id = sale.id
+        AND tender.seller_company_id = sale.company_id
+        AND tender.method = 'CASH'
+        AND tender.reconciliation_status <> 'REVERSED'
+       WHERE sale.cash_session_id = cs.id
+         AND sale.status = 'COMPLETED'
+     ) tenders ON TRUE
      LEFT JOIN LATERAL (
        SELECT COUNT(*) movement_count
        FROM cash_movements
@@ -263,12 +535,16 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
        JOIN branches b ON b.id = cr.branch_id
        LEFT JOIN LATERAL (
          SELECT
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CASH'), 0) cash_sales,
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'CARD'), 0) card_sales,
-           COALESCE(SUM(total) FILTER (WHERE payment_method = 'TRANSFER'), 0) transfer_sales
-         FROM sales
-         WHERE cash_session_id = cs.id
-           AND status = 'COMPLETED'
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CASH'), 0) cash_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CARD'), 0) card_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'TRANSFER'), 0) transfer_sales
+         FROM sales sale
+         JOIN sale_payment_tenders tender
+           ON tender.sale_id = sale.id
+          AND tender.seller_company_id = sale.company_id
+          AND tender.reconciliation_status <> 'REVERSED'
+         WHERE sale.cash_session_id = cs.id
+           AND sale.status = 'COMPLETED'
        ) sale_totals ON TRUE
        LEFT JOIN LATERAL (
          SELECT
@@ -335,6 +611,7 @@ router.get('/catalog', asyncHandler(async (req, res) => {
   }
   const result = await query(
     `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
+            p.product_kind,
             c.id category_id, c.name category_name,
             tc.name tax_name, tc.rate tax_rate,
             COALESCE(ib.on_hand, 0) on_hand,
@@ -360,9 +637,15 @@ router.get('/catalog', asyncHandler(async (req, res) => {
          SELECT 1 FROM warehouses
          WHERE id = $2 AND tenant_id = $1 AND active = TRUE
            AND ($3::uuid IS NULL OR branch_id = $3)
+           AND ($4::boolean = FALSE OR warehouse_type = 'DISPLAY')
        )
      ORDER BY p.name`,
-    [req.context.tenantId, warehouseId, req.context.branchId],
+    [
+      req.context.tenantId,
+      warehouseId,
+      req.context.branchId,
+      req.context.user?.role_code === 'CASHIER',
+    ],
   );
   res.json(result.rows);
 }));
@@ -372,13 +655,47 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
   if (typeof cashSessionId !== 'string' || !UUID_PATTERN.test(cashSessionId)) {
     return res.status(422).json({ error: 'cashSessionId debe ser un UUID válido.' });
   }
+  const stockSource = normalizePosStockSource(req.query.stockSource);
+  const customerId = req.query.customerId || null;
+  if (customerId && (typeof customerId !== 'string' || !UUID_PATTERN.test(customerId))) {
+    return res.status(422).json({ error: 'El cliente no es válido.' });
+  }
   const result = await query(
     `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
+            p.product_kind,
             p.seller_company_id, seller.trade_name seller_company_name,
-            crc.default_warehouse_id warehouse_id, warehouse.name warehouse_name,
+            warehouse.id warehouse_id, warehouse.name warehouse_name,
+            warehouse.warehouse_type,
             c.id category_id, c.name category_name,
             tc.name tax_name, tc.rate tax_rate,
             COALESCE(ib.on_hand, 0) on_hand,
+            customer_price_list.name customer_price_list_name,
+            COALESCE((
+              SELECT jsonb_agg(jsonb_build_object(
+                'minQuantity',price.min_quantity,
+                'unitPrice',price.unit_price,
+                'priceListName',customer_price_list.name
+              ) ORDER BY price.min_quantity)
+              FROM sales_product_prices price
+              WHERE price.tenant_id=p.tenant_id
+                AND price.product_id=p.id
+                AND price.price_list_id=customer_price_list.id
+                AND price.active=TRUE
+            ),'[]'::jsonb) price_rules,
+            COALESCE((
+              SELECT jsonb_agg(jsonb_build_object(
+                'name',promotion.name,
+                'discountType',promotion.discount_type,
+                'discountValue',promotion.discount_value,
+                'minQuantity',promotion.min_quantity,
+                'endsAt',promotion.ends_at
+              ))
+              FROM sales_promotions promotion
+              WHERE promotion.tenant_id=p.tenant_id
+                AND promotion.product_id=p.id
+                AND promotion.active=TRUE
+                AND now() BETWEEN promotion.starts_at AND promotion.ends_at
+            ),'[]'::jsonb) promotions,
             pi.public_url image_url, pi.alt_text image_alt
      FROM cash_sessions session
      JOIN cash_register_companies crc
@@ -387,11 +704,34 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
        ON membership.tenant_id = crc.company_id
       AND membership.user_id = $3
       AND membership.status = 'ACTIVE'
+     LEFT JOIN roles membership_role
+       ON membership_role.id = membership.role_id
+      AND membership_role.tenant_id = membership.tenant_id
+      AND membership_role.active = TRUE
      JOIN tenants seller ON seller.id = crc.company_id AND seller.status = 'ACTIVE'
-     JOIN warehouses warehouse
-       ON warehouse.id = crc.default_warehouse_id
-      AND warehouse.tenant_id = crc.company_id
-      AND warehouse.active = TRUE
+     LEFT JOIN customers selected_customer
+       ON selected_customer.id=$5
+      AND selected_customer.tenant_id=crc.company_id
+      AND selected_customer.active=TRUE
+     LEFT JOIN sales_price_lists customer_price_list
+       ON customer_price_list.id=selected_customer.sales_price_list_id
+      AND customer_price_list.tenant_id=selected_customer.tenant_id
+      AND customer_price_list.active=TRUE
+     JOIN warehouses default_warehouse
+       ON default_warehouse.id = crc.default_warehouse_id
+      AND default_warehouse.tenant_id = crc.company_id
+      AND default_warehouse.active = TRUE
+     JOIN LATERAL (
+       SELECT candidate.id, candidate.name, candidate.warehouse_type
+       FROM warehouses candidate
+       WHERE candidate.tenant_id = crc.company_id
+         AND candidate.branch_id = default_warehouse.branch_id
+         AND candidate.warehouse_type = $4
+         AND candidate.active = TRUE
+       ORDER BY (candidate.id = crc.default_warehouse_id) DESC,
+                candidate.name, candidate.id
+       LIMIT 1
+     ) warehouse ON TRUE
      JOIN products p
        ON p.seller_company_id = crc.company_id
       AND p.owner_company_id = crc.company_id
@@ -404,7 +744,7 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
      LEFT JOIN inventory_balances ib
        ON ib.product_id = p.id
       AND ib.tenant_id = p.owner_company_id
-      AND ib.warehouse_id = crc.default_warehouse_id
+      AND ib.warehouse_id = warehouse.id
      LEFT JOIN LATERAL (
        SELECT public_url, alt_text
        FROM product_images
@@ -415,8 +755,31 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
      WHERE session.id = $1
        AND session.tenant_id = $2
        AND session.status = 'OPEN'
+       AND (
+         EXISTS(
+           SELECT 1
+           FROM role_permissions permission
+           WHERE permission.tenant_id = membership.tenant_id
+             AND permission.role_id = membership.role_id
+             AND permission.permission_code = 'sales.operate'
+         )
+         OR (
+           membership.role_id IS NULL
+           AND membership.role_code IN ('OWNER','ADMIN','OPERATIONS','CASHIER')
+         )
+       )
+       AND (
+         COALESCE(membership_role.code, membership.role_code) <> 'CASHIER'
+         OR warehouse.warehouse_type = 'DISPLAY'
+       )
      ORDER BY seller.trade_name, p.name`,
-    [cashSessionId, req.context.tenantId, req.context.userId],
+    [
+      cashSessionId,
+      req.context.tenantId,
+      req.context.userId,
+      stockSource,
+      customerId,
+    ],
   );
   res.json(result.rows);
 }));
@@ -514,6 +877,11 @@ router.post('/sessions', asyncHandler(async (req, res) => {
          RETURNING id, tenant_id, cash_register_id, status, opening_amount, opened_at`,
         [req.context.tenantId, cashRegisterId, amount, req.context.userId],
       );
+      await postCashSessionOpeningAccounting(client, {
+        tenantId: req.context.tenantId,
+        session: result.rows[0],
+        userId: req.context.userId,
+      });
       await writeAudit(client, {
         tenantId: req.context.tenantId,
         userId: req.context.userId,
@@ -589,6 +957,11 @@ router.post('/sessions/:id/movements', asyncHandler(async (req, res) => {
         req.context.userId,
       ],
     );
+    await postCashMovementAccounting(client, {
+      tenantId: req.context.tenantId,
+      movement: result.rows[0],
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -642,17 +1015,39 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
     const current = await client.query(
       `SELECT cs.id, cs.opening_amount,
               COALESCE(sales.cash_sales, 0) cash_sales,
+              COALESCE(sales.card_sales, 0) card_sales,
+              COALESCE(sales.transfer_sales, 0) transfer_sales,
+              COALESCE(sales.sale_count, 0)::integer sale_count,
+              COALESCE(sales.sales_total, 0) sales_total,
               COALESCE(movements.income, 0) manual_income,
               COALESCE(movements.expense, 0) expenses,
               COALESCE(movements.withdrawal, 0) withdrawals
        FROM cash_sessions cs
        JOIN cash_registers cr ON cr.id = cs.cash_register_id
        LEFT JOIN LATERAL (
-         SELECT COALESCE(SUM(total), 0) cash_sales
-         FROM sales
-         WHERE cash_session_id = cs.id
-           AND payment_method = 'CASH'
-           AND status = 'COMPLETED'
+         SELECT
+           (
+             SELECT COUNT(*)
+             FROM sales session_sale
+             WHERE session_sale.cash_session_id = cs.id
+               AND session_sale.status = 'COMPLETED'
+           ) sale_count,
+           (
+             SELECT COALESCE(SUM(session_sale.total), 0)
+             FROM sales session_sale
+             WHERE session_sale.cash_session_id = cs.id
+               AND session_sale.status = 'COMPLETED'
+           ) sales_total,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CASH'), 0) cash_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CARD'), 0) card_sales,
+           COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'TRANSFER'), 0) transfer_sales
+         FROM sales sale
+         JOIN sale_payment_tenders tender
+           ON tender.sale_id = sale.id
+          AND tender.seller_company_id = sale.company_id
+          AND tender.reconciliation_status <> 'REVERSED'
+         WHERE sale.cash_session_id = cs.id
+           AND sale.status = 'COMPLETED'
        ) sales ON TRUE
        LEFT JOIN LATERAL (
          SELECT
@@ -718,6 +1113,11 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
         req.context.tenantId,
       ],
     );
+    await postCashSessionClosingAccounting(client, {
+      tenantId: req.context.tenantId,
+      session: result.rows[0],
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -728,7 +1128,18 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
       after: result.rows[0],
       reason: notes || 'Cierre sin diferencias',
     });
-    return result.rows[0];
+    return {
+      ...result.rows[0],
+      sale_count: current.rows[0].sale_count,
+      sales_total: current.rows[0].sales_total,
+      cash_sales: current.rows[0].cash_sales,
+      card_sales: current.rows[0].card_sales,
+      transfer_sales: current.rows[0].transfer_sales,
+      manual_income: current.rows[0].manual_income,
+      expenses: current.rows[0].expenses,
+      withdrawals: current.rows[0].withdrawals,
+      count_lines: normalizedCounts,
+    };
   });
   res.json(session);
 }));
@@ -736,20 +1147,26 @@ router.post('/sessions/:id/close', asyncHandler(async (req, res) => {
 router.post('/sales/grouped', asyncHandler(async (req, res) => {
   const {
     cashSessionId,
+    stockSource: requestedStockSource = 'DISPLAY',
     paymentMethod,
     cashReceived,
+    payments = null,
     transferReceivingCompanyId = null,
+    transferBankAccountId = null,
     paymentReference = null,
+    customerId = null,
     saleTerms = 'IMMEDIATE',
     items,
   } = req.body;
+  const stockSource = normalizePosStockSource(requestedStockSource);
   const normalizedPayment = typeof paymentMethod === 'string'
     ? paymentMethod.trim().toUpperCase()
     : '';
+  const hasPaymentBreakdown = Array.isArray(payments) && payments.length > 0;
   if (
     typeof cashSessionId !== 'string' ||
     !UUID_PATTERN.test(cashSessionId) ||
-    !['CASH', 'CARD', 'TRANSFER'].includes(normalizedPayment) ||
+    (!hasPaymentBreakdown && !['CASH', 'CARD', 'TRANSFER'].includes(normalizedPayment)) ||
     saleTerms !== 'IMMEDIATE' ||
     !Array.isArray(items) ||
     !items.length ||
@@ -757,8 +1174,11 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     items.some((item) =>
       typeof item?.productId !== 'string' ||
       !UUID_PATTERN.test(item.productId) ||
+      typeof item?.warehouseId !== 'string' ||
+      !UUID_PATTERN.test(item.warehouseId) ||
       !Number.isFinite(Number(item.quantity)) ||
-      Number(item.quantity) <= 0)
+      Number(item.quantity) <= 0) ||
+    (customerId && (typeof customerId !== 'string' || !UUID_PATTERN.test(customerId)))
   ) {
     return res.status(422).json({
       error: 'La venta conjunta requiere turno, pago de contado y productos válidos.',
@@ -766,23 +1186,17 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
   }
   const consolidated = new Map();
   for (const item of items) {
-    consolidated.set(
-      item.productId,
-      (consolidated.get(item.productId) || 0) + Number(item.quantity),
-    );
-  }
-  const normalizedCashReceived = Number(cashReceived);
-  const normalizedPaymentReference = normalizedText(paymentReference, 120);
-  if (
-    normalizedPayment === 'TRANSFER' &&
-    (
-      typeof transferReceivingCompanyId !== 'string' ||
-      !UUID_PATTERN.test(transferReceivingCompanyId) ||
-      !normalizedPaymentReference
-    )
-  ) {
-    return res.status(422).json({
-      error: 'Selecciona la cuenta que recibió la transferencia y registra su referencia.',
+    const current = consolidated.get(item.productId);
+    if (current && current.warehouseId !== item.warehouseId) {
+      throw new AppError(
+        'Un producto no puede salir de dos ubicaciones en el mismo cobro.',
+        422,
+        'POS_PRODUCT_LOCATION_CONFLICT',
+      );
+    }
+    consolidated.set(item.productId, {
+      warehouseId: item.warehouseId,
+      quantity: (current?.quantity || 0) + Number(item.quantity),
     });
   }
 
@@ -798,13 +1212,28 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     if (!session.rowCount) {
       throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
     }
+    if (customerId) {
+      const customer = await client.query(
+        `SELECT id FROM customers
+         WHERE tenant_id=$1 AND id=$2 AND active=TRUE`,
+        [req.context.tenantId, customerId],
+      );
+      if (!customer.rowCount) {
+        throw new AppError(
+          'El cliente no pertenece a la empresa activa.',
+          404,
+          'CUSTOMER_NOT_FOUND',
+        );
+      }
+    }
 
     const productIds = [...consolidated.keys()];
     const products = await client.query(
       `SELECT p.id, p.sku, p.name, p.cost, p.sale_price,
               p.owner_company_id, p.seller_company_id,
               seller.trade_name seller_company_name,
-              crc.default_warehouse_id warehouse_id,
+              warehouse.id warehouse_id,
+              warehouse.warehouse_type,
               warehouse.branch_id warehouse_branch_id,
               p.tax_category_id, tc.rate tax_rate,
               profile.default_document_type
@@ -814,13 +1243,23 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
          ON crc.cash_register_id = $1
         AND crc.company_id = p.seller_company_id
         AND crc.active = TRUE
+       JOIN warehouses register_default
+         ON register_default.id = crc.default_warehouse_id
+        AND register_default.tenant_id = crc.company_id
+        AND register_default.active = TRUE
        JOIN tenant_users membership
          ON membership.tenant_id = p.seller_company_id
         AND membership.user_id = $2
         AND membership.status = 'ACTIVE'
+       LEFT JOIN roles membership_role
+         ON membership_role.id = membership.role_id
+        AND membership_role.tenant_id = membership.tenant_id
+        AND membership_role.active = TRUE
        JOIN warehouses warehouse
-         ON warehouse.id = crc.default_warehouse_id
+         ON warehouse.id = ANY($4::uuid[])
         AND warehouse.tenant_id = p.owner_company_id
+        AND warehouse.branch_id = register_default.branch_id
+        AND warehouse.warehouse_type = $5
         AND warehouse.active = TRUE
        JOIN tax_categories tc
          ON tc.id = p.tax_category_id
@@ -831,29 +1270,78 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
          AND p.deleted_at IS NULL
          AND p.active = TRUE
          AND p.tax_review_status = 'REVIEWED'
+         AND (
+           EXISTS(
+             SELECT 1
+             FROM role_permissions permission
+             WHERE permission.tenant_id = membership.tenant_id
+               AND permission.role_id = membership.role_id
+               AND permission.permission_code = 'sales.operate'
+           )
+           OR (
+             membership.role_id IS NULL
+             AND membership.role_code IN ('OWNER','ADMIN','OPERATIONS','CASHIER')
+           )
+         )
+         AND (
+           COALESCE(membership_role.code, membership.role_code) <> 'CASHIER'
+           OR warehouse.warehouse_type = 'DISPLAY'
+         )
        FOR SHARE OF p`,
-      [session.rows[0].cash_register_id, req.context.userId, productIds],
+      [
+        session.rows[0].cash_register_id,
+        req.context.userId,
+        productIds,
+        [...consolidated.values()].map((item) => item.warehouseId),
+        stockSource,
+      ],
     );
-    if (products.rowCount !== productIds.length) {
+    const productById = new Map(products.rows.map((product) => [product.id, product]));
+    const invalidSelection = productIds.some((productId) => {
+      const product = productById.get(productId);
+      return !product ||
+        product.warehouse_id !== consolidated.get(productId).warehouseId;
+    });
+    if (products.rowCount !== productIds.length || invalidSelection) {
       throw new AppError(
-        'Uno o más productos no están autorizados para esta caja.',
-        422,
-        'SHARED_SALE_PRODUCT_INVALID',
+        stockSource === 'DISPLAY'
+          ? 'Uno o más productos no están autorizados para esta exhibición.'
+          : 'Tu perfil no permite vender uno o más productos directamente desde bodega.',
+        403,
+        'POS_STOCK_SOURCE_DENIED',
       );
     }
 
+    const commercialPricing = await loadCommercialPricing(
+      client,
+      products.rows,
+      customerId,
+    );
     const groups = new Map();
     let grandTotal = 0;
     let grandTax = 0;
     for (const product of products.rows) {
-      const quantity = consolidated.get(product.id);
-      const unitPrice = Number(product.sale_price);
+      const quantity = consolidated.get(product.id).quantity;
+      const appliedPrice = resolveCommercialPrice(
+        product,
+        quantity,
+        commercialPricing.get(product.id),
+      );
+      const unitPrice = appliedPrice.unitPrice;
       const taxRate = Number(product.tax_rate);
       const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
       const taxAmount = taxRate > 0
         ? Math.round((lineTotal * taxRate / (100 + taxRate)) * 100) / 100
         : 0;
-      const line = { ...product, quantity, unitPrice, taxRate, lineTotal, taxAmount };
+      const line = {
+        ...product,
+        quantity,
+        unitPrice,
+        taxRate,
+        lineTotal,
+        taxAmount,
+        pricing: appliedPrice,
+      };
       const group = groups.get(product.seller_company_id) || [];
       group.push(line);
       groups.set(product.seller_company_id, group);
@@ -862,26 +1350,58 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     }
     grandTotal = Math.round(grandTotal * 100) / 100;
     grandTax = Math.round(grandTax * 100) / 100;
-    if (
-      normalizedPayment === 'TRANSFER' &&
-      !groups.has(transferReceivingCompanyId)
-    ) {
-      throw new AppError(
-        'La cuenta receptora debe pertenecer a una empresa incluida en la venta.',
-        422,
-        'TRANSFER_RECEIVER_INVALID',
+    const tenders = normalizeSaleTenders({
+      payments,
+      paymentMethod: normalizedPayment,
+      cashReceived,
+      transferReceivingCompanyId,
+      transferBankAccountId,
+      paymentReference,
+    }, grandTotal);
+    const transferTenders = tenders.filter((tender) => tender.method === 'TRANSFER');
+    if (transferTenders.length) {
+      const bankIds = transferTenders.map((tender) => tender.bankAccountId);
+      const bankAccounts = await client.query(
+        `SELECT account.id, account.tenant_id, account.bank_name,
+                account.account_name, account.masked_account
+         FROM bank_accounts account
+         JOIN cash_register_companies register_company
+           ON register_company.cash_register_id = $1
+          AND register_company.company_id = account.tenant_id
+          AND register_company.active = TRUE
+         JOIN tenant_users membership
+           ON membership.tenant_id = account.tenant_id
+          AND membership.user_id = $2
+          AND membership.status = 'ACTIVE'
+         WHERE account.id = ANY($3::uuid[]) AND account.active = TRUE
+         FOR SHARE OF account`,
+        [session.rows[0].cash_register_id, req.context.userId, bankIds],
       );
+      const bankById = new Map(bankAccounts.rows.map((account) => [account.id, account]));
+      for (const tender of transferTenders) {
+        const account = bankById.get(tender.bankAccountId);
+        if (
+          !account ||
+          account.tenant_id !== tender.receivingCompanyId ||
+          !groups.has(tender.receivingCompanyId)
+        ) {
+          throw new AppError(
+            'La cuenta bancaria debe pertenecer a una empresa incluida en la venta.',
+            422,
+            'TRANSFER_RECEIVER_INVALID',
+          );
+        }
+        tender.bankName = account.bank_name;
+        tender.accountName = account.account_name;
+        tender.maskedAccount = account.masked_account;
+      }
     }
-    if (
-      normalizedPayment === 'CASH' &&
-      (!Number.isFinite(normalizedCashReceived) || normalizedCashReceived < grandTotal)
-    ) {
-      throw new AppError(
-        'El efectivo recibido es menor que el total de la compra.',
-        422,
-        'INSUFFICIENT_CASH_RECEIVED',
-      );
-    }
+    const saleGroups = [...groups].map(([companyId, lines]) => ({
+      companyId,
+      total: money(lines.reduce((sum, line) => sum + line.lineTotal, 0)),
+    }));
+    const tenderAllocations = allocateTendersBySale(tenders, saleGroups);
+    const checkoutPaymentMethod = tenders.length === 1 ? tenders[0].method : 'MIXED';
 
     const receipts = [];
     for (const [companyId, lines] of groups) {
@@ -892,6 +1412,17 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         lines.reduce((sum, line) => sum + line.taxAmount, 0) * 100,
       ) / 100;
       const groupSubtotal = Math.round((groupTotal - groupTax) * 100) / 100;
+      const groupTenders = tenderAllocations.get(companyId) || [];
+      const groupPaymentMethods = new Set(groupTenders.map((tender) => tender.method));
+      const groupPaymentMethod = groupPaymentMethods.size === 1
+        ? groupTenders[0].method
+        : 'MIXED';
+      const groupCashTendered = money(groupTenders
+        .filter((tender) => tender.method === 'CASH')
+        .reduce((sum, tender) => sum + tender.tenderedAmount, 0));
+      const groupCashChange = money(groupTenders
+        .filter((tender) => tender.method === 'CASH')
+        .reduce((sum, tender) => sum + tender.changeAmount, 0));
       const firstLine = lines[0];
       let resolution = null;
       if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
@@ -913,26 +1444,52 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
            tenant_id, company_id, seller_company_id, cash_session_id,
            warehouse_id, payment_method, subtotal, tax_total, total,
            cash_received, cash_change, created_by, sale_terms,
-           document_type, billing_resolution_id
+           document_type, billing_resolution_id,customer_id
          )
-         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,0,$9,'IMMEDIATE',$10,$11)
+         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13)
          RETURNING id, sequence_number, status, payment_method, subtotal,
-                   tax_total, total, document_type, created_at`,
+                   tax_total, total, cash_received, cash_change,
+                   document_type, created_at`,
         [
           companyId,
           cashSessionId,
           firstLine.warehouse_id,
-          normalizedPayment,
+          groupPaymentMethod,
           groupSubtotal,
           groupTax,
           groupTotal,
-          normalizedPayment === 'CASH' ? groupTotal : null,
+          groupCashTendered || null,
+          groupCashChange,
           req.context.userId,
           firstLine.default_document_type,
           resolution?.id || null,
+          companyId === req.context.tenantId ? customerId : null,
         ],
       );
       const sale = saleResult.rows[0];
+      for (const tender of groupTenders) {
+        await client.query(
+          `INSERT INTO sale_payment_tenders(
+             sale_id, seller_company_id, receiving_company_id, bank_account_id,
+             method, amount, tendered_amount, change_amount, reference,
+             reconciliation_status, recorded_by
+           )
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [
+            sale.id,
+            companyId,
+            tender.method === 'TRANSFER' ? tender.receivingCompanyId : companyId,
+            tender.method === 'TRANSFER' ? tender.bankAccountId : null,
+            tender.method,
+            tender.amount,
+            tender.method === 'CASH' ? tender.tenderedAmount : null,
+            tender.changeAmount,
+            tender.reference,
+            tender.method === 'TRANSFER' ? 'PENDING' : 'NOT_APPLICABLE',
+            req.context.userId,
+          ],
+        );
+      }
       let billingDocument = null;
       if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
         let documentNumber = null;
@@ -985,12 +1542,14 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         await client.query(
           `INSERT INTO sale_items(
              tenant_id, sale_id, product_id, sku_snapshot, name_snapshot,
-             quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total
+             quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total,
+             list_unit_price,pricing_source,pricing_label
            )
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
           [
             companyId, sale.id, line.id, line.sku, line.name, line.quantity,
             line.unitPrice, line.cost, line.taxRate, line.taxAmount, line.lineTotal,
+            line.pricing.basePrice,line.pricing.source,line.pricing.label,
           ],
         );
         await client.query(
@@ -1006,7 +1565,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           ],
         );
       }
-      if (normalizedPayment === 'TRANSFER') {
+      const groupTransferTenders = groupTenders
+        .filter((tender) => tender.method === 'TRANSFER');
+      if (groupTransferTenders.length) {
+        const transferTender = groupTransferTenders[0];
         await client.query(
           `INSERT INTO sale_payment_records(
              sale_id, seller_company_id, receiving_company_id, payment_method,
@@ -1016,13 +1578,18 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           [
             sale.id,
             companyId,
-            transferReceivingCompanyId,
-            groupTotal,
-            normalizedPaymentReference,
+            transferTender.receivingCompanyId,
+            money(groupTransferTenders.reduce((sum, tender) => sum + tender.amount, 0)),
+            transferTender.reference,
             req.context.userId,
           ],
         );
       }
+      await postSaleAccounting(client, {
+        tenantId: companyId,
+        saleId: sale.id,
+        userId: req.context.userId,
+      });
       await writeAudit(client, {
         tenantId: companyId,
         userId: req.context.userId,
@@ -1041,6 +1608,18 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
         billingDocument,
         customer: null,
+        payments: groupTenders.map((tender) => ({
+          method: tender.method,
+          amount: tender.amount,
+          tenderedAmount: tender.method === 'CASH' ? tender.tenderedAmount : null,
+          changeAmount: tender.changeAmount,
+          receivingCompanyId: tender.receivingCompanyId,
+          bankAccountId: tender.bankAccountId,
+          bankName: tender.bankName,
+          accountName: tender.accountName,
+          maskedAccount: tender.maskedAccount,
+          reference: tender.reference,
+        })),
         items: lines.map((line) => ({
           productId: line.id,
           name: line.name,
@@ -1060,17 +1639,27 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       subtotal: Math.round((grandTotal - grandTax) * 100) / 100,
       tax_total: grandTax,
       total: grandTotal,
-      payment_method: normalizedPayment,
-      cash_received: normalizedPayment === 'CASH' ? normalizedCashReceived : null,
-      cash_change: normalizedPayment === 'CASH'
-        ? Math.round((normalizedCashReceived - grandTotal) * 100) / 100
-        : null,
-      receiving_company_name: normalizedPayment === 'TRANSFER'
-        ? receipts.find((receipt) => receipt.companyId === transferReceivingCompanyId)?.companyName
-        : null,
-      payment_reference: normalizedPayment === 'TRANSFER'
-        ? normalizedPaymentReference
-        : null,
+      payment_method: checkoutPaymentMethod,
+      payments: tenders.map((tender) => ({
+        method: tender.method,
+        amount: tender.amount,
+        tenderedAmount: tender.tenderedAmount,
+        changeAmount: tender.method === 'CASH'
+          ? money(tender.tenderedAmount - tender.amount)
+          : 0,
+        receivingCompanyId: tender.receivingCompanyId,
+        bankAccountId: tender.bankAccountId,
+        bankName: tender.bankName,
+        accountName: tender.accountName,
+        maskedAccount: tender.maskedAccount,
+        reference: tender.reference,
+      })),
+      cash_received: tenders
+        .filter((tender) => tender.method === 'CASH')
+        .reduce((sum, tender) => sum + tender.tenderedAmount, 0) || null,
+      cash_change: tenders
+        .filter((tender) => tender.method === 'CASH')
+        .reduce((sum, tender) => sum + money(tender.tenderedAmount - tender.amount), 0),
       sale_terms: 'IMMEDIATE',
       customer: null,
       items: receipts.flatMap((receipt) => receipt.items),
@@ -1083,10 +1672,11 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
   if (!UUID_PATTERN.test(req.params.id)) {
     return res.status(422).json({ error: 'La venta debe tener un UUID válido.' });
   }
-  const [saleResult, itemsResult] = await Promise.all([
+  const [saleResult, itemsResult, tenderResult] = await Promise.all([
     query(
-      `SELECT s.id, s.sequence_number, s.status, s.payment_method,
+      `SELECT s.id, s.company_id, s.sequence_number, s.status, s.payment_method,
               s.subtotal, s.tax_total, s.total, s.cash_received, s.cash_change,
+              s.returned_total, s.return_status,
               s.customer_id, s.sale_terms, s.due_date, s.created_at,
               s.document_type sale_document_type,
               c.name customer_name, c.document_type customer_document_type,
@@ -1111,12 +1701,42 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
       [req.params.id, req.context.tenantId, req.context.branchId],
     ),
     query(
-      `SELECT product_id, sku_snapshot sku, name_snapshot name, quantity,
+      `SELECT item.id, item.product_id, item.sku_snapshot sku,
+              item.name_snapshot name, item.quantity,
               unit_price "unitPrice", tax_rate "taxRate",
-              tax_amount "taxAmount", line_total "lineTotal"
-       FROM sale_items
-       WHERE sale_id = $1 AND tenant_id = $2
-       ORDER BY id`,
+              tax_amount "taxAmount", line_total "lineTotal",
+              COALESCE(returned.quantity, 0) "returnedQuantity",
+              item.quantity - COALESCE(returned.quantity, 0) "returnableQuantity"
+       FROM sale_items item
+       LEFT JOIN LATERAL (
+         SELECT SUM(return_item.quantity) quantity
+         FROM sale_return_items return_item
+         JOIN sale_returns header
+           ON header.id = return_item.sale_return_id
+          AND header.company_id = return_item.company_id
+          AND header.status = 'COMPLETED'
+         WHERE return_item.sale_item_id = item.id
+           AND return_item.company_id = item.seller_company_id
+       ) returned ON TRUE
+       WHERE item.sale_id = $1 AND item.tenant_id = $2
+       ORDER BY item.id`,
+      [req.params.id, req.context.tenantId],
+    ),
+    query(
+      `SELECT tender.method, tender.amount, tender.tendered_amount "tenderedAmount",
+              tender.change_amount "changeAmount", tender.reference,
+              tender.reconciliation_status "reconciliationStatus",
+              account.id "bankAccountId", account.bank_name "bankName",
+              account.account_name "accountName", account.masked_account "maskedAccount",
+              receiver.trade_name "receivingCompanyName"
+       FROM sale_payment_tenders tender
+       LEFT JOIN bank_accounts account
+         ON account.id = tender.bank_account_id
+        AND account.tenant_id = tender.receiving_company_id
+       JOIN tenants receiver ON receiver.id = tender.receiving_company_id
+       WHERE tender.sale_id = $1 AND tender.seller_company_id = $2
+         AND tender.reconciliation_status <> 'REVERSED'
+       ORDER BY tender.recorded_at, tender.id`,
       [req.params.id, req.context.tenantId],
     ),
   ]);
@@ -1140,6 +1760,7 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
       invoice_number: sale.invoice_number,
       status: sale.receivable_status,
     } : null,
+    payments: tenderResult.rows,
     items: itemsResult.rows,
   });
 }));
@@ -1151,6 +1772,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     paymentMethod,
     cashReceived,
     transferReceivingCompanyId = null,
+    transferBankAccountId = null,
     paymentReference = null,
     customerId = null,
     saleTerms = 'IMMEDIATE',
@@ -1204,6 +1826,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
     normalizedPayment === 'TRANSFER' &&
     (
       transferReceivingCompanyId !== req.context.tenantId ||
+      typeof transferBankAccountId !== 'string' ||
+      !UUID_PATTERN.test(transferBankAccountId) ||
       !normalizedPaymentReference
     )
   ) {
@@ -1289,7 +1913,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
       customer = customerResult.rows[0];
     }
     const warehouse = await client.query(
-      `SELECT id
+      `SELECT id, warehouse_type
        FROM warehouses
        WHERE id = $1 AND tenant_id = $2 AND branch_id = $3 AND active = TRUE`,
       [warehouseId, req.context.tenantId, session.rows[0].branch_id],
@@ -1299,6 +1923,16 @@ router.post('/sales', asyncHandler(async (req, res) => {
         'La bodega debe pertenecer a la misma sucursal de la caja.',
         422,
         'WAREHOUSE_BRANCH_MISMATCH',
+      );
+    }
+    if (
+      req.context.user?.role_code === 'CASHIER' &&
+      warehouse.rows[0].warehouse_type !== 'DISPLAY'
+    ) {
+      throw new AppError(
+        'El perfil de Caja solo puede vender existencias de exhibición.',
+        403,
+        'CASHIER_DISPLAY_ONLY',
       );
     }
 
@@ -1316,6 +1950,11 @@ router.post('/sales', asyncHandler(async (req, res) => {
       throw new AppError('Uno o más productos no pertenecen a la empresa.', 422, 'SALE_PRODUCT_INVALID');
     }
 
+    const commercialPricing = await loadCommercialPricing(
+      client,
+      productResult.rows,
+      customerId,
+    );
     const lines = [];
     let total = 0;
     let taxTotal = 0;
@@ -1328,7 +1967,12 @@ router.post('/sales', asyncHandler(async (req, res) => {
         );
       }
       const quantity = consolidatedItems.get(product.id);
-      const unitPrice = Number(product.sale_price);
+      const appliedPrice = resolveCommercialPrice(
+        product,
+        quantity,
+        commercialPricing.get(product.id),
+      );
+      const unitPrice = appliedPrice.unitPrice;
       const taxRate = Number(product.tax_rate);
       const lineTotal = Math.round(unitPrice * quantity * 100) / 100;
       const lineTax = taxRate > 0
@@ -1343,24 +1987,39 @@ router.post('/sales', asyncHandler(async (req, res) => {
         taxRate,
         lineTotal,
         lineTax,
+        pricing: appliedPrice,
       });
     }
     total = Math.round(total * 100) / 100;
     taxTotal = Math.round(taxTotal * 100) / 100;
     const subtotal = Math.round((total - taxTotal) * 100) / 100;
-    const tendered = normalizedPayment === 'CASH'
-      ? Math.round(normalizedCashReceived * 100) / 100
-      : null;
-    const change = normalizedPayment === 'CASH'
-      ? Math.round((tendered - total) * 100) / 100
-      : null;
-    if (normalizedPayment === 'CASH' && change < 0) {
-      throw new AppError(
-        'El efectivo recibido es menor que el total de la venta.',
-        422,
-        'INSUFFICIENT_CASH_RECEIVED',
+    const saleTenders = normalizedTerms === 'IMMEDIATE'
+      ? normalizeSaleTenders({
+        paymentMethod: normalizedPayment,
+        cashReceived: normalizedCashReceived,
+        transferReceivingCompanyId,
+        transferBankAccountId,
+        paymentReference: normalizedPaymentReference,
+      }, total)
+      : [];
+    if (normalizedPayment === 'TRANSFER') {
+      const bank = await client.query(
+        `SELECT id FROM bank_accounts
+         WHERE id = $1 AND tenant_id = $2 AND active = TRUE
+         FOR SHARE`,
+        [transferBankAccountId, req.context.tenantId],
       );
+      if (!bank.rowCount) {
+        throw new AppError(
+          'La cuenta bancaria no pertenece a la empresa activa.',
+          422,
+          'TRANSFER_ACCOUNT_INVALID',
+        );
+      }
     }
+    const cashTender = saleTenders.find((tender) => tender.method === 'CASH');
+    const tendered = cashTender?.tenderedAmount || null;
+    const change = cashTender ? money(cashTender.tenderedAmount - cashTender.amount) : null;
 
     const saleResult = await client.query(
       `INSERT INTO sales(
@@ -1392,6 +2051,30 @@ router.post('/sales', asyncHandler(async (req, res) => {
       ],
     );
     const sale = saleResult.rows[0];
+    for (const tender of saleTenders) {
+      await client.query(
+        `INSERT INTO sale_payment_tenders(
+           sale_id, seller_company_id, receiving_company_id, bank_account_id,
+           method, amount, tendered_amount, change_amount, reference,
+           reconciliation_status, recorded_by
+         )
+         VALUES($1,$2,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          sale.id,
+          req.context.tenantId,
+          tender.method === 'TRANSFER' ? transferBankAccountId : null,
+          tender.method,
+          tender.amount,
+          tender.method === 'CASH' ? tender.tenderedAmount : null,
+          tender.method === 'CASH'
+            ? money(tender.tenderedAmount - tender.amount)
+            : 0,
+          tender.reference,
+          tender.method === 'TRANSFER' ? 'PENDING' : 'NOT_APPLICABLE',
+          req.context.userId,
+        ],
+      );
+    }
     let billingDocument = null;
     if (documentType === 'ELECTRONIC_INVOICE') {
       let billingNumber = null;
@@ -1446,9 +2129,10 @@ router.post('/sales', asyncHandler(async (req, res) => {
       await client.query(
         `INSERT INTO sale_items(
            tenant_id, sale_id, product_id, sku_snapshot, name_snapshot,
-           quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total
+           quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total,
+           list_unit_price,pricing_source,pricing_label
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [
           req.context.tenantId,
           sale.id,
@@ -1461,6 +2145,9 @@ router.post('/sales', asyncHandler(async (req, res) => {
           line.taxRate,
           line.lineTax,
           line.lineTotal,
+          line.pricing.basePrice,
+          line.pricing.source,
+          line.pricing.label,
         ],
       );
       await client.query(
@@ -1569,6 +2256,11 @@ router.post('/sales', asyncHandler(async (req, res) => {
       };
     }
 
+    await postSaleAccounting(client, {
+      tenantId: req.context.tenantId,
+      saleId: sale.id,
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -1588,6 +2280,16 @@ router.post('/sales', asyncHandler(async (req, res) => {
       ...transferRecord,
       customer: customer || null,
       receivable,
+      payments: saleTenders.map((tender) => ({
+        method: tender.method,
+        amount: tender.amount,
+        tenderedAmount: tender.tenderedAmount,
+        changeAmount: tender.method === 'CASH'
+          ? money(tender.tenderedAmount - tender.amount)
+          : 0,
+        bankAccountId: tender.bankAccountId,
+        reference: tender.reference,
+      })),
       items: lines.map((line) => ({
         productId: line.id,
         sku: line.sku,

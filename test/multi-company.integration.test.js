@@ -7,7 +7,18 @@ import request from 'supertest';
 import { applyInventoryBalanceDelta } from '../src/modules/inventory.js';
 import companiesRouter from '../src/modules/companies.js';
 import posRouter from '../src/modules/pos.js';
-import { closeDatabase } from '../src/db.js';
+import returnsRouter from '../src/modules/returns.js';
+import expensesRouter from '../src/modules/expenses.js';
+import thirdPartiesRouter from '../src/modules/third-parties.js';
+import inventoryRouter from '../src/modules/inventory.js';
+import moduleSettingsRouter from '../src/modules/module-settings.js';
+import logisticsRouter from '../src/modules/logistics.js';
+import productStructuresRouter from '../src/modules/product-structures.js';
+import pricingRouter from '../src/modules/pricing.js';
+import { closeDatabase, withTransaction } from '../src/db.js';
+import { reverseJournalEntry } from '../src/accounting.js';
+import { requireTenantModule } from '../src/module-gates.js';
+import { errorHandler } from '../src/middleware.js';
 
 const connectionString =
   process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
@@ -601,6 +612,7 @@ test(
   async () => {
     const pool = new pg.Pool({ connectionString });
     const ownerId = randomUUID();
+    const cashierId = randomUUID();
     const email = `owner-${ownerId}@example.test`;
     let companyId = null;
     try {
@@ -622,7 +634,29 @@ test(
         next();
       });
       application.use('/api/companies', companiesRouter);
+      application.use('/api/pos', returnsRouter);
       application.use('/api/pos', posRouter);
+      application.use('/api/expenses', expensesRouter);
+      application.use('/api/third-parties', thirdPartiesRouter);
+      application.use('/api/module-settings', moduleSettingsRouter);
+      application.use('/api/product-structures', productStructuresRouter);
+      application.use('/api/pricing', pricingRouter);
+      application.use(
+        '/api/inventory',
+        (req, res, next) => {
+          if (/^\/(replenishments|incidents|transfer-orders|transfers)(?:\/|$)/.test(req.path)) {
+            return requireTenantModule('LOGISTICS')(req, res, next);
+          }
+          return next();
+        },
+        inventoryRouter,
+      );
+      application.use(
+        '/api/logistics',
+        requireTenantModule('LOGISTICS'),
+        logisticsRouter,
+      );
+      application.use(errorHandler);
 
       const response = await request(application)
         .post('/api/companies')
@@ -655,8 +689,41 @@ test(
           registers: Number(setup.rows[0].registers),
           taxes: Number(setup.rows[0].taxes),
         },
-        { memberships: 1, branches: 1, warehouses: 1, registers: 1, taxes: 3 },
+        { memberships: 1, branches: 1, warehouses: 2, registers: 1, taxes: 3 },
       );
+      assert.equal(response.body.setup.warehouse.warehouse_type, 'AVAILABLE');
+      assert.equal(response.body.setup.displayWarehouse.warehouse_type, 'DISPLAY');
+
+      const initialModules = await request(application)
+        .get('/api/module-settings')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(initialModules.body[0].code, 'LOGISTICS');
+      assert.equal(initialModules.body[0].enabled, true);
+
+      await request(application)
+        .patch('/api/module-settings/LOGISTICS')
+        .set('x-tenant-id', companyId)
+        .send({ enabled: false })
+        .expect(200);
+      const blockedLogistics = await request(application)
+        .get('/api/inventory/replenishments')
+        .set('x-tenant-id', companyId)
+        .expect(403);
+      assert.equal(blockedLogistics.body.code, 'TENANT_MODULE_DISABLED');
+      await request(application)
+        .get('/api/logistics/overview')
+        .set('x-tenant-id', companyId)
+        .expect(403);
+      await request(application)
+        .get('/api/inventory/summary')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      await request(application)
+        .patch('/api/module-settings/LOGISTICS')
+        .set('x-tenant-id', companyId)
+        .send({ enabled: true })
+        .expect(200);
 
       const tax = await pool.query(
         `SELECT id FROM tax_categories WHERE tenant_id = $1 AND code = 'IVA19'`,
@@ -675,9 +742,167 @@ test(
         `INSERT INTO inventory_balances(
            tenant_id, product_id, warehouse_id, on_hand, reserved
          )
-         VALUES($1,$2,$3,5,0)`,
-        [companyId, product.rows[0].id, response.body.setup.warehouse.id],
+         VALUES($1,$2,$3,5,0),($1,$2,$4,3,0)`,
+        [
+          companyId,
+          product.rows[0].id,
+          response.body.setup.warehouse.id,
+          response.body.setup.displayWarehouse.id,
+        ],
       );
+
+      const structuredProducts = await pool.query(
+        `INSERT INTO products(
+           tenant_id,sku,name,sales_tax_category_id,cost,sale_price,
+           tax_review_status,active
+         )
+         VALUES
+           ($1,'CAM-BASE','Camiseta deportiva',$2,12000,25000,'REVIEWED',TRUE),
+           ($1,'BOLSA-KIT','Bolsa para kit',$2,1500,3000,'REVIEWED',TRUE),
+           ($1,'KIT-DEMO','Kit de demostración',$2,0,40000,'REVIEWED',TRUE)
+         RETURNING id,sku`,
+        [companyId, tax.rows[0].id],
+      );
+      const structuredBySku = Object.fromEntries(
+        structuredProducts.rows.map((item) => [item.sku, item.id]),
+      );
+      await pool.query(
+        `INSERT INTO inventory_balances(
+           tenant_id,product_id,warehouse_id,on_hand,reserved
+         )
+         VALUES($1,$2,$4,5,0),($1,$3,$4,6,0)`,
+        [
+          companyId,
+          structuredBySku['CAM-BASE'],
+          structuredBySku['BOLSA-KIT'],
+          response.body.setup.displayWarehouse.id,
+        ],
+      );
+      const redVariant = await request(application)
+        .post(`/api/product-structures/${structuredBySku['CAM-BASE']}/variants`)
+        .set('x-tenant-id', companyId)
+        .send({
+          optionName: 'Color',
+          optionValue: 'Rojo',
+          sku: 'CAM-ROJA',
+          salePrice: 27000,
+          warehouseId: response.body.setup.displayWarehouse.id,
+          initialQuantity: 3,
+        })
+        .expect(201);
+      assert.deepEqual(redVariant.body.variant_attributes, { Color: 'Rojo' });
+      const parentAfterSplit = await pool.query(
+        `SELECT product_kind,active FROM products
+         WHERE tenant_id=$1 AND id=$2`,
+        [companyId, structuredBySku['CAM-BASE']],
+      );
+      assert.equal(parentAfterSplit.rows[0].product_kind, 'VARIANT_PARENT');
+      assert.equal(parentAfterSplit.rows[0].active, false);
+      const variantStock = await pool.query(
+        `SELECT on_hand FROM inventory_balances
+         WHERE tenant_id=$1 AND product_id=$2 AND warehouse_id=$3`,
+        [
+          companyId,
+          redVariant.body.id,
+          response.body.setup.displayWarehouse.id,
+        ],
+      );
+      assert.equal(Number(variantStock.rows[0].on_hand), 3);
+
+      await request(application)
+        .put(`/api/product-structures/${structuredBySku['KIT-DEMO']}/combo`)
+        .set('x-tenant-id', companyId)
+        .send({
+          components: [
+            { productId: redVariant.body.id, quantity: 1 },
+            { productId: structuredBySku['BOLSA-KIT'], quantity: 2 },
+          ],
+        })
+        .expect(200);
+      const comboAssembly = await request(application)
+        .post(
+          `/api/product-structures/${structuredBySku['KIT-DEMO']}/combo/assemble`,
+        )
+        .set('x-tenant-id', companyId)
+        .send({
+          warehouseId: response.body.setup.displayWarehouse.id,
+          quantity: 2,
+        })
+        .expect(201);
+      assert.equal(Number(comboAssembly.body.quantity), 2);
+      assert.equal(Number(comboAssembly.body.unitCost), 15000);
+      const structure = await request(application)
+        .get(`/api/product-structures/${structuredBySku['KIT-DEMO']}`)
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(structure.body.components.length, 2);
+      assert.equal(structure.body.assemblies.length, 1);
+      const comboCatalog = await request(application)
+        .get('/api/product-structures/combos')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(comboCatalog.body.length, 1);
+      assert.equal(Number(comboCatalog.body[0].display_stock), 2);
+      assert.equal(comboCatalog.body[0].cashier_ready, true);
+      const assembledBalances = await pool.query(
+        `SELECT product_id,on_hand FROM inventory_balances
+         WHERE tenant_id=$1 AND warehouse_id=$2
+           AND product_id=ANY($3::uuid[])`,
+        [
+          companyId,
+          response.body.setup.displayWarehouse.id,
+          [
+            redVariant.body.id,
+            structuredBySku['BOLSA-KIT'],
+            structuredBySku['KIT-DEMO'],
+          ],
+        ],
+      );
+      const stockByProduct = Object.fromEntries(
+        assembledBalances.rows.map((item) => [
+          item.product_id,
+          Number(item.on_hand),
+        ]),
+      );
+      assert.equal(stockByProduct[redVariant.body.id], 1);
+      assert.equal(stockByProduct[structuredBySku['BOLSA-KIT']], 2);
+      assert.equal(stockByProduct[structuredBySku['KIT-DEMO']], 2);
+      const wholesaleList = await pool.query(
+        `SELECT id FROM sales_price_lists
+         WHERE tenant_id=$1 AND code='WHOLESALE'`,
+        [companyId],
+      );
+      await request(application)
+        .put('/api/pricing/product-prices')
+        .set('x-tenant-id', companyId)
+        .send({
+          productId: structuredBySku['KIT-DEMO'],
+          priceListId: wholesaleList.rows[0].id,
+          minQuantity: 12,
+          unitPrice: 32000,
+        })
+        .expect(200);
+      await request(application)
+        .post('/api/pricing/promotions')
+        .set('x-tenant-id', companyId)
+        .send({
+          productId: structuredBySku['KIT-DEMO'],
+          name: 'Promoción de integración',
+          discountType: 'PERCENT',
+          discountValue: 10,
+          minQuantity: 1,
+          startsAt: new Date(Date.now() - 60000).toISOString(),
+          endsAt: new Date(Date.now() + 86400000).toISOString(),
+        })
+        .expect(201);
+      const pricingOverview = await request(application)
+        .get('/api/pricing/overview')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(pricingOverview.body.lists.length, 3);
+      assert.equal(pricingOverview.body.prices.length, 1);
+      assert.equal(pricingOverview.body.promotions.length, 1);
+
       const cashSession = await pool.query(
         `INSERT INTO cash_sessions(
            tenant_id, cash_register_id, opening_amount, opened_by
@@ -686,6 +911,199 @@ test(
          RETURNING id`,
         [companyId, response.body.setup.register.id, ownerId],
       );
+      const supplier = await pool.query(
+        `INSERT INTO suppliers(tenant_id, name, tax_id)
+         VALUES($1,'Servicios de integración','900999001-1')
+         RETURNING id`,
+        [companyId],
+      );
+      const logisticsBatch = await request(application)
+        .post('/api/logistics/batches')
+        .set('x-tenant-id', companyId)
+        .send({
+          title: 'Recepción controlada de integración',
+          branchId: response.body.setup.branch.id,
+          warehouseId: response.body.setup.warehouse.id,
+          supplierId: supplier.rows[0].id,
+          supplierInvoiceNumber: 'FV-LOG-001',
+          receivedOn: new Date().toISOString().slice(0, 10),
+        })
+        .expect(201);
+      assert.equal(logisticsBatch.body.status, 'COUNTING');
+      const logisticsItem = await request(application)
+        .post(`/api/logistics/batches/${logisticsBatch.body.id}/scan`)
+        .set('x-tenant-id', companyId)
+        .send({ sku: 'TEST-001', quantity: 2, expectedQuantity: 2 })
+        .expect(201);
+      assert.equal(Number(logisticsItem.body.counted_quantity), 2);
+      await request(application)
+        .post(`/api/logistics/batches/${logisticsBatch.body.id}/finish-count`)
+        .set('x-tenant-id', companyId)
+        .send({})
+        .expect(200);
+      await request(application)
+        .patch(
+          `/api/logistics/batches/${logisticsBatch.body.id}/items/${logisticsItem.body.id}/pricing`,
+        )
+        .set('x-tenant-id', companyId)
+        .send({ unitCost: 1000, proposedPrice: 2000, movementMode: 'ADD' })
+        .expect(200);
+      await request(application)
+        .post(`/api/logistics/batches/${logisticsBatch.body.id}/submit-approval`)
+        .set('x-tenant-id', companyId)
+        .send({})
+        .expect(200);
+      const completedLogisticsBatch = await request(application)
+        .post(`/api/logistics/batches/${logisticsBatch.body.id}/approve`)
+        .set('x-tenant-id', companyId)
+        .send({ reason: 'Aprobación de integración' })
+        .expect(200);
+      assert.equal(completedLogisticsBatch.body.status, 'COMPLETED');
+      await request(application)
+        .post(
+          `/api/logistics/batches/${logisticsBatch.body.id}/items/${logisticsItem.body.id}/label-printed`,
+        )
+        .set('x-tenant-id', companyId)
+        .send({ quantity: 2 })
+        .expect(200);
+      const labelTracking = await pool.query(
+        `SELECT print_count,label_quantity_printed
+         FROM logistics_intake_items
+         WHERE tenant_id=$1 AND id=$2`,
+        [companyId, logisticsItem.body.id],
+      );
+      assert.equal(Number(labelTracking.rows[0].print_count), 1);
+      assert.equal(Number(labelTracking.rows[0].label_quantity_printed), 2);
+      await request(application)
+        .patch('/api/logistics/labels/settings')
+        .set('x-tenant-id', companyId)
+        .send({
+          widthMm: 50,
+          heightMm: 30,
+          showCompany: true,
+          showProduct: true,
+          showPrice: true,
+          showSku: true,
+          showBarcode: true,
+          footerText: 'Calidad garantizada',
+        })
+        .expect(200);
+      const logisticsStock = await pool.query(
+        `SELECT on_hand
+         FROM inventory_balances
+         WHERE tenant_id=$1 AND product_id=$2 AND warehouse_id=$3`,
+        [
+          companyId,
+          product.rows[0].id,
+          response.body.setup.warehouse.id,
+        ],
+      );
+      assert.equal(Number(logisticsStock.rows[0].on_hand), 7);
+      const logisticsOverview = await request(application)
+        .get('/api/logistics/overview')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(Number(logisticsOverview.body.summary.completed_month), 1);
+      assert.equal(Number(logisticsOverview.body.summary.labels_pending), 0);
+      assert.equal(Number(logisticsOverview.body.labelSettings.heightMm), 30);
+      await request(application)
+        .get(`/api/logistics/batches/${logisticsBatch.body.id}/export.csv`)
+        .set('x-tenant-id', companyId)
+        .expect(200)
+        .expect('Content-Type', /text\/csv/);
+      const partyDirectory = await request(application)
+        .get('/api/third-parties')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      const supplierParty = partyDirectory.body.find(
+        (party) => party.supplier_id === supplier.rows[0].id,
+      );
+      assert.ok(supplierParty);
+      assert.equal(supplierParty.is_supplier, true);
+      assert.equal(supplierParty.is_customer, false);
+      const dualParty = await request(application)
+        .patch(`/api/third-parties/${supplierParty.id}`)
+        .set('x-tenant-id', companyId)
+        .send({
+          partyType: 'ORGANIZATION',
+          name: 'Servicios de integración',
+          documentType: 'NIT',
+          documentNumber: '900999001-1',
+          isCustomer: true,
+          isSupplier: true,
+          paymentTermsDays: 30,
+          reason: 'Validación de tercero con doble relación',
+        })
+        .expect(200);
+      assert.equal(dualParty.body.is_customer, true);
+      assert.equal(dualParty.body.is_supplier, true);
+      assert.ok(dualParty.body.customer_id);
+      const expenseSetup = await request(application)
+        .get('/api/expenses/setup')
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.ok(expenseSetup.body.categories.length >= 7);
+      assert.ok(expenseSetup.body.costCenters.length >= 1);
+      const expense = await request(application)
+        .post('/api/expenses')
+        .set('x-tenant-id', companyId)
+        .send({
+          branchId: response.body.setup.branch.id,
+          costCenterId: expenseSetup.body.costCenters[0].id,
+          categoryId: expenseSetup.body.categories[0].id,
+          supplierId: supplier.rows[0].id,
+          supplierDocumentNumber: 'FV-EXP-001',
+          description: 'Servicio operativo de integración',
+          issueDate: new Date().toISOString().slice(0, 10),
+          dueDate: new Date().toISOString().slice(0, 10),
+          subtotal: 100000,
+          taxTotal: 19000,
+          recurring: false,
+        })
+        .expect(201);
+      assert.equal(expense.body.status, 'SUBMITTED');
+      const approvedExpense = await request(application)
+        .post(`/api/expenses/${expense.body.id}/approve`)
+        .set('x-tenant-id', companyId)
+        .send({ notes: 'Aprobado en prueba de integración' })
+        .expect(200);
+      assert.equal(approvedExpense.body.status, 'APPROVED');
+      const paidExpense = await request(application)
+        .post(`/api/expenses/${expense.body.id}/payments`)
+        .set('x-tenant-id', companyId)
+        .send({
+          paymentDate: new Date().toISOString().slice(0, 10),
+          amount: 119000,
+          paymentMethod: 'CASH',
+          cashSessionId: cashSession.rows[0].id,
+          reference: 'EGRESO-EXP-001',
+          notes: 'Pago controlado de integración',
+        })
+        .expect(201);
+      assert.equal(paidExpense.body.expense.status, 'PAID');
+      const expenseAccounting = await pool.query(
+        `SELECT source_type, status, total_debit, total_credit
+         FROM journal_entries
+         WHERE tenant_id = $1
+           AND source_type IN ('BUSINESS_EXPENSE','EXPENSE_PAYMENT')
+           AND source_id IN ($2,$3)
+         ORDER BY source_type`,
+        [companyId, expense.body.id, paidExpense.body.payment.id],
+      );
+      assert.equal(expenseAccounting.rowCount, 2);
+      expenseAccounting.rows.forEach((entry) => {
+        assert.equal(entry.status, 'POSTED');
+        assert.equal(Number(entry.total_debit), Number(entry.total_credit));
+      });
+      const cashExpense = await pool.query(
+        `SELECT amount, movement_type
+         FROM cash_movements
+         WHERE tenant_id = $1 AND cash_session_id = $2
+           AND reference = 'EGRESO-EXP-001'`,
+        [companyId, cashSession.rows[0].id],
+      );
+      assert.equal(cashExpense.rows[0].movement_type, 'EXPENSE');
+      assert.equal(Number(cashExpense.rows[0].amount), 119000);
       const sale = await request(application)
         .post('/api/pos/sales')
         .set('x-tenant-id', companyId)
@@ -700,14 +1118,301 @@ test(
       assert.equal(sale.body.document_type, 'ELECTRONIC_INVOICE');
       assert.equal(sale.body.billingDocument.status, 'PENDING');
       assert.match(sale.body.billingDocument.failure_reason, /resolución/i);
+
+      const advancedCatalog = await request(application)
+        .get('/api/pos/shared-catalog')
+        .query({
+          cashSessionId: cashSession.rows[0].id,
+          stockSource: 'AVAILABLE',
+        })
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      const availableCatalogProduct = advancedCatalog.body.find(
+        (item) => item.id === product.rows[0].id,
+      );
+      assert.ok(availableCatalogProduct);
+      assert.equal(availableCatalogProduct.warehouse_type, 'AVAILABLE');
+
+      await pool.query(
+        `INSERT INTO users(id, email, full_name, status)
+         VALUES($1,$2,'Cajero restringido','ACTIVE')`,
+        [cashierId, `cashier-${cashierId}@example.test`],
+      );
+      await pool.query(
+        `INSERT INTO tenant_users(
+           tenant_id, user_id, role_code, role_id, status, joined_at
+         )
+         SELECT $1,$2,'CASHIER',id,'ACTIVE',now()
+         FROM roles
+         WHERE tenant_id = $1 AND code = 'CASHIER'`,
+        [companyId, cashierId],
+      );
+      const cashierApplication = express();
+      cashierApplication.use(express.json());
+      cashierApplication.use((req, _res, next) => {
+        req.context = {
+          tenantId: req.header('x-tenant-id') || null,
+          userId: cashierId,
+          authenticated: true,
+          requestId: randomUUID(),
+          branchId: null,
+          user: { role_code: 'CASHIER' },
+        };
+        next();
+      });
+      cashierApplication.use('/api/pos', returnsRouter);
+      cashierApplication.use('/api/pos', posRouter);
+
+      const cashierDisplayCatalog = await request(cashierApplication)
+        .get('/api/pos/shared-catalog')
+        .query({
+          cashSessionId: cashSession.rows[0].id,
+          stockSource: 'DISPLAY',
+        })
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.ok(cashierDisplayCatalog.body.length >= 1);
+      assert.ok(
+        cashierDisplayCatalog.body.every(
+          (item) => item.warehouse_type === 'DISPLAY',
+        ),
+      );
+
+      const cashierWarehouseCatalog = await request(cashierApplication)
+        .get('/api/pos/shared-catalog')
+        .query({
+          cashSessionId: cashSession.rows[0].id,
+          stockSource: 'AVAILABLE',
+        })
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.deepEqual(cashierWarehouseCatalog.body, []);
+
+      await request(cashierApplication)
+        .post('/api/pos/sales/grouped')
+        .set('x-tenant-id', companyId)
+        .send({
+          cashSessionId: cashSession.rows[0].id,
+          stockSource: 'AVAILABLE',
+          paymentMethod: 'CARD',
+          saleTerms: 'IMMEDIATE',
+          items: [{
+            productId: product.rows[0].id,
+            warehouseId: response.body.setup.warehouse.id,
+            quantity: 1,
+          }],
+        })
+        .expect(403);
+
+      const cashierDisplaySale = await request(cashierApplication)
+        .post('/api/pos/sales/grouped')
+        .set('x-tenant-id', companyId)
+        .send({
+          cashSessionId: cashSession.rows[0].id,
+          stockSource: 'DISPLAY',
+          paymentMethod: 'CARD',
+          saleTerms: 'IMMEDIATE',
+          items: [{
+            productId: product.rows[0].id,
+            warehouseId: response.body.setup.displayWarehouse.id,
+            quantity: 1,
+          }],
+        })
+        .expect(201);
+      assert.equal(cashierDisplaySale.body.receipts.length, 1);
+      assert.equal(cashierDisplaySale.body.receipts[0].companyId, companyId);
+      const displayStock = await pool.query(
+        `SELECT on_hand
+         FROM inventory_balances
+         WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3`,
+        [
+          companyId,
+          product.rows[0].id,
+          response.body.setup.displayWarehouse.id,
+        ],
+      );
+      assert.equal(Number(displayStock.rows[0].on_hand), 2);
+
+      const returnableSale = await request(cashierApplication)
+        .get(`/api/pos/sales/${cashierDisplaySale.body.receipts[0].id}`)
+        .set('x-tenant-id', companyId)
+        .expect(200);
+      assert.equal(Number(returnableSale.body.items[0].returnableQuantity), 1);
+
+      const saleReturn = await request(cashierApplication)
+        .post(`/api/pos/sales/${cashierDisplaySale.body.receipts[0].id}/returns`)
+        .set('x-tenant-id', companyId)
+        .send({
+          cashSessionId: cashSession.rows[0].id,
+          refundMethod: 'CARD',
+          refundReference: 'REVERSO-TEST-001',
+          correctionConceptCode: 'TEST-CONCEPT',
+          reason: 'Devolución controlada de integración',
+          idempotencyKey: `return-${cashierDisplaySale.body.receipts[0].id}`,
+          items: [{
+            saleItemId: returnableSale.body.items[0].id,
+            quantity: 1,
+          }],
+        })
+        .expect(201);
+      assert.equal(saleReturn.body.return_status, 'FULL');
+      assert.equal(Number(saleReturn.body.total), 2000);
+      assert.ok(saleReturn.body.electronic_adjustment_note_id);
+
+      const restoredDisplayStock = await pool.query(
+        `SELECT on_hand
+         FROM inventory_balances
+         WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3`,
+        [
+          companyId,
+          product.rows[0].id,
+          response.body.setup.displayWarehouse.id,
+        ],
+      );
+      assert.equal(Number(restoredDisplayStock.rows[0].on_hand), 3);
+
+      const returnAccounting = await pool.query(
+        `SELECT status, total_debit, total_credit, entry_hash
+         FROM journal_entries
+         WHERE tenant_id = $1 AND source_type = 'SALE_RETURN' AND source_id = $2`,
+        [companyId, saleReturn.body.id],
+      );
+      assert.equal(returnAccounting.rowCount, 1);
+      assert.equal(returnAccounting.rows[0].status, 'POSTED');
+      assert.equal(
+        Number(returnAccounting.rows[0].total_debit),
+        Number(returnAccounting.rows[0].total_credit),
+      );
+      assert.match(returnAccounting.rows[0].entry_hash, /^[0-9a-f]{64}$/);
+
+      await request(cashierApplication)
+        .post(`/api/pos/sales/${cashierDisplaySale.body.receipts[0].id}/returns`)
+        .set('x-tenant-id', companyId)
+        .send({
+          cashSessionId: cashSession.rows[0].id,
+          refundMethod: 'CARD',
+          refundReference: 'REVERSO-TEST-002',
+          correctionConceptCode: 'TEST-CONCEPT',
+          reason: 'Intento duplicado por cantidad',
+          idempotencyKey: `return-excess-${cashierDisplaySale.body.receipts[0].id}`,
+          items: [{
+            saleItemId: returnableSale.body.items[0].id,
+            quantity: 1,
+          }],
+        })
+        .expect(409);
+
+      const accounting = await pool.query(
+        `SELECT entry.id, entry.status, entry.total_debit, entry.total_credit,
+                entry.entry_hash, COUNT(line.id)::integer line_count
+         FROM journal_entries entry
+         JOIN journal_entry_lines line
+           ON line.journal_entry_id = entry.id
+          AND line.tenant_id = entry.tenant_id
+         WHERE entry.tenant_id = $1
+           AND entry.source_type = 'SALE'
+           AND entry.source_id = $2
+         GROUP BY entry.id`,
+        [companyId, sale.body.id],
+      );
+      assert.equal(accounting.rowCount, 1);
+      assert.equal(accounting.rows[0].status, 'POSTED');
+      assert.equal(
+        Number(accounting.rows[0].total_debit),
+        Number(accounting.rows[0].total_credit),
+      );
+      assert.ok(accounting.rows[0].line_count >= 4);
+      assert.match(accounting.rows[0].entry_hash, /^[0-9a-f]{64}$/);
+      const reversal = await withTransaction((client) => reverseJournalEntry(client, {
+        tenantId: companyId,
+        entryId: accounting.rows[0].id,
+        entryDate: new Date().toISOString().slice(0, 10),
+        reason: 'Prueba de reversión controlada',
+        userId: ownerId,
+      }));
+      assert.equal(reversal.status, 'POSTED');
+      assert.equal(reversal.reversal_of, accounting.rows[0].id);
+      assert.equal(Number(reversal.total_debit), Number(reversal.total_credit));
+      await assert.rejects(
+        () => withTransaction((client) => reverseJournalEntry(client, {
+          tenantId: companyId,
+          entryId: accounting.rows[0].id,
+          entryDate: new Date().toISOString().slice(0, 10),
+          reason: 'Segundo intento no permitido',
+          userId: ownerId,
+        })),
+        (error) => error.code === 'JOURNAL_ENTRY_ALREADY_REVERSED',
+      );
     } finally {
       if (companyId) {
-        await pool.query('DELETE FROM audit_events WHERE tenant_id = $1', [companyId]);
+        // La bitácora productiva es append-only. El aislamiento de la prueba
+        // desactiva sus triggers únicamente en esta sesión de limpieza.
+        const cleanupClient = await pool.connect();
+        try {
+          await cleanupClient.query(`SET session_replication_role = 'replica'`);
+          await cleanupClient.query(
+            'DELETE FROM audit_chain_heads WHERE tenant_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM audit_events WHERE tenant_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM sale_return_items WHERE company_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM sale_returns WHERE company_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM electronic_note_transmissions WHERE company_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM electronic_adjustment_notes WHERE company_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM journal_entry_lines WHERE tenant_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM journal_entries WHERE tenant_id = $1',
+            [companyId],
+          );
+          await cleanupClient.query(
+            'DELETE FROM sale_payment_tenders WHERE seller_company_id = $1',
+            [companyId],
+          );
+        } finally {
+          await cleanupClient.query(`SET session_replication_role = 'origin'`);
+          cleanupClient.release();
+        }
         await pool.query('DELETE FROM electronic_documents WHERE company_id = $1', [companyId]);
+        await pool.query('DELETE FROM expense_payments WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM business_expenses WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM cash_movements WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM sale_items WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM inventory_movements WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM sales WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM cash_sessions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM logistics_intake_comments WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM logistics_intake_items WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM logistics_intake_batches WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_valuation_lines WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_valuation_closures WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_label_jobs WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_reservations WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_serial_numbers WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM inventory_lots WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM product_unit_conversions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM product_variants WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM product_combo_assemblies WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM product_combo_components WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM sales_promotions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM sales_product_prices WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM inventory_balances WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM products WHERE tenant_id = $1', [companyId]);
         await pool.query(
@@ -716,15 +1421,36 @@ test(
         );
         await pool.query('DELETE FROM cash_registers WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM tax_categories WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM third_parties WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM customers WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM sales_price_lists WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM suppliers WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM cost_centers WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM expense_categories WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM warehouse_user_permissions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM warehouse_locations WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM warehouses WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM branches WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM role_permissions WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM tenant_users WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM roles WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [companyId]);
+        await pool.query('DELETE FROM accounting_periods WHERE tenant_id = $1', [companyId]);
+        await pool.query(
+          'DELETE FROM accounting_account_mappings WHERE tenant_id = $1',
+          [companyId],
+        );
+        await pool.query(
+          'DELETE FROM accounting_entry_counters WHERE tenant_id = $1',
+          [companyId],
+        );
+        await pool.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM tenants WHERE id = $1', [companyId]);
       }
       await pool.query('DELETE FROM users WHERE id = $1', [ownerId]);
+      await pool.query('DELETE FROM users WHERE id = $1', [cashierId]);
       await pool.end();
       await closeDatabase();
     }

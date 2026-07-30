@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nubixor — Impresión de etiquetas</title>
+    <link rel="icon" type="image/png" href="./assets/brand/nubixor-icon.png">
+    <link rel="stylesheet" href="./label-print.css?v=20260729-01">
+    <script src="./vendor/jsbarcode/JsBarcode.all.min.js" defer></script>
+    <script src="./label-print.js?v=20260729-01" defer></script>
+  </head>
+  <body>
+    <header class="print-toolbar">
+      <div>
+        <img src="./assets/brand/nubixor-icon.png" alt="">
+        <span><b>Nubixor</b><small id="jobSummary">Preparando etiquetas…</small></span>
+      </div>
+      <p id="printGuidance">Verifica el tamaño del papel antes de imprimir.</p>
+      <div>
+        <button class="secondary" id="closePrintWindow" type="button">Volver</button>
+        <button class="primary" id="startPrint" type="button">Imprimir ahora</button>
+      </div>
+    </header>
+    <main class="label-sheet" id="labelSheet"></main>
+    <section class="print-error" id="printError" hidden>
+      <strong>No fue posible preparar las etiquetas</strong>
+      <p>Vuelve a Nubixor y genera la impresión nuevamente.</p>
+    </section>
+  </body>
+</html>

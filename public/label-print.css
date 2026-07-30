@@ -1,0 +1,151 @@
+:root {
+  --label-width: 50mm;
+  --label-height: 25mm;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #edf2fb;
+  color: #071d59;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 22px;
+  background: #fff;
+  border-bottom: 1px solid #d8e0ef;
+  box-shadow: 0 10px 30px rgba(7, 29, 89, .08);
+}
+
+.print-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.print-toolbar img { width: 38px; height: 38px; border-radius: 11px; }
+.print-toolbar span { display: grid; gap: 2px; }
+.print-toolbar b { font-size: 17px; }
+.print-toolbar small,
+.print-toolbar p { color: #667085; font-size: 13px; margin: 0; }
+
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 18px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button.primary { color: #fff; background: linear-gradient(135deg, #192584, #b541fa); }
+button.secondary { color: #192584; background: #edf2ff; }
+
+.label-sheet {
+  display: grid;
+  justify-content: center;
+  gap: 16px;
+  padding: 28px;
+}
+
+.product-label {
+  width: var(--label-width);
+  height: var(--label-height);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 1.4mm 1.8mm;
+  background: #fff;
+  border: 1px dashed #9ba8be;
+  text-align: center;
+  color: #090d27;
+}
+
+.product-label .company {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 7.5pt;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.product-label .product {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8pt;
+  font-weight: 700;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-label .price {
+  font-size: 11pt;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.product-label svg {
+  width: 96%;
+  max-height: 8mm;
+}
+
+.product-label .sku {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 6.5pt;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-label .footer {
+  width: 100%;
+  padding-top: .4mm;
+  border-top: .25mm dotted #111;
+  font-size: 6pt;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.print-error {
+  max-width: 480px;
+  margin: 80px auto;
+  padding: 30px;
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+
+@media print {
+  body { background: #fff; }
+  .print-toolbar,
+  .print-error { display: none !important; }
+  .label-sheet { display: block; padding: 0; }
+  .product-label {
+    margin: 0;
+    border: 0;
+    break-after: page;
+    break-inside: avoid;
+    page-break-after: always;
+  }
+  @page {
+    margin: 0;
+    size: var(--label-width) var(--label-height);
+  }
+}

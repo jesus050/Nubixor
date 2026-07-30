@@ -4,6 +4,7 @@ import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
+import { postPurchaseReceiptAccounting } from '../accounting.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -604,6 +605,11 @@ router.post('/:id/receipts', asyncHandler(async (req, res) => {
        WHERE id = $1 AND tenant_id = $2`,
       [req.params.id, req.context.tenantId, status],
     );
+    await postPurchaseReceiptAccounting(client, {
+      tenantId: req.context.tenantId,
+      receiptId: receipt.rows[0].id,
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,

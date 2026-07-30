@@ -26,6 +26,18 @@ const elements = {
   loginAccessError: document.querySelector('#loginAccessError'),
   loginAccessButton: document.querySelector('#loginAccessButton'),
   loginEmail: document.querySelector('#loginEmail'),
+  forgotPasswordButton: document.querySelector('#forgotPasswordButton'),
+  recoveryRequestPanel: document.querySelector('#recoveryRequestPanel'),
+  recoveryRequestForm: document.querySelector('#recoveryRequestForm'),
+  recoveryEmail: document.querySelector('#recoveryEmail'),
+  recoveryRequestError: document.querySelector('#recoveryRequestError'),
+  recoveryRequestSuccess: document.querySelector('#recoveryRequestSuccess'),
+  recoveryRequestButton: document.querySelector('#recoveryRequestButton'),
+  backToLoginButton: document.querySelector('#backToLoginButton'),
+  resetPasswordPanel: document.querySelector('#resetPasswordPanel'),
+  resetPasswordForm: document.querySelector('#resetPasswordForm'),
+  resetPasswordError: document.querySelector('#resetPasswordError'),
+  resetPasswordButton: document.querySelector('#resetPasswordButton'),
   activateAccessPanel: document.querySelector('#activateAccessPanel'),
   activateAccessForm: document.querySelector('#activateAccessForm'),
   activateAccessError: document.querySelector('#activateAccessError'),
@@ -76,8 +88,43 @@ const elements = {
   billingPendingCount: document.querySelector('#billingPendingCount'),
   billingAcceptedCount: document.querySelector('#billingAcceptedCount'),
   billingRejectedCount: document.querySelector('#billingRejectedCount'),
+  billingContingencyButton: document.querySelector('#billingContingencyButton'),
+  billingContingencyStrip: document.querySelector('#billingContingencyStrip'),
+  billingContingencyReason: document.querySelector('#billingContingencyReason'),
+  billingContingencyStarted: document.querySelector('#billingContingencyStarted'),
+  closeBillingContingencyButton:
+    document.querySelector('#closeBillingContingencyButton'),
   billingDocumentList: document.querySelector('#billingDocumentList'),
   billingDocumentState: document.querySelector('#billingDocumentState'),
+  billingFlowQuoteCount: document.querySelector('#billingFlowQuoteCount'),
+  billingFlowOrderCount: document.querySelector('#billingFlowOrderCount'),
+  billingFlowNoteCount: document.querySelector('#billingFlowNoteCount'),
+  billingFlowAcceptedCount: document.querySelector('#billingFlowAcceptedCount'),
+  billingCommercialList: document.querySelector('#billingCommercialList'),
+  billingCommercialState: document.querySelector('#billingCommercialState'),
+  billingFiscalList: document.querySelector('#billingFiscalList'),
+  billingFiscalState: document.querySelector('#billingFiscalState'),
+  reloadBillingWorkflowButton: document.querySelector('#reloadBillingWorkflowButton'),
+  newQuoteButton: document.querySelector('#newQuoteButton'),
+  newBillingNoteButton: document.querySelector('#newBillingNoteButton'),
+  quoteDialog: document.querySelector('#quoteDialog'),
+  quoteForm: document.querySelector('#quoteForm'),
+  quoteBranchId: document.querySelector('#quoteBranchId'),
+  quoteCustomerId: document.querySelector('#quoteCustomerId'),
+  quoteValidUntil: document.querySelector('#quoteValidUntil'),
+  quoteItems: document.querySelector('#quoteItems'),
+  addQuoteItemButton: document.querySelector('#addQuoteItemButton'),
+  quoteFormError: document.querySelector('#quoteFormError'),
+  closeQuoteDialog: document.querySelector('#closeQuoteDialog'),
+  cancelQuoteButton: document.querySelector('#cancelQuoteButton'),
+  saveQuoteButton: document.querySelector('#saveQuoteButton'),
+  billingNoteDialog: document.querySelector('#billingNoteDialog'),
+  billingNoteForm: document.querySelector('#billingNoteForm'),
+  billingNoteDocumentId: document.querySelector('#billingNoteDocumentId'),
+  billingNoteFormError: document.querySelector('#billingNoteFormError'),
+  closeBillingNoteDialog: document.querySelector('#closeBillingNoteDialog'),
+  cancelBillingNoteButton: document.querySelector('#cancelBillingNoteButton'),
+  saveBillingNoteButton: document.querySelector('#saveBillingNoteButton'),
   billingConnectionDialog: document.querySelector('#billingConnectionDialog'),
   billingConnectionForm: document.querySelector('#billingConnectionForm'),
   billingConnectionFormError: document.querySelector('#billingConnectionFormError'),
@@ -86,7 +133,11 @@ const elements = {
   billingProviderEnvironmentInput:
     document.querySelector('#billingProviderEnvironmentInput'),
   billingProviderBaseUrl: document.querySelector('#billingProviderBaseUrl'),
-  billingProviderCredentials: document.querySelector('#billingProviderCredentials'),
+  factusCredentialFields: document.querySelector('#factusCredentialFields'),
+  billingFactusUsername: document.querySelector('#billingFactusUsername'),
+  billingFactusPassword: document.querySelector('#billingFactusPassword'),
+  billingFactusClientId: document.querySelector('#billingFactusClientId'),
+  billingFactusClientSecret: document.querySelector('#billingFactusClientSecret'),
   closeBillingConnectionDialog: document.querySelector('#closeBillingConnectionDialog'),
   cancelBillingConnectionButton: document.querySelector('#cancelBillingConnectionButton'),
   saveBillingConnectionButton: document.querySelector('#saveBillingConnectionButton'),
@@ -94,6 +145,8 @@ const elements = {
   billingResolutionForm: document.querySelector('#billingResolutionForm'),
   billingResolutionFormError: document.querySelector('#billingResolutionFormError'),
   billingResolutionBranchId: document.querySelector('#billingResolutionBranchId'),
+  factusRangeField: document.querySelector('#factusRangeField'),
+  factusNumberingRangeSelect: document.querySelector('#factusNumberingRangeSelect'),
   closeBillingResolutionDialog: document.querySelector('#closeBillingResolutionDialog'),
   cancelBillingResolutionButton: document.querySelector('#cancelBillingResolutionButton'),
   saveBillingResolutionButton: document.querySelector('#saveBillingResolutionButton'),
@@ -101,16 +154,37 @@ const elements = {
   companyCount: document.querySelector('#companyCount'),
   companyDetail: document.querySelector('#companyDetail'),
   dashboardReceivable: document.querySelector('#dashboardReceivable'),
+  dashboardReceivableSnapshot: document.querySelector('#dashboardReceivableSnapshot'),
   dashboardPayable: document.querySelector('#dashboardPayable'),
+  dashboardPayableSnapshot: document.querySelector('#dashboardPayableSnapshot'),
   dashboardInventoryValue: document.querySelector('#dashboardInventoryValue'),
   dashboardOpenPurchases: document.querySelector('#dashboardOpenPurchases'),
+  dashboardCompanyName: document.querySelector('#dashboardCompanyName'),
   dashboardSalesToday: document.querySelector('#dashboardSalesToday'),
   dashboardSalesMonth: document.querySelector('#dashboardSalesMonth'),
+  dashboardSalesCount: document.querySelector('#dashboardSalesCount'),
+  dashboardAverageTicket: document.querySelector('#dashboardAverageTicket'),
+  dashboardSalesComparison: document.querySelector('#dashboardSalesComparison'),
+  dashboardSalesTrend: document.querySelector('#dashboardSalesTrend'),
   dashboardGrossMargin: document.querySelector('#dashboardGrossMargin'),
   dashboardLowStock: document.querySelector('#dashboardLowStock'),
   dashboardPendingPurchases: document.querySelector('#dashboardPendingPurchases'),
   dashboardCashProjection: document.querySelector('#dashboardCashProjection'),
   dashboardCashProjectionDetail: document.querySelector('#dashboardCashProjectionDetail'),
+  dashboardOverdueReceivable: document.querySelector('#dashboardOverdueReceivable'),
+  dashboardOverdueReceivableCount:
+    document.querySelector('#dashboardOverdueReceivableCount'),
+  dashboardOverduePayable: document.querySelector('#dashboardOverduePayable'),
+  dashboardOverduePayableCount: document.querySelector('#dashboardOverduePayableCount'),
+  dashboardPriorityCount: document.querySelector('#dashboardPriorityCount'),
+  dashboardUpdatedAt: document.querySelector('#dashboardUpdatedAt'),
+  onboardingCenter: document.querySelector('#onboardingCenter'),
+  onboardingDescription: document.querySelector('#onboardingDescription'),
+  onboardingPercent: document.querySelector('#onboardingPercent'),
+  onboardingProgressCopy: document.querySelector('#onboardingProgressCopy'),
+  onboardingScoreRing: document.querySelector('#onboardingScoreRing'),
+  onboardingDemoNotice: document.querySelector('#onboardingDemoNotice'),
+  onboardingSteps: document.querySelector('#onboardingSteps'),
   warehouseCount: document.querySelector('#warehouseCount'),
   warehouseDetail: document.querySelector('#warehouseDetail'),
   productCount: document.querySelector('#productCount'),
@@ -119,7 +193,16 @@ const elements = {
   branchDetail: document.querySelector('#branchDetail'),
   menuButton: document.querySelector('#menuButton'),
   sidebar: document.querySelector('#sidebar'),
+  sidebarScrim: document.querySelector('#sidebarScrim'),
   moduleSearch: document.querySelector('#moduleSearch'),
+  quickLookupButton: document.querySelector('#quickLookupButton'),
+  quickLookupShortcut: document.querySelector('#quickLookupShortcut'),
+  quickLookupDialog: document.querySelector('#quickLookupDialog'),
+  quickLookupCompany: document.querySelector('#quickLookupCompany'),
+  quickLookupSearch: document.querySelector('#quickLookupSearch'),
+  quickLookupState: document.querySelector('#quickLookupState'),
+  quickLookupResults: document.querySelector('#quickLookupResults'),
+  closeQuickLookup: document.querySelector('#closeQuickLookup'),
   moduleGrid: document.querySelector('#moduleGrid'),
   emptySearch: document.querySelector('#emptySearch'),
   moduleResult: document.querySelector('#moduleResult'),
@@ -135,6 +218,32 @@ const elements = {
   companyForm: document.querySelector('#companyForm'),
   companyFormError: document.querySelector('#companyFormError'),
   saveCompanyButton: document.querySelector('#saveCompanyButton'),
+  companyIdentityDialog: document.querySelector('#companyIdentityDialog'),
+  companyIdentityForm: document.querySelector('#companyIdentityForm'),
+  companyIdentityName: document.querySelector('#companyIdentityName'),
+  companyLogoPreview: document.querySelector('#companyLogoPreview'),
+  companyLogoPlaceholder: document.querySelector('#companyLogoPlaceholder'),
+  companyLogoFile: document.querySelector('#companyLogoFile'),
+  companyIdentityError: document.querySelector('#companyIdentityError'),
+  closeCompanyIdentityDialog: document.querySelector('#closeCompanyIdentityDialog'),
+  cancelCompanyIdentityButton: document.querySelector('#cancelCompanyIdentityButton'),
+  removeCompanyLogoButton: document.querySelector('#removeCompanyLogoButton'),
+  saveCompanyLogoButton: document.querySelector('#saveCompanyLogoButton'),
+  taxProfileDialog: document.querySelector('#taxProfileDialog'),
+  taxProfileForm: document.querySelector('#taxProfileForm'),
+  taxProfileCompanyName: document.querySelector('#taxProfileCompanyName'),
+  taxpayerType: document.querySelector('#taxpayerType'),
+  vatResponsibility: document.querySelector('#vatResponsibility'),
+  taxRegime: document.querySelector('#taxRegime'),
+  taxDocumentType: document.querySelector('#taxDocumentType'),
+  electronicInvoicingRequired: document.querySelector('#electronicInvoicingRequired'),
+  taxRutFile: document.querySelector('#taxRutFile'),
+  taxValidationStatus: document.querySelector('#taxValidationStatus'),
+  taxValidationNotes: document.querySelector('#taxValidationNotes'),
+  taxProfileError: document.querySelector('#taxProfileError'),
+  closeTaxProfileDialog: document.querySelector('#closeTaxProfileDialog'),
+  cancelTaxProfileButton: document.querySelector('#cancelTaxProfileButton'),
+  saveTaxProfileButton: document.querySelector('#saveTaxProfileButton'),
   branchCompanyName: document.querySelector('#branchCompanyName'),
   branchSearch: document.querySelector('#branchSearch'),
   branchTableBody: document.querySelector('#branchTableBody'),
@@ -164,6 +273,69 @@ const elements = {
   warehouseFormError: document.querySelector('#warehouseFormError'),
   saveWarehouseButton: document.querySelector('#saveWarehouseButton'),
   reloadInventoryButton: document.querySelector('#reloadInventoryButton'),
+  logisticsViewStatus: document.querySelector('#logisticsViewStatus'),
+  reloadLogisticsButton: document.querySelector('#reloadLogisticsButton'),
+  logisticsModuleStatus: document.querySelector('#logisticsModuleStatus'),
+  logisticsModuleToggle: document.querySelector('#logisticsModuleToggle'),
+  moduleSettingMessage: document.querySelector('#moduleSettingMessage'),
+  logisticsWorkflowAlertBadge: document.querySelector('#logisticsWorkflowAlertBadge'),
+  logisticsCountingCount: document.querySelector('#logisticsCountingCount'),
+  logisticsPricingCount: document.querySelector('#logisticsPricingCount'),
+  logisticsApprovalCount: document.querySelector('#logisticsApprovalCount'),
+  logisticsLabelsPending: document.querySelector('#logisticsLabelsPending'),
+  logisticsLabelTabBadge: document.querySelector('#logisticsLabelTabBadge'),
+  logisticsFlowValue: document.querySelector('#logisticsFlowValue'),
+  logisticsFlowUnits: document.querySelector('#logisticsFlowUnits'),
+  logisticsBatchSearch: document.querySelector('#logisticsBatchSearch'),
+  logisticsBatchStatusFilter: document.querySelector('#logisticsBatchStatusFilter'),
+  newLogisticsBatchButton: document.querySelector('#newLogisticsBatchButton'),
+  logisticsBatchCount: document.querySelector('#logisticsBatchCount'),
+  logisticsBatchList: document.querySelector('#logisticsBatchList'),
+  logisticsBatchState: document.querySelector('#logisticsBatchState'),
+  logisticsDetailEmpty: document.querySelector('#logisticsDetailEmpty'),
+  logisticsDetailContent: document.querySelector('#logisticsDetailContent'),
+  logisticsDetailNumber: document.querySelector('#logisticsDetailNumber'),
+  logisticsDetailTitle: document.querySelector('#logisticsDetailTitle'),
+  logisticsDetailMeta: document.querySelector('#logisticsDetailMeta'),
+  logisticsDetailStatus: document.querySelector('#logisticsDetailStatus'),
+  logisticsDetailActions: document.querySelector('#logisticsDetailActions'),
+  logisticsScanForm: document.querySelector('#logisticsScanForm'),
+  logisticsScanSku: document.querySelector('#logisticsScanSku'),
+  logisticsConnectionState: document.querySelector('#logisticsConnectionState'),
+  logisticsScanError: document.querySelector('#logisticsScanError'),
+  logisticsItemCount: document.querySelector('#logisticsItemCount'),
+  logisticsItemList: document.querySelector('#logisticsItemList'),
+  logisticsTimeline: document.querySelector('#logisticsTimeline'),
+  logisticsLabelSize: document.querySelector('#logisticsLabelSize'),
+  logisticsLabelShowCompany: document.querySelector('#logisticsLabelShowCompany'),
+  logisticsLabelShowProduct: document.querySelector('#logisticsLabelShowProduct'),
+  logisticsLabelShowPrice: document.querySelector('#logisticsLabelShowPrice'),
+  logisticsLabelShowSku: document.querySelector('#logisticsLabelShowSku'),
+  logisticsLabelShowBarcode: document.querySelector('#logisticsLabelShowBarcode'),
+  logisticsLabelFooter: document.querySelector('#logisticsLabelFooter'),
+  logisticsLabelPreview: document.querySelector('#logisticsLabelPreview'),
+  logisticsLabelPreviewCompany: document.querySelector('#logisticsLabelPreviewCompany'),
+  logisticsLabelPreviewProduct: document.querySelector('#logisticsLabelPreviewProduct'),
+  logisticsLabelPreviewPrice: document.querySelector('#logisticsLabelPreviewPrice'),
+  logisticsLabelPreviewBarcode: document.querySelector('#logisticsLabelPreviewBarcode'),
+  logisticsLabelPreviewSku: document.querySelector('#logisticsLabelPreviewSku'),
+  logisticsLabelPreviewFooter: document.querySelector('#logisticsLabelPreviewFooter'),
+  saveLogisticsLabelSettings: document.querySelector('#saveLogisticsLabelSettings'),
+  logisticsLabelBatchCount: document.querySelector('#logisticsLabelBatchCount'),
+  logisticsLabelBatchList: document.querySelector('#logisticsLabelBatchList'),
+  logisticsLabelSelectedBatch: document.querySelector('#logisticsLabelSelectedBatch'),
+  logisticsLabelEmpty: document.querySelector('#logisticsLabelEmpty'),
+  logisticsLabelProductList: document.querySelector('#logisticsLabelProductList'),
+  printLogisticsBatchLabels: document.querySelector('#printLogisticsBatchLabels'),
+  logisticsBatchDialog: document.querySelector('#logisticsBatchDialog'),
+  logisticsBatchForm: document.querySelector('#logisticsBatchForm'),
+  logisticsBatchBranchId: document.querySelector('#logisticsBatchBranchId'),
+  logisticsBatchWarehouseId: document.querySelector('#logisticsBatchWarehouseId'),
+  logisticsBatchSupplierId: document.querySelector('#logisticsBatchSupplierId'),
+  logisticsBatchFormError: document.querySelector('#logisticsBatchFormError'),
+  closeLogisticsBatchDialog: document.querySelector('#closeLogisticsBatchDialog'),
+  cancelLogisticsBatchButton: document.querySelector('#cancelLogisticsBatchButton'),
+  saveLogisticsBatchButton: document.querySelector('#saveLogisticsBatchButton'),
   inventoryValue: document.querySelector('#inventoryValue'),
   inventoryStockedProducts: document.querySelector('#inventoryStockedProducts'),
   inventoryStorageUnits: document.querySelector('#inventoryStorageUnits'),
@@ -172,6 +344,37 @@ const elements = {
   inventoryLowStock: document.querySelector('#inventoryLowStock'),
   inventoryMovementsMonth: document.querySelector('#inventoryMovementsMonth'),
   inventoryActiveCountBadge: document.querySelector('#inventoryActiveCountBadge'),
+  inventoryOperationAlertBadge: document.querySelector('#inventoryOperationAlertBadge'),
+  advancedInventoryAlertBadge: document.querySelector('#advancedInventoryAlertBadge'),
+  reloadAdvancedInventoryButton: document.querySelector('#reloadAdvancedInventoryButton'),
+  advancedLocationCount: document.querySelector('#advancedLocationCount'),
+  advancedUnitCount: document.querySelector('#advancedUnitCount'),
+  advancedLotCount: document.querySelector('#advancedLotCount'),
+  advancedExpiringCount: document.querySelector('#advancedExpiringCount'),
+  advancedSerialCount: document.querySelector('#advancedSerialCount'),
+  advancedReservedCount: document.querySelector('#advancedReservedCount'),
+  advancedLocationRecordCount: document.querySelector('#advancedLocationRecordCount'),
+  advancedLotRecordCount: document.querySelector('#advancedLotRecordCount'),
+  advancedReservationRecordCount: document.querySelector('#advancedReservationRecordCount'),
+  advancedClosureRecordCount: document.querySelector('#advancedClosureRecordCount'),
+  advancedLabelRecordCount: document.querySelector('#advancedLabelRecordCount'),
+  advancedPermissionRecordCount: document.querySelector('#advancedPermissionRecordCount'),
+  advancedLocationList: document.querySelector('#advancedLocationList'),
+  advancedLotList: document.querySelector('#advancedLotList'),
+  advancedReservationList: document.querySelector('#advancedReservationList'),
+  advancedClosureList: document.querySelector('#advancedClosureList'),
+  advancedLabelList: document.querySelector('#advancedLabelList'),
+  advancedPermissionList: document.querySelector('#advancedPermissionList'),
+  advancedInventoryDialog: document.querySelector('#advancedInventoryDialog'),
+  advancedInventoryForm: document.querySelector('#advancedInventoryForm'),
+  advancedInventoryFields: document.querySelector('#advancedInventoryFields'),
+  advancedInventoryFormError: document.querySelector('#advancedInventoryFormError'),
+  advancedInventoryDialogEyebrow: document.querySelector('#advancedInventoryDialogEyebrow'),
+  advancedInventoryDialogTitle: document.querySelector('#advancedInventoryDialogTitle'),
+  advancedInventoryDialogCopy: document.querySelector('#advancedInventoryDialogCopy'),
+  closeAdvancedInventoryDialog: document.querySelector('#closeAdvancedInventoryDialog'),
+  cancelAdvancedInventoryButton: document.querySelector('#cancelAdvancedInventoryButton'),
+  saveAdvancedInventoryButton: document.querySelector('#saveAdvancedInventoryButton'),
   inventorySearch: document.querySelector('#inventorySearch'),
   inventoryWarehouseFilter: document.querySelector('#inventoryWarehouseFilter'),
   inventoryBalanceCount: document.querySelector('#inventoryBalanceCount'),
@@ -180,6 +383,52 @@ const elements = {
   inventoryMovementCount: document.querySelector('#inventoryMovementCount'),
   inventoryMovementList: document.querySelector('#inventoryMovementList'),
   inventoryMovementState: document.querySelector('#inventoryMovementState'),
+  inventoryIncidentCount: document.querySelector('#inventoryIncidentCount'),
+  inventoryIncidentList: document.querySelector('#inventoryIncidentList'),
+  inventoryIncidentState: document.querySelector('#inventoryIncidentState'),
+  inventoryTransferOrderCount:
+    document.querySelector('#inventoryTransferOrderCount'),
+  inventoryTransferOrderList:
+    document.querySelector('#inventoryTransferOrderList'),
+  inventoryTransferOrderState:
+    document.querySelector('#inventoryTransferOrderState'),
+  newInventoryIncidentButton:
+    document.querySelector('#newInventoryIncidentButton'),
+  inventoryIncidentDialog: document.querySelector('#inventoryIncidentDialog'),
+  inventoryIncidentForm: document.querySelector('#inventoryIncidentForm'),
+  inventoryIncidentFormError:
+    document.querySelector('#inventoryIncidentFormError'),
+  inventoryIncidentType: document.querySelector('#inventoryIncidentType'),
+  inventoryIncidentProductId:
+    document.querySelector('#inventoryIncidentProductId'),
+  inventoryIncidentWarehouseId:
+    document.querySelector('#inventoryIncidentWarehouseId'),
+  inventoryIncidentWarehouseLabel:
+    document.querySelector('#inventoryIncidentWarehouseLabel'),
+  inventoryIncidentDestinationField:
+    document.querySelector('#inventoryIncidentDestinationField'),
+  inventoryIncidentDestinationId:
+    document.querySelector('#inventoryIncidentDestinationId'),
+  inventoryIncidentGuidance:
+    document.querySelector('#inventoryIncidentGuidance'),
+  inventoryIncidentImpact: document.querySelector('#inventoryIncidentImpact'),
+  closeInventoryIncidentDialog:
+    document.querySelector('#closeInventoryIncidentDialog'),
+  cancelInventoryIncidentButton:
+    document.querySelector('#cancelInventoryIncidentButton'),
+  saveInventoryIncidentButton:
+    document.querySelector('#saveInventoryIncidentButton'),
+  openKardexButton: document.querySelector('#openKardexButton'),
+  kardexDialog: document.querySelector('#kardexDialog'),
+  kardexForm: document.querySelector('#kardexForm'),
+  kardexProduct: document.querySelector('#kardexProduct'),
+  kardexWarehouse: document.querySelector('#kardexWarehouse'),
+  kardexDateFrom: document.querySelector('#kardexDateFrom'),
+  kardexDateTo: document.querySelector('#kardexDateTo'),
+  closeKardexDialog: document.querySelector('#closeKardexDialog'),
+  loadKardexButton: document.querySelector('#loadKardexButton'),
+  kardexTableBody: document.querySelector('#kardexTableBody'),
+  kardexState: document.querySelector('#kardexState'),
   replenishmentAlertCount: document.querySelector('#replenishmentAlertCount'),
   replenishmentReadyCount: document.querySelector('#replenishmentReadyCount'),
   replenishmentList: document.querySelector('#replenishmentList'),
@@ -202,6 +451,10 @@ const elements = {
   transferSourceWarehouseId: document.querySelector('#transferSourceWarehouseId'),
   transferDestinationWarehouseId: document.querySelector('#transferDestinationWarehouseId'),
   transferAvailability: document.querySelector('#transferAvailability'),
+  transferRequiresReception:
+    document.querySelector('#transferRequiresReception'),
+  transferDispatchReferenceField:
+    document.querySelector('#transferDispatchReferenceField'),
   closeTransferDialog: document.querySelector('#closeTransferDialog'),
   cancelTransferButton: document.querySelector('#cancelTransferButton'),
   saveTransferButton: document.querySelector('#saveTransferButton'),
@@ -269,9 +522,46 @@ const elements = {
   newBrandButton: document.querySelector('#newBrandButton'),
   newTaxButton: document.querySelector('#newTaxButton'),
   newProductButton: document.querySelector('#newProductButton'),
+  openCatalogImportButton: document.querySelector('#openCatalogImportButton'),
+  catalogImportDialog: document.querySelector('#catalogImportDialog'),
+  catalogImportCompany: document.querySelector('#catalogImportCompany'),
+  closeCatalogImportDialog: document.querySelector('#closeCatalogImportDialog'),
+  cancelCatalogImport: document.querySelector('#cancelCatalogImport'),
+  downloadCatalogTemplate: document.querySelector('#downloadCatalogTemplate'),
+  catalogImportFile: document.querySelector('#catalogImportFile'),
+  catalogImportFileLabel: document.querySelector('#catalogImportFileLabel'),
+  previewCatalogImport: document.querySelector('#previewCatalogImport'),
+  catalogImportSummary: document.querySelector('#catalogImportSummary'),
+  catalogImportTotal: document.querySelector('#catalogImportTotal'),
+  catalogImportCreates: document.querySelector('#catalogImportCreates'),
+  catalogImportUpdates: document.querySelector('#catalogImportUpdates'),
+  catalogImportErrors: document.querySelector('#catalogImportErrors'),
+  catalogImportPreview: document.querySelector('#catalogImportPreview'),
+  catalogImportStatus: document.querySelector('#catalogImportStatus'),
+  catalogImportTableBody: document.querySelector('#catalogImportTableBody'),
+  catalogImportError: document.querySelector('#catalogImportError'),
+  commitCatalogImport: document.querySelector('#commitCatalogImport'),
   categoryCount: document.querySelector('#categoryCount'),
   brandCount: document.querySelector('#brandCount'),
   taxCount: document.querySelector('#taxCount'),
+  newComboProductButton: document.querySelector('#newComboProductButton'),
+  comboCatalogGrid: document.querySelector('#comboCatalogGrid'),
+  comboCatalogState: document.querySelector('#comboCatalogState'),
+  productPriceForm: document.querySelector('#productPriceForm'),
+  pricingProductId: document.querySelector('#pricingProductId'),
+  pricingPriceListId: document.querySelector('#pricingPriceListId'),
+  productPriceError: document.querySelector('#productPriceError'),
+  customerPriceListForm: document.querySelector('#customerPriceListForm'),
+  pricingCustomerId: document.querySelector('#pricingCustomerId'),
+  customerPriceListId: document.querySelector('#customerPriceListId'),
+  customerPriceListError: document.querySelector('#customerPriceListError'),
+  promotionForm: document.querySelector('#promotionForm'),
+  promotionProductId: document.querySelector('#promotionProductId'),
+  promotionStartsAt: document.querySelector('#promotionStartsAt'),
+  promotionEndsAt: document.querySelector('#promotionEndsAt'),
+  promotionError: document.querySelector('#promotionError'),
+  productPriceList: document.querySelector('#productPriceList'),
+  promotionList: document.querySelector('#promotionList'),
   categoryList: document.querySelector('#categoryList'),
   brandList: document.querySelector('#brandList'),
   taxList: document.querySelector('#taxList'),
@@ -316,6 +606,24 @@ const elements = {
   closeProductDialog: document.querySelector('#closeProductDialog'),
   cancelProductButton: document.querySelector('#cancelProductButton'),
   saveProductButton: document.querySelector('#saveProductButton'),
+  productStructureDialog: document.querySelector('#productStructureDialog'),
+  productStructureProduct: document.querySelector('#productStructureProduct'),
+  closeProductStructureDialog: document.querySelector('#closeProductStructureDialog'),
+  productVariantList: document.querySelector('#productVariantList'),
+  productVariantForm: document.querySelector('#productVariantForm'),
+  productVariantWarehouse: document.querySelector('#productVariantWarehouse'),
+  productVariantError: document.querySelector('#productVariantError'),
+  saveProductVariant: document.querySelector('#saveProductVariant'),
+  productComboForm: document.querySelector('#productComboForm'),
+  productComboComponents: document.querySelector('#productComboComponents'),
+  addComboComponent: document.querySelector('#addComboComponent'),
+  productComboError: document.querySelector('#productComboError'),
+  saveProductCombo: document.querySelector('#saveProductCombo'),
+  productComboAssemblyForm: document.querySelector('#productComboAssemblyForm'),
+  productComboWarehouse: document.querySelector('#productComboWarehouse'),
+  productComboAssemblyError: document.querySelector('#productComboAssemblyError'),
+  assembleProductCombo: document.querySelector('#assembleProductCombo'),
+  productComboAssemblyList: document.querySelector('#productComboAssemblyList'),
   productImageDialog: document.querySelector('#productImageDialog'),
   productImageForm: document.querySelector('#productImageForm'),
   productImageFormError: document.querySelector('#productImageFormError'),
@@ -327,6 +635,40 @@ const elements = {
   closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
   cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
   saveProductImageButton: document.querySelector('#saveProductImageButton'),
+  thirdPartyTotal: document.querySelector('#thirdPartyTotal'),
+  thirdPartyCustomers: document.querySelector('#thirdPartyCustomers'),
+  thirdPartySuppliers: document.querySelector('#thirdPartySuppliers'),
+  thirdPartyDual: document.querySelector('#thirdPartyDual'),
+  thirdPartySearch: document.querySelector('#thirdPartySearch'),
+  thirdPartyRoleFilter: document.querySelector('#thirdPartyRoleFilter'),
+  thirdPartyStatusFilter: document.querySelector('#thirdPartyStatusFilter'),
+  reloadThirdPartiesButton: document.querySelector('#reloadThirdPartiesButton'),
+  newThirdPartyButton: document.querySelector('#newThirdPartyButton'),
+  thirdPartyList: document.querySelector('#thirdPartyList'),
+  thirdPartyDataState: document.querySelector('#thirdPartyDataState'),
+  thirdPartyDetailEmpty: document.querySelector('#thirdPartyDetailEmpty'),
+  thirdPartyDetailContent: document.querySelector('#thirdPartyDetailContent'),
+  thirdPartyDetailDocument: document.querySelector('#thirdPartyDetailDocument'),
+  thirdPartyDetailName: document.querySelector('#thirdPartyDetailName'),
+  thirdPartyDetailRoles: document.querySelector('#thirdPartyDetailRoles'),
+  thirdPartyDetailContact: document.querySelector('#thirdPartyDetailContact'),
+  thirdPartyDetailAddress: document.querySelector('#thirdPartyDetailAddress'),
+  thirdPartyDetailReceivable: document.querySelector('#thirdPartyDetailReceivable'),
+  thirdPartyDetailPayable: document.querySelector('#thirdPartyDetailPayable'),
+  thirdPartyDetailPurchases: document.querySelector('#thirdPartyDetailPurchases'),
+  thirdPartyActivityCount: document.querySelector('#thirdPartyActivityCount'),
+  thirdPartyActivityList: document.querySelector('#thirdPartyActivityList'),
+  editThirdPartyButton: document.querySelector('#editThirdPartyButton'),
+  thirdPartyDialog: document.querySelector('#thirdPartyDialog'),
+  thirdPartyForm: document.querySelector('#thirdPartyForm'),
+  thirdPartyFormError: document.querySelector('#thirdPartyFormError'),
+  thirdPartyDialogEyebrow: document.querySelector('#thirdPartyDialogEyebrow'),
+  thirdPartyDialogTitle: document.querySelector('#thirdPartyDialogTitle'),
+  thirdPartyDialogCopy: document.querySelector('#thirdPartyDialogCopy'),
+  thirdPartyActiveField: document.querySelector('#thirdPartyActiveField'),
+  closeThirdPartyDialog: document.querySelector('#closeThirdPartyDialog'),
+  cancelThirdPartyButton: document.querySelector('#cancelThirdPartyButton'),
+  saveThirdPartyButton: document.querySelector('#saveThirdPartyButton'),
   purchaseOpenOrders: document.querySelector('#purchaseOpenOrders'),
   purchasePendingUnits: document.querySelector('#purchasePendingUnits'),
   purchaseReceivedMonth: document.querySelector('#purchaseReceivedMonth'),
@@ -422,10 +764,27 @@ const elements = {
   cashCloseExpected: document.querySelector('#cashCloseExpected'),
   cashCloseCounted: document.querySelector('#cashCloseCounted'),
   cashCloseDifference: document.querySelector('#cashCloseDifference'),
+  cashCloseSalesTotal: document.querySelector('#cashCloseSalesTotal'),
+  cashCloseCardTotal: document.querySelector('#cashCloseCardTotal'),
+  cashCloseTransferTotal: document.querySelector('#cashCloseTransferTotal'),
   cashDenominationGrid: document.querySelector('#cashDenominationGrid'),
   closeCloseCashDialog: document.querySelector('#closeCloseCashDialog'),
   cancelCloseCashButton: document.querySelector('#cancelCloseCashButton'),
   saveCloseCashButton: document.querySelector('#saveCloseCashButton'),
+  cashCloseReceiptDialog: document.querySelector('#cashCloseReceiptDialog'),
+  closeCashCloseReceipt: document.querySelector('#closeCashCloseReceipt'),
+  finishCashCloseReceipt: document.querySelector('#finishCashCloseReceipt'),
+  printCashCloseReceipt: document.querySelector('#printCashCloseReceipt'),
+  cashCloseReceiptPeriod: document.querySelector('#cashCloseReceiptPeriod'),
+  cashCloseReceiptSales: document.querySelector('#cashCloseReceiptSales'),
+  cashCloseReceiptCount: document.querySelector('#cashCloseReceiptCount'),
+  cashCloseReceiptExpected: document.querySelector('#cashCloseReceiptExpected'),
+  cashCloseReceiptCounted: document.querySelector('#cashCloseReceiptCounted'),
+  cashCloseReceiptDifference: document.querySelector('#cashCloseReceiptDifference'),
+  cashCloseReceiptCards: document.querySelector('#cashCloseReceiptCards'),
+  cashCloseReceiptTransfers: document.querySelector('#cashCloseReceiptTransfers'),
+  cashCloseReceiptDenominations: document.querySelector('#cashCloseReceiptDenominations'),
+  cashCloseReceiptNote: document.querySelector('#cashCloseReceiptNote'),
   cashMovementDialog: document.querySelector('#cashMovementDialog'),
   cashMovementForm: document.querySelector('#cashMovementForm'),
   cashMovementFormError: document.querySelector('#cashMovementFormError'),
@@ -455,12 +814,20 @@ const elements = {
   posPaymentPanel: document.querySelector('#posPaymentPanel'),
   posPaymentMethod: document.querySelector('#posPaymentMethod'),
   posPaymentButtons: document.querySelectorAll('[data-payment-method]'),
+  toggleMixedPaymentButton: document.querySelector('#toggleMixedPaymentButton'),
+  posMixedPaymentPanel: document.querySelector('#posMixedPaymentPanel'),
+  posMixedCashAmount: document.querySelector('#posMixedCashAmount'),
+  posMixedCardAmount: document.querySelector('#posMixedCardAmount'),
+  posMixedTransferAmount: document.querySelector('#posMixedTransferAmount'),
+  posMixedRemaining: document.querySelector('#posMixedRemaining'),
   posCashTender: document.querySelector('#posCashTender'),
   posCashReceived: document.querySelector('#posCashReceived'),
   cashTenderSuggestions: document.querySelector('#cashTenderSuggestions'),
   posCashChange: document.querySelector('#posCashChange'),
   posTransferDetails: document.querySelector('#posTransferDetails'),
   posTransferCompany: document.querySelector('#posTransferCompany'),
+  posTransferBankAccount: document.querySelector('#posTransferBankAccount'),
+  posTransferAccountHelp: document.querySelector('#posTransferAccountHelp'),
   posTransferReference: document.querySelector('#posTransferReference'),
   posSaleError: document.querySelector('#posSaleError'),
   completeSaleButton: document.querySelector('#completeSaleButton'),
@@ -474,6 +841,7 @@ const elements = {
   posDocumentPaymentFilter: document.querySelector('#posDocumentPaymentFilter'),
   posTransferSummary: document.querySelector('#posTransferSummary'),
   receiptDialog: document.querySelector('#receiptDialog'),
+  receiptBrandLogo: document.querySelector('#receiptBrandLogo'),
   receiptNumber: document.querySelector('#receiptNumber'),
   receiptDocumentType: document.querySelector('#receiptDocumentType'),
   receiptDocumentStatus: document.querySelector('#receiptDocumentStatus'),
@@ -483,6 +851,7 @@ const elements = {
   receiptTotal: document.querySelector('#receiptTotal'),
   receiptCustomer: document.querySelector('#receiptCustomer'),
   receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
+  receiptPaymentBreakdown: document.querySelector('#receiptPaymentBreakdown'),
   receiptTransferRow: document.querySelector('#receiptTransferRow'),
   receiptTransferReference: document.querySelector('#receiptTransferReference'),
   receiptCreditRow: document.querySelector('#receiptCreditRow'),
@@ -491,6 +860,23 @@ const elements = {
   receiptCashReceived: document.querySelector('#receiptCashReceived'),
   receiptCashChangeRow: document.querySelector('#receiptCashChangeRow'),
   receiptCashChange: document.querySelector('#receiptCashChange'),
+  openReturnDialogButton: document.querySelector('#openReturnDialogButton'),
+  returnDialog: document.querySelector('#returnDialog'),
+  returnForm: document.querySelector('#returnForm'),
+  closeReturnDialog: document.querySelector('#closeReturnDialog'),
+  cancelReturnButton: document.querySelector('#cancelReturnButton'),
+  saveReturnButton: document.querySelector('#saveReturnButton'),
+  returnItems: document.querySelector('#returnItems'),
+  returnRefundMethod: document.querySelector('#returnRefundMethod'),
+  returnBankAccountField: document.querySelector('#returnBankAccountField'),
+  returnBankAccount: document.querySelector('#returnBankAccount'),
+  returnReferenceField: document.querySelector('#returnReferenceField'),
+  returnRefundReference: document.querySelector('#returnRefundReference'),
+  returnCorrectionField: document.querySelector('#returnCorrectionField'),
+  returnCorrectionConcept: document.querySelector('#returnCorrectionConcept'),
+  returnReason: document.querySelector('#returnReason'),
+  returnEstimatedTotal: document.querySelector('#returnEstimatedTotal'),
+  returnFormError: document.querySelector('#returnFormError'),
   closeReceiptDialog: document.querySelector('#closeReceiptDialog'),
   printReceiptButton: document.querySelector('#printReceiptButton'),
   finishReceiptButton: document.querySelector('#finishReceiptButton'),
@@ -608,6 +994,104 @@ const elements = {
   closePayablePaymentDialog: document.querySelector('#closePayablePaymentDialog'),
   cancelPayablePaymentButton: document.querySelector('#cancelPayablePaymentButton'),
   savePayablePaymentButton: document.querySelector('#savePayablePaymentButton'),
+  expenseMonthTotal: document.querySelector('#expenseMonthTotal'),
+  expensePendingApproval: document.querySelector('#expensePendingApproval'),
+  expensePendingPayment: document.querySelector('#expensePendingPayment'),
+  expenseRecurringTotal: document.querySelector('#expenseRecurringTotal'),
+  expenseUnsupportedTotal: document.querySelector('#expenseUnsupportedTotal'),
+  expenseCenterStrip: document.querySelector('#expenseCenterStrip'),
+  expenseSearch: document.querySelector('#expenseSearch'),
+  expenseStatusFilter: document.querySelector('#expenseStatusFilter'),
+  reloadExpensesButton: document.querySelector('#reloadExpensesButton'),
+  expenseRecordCount: document.querySelector('#expenseRecordCount'),
+  expenseList: document.querySelector('#expenseList'),
+  expenseDataState: document.querySelector('#expenseDataState'),
+  expenseDetailEmpty: document.querySelector('#expenseDetailEmpty'),
+  expenseDetailContent: document.querySelector('#expenseDetailContent'),
+  expenseDetailNumber: document.querySelector('#expenseDetailNumber'),
+  expenseDetailDescription: document.querySelector('#expenseDetailDescription'),
+  expenseDetailBeneficiary: document.querySelector('#expenseDetailBeneficiary'),
+  expenseDetailStatus: document.querySelector('#expenseDetailStatus'),
+  expenseDetailDate: document.querySelector('#expenseDetailDate'),
+  expenseDetailCategory: document.querySelector('#expenseDetailCategory'),
+  expenseDetailCenter: document.querySelector('#expenseDetailCenter'),
+  expenseDetailBranch: document.querySelector('#expenseDetailBranch'),
+  expenseDetailTotal: document.querySelector('#expenseDetailTotal'),
+  expenseDetailBalance: document.querySelector('#expenseDetailBalance'),
+  expenseDetailSupport: document.querySelector('#expenseDetailSupport'),
+  expenseDetailDocument: document.querySelector('#expenseDetailDocument'),
+  expenseSupportLink: document.querySelector('#expenseSupportLink'),
+  expenseDecisionOwner: document.querySelector('#expenseDecisionOwner'),
+  expenseDecisionNotes: document.querySelector('#expenseDecisionNotes'),
+  approveExpenseButton: document.querySelector('#approveExpenseButton'),
+  rejectExpenseButton: document.querySelector('#rejectExpenseButton'),
+  payExpenseButton: document.querySelector('#payExpenseButton'),
+  expensePaymentCount: document.querySelector('#expensePaymentCount'),
+  expensePaymentList: document.querySelector('#expensePaymentList'),
+  newExpenseButton: document.querySelector('#newExpenseButton'),
+  newCostCenterButton: document.querySelector('#newCostCenterButton'),
+  newExpenseCategoryButton: document.querySelector('#newExpenseCategoryButton'),
+  expenseDialog: document.querySelector('#expenseDialog'),
+  expenseForm: document.querySelector('#expenseForm'),
+  expenseFormError: document.querySelector('#expenseFormError'),
+  expenseBranchId: document.querySelector('#expenseBranchId'),
+  expenseCostCenterId: document.querySelector('#expenseCostCenterId'),
+  expenseCategoryId: document.querySelector('#expenseCategoryId'),
+  expenseSupplierId: document.querySelector('#expenseSupplierId'),
+  expenseBeneficiaryField: document.querySelector('#expenseBeneficiaryField'),
+  expenseBeneficiaryName: document.querySelector('#expenseBeneficiaryName'),
+  expenseIssueDate: document.querySelector('#expenseIssueDate'),
+  expenseDueDate: document.querySelector('#expenseDueDate'),
+  expenseSubtotal: document.querySelector('#expenseSubtotal'),
+  expenseTaxTotal: document.querySelector('#expenseTaxTotal'),
+  expenseSupportDocumentId: document.querySelector('#expenseSupportDocumentId'),
+  expenseRecurring: document.querySelector('#expenseRecurring'),
+  expenseRecurrenceField: document.querySelector('#expenseRecurrenceField'),
+  expenseRecurrenceRule: document.querySelector('#expenseRecurrenceRule'),
+  expenseDraftTotal: document.querySelector('#expenseDraftTotal'),
+  closeExpenseDialog: document.querySelector('#closeExpenseDialog'),
+  cancelExpenseButton: document.querySelector('#cancelExpenseButton'),
+  saveExpenseButton: document.querySelector('#saveExpenseButton'),
+  expenseDecisionDialog: document.querySelector('#expenseDecisionDialog'),
+  expenseDecisionForm: document.querySelector('#expenseDecisionForm'),
+  expenseDecisionKicker: document.querySelector('#expenseDecisionKicker'),
+  expenseDecisionTitle: document.querySelector('#expenseDecisionTitle'),
+  expenseDecisionCopy: document.querySelector('#expenseDecisionCopy'),
+  expenseDecisionAction: document.querySelector('#expenseDecisionAction'),
+  expenseDecisionInput: document.querySelector('#expenseDecisionInput'),
+  expenseDecisionError: document.querySelector('#expenseDecisionError'),
+  closeExpenseDecisionDialog: document.querySelector('#closeExpenseDecisionDialog'),
+  cancelExpenseDecision: document.querySelector('#cancelExpenseDecision'),
+  saveExpenseDecision: document.querySelector('#saveExpenseDecision'),
+  expensePaymentDialog: document.querySelector('#expensePaymentDialog'),
+  expensePaymentForm: document.querySelector('#expensePaymentForm'),
+  expensePaymentNumber: document.querySelector('#expensePaymentNumber'),
+  expensePaymentBalance: document.querySelector('#expensePaymentBalance'),
+  expensePaymentAmount: document.querySelector('#expensePaymentAmount'),
+  expensePaymentDate: document.querySelector('#expensePaymentDate'),
+  expensePaymentMethod: document.querySelector('#expensePaymentMethod'),
+  expenseBankAccountField: document.querySelector('#expenseBankAccountField'),
+  expenseBankAccountId: document.querySelector('#expenseBankAccountId'),
+  expenseCashSessionField: document.querySelector('#expenseCashSessionField'),
+  expenseCashSessionId: document.querySelector('#expenseCashSessionId'),
+  expensePaymentError: document.querySelector('#expensePaymentError'),
+  closeExpensePaymentDialog: document.querySelector('#closeExpensePaymentDialog'),
+  cancelExpensePayment: document.querySelector('#cancelExpensePayment'),
+  saveExpensePayment: document.querySelector('#saveExpensePayment'),
+  costCenterDialog: document.querySelector('#costCenterDialog'),
+  costCenterForm: document.querySelector('#costCenterForm'),
+  costCenterBranchId: document.querySelector('#costCenterBranchId'),
+  costCenterFormError: document.querySelector('#costCenterFormError'),
+  closeCostCenterDialog: document.querySelector('#closeCostCenterDialog'),
+  cancelCostCenter: document.querySelector('#cancelCostCenter'),
+  saveCostCenter: document.querySelector('#saveCostCenter'),
+  expenseCategoryDialog: document.querySelector('#expenseCategoryDialog'),
+  expenseCategoryForm: document.querySelector('#expenseCategoryForm'),
+  expenseAccountingAccountId: document.querySelector('#expenseAccountingAccountId'),
+  expenseCategoryFormError: document.querySelector('#expenseCategoryFormError'),
+  closeExpenseCategoryDialog: document.querySelector('#closeExpenseCategoryDialog'),
+  cancelExpenseCategory: document.querySelector('#cancelExpenseCategory'),
+  saveExpenseCategory: document.querySelector('#saveExpenseCategory'),
   userTotalMembers: document.querySelector('#userTotalMembers'),
   userActiveMembers: document.querySelector('#userActiveMembers'),
   userPendingInvites: document.querySelector('#userPendingInvites'),
@@ -689,6 +1173,111 @@ const elements = {
   auditActors: document.querySelector('#auditActors'),
   auditActionTypes: document.querySelector('#auditActionTypes'),
   auditTotal: document.querySelector('#auditTotal'),
+  auditPeriodFrom: document.querySelector('#auditPeriodFrom'),
+  auditPeriodTo: document.querySelector('#auditPeriodTo'),
+  auditReadinessScore: document.querySelector('#auditReadinessScore'),
+  auditControlGrid: document.querySelector('#auditControlGrid'),
+  accountingBalanceBadge: document.querySelector('#accountingBalanceBadge'),
+  accountingPostedCount: document.querySelector('#accountingPostedCount'),
+  accountingDebitTotal: document.querySelector('#accountingDebitTotal'),
+  accountingCreditTotal: document.querySelector('#accountingCreditTotal'),
+  accountingPendingAccounts: document.querySelector('#accountingPendingAccounts'),
+  accountingEntryList: document.querySelector('#accountingEntryList'),
+  bankTransactionCount: document.querySelector('#bankTransactionCount'),
+  bankMatchedCount: document.querySelector('#bankMatchedCount'),
+  bankUnmatchedCount: document.querySelector('#bankUnmatchedCount'),
+  trialBalanceState: document.querySelector('#trialBalanceState'),
+  bankTransactionList: document.querySelector('#bankTransactionList'),
+  trialBalanceList: document.querySelector('#trialBalanceList'),
+  newBankAccountButton: document.querySelector('#newBankAccountButton'),
+  newBankTransactionButton: document.querySelector('#newBankTransactionButton'),
+  completeBankReconciliationButton:
+    document.querySelector('#completeBankReconciliationButton'),
+  downloadMonthlyPackageButton:
+    document.querySelector('#downloadMonthlyPackageButton'),
+  bankAccountDialog: document.querySelector('#bankAccountDialog'),
+  bankAccountForm: document.querySelector('#bankAccountForm'),
+  bankAccountingAccountId: document.querySelector('#bankAccountingAccountId'),
+  bankName: document.querySelector('#bankName'),
+  bankAccountName: document.querySelector('#bankAccountName'),
+  bankMaskedAccount: document.querySelector('#bankMaskedAccount'),
+  bankOpeningBalance: document.querySelector('#bankOpeningBalance'),
+  bankAccountError: document.querySelector('#bankAccountError'),
+  closeBankAccountDialog: document.querySelector('#closeBankAccountDialog'),
+  cancelBankAccount: document.querySelector('#cancelBankAccount'),
+  saveBankAccount: document.querySelector('#saveBankAccount'),
+  bankTransactionDialog: document.querySelector('#bankTransactionDialog'),
+  bankTransactionForm: document.querySelector('#bankTransactionForm'),
+  bankTransactionAccountId: document.querySelector('#bankTransactionAccountId'),
+  bankTransactionDate: document.querySelector('#bankTransactionDate'),
+  bankTransactionReference: document.querySelector('#bankTransactionReference'),
+  bankTransactionAmount: document.querySelector('#bankTransactionAmount'),
+  bankStatementBalance: document.querySelector('#bankStatementBalance'),
+  bankTransactionDescription:
+    document.querySelector('#bankTransactionDescription'),
+  bankTransactionError: document.querySelector('#bankTransactionError'),
+  closeBankTransactionDialog:
+    document.querySelector('#closeBankTransactionDialog'),
+  cancelBankTransaction: document.querySelector('#cancelBankTransaction'),
+  saveBankTransaction: document.querySelector('#saveBankTransaction'),
+  bankReconciliationDialog: document.querySelector('#bankReconciliationDialog'),
+  bankReconciliationForm: document.querySelector('#bankReconciliationForm'),
+  bankReconciliationAccountId:
+    document.querySelector('#bankReconciliationAccountId'),
+  bankReconciliationBalance:
+    document.querySelector('#bankReconciliationBalance'),
+  bankReconciliationNotes: document.querySelector('#bankReconciliationNotes'),
+  bankReconciliationError: document.querySelector('#bankReconciliationError'),
+  closeBankReconciliationDialog:
+    document.querySelector('#closeBankReconciliationDialog'),
+  cancelBankReconciliation: document.querySelector('#cancelBankReconciliation'),
+  saveBankReconciliation: document.querySelector('#saveBankReconciliation'),
+  accountingGovernance: document.querySelector('#accountingGovernance'),
+  accountingPeriodList: document.querySelector('#accountingPeriodList'),
+  accountingMappingList: document.querySelector('#accountingMappingList'),
+  accountingAccountList: document.querySelector('#accountingAccountList'),
+  newAccountingAccount: document.querySelector('#newAccountingAccount'),
+  accountingActionDialog: document.querySelector('#accountingActionDialog'),
+  accountingActionForm: document.querySelector('#accountingActionForm'),
+  accountingActionKicker: document.querySelector('#accountingActionKicker'),
+  accountingActionTitle: document.querySelector('#accountingActionTitle'),
+  accountingActionDescription: document.querySelector('#accountingActionDescription'),
+  accountingActionType: document.querySelector('#accountingActionType'),
+  accountingActionId: document.querySelector('#accountingActionId'),
+  accountingActionDateField: document.querySelector('#accountingActionDateField'),
+  accountingActionDate: document.querySelector('#accountingActionDate'),
+  accountingActionNotes: document.querySelector('#accountingActionNotes'),
+  accountingActionError: document.querySelector('#accountingActionError'),
+  closeAccountingAction: document.querySelector('#closeAccountingAction'),
+  cancelAccountingAction: document.querySelector('#cancelAccountingAction'),
+  saveAccountingAction: document.querySelector('#saveAccountingAction'),
+  accountingAccountDialog: document.querySelector('#accountingAccountDialog'),
+  accountingAccountForm: document.querySelector('#accountingAccountForm'),
+  accountingAccountCode: document.querySelector('#accountingAccountCode'),
+  accountingAccountName: document.querySelector('#accountingAccountName'),
+  accountingAccountType: document.querySelector('#accountingAccountType'),
+  accountingNormalBalance: document.querySelector('#accountingNormalBalance'),
+  accountingAccountReason: document.querySelector('#accountingAccountReason'),
+  accountingAccountError: document.querySelector('#accountingAccountError'),
+  closeAccountingAccount: document.querySelector('#closeAccountingAccount'),
+  cancelAccountingAccount: document.querySelector('#cancelAccountingAccount'),
+  saveAccountingAccount: document.querySelector('#saveAccountingAccount'),
+  runAuditControls: document.querySelector('#runAuditControls'),
+  openAccountantReview: document.querySelector('#openAccountantReview'),
+  exportAuditEvidence: document.querySelector('#exportAuditEvidence'),
+  accountantReviewDialog: document.querySelector('#accountantReviewDialog'),
+  accountantReviewForm: document.querySelector('#accountantReviewForm'),
+  accountantReviewType: document.querySelector('#accountantReviewType'),
+  accountantReviewStatus: document.querySelector('#accountantReviewStatus'),
+  accountantReviewerName: document.querySelector('#accountantReviewerName'),
+  accountantReviewerDocument: document.querySelector('#accountantReviewerDocument'),
+  accountantProfessionalCard: document.querySelector('#accountantProfessionalCard'),
+  accountantEvidenceReference: document.querySelector('#accountantEvidenceReference'),
+  accountantReviewNotes: document.querySelector('#accountantReviewNotes'),
+  accountantReviewError: document.querySelector('#accountantReviewError'),
+  closeAccountantReview: document.querySelector('#closeAccountantReview'),
+  cancelAccountantReview: document.querySelector('#cancelAccountantReview'),
+  saveAccountantReview: document.querySelector('#saveAccountantReview'),
   auditSearch: document.querySelector('#auditSearch'),
   auditActorFilter: document.querySelector('#auditActorFilter'),
   auditEntityFilter: document.querySelector('#auditEntityFilter'),
@@ -723,13 +1312,20 @@ let categories = [];
 let brands = [];
 let taxCategories = [];
 let products = [];
+let comboCatalog = [];
+let pricingOverview = {
+  lists: [], prices: [], promotions: [], products: [], customers: [],
+};
 let posSummary = { registers: [], openSession: null };
 let executiveSummary = {};
 let posCatalog = [];
 let posDocuments = [];
 let posTransferSummary = [];
+let posBankAccounts = [];
 let posCustomers = [];
 let posSaleTerms = 'IMMEDIATE';
+let posMixedPayment = false;
+let selectedReceiptForReturn = null;
 let receivableCustomers = [];
 let receivableInvoices = [];
 let selectedReceivable = null;
@@ -739,12 +1335,35 @@ let inventorySummary = {};
 let inventoryBalances = [];
 let inventoryMovements = [];
 let inventoryReplenishments = [];
+let inventoryIncidents = [];
+let inventoryTransferOrders = [];
+let advancedInventory = {
+  summary: {}, locations: [], units: [], variants: [], lots: [], serials: [],
+  reservations: [], labels: [], closures: [], permissions: [], users: [],
+};
+let advancedInventoryAction = null;
+let thirdParties = [];
+let selectedThirdParty = null;
+let editingThirdParty = null;
+let thirdPartySearchTimer = null;
 let suppliers = [];
 let purchases = [];
 let selectedPurchase = null;
 let payableInvoices = [];
 let payableSources = { suppliers: [], purchases: [] };
 let selectedPayable = null;
+let businessExpenses = [];
+let expenseSetup = {
+  branches: [],
+  suppliers: [],
+  categories: [],
+  costCenters: [],
+  bankAccounts: [],
+  cashSessions: [],
+  documents: [],
+  expenseAccounts: [],
+};
+let selectedExpense = null;
 let teamUsers = [];
 let accessRoles = [];
 let accessPermissions = [];
@@ -756,6 +1375,16 @@ let auditPagination = { page: 1, pageSize: 30, total: 0, totalPages: 1 };
 let selectedAuditEventId = null;
 let auditSearchTimer = null;
 let auditFacetsLoadedForTenant = null;
+let auditReadiness = null;
+let accountingGovernanceData = { accounts: [], mappings: [], periods: [] };
+let bankReconciliationData = {
+  accounts: [],
+  transactions: [],
+  runs: [],
+  summary: {},
+};
+let trialBalanceData = { accounts: [], totals: {}, balanced: true };
+let pendingAccountingAction = null;
 let activeReportType = 'sales';
 let reportColumns = [];
 let reportItems = [];
@@ -763,16 +1392,43 @@ let reportPagination = { page: 1, pageSize: 50, total: 0, totalPages: 1 };
 let reportFacetsLoadedForTenant = null;
 let reportSearchTimer = null;
 let electronicBillingOverview = null;
+let billingWorkflowOverview = {
+  documents: [],
+  notes: [],
+  invoices: [],
+  counts: {},
+};
 let currentUser = null;
 let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
+let pendingPasswordResetToken = new URLSearchParams(window.location.search).get('reset');
 const saleCart = new Map();
 let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
 let taxProduct = null;
+let structuredProduct = null;
+let productStructure = null;
 let imagePreviewUrl = null;
+let catalogImportCsv = null;
+let catalogImportPreview = null;
+let quickLookupTimer = null;
+let quickLookupSequence = 0;
 let activeTenantId = readTenantPreference();
+let taxProfileCompany = null;
+let identityCompany = null;
+let tenantModules = { LOGISTICS: true };
+let logisticsOverview = {
+  summary: {},
+  batches: [],
+  labelSettings: {},
+};
+let selectedLogisticsBatch = null;
+let logisticsLabelBatchId = null;
+
+function isTenantModuleEnabled(moduleCode) {
+  return tenantModules[moduleCode] !== false;
+}
 
 const warehouseTypeLabels = {
   AVAILABLE: 'Disponible',
@@ -786,6 +1442,7 @@ const paymentMethodLabels = {
   CASH: 'Efectivo',
   CARD: 'Tarjeta',
   TRANSFER: 'Transferencia',
+  MIXED: 'Pago mixto',
   CREDIT: 'Crédito',
 };
 
@@ -823,13 +1480,894 @@ function hasAnyPermission(...permissionCodes) {
 }
 
 function accountInitials(name) {
-  return (name || 'MegaSuite')
+  return (name || 'Nubixor')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
     .toUpperCase();
+}
+
+function renderTenantModules() {
+  const logisticsEnabled = isTenantModuleEnabled('LOGISTICS');
+  const canManageModules = hasAnyPermission('users.manage');
+  const logisticsCard = document.querySelector('[data-module-setting="LOGISTICS"]');
+
+  elements.logisticsModuleToggle.checked = logisticsEnabled;
+  elements.logisticsModuleToggle.disabled = !canManageModules;
+  elements.logisticsModuleStatus.textContent =
+    logisticsEnabled ? 'Activo para esta empresa' : 'Desactivado';
+  elements.logisticsViewStatus.classList.toggle('disabled', !logisticsEnabled);
+  elements.logisticsViewStatus.innerHTML = logisticsEnabled
+    ? '<i aria-hidden="true"></i> Módulo activo'
+    : '<i aria-hidden="true"></i> Módulo desactivado';
+  logisticsCard?.classList.toggle('module-disabled', !logisticsEnabled);
+}
+
+async function loadTenantModules() {
+  if (!activeTenantId) return [];
+  const modules = await getJson('/api/module-settings', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  tenantModules = Object.fromEntries(
+    modules.map((module) => [module.code, Boolean(module.enabled)]),
+  );
+  elements.moduleSettingMessage.hidden = true;
+  renderTenantModules();
+  applyAccessVisibility();
+  if (!isTenantModuleEnabled('LOGISTICS') && resolveView() === 'logistica') {
+    window.location.hash = 'inventario';
+    showView('inventario');
+  }
+  return modules;
+}
+
+const logisticsStatusLabels = {
+  COUNTING: 'En recepción',
+  PRICING: 'En valoración',
+  APPROVAL: 'Por aprobar',
+  COMPLETED: 'Completado',
+  REJECTED: 'Rechazado',
+};
+
+function logisticsOfflineKey(batchId) {
+  return `nubixor.logistics.scans.${activeTenantId}.${batchId}`;
+}
+
+function readOfflineScans(batchId) {
+  try {
+    return JSON.parse(window.localStorage.getItem(logisticsOfflineKey(batchId)) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function writeOfflineScans(batchId, scans) {
+  try {
+    window.localStorage.setItem(logisticsOfflineKey(batchId), JSON.stringify(scans));
+  } catch {
+    // El almacenamiento local es una ayuda de resiliencia, no la fuente oficial.
+  }
+}
+
+function syncLogisticsConnectionState() {
+  const pending = selectedLogisticsBatch
+    ? readOfflineScans(selectedLogisticsBatch.batch.id).length
+    : 0;
+  elements.logisticsConnectionState.textContent = navigator.onLine
+    ? pending
+      ? `${pending} lectura(s) pendientes de sincronizar`
+      : 'Conexión disponible'
+    : `Modo sin conexión · ${pending} lectura(s) en cola`;
+  elements.logisticsConnectionState.classList.toggle('offline', !navigator.onLine || pending > 0);
+}
+
+function renderLogisticsOverview() {
+  const summary = logisticsOverview.summary || {};
+  elements.logisticsCountingCount.textContent = String(summary.counting || 0);
+  elements.logisticsPricingCount.textContent = String(summary.pricing || 0);
+  elements.logisticsApprovalCount.textContent = String(summary.approval || 0);
+  elements.logisticsLabelsPending.textContent = String(summary.labels_pending || 0);
+  elements.logisticsLabelTabBadge.textContent = String(summary.labels_pending || 0);
+  elements.logisticsFlowValue.textContent = formatCurrency(summary.value_in_flow);
+  elements.logisticsFlowUnits.textContent =
+    `${Number(summary.units_in_flow || 0).toLocaleString('es-CO')} unidades recibidas`;
+  elements.logisticsWorkflowAlertBadge.textContent =
+    String(Number(summary.counting || 0) +
+      Number(summary.pricing || 0) +
+      Number(summary.approval || 0));
+  renderLogisticsBatches();
+  syncLogisticsLabelSettings();
+  renderLogisticsLabelCenter();
+}
+
+function resolvedLogisticsLabelSettings() {
+  return {
+    widthMm: 50,
+    heightMm: 25,
+    showCompany: true,
+    showProduct: true,
+    showPrice: true,
+    showSku: true,
+    showBarcode: true,
+    footerText: 'Gracias por su compra',
+    ...(logisticsOverview.labelSettings || {}),
+  };
+}
+
+function readLogisticsLabelSettings() {
+  const [widthMm, heightMm] = elements.logisticsLabelSize.value
+    .split('x')
+    .map(Number);
+  return {
+    widthMm,
+    heightMm,
+    showCompany: elements.logisticsLabelShowCompany.checked,
+    showProduct: elements.logisticsLabelShowProduct.checked,
+    showPrice: elements.logisticsLabelShowPrice.checked,
+    showSku: elements.logisticsLabelShowSku.checked,
+    showBarcode: elements.logisticsLabelShowBarcode.checked,
+    footerText: elements.logisticsLabelFooter.value.trim(),
+  };
+}
+
+function updateLogisticsLabelPreview() {
+  const settings = readLogisticsLabelSettings();
+  const company = getActiveCompany();
+  elements.logisticsLabelPreview.style.aspectRatio =
+    `${settings.widthMm} / ${settings.heightMm}`;
+  elements.logisticsLabelPreviewCompany.textContent =
+    company?.trade_name || company?.legal_name || 'Mi empresa';
+  elements.logisticsLabelPreviewCompany.hidden = !settings.showCompany;
+  elements.logisticsLabelPreviewProduct.hidden = !settings.showProduct;
+  elements.logisticsLabelPreviewPrice.hidden = !settings.showPrice;
+  elements.logisticsLabelPreviewBarcode.hidden = !settings.showBarcode;
+  elements.logisticsLabelPreviewSku.hidden = !settings.showSku;
+  elements.logisticsLabelPreviewFooter.textContent = settings.footerText;
+  elements.logisticsLabelPreviewFooter.hidden = !settings.footerText;
+}
+
+function syncLogisticsLabelSettings() {
+  const settings = resolvedLogisticsLabelSettings();
+  const size = `${settings.widthMm}x${settings.heightMm}`;
+  if ([...elements.logisticsLabelSize.options].some((option) => option.value === size)) {
+    elements.logisticsLabelSize.value = size;
+  }
+  elements.logisticsLabelShowCompany.checked = settings.showCompany;
+  elements.logisticsLabelShowProduct.checked = settings.showProduct;
+  elements.logisticsLabelShowPrice.checked = settings.showPrice;
+  elements.logisticsLabelShowSku.checked = settings.showSku;
+  elements.logisticsLabelShowBarcode.checked = settings.showBarcode;
+  elements.logisticsLabelFooter.value = settings.footerText || '';
+  updateLogisticsLabelPreview();
+}
+
+function renderLogisticsLabelCenter() {
+  const batches = logisticsOverview.batches.filter((batch) =>
+    batch.status === 'COMPLETED');
+  elements.logisticsLabelBatchList.replaceChildren();
+  elements.logisticsLabelBatchCount.textContent =
+    `${batches.length} ${batches.length === 1 ? 'lote' : 'lotes'}`;
+  if (logisticsLabelBatchId &&
+      !batches.some((batch) => batch.id === logisticsLabelBatchId)) {
+    logisticsLabelBatchId = null;
+  }
+  batches.forEach((batch) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'logistics-label-batch';
+    button.classList.toggle('active', batch.id === logisticsLabelBatchId);
+    button.dataset.logisticsLabelBatch = batch.id;
+    const copy = document.createElement('span');
+    const number = document.createElement('small');
+    number.textContent = batch.batch_number;
+    const title = document.createElement('strong');
+    title.textContent = batch.title;
+    const meta = document.createElement('em');
+    meta.textContent = `${Number(batch.item_count || 0)} productos · ` +
+      `${Number(batch.units || 0).toLocaleString('es-CO')} etiquetas`;
+    copy.append(number, title, meta);
+    const pending = document.createElement('b');
+    pending.textContent = Number(batch.labels_pending || 0)
+      ? `${batch.labels_pending} pendientes`
+      : 'Impreso';
+    pending.classList.toggle('complete', !Number(batch.labels_pending || 0));
+    button.append(copy, pending);
+    elements.logisticsLabelBatchList.append(button);
+  });
+
+  const detailReady = logisticsLabelBatchId &&
+    selectedLogisticsBatch?.batch?.id === logisticsLabelBatchId &&
+    selectedLogisticsBatch.batch.status === 'COMPLETED';
+  elements.logisticsLabelEmpty.hidden = Boolean(detailReady);
+  elements.logisticsLabelProductList.replaceChildren();
+  elements.printLogisticsBatchLabels.disabled = !detailReady;
+  if (!detailReady) {
+    elements.logisticsLabelSelectedBatch.textContent = batches.length
+      ? 'Selecciona un lote'
+      : 'Aún no hay lotes aprobados';
+    return;
+  }
+
+  const { batch, items } = selectedLogisticsBatch;
+  elements.logisticsLabelSelectedBatch.textContent =
+    `${batch.batch_number} · ${batch.title}`;
+  items.forEach((item) => {
+    const row = document.createElement('article');
+    row.className = 'logistics-label-product';
+    row.dataset.logisticsLabelProduct = item.id;
+    const identity = document.createElement('div');
+    const icon = document.createElement('span');
+    icon.textContent = (item.product_name || item.sku).slice(0, 1).toUpperCase();
+    const copy = document.createElement('p');
+    const name = document.createElement('strong');
+    name.textContent = item.product_name;
+    const meta = document.createElement('small');
+    meta.textContent = `${item.sku} · ${formatCurrency(
+      item.approved_price || item.proposed_price,
+    )}`;
+    const status = document.createElement('em');
+    status.textContent = item.label_status === 'PRINTED'
+      ? `${Number(item.label_quantity_printed || 0)} impresas en ${item.print_count} envío(s)`
+      : 'Pendiente de impresión';
+    copy.append(name, meta, status);
+    identity.append(icon, copy);
+    const controls = document.createElement('div');
+    const quantityLabel = document.createElement('label');
+    quantityLabel.textContent = 'Copias';
+    const quantity = document.createElement('input');
+    quantity.type = 'number';
+    quantity.min = '1';
+    quantity.max = '10000';
+    quantity.step = '1';
+    quantity.value = String(Math.max(1, Math.trunc(Number(item.counted_quantity) || 1)));
+    quantity.dataset.logisticsLabelQuantity = item.id;
+    quantityLabel.append(quantity);
+    const print = document.createElement('button');
+    print.type = 'button';
+    print.className = 'secondary-button compact';
+    print.dataset.logisticsPrintItem = item.id;
+    print.textContent = item.label_status === 'PRINTED' ? 'Reimprimir' : 'Imprimir';
+    controls.append(quantityLabel, print);
+    row.append(identity, controls);
+    elements.logisticsLabelProductList.append(row);
+  });
+}
+
+async function selectLogisticsLabelBatch(batchId) {
+  logisticsLabelBatchId = batchId;
+  await loadLogisticsBatch(batchId);
+  renderLogisticsLabelCenter();
+}
+
+function logisticsLabelJobItems(itemId = null) {
+  if (!selectedLogisticsBatch ||
+      selectedLogisticsBatch.batch.id !== logisticsLabelBatchId) return [];
+  return selectedLogisticsBatch.items
+    .filter((item) => !itemId || item.id === itemId)
+    .map((item) => {
+      const input = elements.logisticsLabelProductList.querySelector(
+        `[data-logistics-label-quantity="${item.id}"]`,
+      );
+      return {
+        itemId: item.id,
+        productName: item.product_name,
+        sku: item.sku,
+        barcode: item.barcode || item.sku,
+        price: item.approved_price || item.proposed_price,
+        quantity: Math.max(1, Math.trunc(Number(input?.value) || 1)),
+      };
+    });
+}
+
+function openLogisticsLabelPrint(itemId = null) {
+  const items = logisticsLabelJobItems(itemId);
+  if (!items.length) {
+    showToast('Selecciona un lote aprobado para imprimir.');
+    return;
+  }
+  if (items.reduce((total, item) => total + item.quantity, 0) > 10000) {
+    showToast('El trabajo supera 10.000 etiquetas. Divide la impresión en partes.');
+    return;
+  }
+  const jobId = window.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const company = getActiveCompany();
+  window.localStorage.setItem(`nubixor.label-job.${jobId}`, JSON.stringify({
+    batchId: selectedLogisticsBatch.batch.id,
+    batchNumber: selectedLogisticsBatch.batch.batch_number,
+    companyName: company?.trade_name || company?.legal_name || 'Mi empresa',
+    settings: readLogisticsLabelSettings(),
+    items,
+  }));
+  const printWindow = window.open(
+    `/label-print.html?job=${encodeURIComponent(jobId)}`,
+    `nubixor-labels-${jobId}`,
+  );
+  if (!printWindow) {
+    showToast('El navegador bloqueó la ventana. Permite ventanas emergentes para imprimir.');
+  }
+}
+
+async function saveLogisticsLabelConfiguration() {
+  elements.saveLogisticsLabelSettings.disabled = true;
+  try {
+    logisticsOverview.labelSettings = await getJson('/api/logistics/labels/settings', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(readLogisticsLabelSettings()),
+    });
+    syncLogisticsLabelSettings();
+    showToast('Diseño de etiqueta guardado para esta empresa.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.saveLogisticsLabelSettings.disabled = false;
+  }
+}
+
+function renderLogisticsBatches() {
+  const search = normalizeSearch(elements.logisticsBatchSearch.value.trim());
+  const status = elements.logisticsBatchStatusFilter.value;
+  const batches = logisticsOverview.batches.filter((batch) => {
+    const searchable = normalizeSearch([
+      batch.batch_number,
+      batch.title,
+      batch.supplier_name,
+      batch.supplier_invoice_number,
+      batch.warehouse_name,
+    ].filter(Boolean).join(' '));
+    return (!search || searchable.includes(search)) &&
+      (!status || batch.status === status);
+  });
+  elements.logisticsBatchList.replaceChildren();
+  elements.logisticsBatchCount.textContent =
+    `${batches.length} ${batches.length === 1 ? 'lote' : 'lotes'}`;
+  elements.logisticsBatchState.hidden = batches.length > 0;
+  if (!batches.length) {
+    elements.logisticsBatchState.querySelector('strong').textContent =
+      logisticsOverview.batches.length
+        ? 'Sin coincidencias'
+        : 'Aún no hay recepciones';
+    elements.logisticsBatchState.querySelector('p').textContent =
+      logisticsOverview.batches.length
+        ? 'Ajusta la búsqueda o el estado.'
+        : 'Crea el primer lote para comenzar a recibir mercancía.';
+    return;
+  }
+  batches.forEach((batch) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'logistics-batch-card';
+    button.classList.toggle(
+      'active',
+      selectedLogisticsBatch?.batch?.id === batch.id,
+    );
+    button.dataset.logisticsBatchId = batch.id;
+    const header = document.createElement('div');
+    const identity = document.createElement('span');
+    identity.textContent = batch.batch_number;
+    const badge = document.createElement('b');
+    badge.dataset.status = batch.status;
+    badge.textContent = logisticsStatusLabels[batch.status] || batch.status;
+    header.append(identity, badge);
+    const title = document.createElement('strong');
+    title.textContent = batch.title;
+    const meta = document.createElement('small');
+    meta.textContent = [
+      batch.supplier_name || 'Sin proveedor',
+      batch.warehouse_name,
+    ].filter(Boolean).join(' · ');
+    const metrics = document.createElement('div');
+    metrics.innerHTML = `
+      <span><b>${Number(batch.item_count || 0)}</b> referencias</span>
+      <span><b>${Number(batch.units || 0).toLocaleString('es-CO')}</b> unidades</span>
+      <span><b>${formatCurrency(batch.total_cost)}</b> valor</span>
+    `;
+    button.append(header, title, meta, metrics);
+    button.addEventListener('click', () => loadLogisticsBatch(batch.id));
+    elements.logisticsBatchList.append(button);
+  });
+}
+
+function logisticsActionButton(label, action, className = 'secondary-button') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `${className} compact`;
+  button.dataset.logisticsAction = action;
+  button.textContent = label;
+  return button;
+}
+
+function renderLogisticsDetail() {
+  const detail = selectedLogisticsBatch;
+  elements.logisticsDetailEmpty.hidden = Boolean(detail);
+  elements.logisticsDetailContent.hidden = !detail;
+  if (!detail) return;
+  const { batch, items, comments } = detail;
+  elements.logisticsDetailNumber.textContent = batch.batch_number;
+  elements.logisticsDetailTitle.textContent = batch.title;
+  elements.logisticsDetailMeta.textContent = [
+    batch.supplier_invoice_number && `Factura ${batch.supplier_invoice_number}`,
+    new Date(`${String(batch.received_on).slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO'),
+  ].filter(Boolean).join(' · ') || 'Recepción logística';
+  elements.logisticsDetailStatus.textContent =
+    logisticsStatusLabels[batch.status] || batch.status;
+  elements.logisticsDetailStatus.dataset.status = batch.status;
+  elements.logisticsScanForm.hidden =
+    batch.status !== 'COUNTING' || !hasAnyPermission('logistics.count');
+  elements.logisticsDetailActions.replaceChildren();
+
+  if (batch.status === 'COUNTING' && hasAnyPermission('logistics.count')) {
+    elements.logisticsDetailActions.append(
+      logisticsActionButton('Finalizar conteo →', 'finish-count', 'primary-button'),
+    );
+  }
+  if (batch.status === 'PRICING' && hasAnyPermission('logistics.price')) {
+    elements.logisticsDetailActions.append(
+      logisticsActionButton('Enviar a jefatura →', 'submit-approval', 'primary-button'),
+    );
+  }
+  if (batch.status === 'APPROVAL' && hasAnyPermission('logistics.approve')) {
+    elements.logisticsDetailActions.append(
+      logisticsActionButton('Devolver a precios', 'reject'),
+      logisticsActionButton('Aprobar y cargar inventario ✓', 'approve', 'primary-button'),
+    );
+  }
+  if (batch.status === 'COMPLETED') {
+    elements.logisticsDetailActions.append(
+      logisticsActionButton('Imprimir etiquetas ▥', 'open-labels', 'primary-button'),
+      logisticsActionButton('Exportar lote CSV ↓', 'export'),
+    );
+  }
+
+  elements.logisticsItemCount.textContent =
+    `${items.length} ${items.length === 1 ? 'producto' : 'productos'}`;
+  elements.logisticsItemList.replaceChildren();
+  items.forEach((item) => {
+    const article = document.createElement('article');
+    article.className = 'logistics-item-card';
+    article.dataset.itemId = item.id;
+    const identity = document.createElement('div');
+    identity.className = 'logistics-item-identity';
+    const symbol = document.createElement('span');
+    symbol.textContent = (item.product_name || item.sku).slice(0, 1).toUpperCase();
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = item.product_name;
+    const meta = document.createElement('small');
+    meta.textContent = `${item.sku} · ${Number(item.counted_quantity).toLocaleString('es-CO')} contadas` +
+      (Number(item.expected_quantity) > 0
+        ? ` / ${Number(item.expected_quantity).toLocaleString('es-CO')} esperadas`
+        : '');
+    copy.append(title, meta);
+    if (item.tax_review_status === 'PENDING') {
+      const provisional = document.createElement('em');
+      provisional.textContent = 'Producto nuevo · revisar en Catálogo';
+      copy.append(provisional);
+    }
+    identity.append(symbol, copy);
+    article.append(identity);
+
+    if (batch.status === 'PRICING' && hasAnyPermission('logistics.price')) {
+      const pricing = document.createElement('div');
+      pricing.className = 'logistics-pricing-fields';
+      pricing.innerHTML = `
+        <label><span>Costo unitario</span>
+          <input data-logistics-price="cost" type="number" min="0" step="0.01"
+            value="${Number(item.unit_cost || 0)}"></label>
+        <label><span>Precio propuesto</span>
+          <input data-logistics-price="price" type="number" min="0" step="0.01"
+            value="${Number(item.proposed_price || 0)}"></label>
+        <label><span>Actualizar existencia</span>
+          <select data-logistics-price="mode">
+            <option value="ADD"${item.movement_mode === 'ADD' ? ' selected' : ''}>Sumar</option>
+            <option value="REPLACE"${item.movement_mode === 'REPLACE' ? ' selected' : ''}>Reemplazar</option>
+          </select></label>
+        <button class="secondary-button compact" type="button"
+          data-logistics-price-save="${item.id}">Guardar</button>
+      `;
+      article.append(pricing);
+    } else {
+      const values = document.createElement('div');
+      values.className = 'logistics-item-values';
+      values.innerHTML = `
+        <span><small>Costo</small><strong>${formatCurrency(item.unit_cost)}</strong></span>
+        <span><small>Precio</small><strong>${formatCurrency(item.approved_price || item.proposed_price)}</strong></span>
+        <span><small>Movimiento</small><strong>${item.movement_mode === 'REPLACE' ? 'Reemplazar' : 'Sumar'}</strong></span>
+      `;
+      article.append(values);
+    }
+
+    if (batch.status === 'COMPLETED' && hasAnyPermission('logistics.labels')) {
+      const labelButton = document.createElement('button');
+      labelButton.type = 'button';
+      labelButton.className = 'logistics-label-button';
+      labelButton.dataset.logisticsLabelItem = item.id;
+      labelButton.textContent = item.label_status === 'PENDING'
+        ? 'Imprimir etiqueta'
+        : `Reimprimir · ${item.print_count}`;
+      article.append(labelButton);
+    }
+    elements.logisticsItemList.append(article);
+  });
+
+  elements.logisticsTimeline.replaceChildren();
+  if (!comments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'logistics-timeline-empty';
+    empty.textContent = 'Sin eventos registrados.';
+    elements.logisticsTimeline.append(empty);
+  }
+  comments.forEach((comment) => {
+    const event = document.createElement('article');
+    const dot = document.createElement('span');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = comment.event_type.replaceAll('_', ' ');
+    const message = document.createElement('p');
+    message.textContent = comment.comment;
+    const meta = document.createElement('small');
+    meta.textContent = `${comment.user_name || 'Sistema'} · ${
+      new Date(comment.created_at).toLocaleString('es-CO')
+    }`;
+    copy.append(title, message, meta);
+    event.append(dot, copy);
+    elements.logisticsTimeline.append(event);
+  });
+  syncLogisticsConnectionState();
+  renderLogisticsBatches();
+  renderLogisticsLabelCenter();
+}
+
+async function loadLogisticsOverview() {
+  if (!activeTenantId || !isTenantModuleEnabled('LOGISTICS') ||
+      !hasAnyPermission('logistics.view')) {
+    logisticsOverview = { summary: {}, batches: [], labelSettings: {} };
+    renderLogisticsOverview();
+    return logisticsOverview;
+  }
+  logisticsOverview = await getJson('/api/logistics/overview', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderLogisticsOverview();
+  if (selectedLogisticsBatch &&
+      !logisticsOverview.batches.some((batch) =>
+        batch.id === selectedLogisticsBatch.batch.id)) {
+    selectedLogisticsBatch = null;
+    renderLogisticsDetail();
+  }
+  return logisticsOverview;
+}
+
+async function loadLogisticsBatch(batchId) {
+  selectedLogisticsBatch = await getJson(`/api/logistics/batches/${batchId}`, {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderLogisticsDetail();
+  return selectedLogisticsBatch;
+}
+
+function syncLogisticsBatchWarehouses() {
+  const branchId = elements.logisticsBatchBranchId.value;
+  const current = elements.logisticsBatchWarehouseId.value;
+  elements.logisticsBatchWarehouseId.replaceChildren(
+    new Option('Selecciona la bodega', ''),
+  );
+  warehouses
+    .filter((warehouse) => warehouse.active && warehouse.branch_id === branchId)
+    .forEach((warehouse) => {
+      elements.logisticsBatchWarehouseId.append(
+        new Option(`${warehouse.name} · ${warehouse.code}`, warehouse.id),
+      );
+    });
+  if ([...elements.logisticsBatchWarehouseId.options]
+    .some((option) => option.value === current)) {
+    elements.logisticsBatchWarehouseId.value = current;
+  }
+}
+
+function openLogisticsBatchDialog() {
+  elements.logisticsBatchForm.reset();
+  elements.logisticsBatchFormError.hidden = true;
+  elements.logisticsBatchBranchId.replaceChildren(
+    new Option('Selecciona la sucursal', ''),
+  );
+  branches.filter((branch) => branch.active).forEach((branch) => {
+    elements.logisticsBatchBranchId.append(
+      new Option(`${branch.name} · ${branch.code}`, branch.id),
+    );
+  });
+  elements.logisticsBatchSupplierId.replaceChildren(
+    new Option('Sin proveedor asociado', ''),
+  );
+  suppliers.filter((supplier) => supplier.active).forEach((supplier) => {
+    elements.logisticsBatchSupplierId.append(
+      new Option(supplier.name, supplier.id),
+    );
+  });
+  if (branches.length) elements.logisticsBatchBranchId.value = branches[0].id;
+  syncLogisticsBatchWarehouses();
+  const date = elements.logisticsBatchForm.querySelector('[name="receivedOn"]');
+  date.value = new Date().toISOString().slice(0, 10);
+  elements.logisticsBatchDialog.showModal();
+  elements.logisticsBatchForm.querySelector('[name="title"]').focus();
+}
+
+function closeLogisticsBatchDialog() {
+  elements.logisticsBatchDialog.close();
+}
+
+async function submitLogisticsBatch(event) {
+  event.preventDefault();
+  elements.logisticsBatchFormError.hidden = true;
+  elements.saveLogisticsBatchButton.disabled = true;
+  const form = new FormData(elements.logisticsBatchForm);
+  const payload = Object.fromEntries(form.entries());
+  payload.supplierId ||= null;
+  try {
+    const batch = await getJson('/api/logistics/batches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(payload),
+    });
+    closeLogisticsBatchDialog();
+    await loadLogisticsOverview();
+    await loadLogisticsBatch(batch.id);
+    elements.logisticsScanSku.focus();
+    showToast('Lote abierto para recepción y conteo.');
+  } catch (error) {
+    elements.logisticsBatchFormError.textContent = error.message;
+    elements.logisticsBatchFormError.hidden = false;
+  } finally {
+    elements.saveLogisticsBatchButton.disabled = false;
+  }
+}
+
+async function submitLogisticsScan(event) {
+  event.preventDefault();
+  if (!selectedLogisticsBatch) return;
+  const form = new FormData(elements.logisticsScanForm);
+  const payload = {
+    sku: form.get('sku'),
+    quantity: Number(form.get('quantity')),
+    expectedQuantity: Number(form.get('expectedQuantity') || 0),
+    createIfMissing: form.get('createIfMissing') === 'on',
+    productName: form.get('productName') || null,
+  };
+  elements.logisticsScanError.hidden = true;
+  if (!navigator.onLine) {
+    const pending = readOfflineScans(selectedLogisticsBatch.batch.id);
+    pending.push(payload);
+    writeOfflineScans(selectedLogisticsBatch.batch.id, pending);
+    elements.logisticsScanForm.reset();
+    elements.logisticsScanForm.querySelector('[name="quantity"]').value = '1';
+    elements.logisticsScanForm.querySelector('[name="expectedQuantity"]').value = '0';
+    syncLogisticsConnectionState();
+    showToast('Lectura guardada en el dispositivo para sincronizar después.');
+    return;
+  }
+  try {
+    await getJson(
+      `/api/logistics/batches/${selectedLogisticsBatch.batch.id}/scan`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    const batchId = selectedLogisticsBatch.batch.id;
+    elements.logisticsScanForm.reset();
+    elements.logisticsScanForm.querySelector('[name="quantity"]').value = '1';
+    elements.logisticsScanForm.querySelector('[name="expectedQuantity"]').value = '0';
+    await Promise.all([loadLogisticsOverview(), loadLogisticsBatch(batchId)]);
+    elements.logisticsScanSku.focus();
+  } catch (error) {
+    if (!error.status) {
+      const pending = readOfflineScans(selectedLogisticsBatch.batch.id);
+      pending.push(payload);
+      writeOfflineScans(selectedLogisticsBatch.batch.id, pending);
+      syncLogisticsConnectionState();
+      showToast('Sin conexión. La lectura quedó protegida en la cola local.');
+      return;
+    }
+    elements.logisticsScanError.textContent = error.message;
+    elements.logisticsScanError.hidden = false;
+  }
+}
+
+async function flushLogisticsOfflineScans() {
+  if (!selectedLogisticsBatch || !navigator.onLine) {
+    syncLogisticsConnectionState();
+    return;
+  }
+  const batchId = selectedLogisticsBatch.batch.id;
+  const pending = readOfflineScans(batchId);
+  if (!pending.length) {
+    syncLogisticsConnectionState();
+    return;
+  }
+  const remaining = [...pending];
+  while (remaining.length) {
+    try {
+      await getJson(`/api/logistics/batches/${batchId}/scan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify(remaining[0]),
+      });
+      remaining.shift();
+      writeOfflineScans(batchId, remaining);
+    } catch {
+      break;
+    }
+  }
+  syncLogisticsConnectionState();
+  await Promise.all([loadLogisticsOverview(), loadLogisticsBatch(batchId)]);
+  if (!remaining.length) showToast('Lecturas sin conexión sincronizadas.');
+}
+
+async function runLogisticsAction(action) {
+  if (!selectedLogisticsBatch) return;
+  const batchId = selectedLogisticsBatch.batch.id;
+  if (action === 'open-labels') {
+    logisticsLabelBatchId = batchId;
+    selectInventoryPanel('labels');
+    renderLogisticsLabelCenter();
+    return;
+  }
+  if (action === 'export') {
+    const response = await fetch(
+      `${API_BASE_URL}/api/logistics/batches/${batchId}/export.csv`,
+      {
+        credentials: 'include',
+        headers: { 'x-tenant-id': activeTenantId },
+      },
+    );
+    if (!response.ok) throw new Error('No fue posible exportar el lote.');
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedLogisticsBatch.batch.batch_number}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+  const actions = {
+    'finish-count': { path: 'finish-count', body: {} },
+    'submit-approval': { path: 'submit-approval', body: {} },
+    approve: {
+      path: 'approve',
+      body: { reason: 'Revisión y aprobación final desde Logística' },
+    },
+  };
+  if (action === 'reject') {
+    const reason = window.prompt('Explica qué debe corregirse antes de aprobar:');
+    if (!reason) return;
+    actions.reject = { path: 'reject', body: { reason } };
+  }
+  const selected = actions[action];
+  if (!selected) return;
+  if (action === 'approve' && !window.confirm(
+    'Esta aprobación cargará existencias, costos y precios y bloqueará el lote. ¿Continuar?',
+  )) return;
+  await getJson(`/api/logistics/batches/${batchId}/${selected.path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify(selected.body),
+  });
+  await Promise.all([loadLogisticsOverview(), loadLogisticsBatch(batchId), loadInventory()]);
+  showToast('Etapa logística actualizada.');
+}
+
+async function saveLogisticsPricing(button) {
+  const item = button.closest('.logistics-item-card');
+  const batchId = selectedLogisticsBatch.batch.id;
+  button.disabled = true;
+  try {
+    await getJson(
+      `/api/logistics/batches/${batchId}/items/${button.dataset.logisticsPriceSave}/pricing`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({
+          unitCost: Number(item.querySelector('[data-logistics-price="cost"]').value),
+          proposedPrice: Number(item.querySelector('[data-logistics-price="price"]').value),
+          movementMode: item.querySelector('[data-logistics-price="mode"]').value,
+        }),
+      },
+    );
+    await loadLogisticsBatch(batchId);
+    await loadLogisticsOverview();
+    showToast('Costo y precio guardados.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function markLogisticsLabelsPrinted(batchId, items) {
+  if (!items?.length) return;
+  if (!batchId) return;
+  await Promise.all(items.map((item) =>
+    getJson(
+      `/api/logistics/batches/${batchId}/items/${item.itemId}/label-printed`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ quantity: item.quantity }),
+      },
+    )));
+  logisticsLabelBatchId = batchId;
+  await Promise.all([loadLogisticsOverview(), loadLogisticsBatch(batchId)]);
+  showToast('Impresión registrada con cantidades e historial.');
+}
+
+async function toggleTenantModule(event) {
+  const desiredState = event.currentTarget.checked;
+  const previousState = isTenantModuleEnabled('LOGISTICS');
+  elements.logisticsModuleToggle.disabled = true;
+  elements.moduleSettingMessage.hidden = true;
+  try {
+    const module = await getJson('/api/module-settings/LOGISTICS', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ enabled: desiredState }),
+    });
+    tenantModules.LOGISTICS = Boolean(module.enabled);
+    renderTenantModules();
+    applyAccessVisibility();
+    if (!module.enabled && resolveView() === 'logistica') {
+      window.location.hash = 'inventario';
+      showView('inventario');
+    }
+    if (!module.enabled) {
+      selectedLogisticsBatch = null;
+      logisticsLabelBatchId = null;
+      logisticsOverview = { summary: {}, batches: [], labelSettings: {} };
+      renderLogisticsOverview();
+      renderLogisticsDetail();
+    }
+    await Promise.all([
+      loadInventory(),
+      module.enabled ? loadLogisticsOverview() : Promise.resolve({}),
+    ]);
+    showToast(module.enabled
+      ? 'Logística activada para esta empresa.'
+      : 'Logística desactivada. Sus datos permanecen guardados.');
+  } catch (error) {
+    tenantModules.LOGISTICS = previousState;
+    renderTenantModules();
+    elements.moduleSettingMessage.textContent = error.message;
+    elements.moduleSettingMessage.hidden = false;
+  } finally {
+    elements.logisticsModuleToggle.disabled = !hasAnyPermission('users.manage');
+  }
 }
 
 function applyAccessVisibility() {
@@ -841,13 +2379,17 @@ function applyAccessVisibility() {
     inicio: ['dashboard.view'],
     empresas: [],
     sucursales: ['branches.manage', 'dashboard.view', 'inventory.view', 'sales.operate'],
+    terceros: ['parties.view', 'parties.manage'],
     bodegas: ['warehouses.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
     inventario: ['inventory.view', 'inventory.adjust'],
+    logistica: ['logistics.view'],
     productos: ['catalog.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
     compras: ['purchases.manage'],
     'cuentas-pagar': ['payables.manage'],
+    gastos: ['expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay'],
     caja: ['sales.operate'],
     cartera: ['receivables.manage'],
+    facturacion: ['billing.manage'],
     usuarios: ['users.manage'],
     modulos: ['dashboard.view'],
     reportes: ['reports.view'],
@@ -856,31 +2398,44 @@ function applyAccessVisibility() {
   };
   document.querySelectorAll('[data-view-link]').forEach((link) => {
     const required = viewPermissions[link.dataset.viewLink] || [];
+    const requiredModule = link.dataset.tenantModuleLink;
+    const moduleRestricted =
+      requiredModule && !isTenantModuleEnabled(requiredModule);
     const cashierRestricted = cashierMode && link.dataset.viewLink !== 'caja';
     const branchAuditRestricted =
       link.dataset.viewLink === 'auditoria' && Boolean(membership?.branchId);
-    link.hidden = cashierRestricted || branchAuditRestricted ||
+    link.hidden = moduleRestricted || cashierRestricted || branchAuditRestricted ||
       (required.length > 0 && !hasAnyPermission(...required));
   });
+  updateSidebarGroupVisibility();
   elements.accountRole.textContent = membership?.roleName || 'Sin acceso a empresa';
   elements.newCompanyButton.hidden = !hasAnyPermission('companies.manage');
   elements.newBranchButton.hidden = !hasAnyPermission('branches.manage');
   elements.newWarehouseButton.hidden = !hasAnyPermission('warehouses.manage');
   elements.newAdjustmentButton.hidden = !hasAnyPermission('inventory.adjust');
-  elements.newTransferButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newTransferButton.hidden =
+    !isTenantModuleEnabled('LOGISTICS') || !hasAnyPermission('inventory.adjust');
+  elements.newLogisticsBatchButton.hidden = !hasAnyPermission('logistics.count');
   elements.newCountButton.hidden = !hasAnyPermission('inventory.adjust');
   elements.newCategoryButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newBrandButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newTaxButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newProductButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.openCatalogImportButton.hidden = !hasAnyPermission('catalog.manage');
   elements.categoryPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.brandPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.taxPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newPurchaseButton.hidden = !hasAnyPermission('purchases.manage');
   elements.newSupplierButton.hidden = !hasAnyPermission('purchases.manage');
   elements.supplierPanelCreateButton.hidden = !hasAnyPermission('purchases.manage');
+  elements.newExpenseButton.hidden = !hasAnyPermission('expenses.manage');
+  elements.newCostCenterButton.hidden = !hasAnyPermission('expenses.manage');
+  elements.newExpenseCategoryButton.hidden = !hasAnyPermission('expenses.manage');
+  elements.newThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
+  elements.editThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
   elements.inviteUserButton.hidden = !hasAnyPermission('users.manage');
   elements.newRoleButton.hidden = !hasAnyPermission('users.manage');
+  renderTenantModules();
 }
 
 function renderAuthenticatedUser() {
@@ -901,9 +2456,11 @@ function showAuthGate({ setupRequired = false, initialEmail = '' } = {}) {
   elements.setupAccessPanel.hidden = !setupRequired;
   elements.loginAccessPanel.hidden = setupRequired;
   elements.activateAccessPanel.hidden = true;
+  elements.recoveryRequestPanel.hidden = true;
+  elements.resetPasswordPanel.hidden = true;
   elements.accountMenu.hidden = true;
   if (setupRequired) {
-    elements.setupEmail.value = initialEmail || 'admin@megasuite.local';
+    elements.setupEmail.value = initialEmail || 'admin@nubixor.tech';
     queueMicrotask(() => elements.setupEmail.focus());
   } else {
     queueMicrotask(() => elements.loginEmail.focus());
@@ -919,7 +2476,35 @@ function showActivationGate() {
   elements.setupAccessPanel.hidden = true;
   elements.loginAccessPanel.hidden = true;
   elements.activateAccessPanel.hidden = false;
+  elements.recoveryRequestPanel.hidden = true;
+  elements.resetPasswordPanel.hidden = true;
   queueMicrotask(() => elements.activateAccessForm.elements.password.focus());
+}
+
+function showRecoveryGate() {
+  elements.setupAccessPanel.hidden = true;
+  elements.loginAccessPanel.hidden = true;
+  elements.activateAccessPanel.hidden = true;
+  elements.resetPasswordPanel.hidden = true;
+  elements.recoveryRequestPanel.hidden = false;
+  elements.recoveryRequestError.hidden = true;
+  elements.recoveryRequestSuccess.hidden = true;
+  elements.recoveryEmail.value = elements.loginEmail.value;
+  queueMicrotask(() => elements.recoveryEmail.focus());
+}
+
+function showResetPasswordGate() {
+  currentUser = null;
+  csrfToken = null;
+  elements.appShell.hidden = true;
+  elements.authGate.hidden = false;
+  elements.authLoading.hidden = true;
+  elements.setupAccessPanel.hidden = true;
+  elements.loginAccessPanel.hidden = true;
+  elements.activateAccessPanel.hidden = true;
+  elements.recoveryRequestPanel.hidden = true;
+  elements.resetPasswordPanel.hidden = false;
+  queueMicrotask(() => elements.resetPasswordForm.elements.password.focus());
 }
 
 async function completeAuthentication(user, nextCsrfToken) {
@@ -1029,6 +2614,64 @@ async function submitActivateAccess(event) {
   }
 }
 
+async function submitRecoveryRequest(event) {
+  event.preventDefault();
+  elements.recoveryRequestError.hidden = true;
+  elements.recoveryRequestSuccess.hidden = true;
+  elements.recoveryRequestButton.disabled = true;
+  try {
+    const result = await getJson('/api/auth/password-recovery/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: elements.recoveryEmail.value }),
+    });
+    if (result.resetUrl) {
+      pendingPasswordResetToken =
+        new URL(result.resetUrl).searchParams.get('reset');
+      showResetPasswordGate();
+      return;
+    }
+    elements.recoveryRequestSuccess.textContent = result.message;
+    elements.recoveryRequestSuccess.hidden = false;
+  } catch (error) {
+    elements.recoveryRequestError.textContent = error.message;
+    elements.recoveryRequestError.hidden = false;
+  } finally {
+    elements.recoveryRequestButton.disabled = false;
+  }
+}
+
+async function submitResetPassword(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.resetPasswordForm);
+  elements.resetPasswordError.hidden = true;
+  if (formData.get('password') !== formData.get('confirmPassword')) {
+    elements.resetPasswordError.textContent = 'Las contraseñas no coinciden.';
+    elements.resetPasswordError.hidden = false;
+    return;
+  }
+  elements.resetPasswordButton.disabled = true;
+  try {
+    const result = await getJson('/api/auth/password-recovery/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: pendingPasswordResetToken,
+        password: formData.get('password'),
+      }),
+    });
+    pendingPasswordResetToken = null;
+    window.history.replaceState({}, '', window.location.pathname);
+    await completeAuthentication(result.user, result.csrfToken);
+    showToast('Contraseña actualizada y sesiones anteriores cerradas.');
+  } catch (error) {
+    elements.resetPasswordError.textContent = error.message;
+    elements.resetPasswordError.hidden = false;
+  } finally {
+    elements.resetPasswordButton.disabled = false;
+  }
+}
+
 async function logout() {
   elements.logoutButton.disabled = true;
   try {
@@ -1042,6 +2685,10 @@ async function logout() {
 }
 
 async function startApplication() {
+  if (pendingPasswordResetToken) {
+    showResetPasswordGate();
+    return;
+  }
   if (pendingActivationToken) {
     showActivationGate();
     return;
@@ -1056,7 +2703,7 @@ async function startApplication() {
   } catch (error) {
     elements.authLoading.replaceChildren();
     const title = document.createElement('strong');
-    title.textContent = 'No pudimos conectar con MegaSuite';
+    title.textContent = 'No pudimos conectar con Nubixor';
     const detail = document.createElement('span');
     detail.textContent = error.message;
     elements.authLoading.append(title, detail);
@@ -1103,6 +2750,16 @@ function normalizeSearch(value) {
     .toLocaleLowerCase('es');
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  })[character]);
+}
+
 function createCell(label, value) {
   const cell = document.createElement('td');
   cell.dataset.label = label;
@@ -1112,6 +2769,182 @@ function createCell(label, value) {
 
 function getActiveCompany() {
   return companies.find((company) => company.id === activeTenantId) || null;
+}
+
+function setQuickLookupState(title, detail, symbol = 'P') {
+  elements.quickLookupState.hidden = false;
+  elements.quickLookupState.replaceChildren();
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = symbol;
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  const paragraph = document.createElement('p');
+  paragraph.textContent = detail;
+  elements.quickLookupState.append(icon, strong, paragraph);
+}
+
+function openQuickLookup() {
+  const company = getActiveCompany();
+  if (!company) {
+    showToast('Selecciona una empresa para consultar su catálogo.');
+    return;
+  }
+  quickLookupSequence += 1;
+  clearTimeout(quickLookupTimer);
+  elements.quickLookupSearch.value = '';
+  elements.quickLookupResults.replaceChildren();
+  elements.quickLookupCompany.textContent =
+    company.trade_name || company.legal_name || 'Empresa activa';
+  setQuickLookupState(
+    'Consulta cualquier producto',
+    'Escribe al menos dos caracteres para ver precio, impuesto y existencias.',
+  );
+  if (!elements.quickLookupDialog.open) elements.quickLookupDialog.showModal();
+  requestAnimationFrame(() => elements.quickLookupSearch.focus());
+}
+
+function closeQuickLookup() {
+  quickLookupSequence += 1;
+  clearTimeout(quickLookupTimer);
+  if (elements.quickLookupDialog.open) elements.quickLookupDialog.close();
+  elements.quickLookupSearch.value = '';
+  elements.quickLookupResults.replaceChildren();
+}
+
+function openLookupProductInWorkspace(product) {
+  closeQuickLookup();
+  if (hasAnyPermission('sales.operate')) {
+    showView('caja');
+    elements.posProductSearch.value = product.sku;
+    renderPosCatalog();
+    elements.posProductSearch.focus();
+    showToast(
+      posCatalog.some((item) => item.id === product.id)
+        ? 'Producto ubicado en Caja. Enter agrega un SKU exacto.'
+        : 'El producto no está disponible en el origen seleccionado de Caja.',
+    );
+    return;
+  }
+  if (hasAnyPermission('inventory.view', 'inventory.adjust')) {
+    showView('inventario');
+    elements.inventorySearch.value = product.sku;
+    renderInventoryBalances();
+    elements.inventorySearch.focus();
+    return;
+  }
+  showView('productos');
+  elements.productSearch.value = product.sku;
+  renderProducts();
+  elements.productSearch.focus();
+}
+
+function renderQuickLookupResults(payload) {
+  elements.quickLookupResults.replaceChildren();
+  const records = payload.products || [];
+  if (!records.length) {
+    setQuickLookupState(
+      'Sin coincidencias',
+      `No encontramos productos para “${payload.query}” en la empresa activa.`,
+      '0',
+    );
+    return;
+  }
+  elements.quickLookupState.hidden = true;
+  records.forEach((product) => {
+    const card = document.createElement('article');
+    card.className = 'quick-product-card';
+    const visual = document.createElement('div');
+    visual.className = 'quick-product-visual';
+    if (product.image_url) {
+      const image = document.createElement('img');
+      image.src = resolvePublicAsset(product.image_url);
+      image.alt = '';
+      visual.append(image);
+    } else {
+      visual.textContent = product.name.slice(0, 1).toUpperCase();
+    }
+    const identity = document.createElement('div');
+    identity.className = 'quick-product-identity';
+    const heading = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = product.name;
+    const meta = document.createElement('small');
+    meta.textContent = [
+      product.sku,
+      product.barcode ? `Código ${product.barcode}` : null,
+      product.category_name,
+      product.brand_name,
+    ].filter(Boolean).join(' · ');
+    heading.append(name, meta);
+    const locations = document.createElement('div');
+    locations.className = 'quick-product-locations';
+    if (product.locations?.length) {
+      product.locations.forEach((location) => {
+        const badge = document.createElement('span');
+        badge.className = location.type === 'DISPLAY' ? 'display' : '';
+        badge.textContent =
+          `${location.warehouse}: ${Number(location.available).toLocaleString('es-CO')}`;
+        locations.append(badge);
+      });
+    } else {
+      const empty = document.createElement('span');
+      empty.className = 'empty';
+      empty.textContent = payload.scope === 'DISPLAY_ONLY'
+        ? 'Sin unidades disponibles en exhibición'
+        : 'Sin existencias registradas';
+      locations.append(empty);
+    }
+    identity.append(heading, locations);
+    const commercial = document.createElement('div');
+    commercial.className = 'quick-product-commercial';
+    const price = document.createElement('strong');
+    price.textContent = formatCurrency(product.sale_price);
+    const tax = document.createElement('small');
+    tax.textContent = product.tax_name
+      ? `${product.tax_name} · ${Number(product.tax_rate)}%`
+      : 'Impuesto pendiente';
+    const stock = document.createElement('span');
+    stock.textContent =
+      `${Number(product.available_stock).toLocaleString('es-CO')} disponibles`;
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'secondary-button compact';
+    open.textContent = hasAnyPermission('sales.operate')
+      ? 'Buscar en Caja →'
+      : 'Abrir detalle →';
+    open.addEventListener('click', () => openLookupProductInWorkspace(product));
+    commercial.append(price, tax, stock, open);
+    card.append(visual, identity, commercial);
+    elements.quickLookupResults.append(card);
+  });
+}
+
+function scheduleQuickLookup() {
+  clearTimeout(quickLookupTimer);
+  const search = elements.quickLookupSearch.value.trim();
+  if (search.length < 2) {
+    elements.quickLookupResults.replaceChildren();
+    setQuickLookupState(
+      'Escribe al menos dos caracteres',
+      'Puedes consultar por nombre, SKU, código de barras, categoría o marca.',
+    );
+    return;
+  }
+  const sequence = ++quickLookupSequence;
+  setQuickLookupState('Consultando productos…', 'Buscando dentro de la empresa activa.', '…');
+  quickLookupTimer = setTimeout(async () => {
+    try {
+      const payload = await getJson(
+        `/api/products/lookup?q=${encodeURIComponent(search)}`,
+      );
+      if (sequence !== quickLookupSequence) return;
+      renderQuickLookupResults(payload);
+    } catch (error) {
+      if (sequence !== quickLookupSequence) return;
+      setQuickLookupState('No fue posible consultar', error.message, '!');
+    }
+  }, 180);
 }
 
 function syncCompanyContext(preferredTenantId = activeTenantId) {
@@ -1193,6 +3026,38 @@ function renderCompanies() {
     row.append(createCell('Nombre comercial', company.trade_name));
     row.append(createCell('NIT', company.tax_id));
 
+    const identityCell = document.createElement('td');
+    identityCell.dataset.label = 'Identidad';
+    const identity = document.createElement('div');
+    identity.className = 'company-identity-cell';
+    if (company.logo_url) {
+      const logo = document.createElement('img');
+      logo.src = company.logo_url;
+      logo.alt = `Logo de ${company.trade_name || company.legal_name}`;
+      identity.append(logo);
+    } else {
+      const logoPlaceholder = document.createElement('span');
+      logoPlaceholder.className = 'company-logo-table-placeholder';
+      logoPlaceholder.textContent = company.legal_name.slice(0, 1).toUpperCase();
+      identity.append(logoPlaceholder);
+    }
+    const identityInfo = document.createElement('div');
+    const identityStatus = document.createElement('strong');
+    identityStatus.textContent = company.logo_url ? 'Logo configurado' : 'Sin logo';
+    identityInfo.append(identityStatus);
+    if (hasAnyPermission('companies.manage')) {
+      const configureIdentity = document.createElement('button');
+      configureIdentity.type = 'button';
+      configureIdentity.className = 'accounting-row-action';
+      configureIdentity.textContent = company.logo_url ? 'Cambiar' : 'Configurar';
+      configureIdentity.addEventListener('click', () =>
+        openCompanyIdentityDialog(company));
+      identityInfo.append(configureIdentity);
+    }
+    identity.append(identityInfo);
+    identityCell.append(identity);
+    row.append(identityCell);
+
     const billingCell = document.createElement('td');
     billingCell.dataset.label = 'Facturación';
     const billing = document.createElement('span');
@@ -1204,6 +3069,30 @@ function renderCompanies() {
       : 'Comprobante interno';
     billingCell.append(billing);
     row.append(billingCell);
+
+    const taxCell = document.createElement('td');
+    taxCell.dataset.label = 'Tributación';
+    const taxState = document.createElement('span');
+    taxState.className = `table-status ${
+      company.validation_status === 'VALIDATED' ? 'active' : 'pending'
+    }`;
+    taxState.textContent = company.validation_status === 'VALIDATED'
+      ? 'Validada'
+      : company.validation_status === 'OBSERVED'
+        ? 'Observada'
+        : 'Por validar';
+    taxCell.append(taxState);
+    if (hasAnyPermission('companies.manage')) {
+      const configure = document.createElement('button');
+      configure.type = 'button';
+      configure.className = 'accounting-row-action';
+      configure.textContent = company.validation_status === 'PENDING'
+        ? 'Configurar'
+        : 'Revisar';
+      configure.addEventListener('click', () => openTaxProfileDialog(company));
+      taxCell.append(configure);
+    }
+    row.append(taxCell);
 
     const statusCell = document.createElement('td');
     statusCell.dataset.label = 'Estado';
@@ -1507,6 +3396,8 @@ function renderProducts() {
       product.category_name,
       product.brand_name,
       product.tax_name,
+      product.product_kind,
+      ...Object.values(product.variant_attributes || {}),
     ].filter(Boolean).join(' '));
     return !query || searchable.includes(query);
   });
@@ -1543,13 +3434,48 @@ function renderProducts() {
     }
     const name = document.createElement('strong');
     name.textContent = product.name;
-    nameWrap.append(visual, name);
+    const nameCopy = document.createElement('div');
+    nameCopy.className = 'product-name-copy';
+    nameCopy.append(name);
+    if (product.product_kind && product.product_kind !== 'SIMPLE') {
+      const kind = document.createElement('small');
+      kind.className = `product-kind-badge ${product.product_kind.toLowerCase()}`;
+      if (product.product_kind === 'COMBO') kind.textContent = 'Combo';
+      else if (product.product_kind === 'VARIANT_PARENT') {
+        kind.textContent = 'Producto con opciones';
+      } else {
+        const attributes = product.variant_attributes || {};
+        kind.textContent = Object.entries(attributes)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(' · ') || 'Variante';
+      }
+      nameCopy.append(kind);
+    }
+    nameWrap.append(visual, nameCopy);
+    const productActions = document.createElement('div');
+    productActions.className = 'product-row-actions';
     const imageButton = document.createElement('button');
     imageButton.className = 'photo-action';
     imageButton.type = 'button';
     imageButton.textContent = product.image_url ? 'Cambiar foto' : 'Adjuntar foto';
     imageButton.addEventListener('click', () => openProductImageDialog(product));
-    nameCell.append(nameWrap, imageButton);
+    productActions.append(imageButton);
+    if (hasAnyPermission('catalog.manage') && product.product_kind !== 'VARIANT') {
+      const organizeButton = document.createElement('button');
+      organizeButton.className = 'product-structure-action';
+      organizeButton.type = 'button';
+      organizeButton.textContent = product.product_kind === 'COMBO'
+        ? 'Configurar combo'
+        : product.product_kind === 'VARIANT_PARENT'
+          ? 'Administrar opciones'
+          : 'Colores o combo';
+      organizeButton.addEventListener(
+        'click',
+        () => openProductStructureDialog(product),
+      );
+      productActions.append(organizeButton);
+    }
+    nameCell.append(nameWrap, productActions);
     row.append(nameCell);
     row.append(createCell('SKU', product.sku));
     row.append(createCell('Categoría', product.category_name));
@@ -1675,6 +3601,7 @@ function showCatalogPanel(panelName) {
     tab.classList.toggle('active', isActive);
     tab.setAttribute('aria-selected', String(isActive));
   });
+  if (panelName === 'pricing') defaultPromotionDates();
 }
 
 function showCatalogError(message) {
@@ -1691,6 +3618,309 @@ function showCatalogError(message) {
   updateCatalogCounters();
   renderTaxonomies();
   syncProductOptions();
+}
+
+function renderComboCatalog() {
+  elements.comboCatalogGrid.replaceChildren();
+  elements.comboCatalogState.hidden = comboCatalog.length > 0;
+  for (const combo of comboCatalog) {
+    const card = document.createElement('article');
+    card.className = `combo-catalog-card ${combo.cashier_ready ? 'ready' : ''}`;
+    const heading = document.createElement('div');
+    heading.className = 'combo-catalog-heading';
+    const identity = document.createElement('div');
+    const eyebrow = document.createElement('small');
+    eyebrow.textContent = `${combo.sku} · ${combo.component_count} componentes`;
+    const name = document.createElement('h4');
+    name.textContent = combo.name;
+    identity.append(eyebrow, name);
+    const status = document.createElement('span');
+    status.className = `combo-ready-status ${combo.cashier_ready ? 'active' : 'pending'}`;
+    status.textContent = combo.cashier_ready ? 'Visible en Caja' : 'Requiere preparación';
+    heading.append(identity, status);
+
+    const stock = document.createElement('div');
+    stock.className = 'combo-stock-grid';
+    for (const [label, value] of [
+      ['Exhibición', combo.display_stock],
+      ['Bodega', combo.warehouse_stock],
+      ['Precio', formatCurrency(combo.sale_price)],
+    ]) {
+      const item = document.createElement('div');
+      item.innerHTML = `<span>${label}</span><strong>${
+        label === 'Precio' ? value : formatQuantity(value)
+      }</strong>`;
+      stock.append(item);
+    }
+    const checklist = document.createElement('ul');
+    checklist.className = 'combo-checklist';
+    const checks = [
+      [Number(combo.component_count) > 0, 'Composición guardada'],
+      [combo.tax_review_status === 'REVIEWED', 'Impuesto revisado'],
+      [Number(combo.total_stock) > 0, 'Combo armado'],
+      [Number(combo.display_stock) > 0, 'Unidades en Exhibición'],
+    ];
+    for (const [ready, label] of checks) {
+      const item = document.createElement('li');
+      item.classList.toggle('ready', ready);
+      item.textContent = `${ready ? '✓' : '○'} ${label}`;
+      checklist.append(item);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'combo-card-actions';
+    const product = products.find((item) => item.id === combo.id) || combo;
+    const manage = document.createElement('button');
+    manage.className = 'secondary-button compact';
+    manage.type = 'button';
+    manage.textContent = Number(combo.component_count)
+      ? 'Composición y armado'
+      : 'Configurar componentes';
+    manage.addEventListener('click', () => openProductStructureDialog(product));
+    actions.append(manage);
+    if (combo.tax_review_status !== 'REVIEWED') {
+      const tax = document.createElement('button');
+      tax.className = 'secondary-button compact';
+      tax.type = 'button';
+      tax.textContent = 'Configurar impuesto';
+      tax.addEventListener('click', () => openProductTaxDialog(product));
+      actions.append(tax);
+    }
+    const source = combo.stock_by_warehouse.find(
+      (item) => item.warehouseType === 'AVAILABLE' && Number(item.onHand) > 0,
+    );
+    const destination = combo.stock_by_warehouse.find(
+      (item) => item.warehouseType === 'DISPLAY',
+    ) || warehouses.find((item) => item.warehouse_type === 'DISPLAY');
+    if (source && destination && !combo.cashier_ready) {
+      const transfer = document.createElement('button');
+      transfer.className = 'primary-button compact';
+      transfer.type = 'button';
+      transfer.textContent = 'Mover a Exhibición →';
+      transfer.addEventListener('click', () => openTransferDialog({
+        productId: combo.id,
+        sourceWarehouseId: source.warehouseId,
+        destinationWarehouseId: destination.warehouseId || destination.id,
+        quantity: Math.min(Number(source.onHand), 1),
+        reason: `Publicación del combo ${combo.name} en Caja`,
+      }));
+      actions.append(transfer);
+    }
+    card.append(heading, stock, checklist, actions);
+    elements.comboCatalogGrid.append(card);
+  }
+}
+
+function fillPricingSelect(select, placeholder, items, label) {
+  const current = select.value;
+  select.replaceChildren(new Option(placeholder, ''));
+  for (const item of items) select.append(new Option(label(item), item.id));
+  if (items.some((item) => item.id === current)) select.value = current;
+}
+
+function renderPricingOverview() {
+  const sellable = pricingOverview.products.filter((product) => product.active);
+  fillPricingSelect(
+    elements.pricingProductId,
+    'Selecciona un producto',
+    sellable,
+    (item) => `${item.name} · ${item.sku}`,
+  );
+  fillPricingSelect(
+    elements.promotionProductId,
+    'Selecciona un producto',
+    sellable,
+    (item) => `${item.name} · ${item.sku}`,
+  );
+  fillPricingSelect(
+    elements.pricingPriceListId,
+    'Selecciona una lista',
+    pricingOverview.lists,
+    (item) => item.name,
+  );
+  fillPricingSelect(
+    elements.pricingCustomerId,
+    'Selecciona un cliente',
+    pricingOverview.customers,
+    (item) => `${item.name}${item.price_list_name ? ` · ${item.price_list_name}` : ''}`,
+  );
+  const currentCustomerList = elements.customerPriceListId.value;
+  elements.customerPriceListId.replaceChildren(
+    new Option('Precio unitario (sin lista)', ''),
+  );
+  for (const list of pricingOverview.lists) {
+    elements.customerPriceListId.append(new Option(list.name, list.id));
+  }
+  elements.customerPriceListId.value = [...elements.customerPriceListId.options]
+    .some((option) => option.value === currentCustomerList)
+    ? currentCustomerList
+    : '';
+
+  elements.productPriceList.replaceChildren();
+  if (!pricingOverview.prices.length) {
+    elements.productPriceList.innerHTML =
+      '<p class="product-structure-empty">Todavía no hay escalas especiales.</p>';
+  }
+  for (const price of pricingOverview.prices) {
+    const row = document.createElement('article');
+    row.className = 'pricing-rule-row';
+    const copy = document.createElement('div');
+    copy.innerHTML = `<strong>${escapeHtml(price.product_name)}</strong>` +
+      `<small>${escapeHtml(price.price_list_name)} · desde ${formatQuantity(price.min_quantity)}</small>`;
+    const value = document.createElement('b');
+    value.textContent = formatCurrency(price.unit_price);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-button';
+    remove.textContent = '×';
+    remove.addEventListener('click', async () => {
+      await getJson(`/api/pricing/product-prices/${price.id}`, {
+        method: 'DELETE',
+        headers: { 'x-tenant-id': activeTenantId },
+      });
+      await loadCommercialCatalog();
+      showToast('Escala de precio desactivada.');
+    });
+    row.append(copy, value, remove);
+    elements.productPriceList.append(row);
+  }
+
+  elements.promotionList.replaceChildren();
+  if (!pricingOverview.promotions.length) {
+    elements.promotionList.innerHTML =
+      '<p class="product-structure-empty">No hay promociones programadas.</p>';
+  }
+  for (const promotion of pricingOverview.promotions) {
+    const row = document.createElement('article');
+    row.className = 'promotion-list-row';
+    const copy = document.createElement('div');
+    const discount = promotion.discount_type === 'PERCENT'
+      ? `${Number(promotion.discount_value)}%`
+      : formatCurrency(promotion.discount_value);
+    copy.innerHTML = `<strong>${escapeHtml(promotion.name)}</strong>` +
+      `<small>${escapeHtml(promotion.product_name)} · ${discount} · hasta ${
+        new Date(promotion.ends_at).toLocaleString('es-CO')
+      }</small>`;
+    const status = document.createElement('span');
+    status.className = `promotion-status ${promotion.status.toLowerCase()}`;
+    status.textContent = {
+      ACTIVE: 'Activa',
+      SCHEDULED: 'Programada',
+      EXPIRED: 'Finalizada',
+      INACTIVE: 'Pausada',
+    }[promotion.status] || promotion.status;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'secondary-button compact';
+    toggle.textContent = promotion.active ? 'Pausar' : 'Activar';
+    toggle.addEventListener('click', async () => {
+      await getJson(`/api/pricing/promotions/${promotion.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ active: !promotion.active }),
+      });
+      await loadCommercialCatalog();
+    });
+    row.append(copy, status, toggle);
+    elements.promotionList.append(row);
+  }
+}
+
+async function loadCommercialCatalog() {
+  if (!activeTenantId || !hasAnyPermission('catalog.manage')) {
+    comboCatalog = [];
+    pricingOverview = {
+      lists: [], prices: [], promotions: [], products: [], customers: [],
+    };
+    renderComboCatalog();
+    renderPricingOverview();
+    return;
+  }
+  const headers = { 'x-tenant-id': activeTenantId };
+  [comboCatalog, pricingOverview] = await Promise.all([
+    getJson('/api/product-structures/combos', { headers }),
+    getJson('/api/pricing/overview', { headers }),
+  ]);
+  renderComboCatalog();
+  renderPricingOverview();
+}
+
+async function submitProductPrice(event) {
+  event.preventDefault();
+  const data = new FormData(elements.productPriceForm);
+  elements.productPriceError.hidden = true;
+  try {
+    await getJson('/api/pricing/product-prices', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
+    await loadCommercialCatalog();
+    showToast('Escala guardada. Caja la aplicará por cliente y cantidad.');
+  } catch (error) {
+    elements.productPriceError.textContent = error.message;
+    elements.productPriceError.hidden = false;
+  }
+}
+
+async function submitCustomerPriceList(event) {
+  event.preventDefault();
+  const data = new FormData(elements.customerPriceListForm);
+  elements.customerPriceListError.hidden = true;
+  try {
+    await getJson(`/api/pricing/customers/${data.get('customerId')}/price-list`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ priceListId: data.get('priceListId') || null }),
+    });
+    await Promise.all([loadCommercialCatalog(), loadPos()]);
+    showToast('Política de precio asignada al cliente.');
+  } catch (error) {
+    elements.customerPriceListError.textContent = error.message;
+    elements.customerPriceListError.hidden = false;
+  }
+}
+
+function defaultPromotionDates() {
+  const now = new Date();
+  const end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const localValue = (date) => {
+    const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return adjusted.toISOString().slice(0, 16);
+  };
+  elements.promotionStartsAt.value ||= localValue(now);
+  elements.promotionEndsAt.value ||= localValue(end);
+}
+
+async function submitPromotion(event) {
+  event.preventDefault();
+  const data = new FormData(elements.promotionForm);
+  elements.promotionError.hidden = true;
+  try {
+    await getJson('/api/pricing/promotions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
+    elements.promotionForm.reset();
+    defaultPromotionDates();
+    await loadCommercialCatalog();
+    showToast('Promoción programada y protegida por su vigencia.');
+  } catch (error) {
+    elements.promotionError.textContent = error.message;
+    elements.promotionError.hidden = false;
+  }
 }
 
 async function loadCatalog() {
@@ -1712,6 +3942,7 @@ async function loadCatalog() {
     renderTaxonomies();
     syncProductOptions();
     renderProducts();
+    await loadCommercialCatalog();
     return products;
   } catch (error) {
     showCatalogError(error.message);
@@ -1745,19 +3976,82 @@ function syncCashRegisterOptions() {
 
 function setExecutiveSummary(summary = {}) {
   executiveSummary = summary;
+  const salesTodayCount = Number(summary.sales_today_count || 0);
+  const salesMonth = Number(summary.sales_month || 0);
+  const previousMonth = Number(summary.sales_previous_month_to_date || 0);
+  const overdueReceivables = Number(summary.overdue_receivables_count || 0);
+  const overduePayables = Number(summary.overdue_payables_count || 0);
+  const lowStock = Number(summary.low_stock_balances || 0);
+  const pendingPurchases = Number(summary.pending_purchase_value || 0);
+  const priorityCount =
+    overdueReceivables + overduePayables + lowStock + (pendingPurchases > 0 ? 1 : 0);
+  const activeCompany = getActiveCompany();
+
+  elements.dashboardCompanyName.textContent =
+    activeCompany?.trade_name || activeCompany?.legal_name || 'la empresa activa';
   elements.dashboardSalesToday.textContent = formatCurrency(summary.sales_today || 0);
-  elements.dashboardSalesMonth.textContent = formatCurrency(summary.sales_month || 0);
+  elements.dashboardSalesMonth.textContent = formatCurrency(salesMonth);
+  elements.dashboardSalesCount.textContent =
+    `${salesTodayCount} ${salesTodayCount === 1 ? 'transacción registrada' : 'transacciones registradas'}`;
+  elements.dashboardAverageTicket.textContent =
+    formatCurrency(summary.average_ticket_today || 0);
   elements.dashboardGrossMargin.textContent =
-    `Margen ${formatCurrency(summary.gross_margin_month || 0)}`;
-  elements.dashboardLowStock.textContent = String(summary.low_stock_balances || 0);
+    formatCurrency(summary.gross_margin_month || 0);
+  elements.dashboardLowStock.textContent = String(lowStock);
   elements.dashboardPendingPurchases.textContent =
-    formatCurrency(summary.pending_purchase_value || 0);
+    formatCurrency(pendingPurchases);
   elements.dashboardCashProjection.textContent =
     formatCurrency(summary.projected_cash_30_days || 0);
   elements.dashboardCashProjectionDetail.textContent =
     `${formatCurrency(summary.open_cash_position || 0)} en caja + ` +
     `${formatCurrency(summary.receivables_30_days || 0)} por cobrar − ` +
     `${formatCurrency(summary.payables_30_days || 0)} por pagar`;
+  elements.dashboardOverdueReceivable.textContent =
+    formatCurrency(summary.overdue_receivables || 0);
+  elements.dashboardOverdueReceivableCount.textContent =
+    `${overdueReceivables} ${overdueReceivables === 1 ? 'documento' : 'documentos'}`;
+  elements.dashboardOverduePayable.textContent =
+    formatCurrency(summary.overdue_payables || 0);
+  elements.dashboardOverduePayableCount.textContent =
+    `${overduePayables} ${overduePayables === 1 ? 'documento' : 'documentos'}`;
+  elements.dashboardPriorityCount.textContent =
+    `${priorityCount} ${priorityCount === 1 ? 'alerta' : 'alertas'}`;
+  elements.dashboardPriorityCount.classList.toggle('clear', priorityCount === 0);
+
+  if (previousMonth > 0) {
+    const difference = ((salesMonth - previousMonth) / previousMonth) * 100;
+    elements.dashboardSalesComparison.textContent =
+      `${difference >= 0 ? '↑' : '↓'} ${Math.abs(difference).toLocaleString('es-CO', {
+        maximumFractionDigits: 1,
+      })}% vs. mes anterior`;
+    elements.dashboardSalesComparison.className =
+      difference >= 0 ? 'positive' : 'negative';
+  } else {
+    elements.dashboardSalesComparison.textContent = 'Sin base anterior';
+    elements.dashboardSalesComparison.className = '';
+  }
+  renderDashboardSalesTrend(summary.sales_last_7_days || []);
+  elements.dashboardUpdatedAt.textContent =
+    `Actualizado hoy a las ${new Intl.DateTimeFormat('es-CO', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date())}. Datos de la empresa activa.`;
+}
+
+function renderDashboardSalesTrend(points = []) {
+  elements.dashboardSalesTrend.replaceChildren();
+  const values = points.map((point) => Number(point.total || 0));
+  const maximum = Math.max(...values, 1);
+  points.forEach((point, index) => {
+    const bar = document.createElement('span');
+    const value = values[index];
+    const height = value > 0 ? Math.max(12, (value / maximum) * 100) : 5;
+    bar.style.setProperty('--bar-height', `${height}%`);
+    bar.title = `${formatShortDate(point.date)} · ${formatCurrency(value)}`;
+    bar.setAttribute('aria-label', bar.title);
+    if (index === points.length - 1) bar.classList.add('today');
+    elements.dashboardSalesTrend.append(bar);
+  });
 }
 
 async function loadExecutiveSummary() {
@@ -1775,6 +4069,156 @@ async function loadExecutiveSummary() {
     setExecutiveSummary();
     throw error;
   }
+}
+
+function onboardingPlan(status = {}) {
+  const structureReady =
+    Number(status.branch_count) > 0 &&
+    Number(status.storage_count) > 0 &&
+    Number(status.display_count) > 0 &&
+    Number(status.register_count) > 0;
+  const electronic = status.electronic_invoicing_required === true;
+  return [
+    {
+      code: '01',
+      title: 'Identidad y perfil tributario',
+      detail: status.validation_status === 'VALIDATED'
+        ? 'RUT y tratamiento tributario validados.'
+        : 'Confirma RUT, régimen, IVA y documento de venta.',
+      complete: status.validation_status === 'VALIDATED',
+      href: '#empresas',
+      action: 'Validar empresa',
+    },
+    {
+      code: '02',
+      title: 'Sucursales, bodega, exhibición y caja',
+      detail: structureReady
+        ? 'La estructura operativa mínima está disponible.'
+        : 'Organiza dónde almacenas, exhibes y vendes.',
+      complete: structureReady,
+      href: '#sucursales',
+      action: 'Revisar estructura',
+    },
+    {
+      code: '03',
+      title: 'Productos listos para operar',
+      detail: Number(status.product_count) > 0
+        ? `${status.product_count} productos configurados.`
+        : 'Crea categorías, impuestos, unidades, precios y productos.',
+      complete: Number(status.product_count) > 0,
+      href: '#catalogo',
+      action: 'Abrir catálogo',
+    },
+    {
+      code: '04',
+      title: 'Inventario inicial verificado',
+      detail: Number(status.inventory_units) > 0
+        ? `${Number(status.inventory_units).toLocaleString('es-CO')} unidades registradas.`
+        : 'Cuenta existencias y separa bodega de exhibición.',
+      complete: Number(status.inventory_units) > 0,
+      href: '#inventario',
+      action: 'Cargar inventario',
+    },
+    {
+      code: '05',
+      title: 'Dinero y transferencias',
+      detail: Number(status.bank_account_count) > 0
+        ? `${status.bank_account_count} cuentas bancarias activas.`
+        : 'Registra las cuentas que recibirán transferencias.',
+      complete: Number(status.bank_account_count) > 0,
+      href: '#auditoria',
+      action: 'Configurar cuentas',
+    },
+    {
+      code: '06',
+      title: 'Equipo y permisos',
+      detail: Number(status.active_user_count) > 1
+        ? `${status.active_user_count} usuarios activos.`
+        : 'Crea al menos el usuario de caja con acceso limitado.',
+      complete: Number(status.active_user_count) > 1,
+      href: '#usuarios',
+      action: 'Organizar equipo',
+    },
+    {
+      code: '07',
+      title: electronic ? 'Facturación electrónica' : 'Documento de venta',
+      detail: electronic
+        ? (
+          status.billing_connection_ready && status.billing_resolution_ready
+            ? 'Proveedor y numeración electrónica listos.'
+            : 'Conecta Factus y selecciona un rango autorizado.'
+        )
+        : 'La empresa emitirá comprobantes internos.',
+      complete: !electronic ||
+        (status.billing_connection_ready && status.billing_resolution_ready),
+      href: '#sistema',
+      action: electronic ? 'Preparar Factus' : 'Revisar documento',
+    },
+    {
+      code: '08',
+      title: 'Primera venta controlada',
+      detail: Number(status.completed_sale_count) > 0
+        ? `${status.completed_sale_count} ventas completadas.`
+        : 'Haz una venta de prueba y verifica inventario, pago y comprobante.',
+      complete: Number(status.completed_sale_count) > 0,
+      href: '#caja',
+      action: 'Ir a caja',
+    },
+  ];
+}
+
+function renderOnboarding(status = {}) {
+  const steps = onboardingPlan(status);
+  const completed = steps.filter((step) => step.complete).length;
+  const percent = Math.round((completed / steps.length) * 100);
+  const activeCompany = getActiveCompany();
+  const isDemo =
+    !status.tax_id &&
+    (status.trade_name === 'Nubixor Demo' || status.legal_name === 'Empresa demostración');
+
+  elements.onboardingDescription.textContent =
+    `${activeCompany?.trade_name || activeCompany?.legal_name || 'Empresa activa'} · ` +
+    `${completed} de ${steps.length} etapas completas.`;
+  elements.onboardingPercent.textContent = `${percent}%`;
+  elements.onboardingProgressCopy.textContent = percent === 100
+    ? 'Empresa lista para una operación controlada'
+    : 'Completa primero los datos marcados como pendientes';
+  elements.onboardingScoreRing.style.setProperty(
+    '--onboarding-progress',
+    `${percent * 3.6}deg`,
+  );
+  elements.onboardingDemoNotice.hidden = !isDemo;
+  elements.onboardingSteps.replaceChildren();
+
+  steps.forEach((step) => {
+    const item = document.createElement('article');
+    item.className = `onboarding-step ${step.complete ? 'complete' : 'pending'}`;
+    const number = document.createElement('span');
+    number.className = 'onboarding-step-number';
+    number.textContent = step.complete ? '✓' : step.code;
+    const copy = document.createElement('div');
+    const statusLabel = document.createElement('small');
+    statusLabel.textContent = step.complete ? 'COMPLETO' : 'SIGUIENTE ACCIÓN';
+    const title = document.createElement('strong');
+    title.textContent = step.title;
+    const detail = document.createElement('p');
+    detail.textContent = step.detail;
+    copy.append(statusLabel, title, detail);
+    const action = document.createElement('a');
+    action.href = step.href;
+    action.textContent = step.complete ? 'Revisar' : `${step.action} →`;
+    item.append(number, copy, action);
+    elements.onboardingSteps.append(item);
+  });
+}
+
+async function loadOnboardingStatus() {
+  if (!activeTenantId || !hasAnyPermission('dashboard.view')) return null;
+  const status = await getJson('/api/dashboard/onboarding', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderOnboarding(status || {});
+  return status;
 }
 
 function renderPos() {
@@ -2049,7 +4493,9 @@ function syncPosCustomers(preferredCustomerId = elements.posCustomerSelect.value
 function renderPosCustomerContext() {
   const customer = posCustomers.find((item) => item.id === elements.posCustomerSelect.value);
   elements.posCustomerBalance.textContent = customer
-    ? `${customer.document_number || 'Sin documento'} · saldo ${formatCurrency(customer.outstanding || 0)}`
+    ? `${customer.document_number || 'Sin documento'} · ${
+      customer.price_list_name || 'Precio unitario'
+    } · saldo ${formatCurrency(customer.outstanding || 0)}`
     : 'Consumidor final · venta sin cartera';
 }
 
@@ -2069,6 +4515,12 @@ async function loadPos() {
     const currentDetail = summary.openSession
       ? await getJson(`/api/pos/sessions/${summary.openSession.id}`, { headers })
       : null;
+    posBankAccounts = summary.openSession
+      ? await getJson(
+        `/api/pos/bank-accounts?cashSessionId=${encodeURIComponent(summary.openSession.id)}`,
+        { headers },
+      )
+      : [];
     posSummary = { ...summary, sessions, currentDetail };
     posCustomers = customers;
     posDocuments = documents.items;
@@ -2089,6 +4541,7 @@ async function loadPos() {
     renderPosSalesHistory();
     return posSummary;
   } catch (error) {
+    posBankAccounts = [];
     showPosError(error.message);
     throw error;
   }
@@ -2102,12 +4555,42 @@ function setPosCatalogState(title, message, isError = false) {
   elements.posCatalogState.querySelector('p').textContent = message;
 }
 
+function productCommercialPrice(product, quantity = 1) {
+  const basePrice = Number(product.sale_price) || 0;
+  const scale = [...(product.price_rules || [])]
+    .filter((item) => Number(item.minQuantity) <= quantity)
+    .sort((left, right) => Number(right.minQuantity) - Number(left.minQuantity))[0];
+  let unitPrice = scale ? Number(scale.unitPrice) : basePrice;
+  let label = scale?.priceListName || 'Precio unitario';
+  let source = scale ? 'PRICE_LIST' : 'BASE';
+  for (const promotion of product.promotions || []) {
+    if (Number(promotion.minQuantity) > quantity) continue;
+    const promotionalPrice = promotion.discountType === 'FIXED_PRICE'
+      ? Number(promotion.discountValue)
+      : Math.round(
+        unitPrice * (1 - Number(promotion.discountValue) / 100) * 100,
+      ) / 100;
+    if (promotionalPrice <= unitPrice) {
+      unitPrice = promotionalPrice;
+      label = promotion.name;
+      source = 'PROMOTION';
+    }
+  }
+  return {
+    unitPrice: Math.round(unitPrice * 100) / 100,
+    basePrice,
+    label,
+    source,
+  };
+}
+
 function calculateCartTotals() {
   let total = 0;
   let tax = 0;
   let itemCount = 0;
   for (const item of saleCart.values()) {
-    const lineTotal = Number(item.product.sale_price) * item.quantity;
+    const lineTotal =
+      productCommercialPrice(item.product, item.quantity).unitPrice * item.quantity;
     const taxRate = Number(item.product.tax_rate) || 0;
     total += lineTotal;
     tax += taxRate > 0 ? lineTotal * taxRate / (100 + taxRate) : 0;
@@ -2133,18 +4616,71 @@ function cashTenderOptions(total) {
   return [...values].sort((left, right) => left - right).slice(0, 4);
 }
 
+function mixedPaymentState(totals = calculateCartTotals()) {
+  const cash = Math.max(0, Number(elements.posMixedCashAmount.value) || 0);
+  const card = Math.max(0, Number(elements.posMixedCardAmount.value) || 0);
+  const transfer = Math.max(0, Number(elements.posMixedTransferAmount.value) || 0);
+  const assigned = Math.round((cash + card + transfer) * 100) / 100;
+  const remaining = Math.round((totals.total - assigned) * 100) / 100;
+  return { cash, card, transfer, assigned, remaining };
+}
+
+function syncTransferBankAccounts() {
+  const previous = elements.posTransferBankAccount.value;
+  const sellerCompanyIds = new Set(
+    [...saleCart.values()].map((item) =>
+      item.product.seller_company_id || activeTenantId),
+  );
+  const available = posBankAccounts.filter((account) =>
+    sellerCompanyIds.has(account.company_id));
+  elements.posTransferBankAccount.replaceChildren(
+    new Option(
+      available.length ? 'Selecciona una cuenta bancaria' : 'No hay cuentas configuradas',
+      '',
+    ),
+  );
+  elements.posTransferCompany.replaceChildren();
+  for (const account of available) {
+    const label = `${account.company_name} · ${account.bank_name} · ${account.masked_account}`;
+    const option = new Option(label, account.id);
+    option.dataset.companyId = account.company_id;
+    elements.posTransferBankAccount.append(option);
+  }
+  if (available.some((account) => account.id === previous)) {
+    elements.posTransferBankAccount.value = previous;
+  }
+  const selected = available.find((account) =>
+    account.id === elements.posTransferBankAccount.value);
+  if (selected) {
+    elements.posTransferCompany.append(
+      new Option(selected.company_name, selected.company_id),
+    );
+    elements.posTransferCompany.value = selected.company_id;
+    elements.posTransferAccountHelp.textContent =
+      `${selected.bank_name} · ${selected.account_name} · ${selected.masked_account}`;
+  } else {
+    elements.posTransferAccountHelp.textContent = available.length
+      ? 'Selecciona la cuenta exacta donde se recibió el dinero.'
+      : 'Configura una cuenta bancaria desde Contabilidad y auditoría antes de aceptar transferencias.';
+  }
+  return available;
+}
+
 function updateCashSettlement(totals = calculateCartTotals(), { rebuild = false } = {}) {
+  const mixed = mixedPaymentState(totals);
+  const cashDue = posMixedPayment ? mixed.cash : totals.total;
   const cashPayment =
-    posSaleTerms === 'IMMEDIATE' && elements.posPaymentMethod.value === 'CASH';
+    posSaleTerms === 'IMMEDIATE' &&
+    (posMixedPayment ? cashDue > 0 : elements.posPaymentMethod.value === 'CASH');
   elements.posCashTender.hidden = !cashPayment;
   if (!cashPayment) return;
 
   if (rebuild) {
     elements.cashTenderSuggestions.replaceChildren();
-    for (const amount of cashTenderOptions(totals.total)) {
+    for (const amount of cashTenderOptions(cashDue)) {
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = amount === totals.total ? 'Exacto' : formatCurrency(amount);
+      button.textContent = amount === cashDue ? 'Exacto' : formatCurrency(amount);
       button.addEventListener('click', () => {
         elements.posCashReceived.value = String(amount);
         updateCashSettlement(calculateCartTotals());
@@ -2156,17 +4692,26 @@ function updateCashSettlement(totals = calculateCartTotals(), { rebuild = false 
   const hasReceived = elements.posCashReceived.value !== '';
   const received = Number(elements.posCashReceived.value);
   const validReceived =
-    hasReceived && Number.isFinite(received) && received >= totals.total;
-  const difference = hasReceived && Number.isFinite(received) ? received - totals.total : 0;
+    hasReceived && Number.isFinite(received) && received >= cashDue;
+  const difference = hasReceived && Number.isFinite(received) ? received - cashDue : 0;
   elements.posCashChange.classList.toggle('short', hasReceived && difference < 0);
   elements.posCashChange.textContent = hasReceived && difference < 0
     ? `Faltan ${formatCurrency(Math.abs(difference))}`
     : formatCurrency(difference);
-  if (totals.itemCount > 0 && !validReceived) {
-    elements.completeSaleButton.disabled = true;
-    elements.completeSaleButton.textContent = hasReceived && difference < 0
-      ? `Faltan ${formatCurrency(Math.abs(difference))}`
-      : 'Registra el efectivo recibido';
+  if (totals.itemCount > 0) {
+    const operationReady =
+      Boolean(posSummary.openSession) &&
+      Boolean(elements.posWarehouseSelect.value) &&
+      saleCart.size > 0;
+    elements.completeSaleButton.disabled = !operationReady || !validReceived;
+    if (!validReceived) {
+      elements.completeSaleButton.textContent = hasReceived && difference < 0
+        ? `Faltan ${formatCurrency(Math.abs(difference))}`
+        : 'Registra el efectivo recibido';
+    } else {
+      elements.completeSaleButton.textContent =
+        `Confirmar cobro ${formatCurrency(totals.total)} →`;
+    }
   }
 }
 
@@ -2197,6 +4742,7 @@ function renderPosCatalog() {
   for (const product of filtered) {
     const card = document.createElement('article');
     card.className = 'pos-product-card';
+    card.classList.toggle('combo', product.product_kind === 'COMBO');
     const visual = product.image_url
       ? document.createElement('img')
       : document.createElement('span');
@@ -2217,15 +4763,32 @@ function renderPosCatalog() {
     ].filter(Boolean).join(' · ');
     const name = document.createElement('strong');
     name.textContent = product.name;
+    if (product.product_kind === 'COMBO') {
+      const comboBadge = document.createElement('em');
+      comboBadge.className = 'pos-combo-badge';
+      comboBadge.textContent = 'Combo';
+      info.append(sku, name, comboBadge);
+    } else {
+      info.append(sku, name);
+    }
     const price = document.createElement('b');
-    price.textContent = formatCurrency(product.sale_price);
-    info.append(sku, name, price);
+    const commercialPrice = productCommercialPrice(product, 1);
+    price.textContent = formatCurrency(commercialPrice.unitPrice);
+    if (commercialPrice.source !== 'BASE') {
+      const offer = document.createElement('small');
+      offer.className = 'pos-product-offer';
+      offer.textContent = commercialPrice.label;
+      info.append(price, offer);
+    } else {
+      info.append(price);
+    }
 
     const footer = document.createElement('div');
     footer.className = 'pos-product-footer';
     const stock = Number(product.on_hand);
     const stockLabel = document.createElement('span');
-    stockLabel.textContent = `${stock} disponibles`;
+    stockLabel.textContent =
+      `${stock} · ${warehouseTypeLabels[product.warehouse_type] || 'Disponible'}`;
     const currentQuantity = saleCart.get(product.id)?.quantity || 0;
     const addButton = document.createElement('button');
     addButton.type = 'button';
@@ -2318,7 +4881,10 @@ function renderCart() {
     const name = document.createElement('strong');
     name.textContent = item.product.name;
     const detail = document.createElement('small');
-    detail.textContent = `${item.product.sku} · ${formatCurrency(item.product.sale_price)}`;
+    const commercialPrice = productCommercialPrice(item.product, item.quantity);
+    detail.textContent =
+      `${item.product.sku} · ${item.product.warehouse_name || 'Ubicación asignada'} · ` +
+      `${formatCurrency(commercialPrice.unitPrice)} · ${commercialPrice.label}`;
     info.append(name, detail);
 
     const controls = document.createElement('div');
@@ -2339,7 +4905,9 @@ function renderCart() {
     controls.append(minus, quantity, plus);
 
     const lineTotal = document.createElement('b');
-    lineTotal.textContent = formatCurrency(Number(item.product.sale_price) * item.quantity);
+    lineTotal.textContent = formatCurrency(
+      commercialPrice.unitPrice * item.quantity,
+    );
     row.append(info, controls, lineTotal);
     elements.cartItems.append(row);
   }
@@ -2363,24 +4931,24 @@ function renderCart() {
   );
   const multiCompanySale = sellerCompanies.size > 1 ||
     (sellerCompanies.size === 1 && !sellerCompanies.has(activeTenantId));
+  const mixed = mixedPaymentState(totals);
   const transferSale =
-    posSaleTerms === 'IMMEDIATE' && elements.posPaymentMethod.value === 'TRANSFER';
+    posSaleTerms === 'IMMEDIATE' &&
+    (posMixedPayment ? mixed.transfer > 0 : elements.posPaymentMethod.value === 'TRANSFER');
   elements.posTransferDetails.hidden = !transferSale;
-  const previousReceiver = elements.posTransferCompany.value;
-  elements.posTransferCompany.replaceChildren();
-  for (const [companyId, companyName] of new Map(
-    [...saleCart.values()].map((item) => [
-      item.product.seller_company_id || activeTenantId,
-      item.product.seller_company_name || getActiveCompany()?.trade_name || 'Empresa activa',
-    ]),
-  )) {
-    elements.posTransferCompany.append(new Option(companyName, companyId));
-  }
-  if ([...elements.posTransferCompany.options]
-    .some((option) => option.value === previousReceiver)) {
-    elements.posTransferCompany.value = previousReceiver;
-  }
+  syncTransferBankAccounts();
   elements.posPaymentPanel.hidden = creditSale;
+  elements.posMixedPaymentPanel.hidden = creditSale || !posMixedPayment;
+  elements.toggleMixedPaymentButton.classList.toggle('active', posMixedPayment);
+  elements.posPaymentButtons.forEach((button) => {
+    button.disabled = posMixedPayment;
+  });
+  elements.posMixedRemaining.textContent = Math.abs(mixed.remaining) < 0.01
+    ? 'Total distribuido'
+    : mixed.remaining > 0
+      ? `${formatCurrency(mixed.remaining)} pendientes`
+      : `${formatCurrency(Math.abs(mixed.remaining))} de más`;
+  elements.posMixedRemaining.classList.toggle('ready', Math.abs(mixed.remaining) < 0.01);
   elements.posCreditTerms.hidden = !creditSale;
   if (creditSale) {
     const hasCustomer = Boolean(elements.posCustomerSelect.value);
@@ -2397,8 +4965,23 @@ function renderCart() {
       else elements.completeSaleButton.textContent =
         `Vender a crédito ${formatCurrency(totals.total)} →`;
     }
-  } else if (transferSale && totals.itemCount > 0) {
+  } else if (posMixedPayment && totals.itemCount > 0) {
+    const positiveMethods = [mixed.cash, mixed.card, mixed.transfer]
+      .filter((amount) => amount > 0).length;
+    const paymentsMatch = Math.abs(mixed.remaining) < 0.01 && positiveMethods >= 2;
+    elements.completeSaleButton.disabled =
+      elements.completeSaleButton.disabled || !paymentsMatch;
+    if (!paymentsMatch) {
+      elements.completeSaleButton.textContent = positiveMethods < 2
+        ? 'Usa al menos dos medios de pago'
+        : mixed.remaining > 0
+          ? `Faltan por distribuir ${formatCurrency(mixed.remaining)}`
+          : `Reduce ${formatCurrency(Math.abs(mixed.remaining))}`;
+    }
+  }
+  if (transferSale && totals.itemCount > 0) {
     const transferReady =
+      Boolean(elements.posTransferBankAccount.value) &&
       Boolean(elements.posTransferCompany.value) &&
       Boolean(elements.posTransferReference.value.trim());
     elements.completeSaleButton.disabled =
@@ -2414,6 +4997,9 @@ function clearCart() {
   saleCart.clear();
   elements.posCashReceived.value = '';
   elements.posTransferReference.value = '';
+  elements.posMixedCashAmount.value = '0';
+  elements.posMixedCardAmount.value = '0';
+  elements.posMixedTransferAmount.value = '0';
   renderCart();
   renderPosCatalog();
 }
@@ -2431,16 +5017,23 @@ async function loadPosCatalog() {
   }
   try {
     posCatalog = await getJson(
-      `/api/pos/shared-catalog?cashSessionId=${encodeURIComponent(posSummary.openSession.id)}`,
+      `/api/pos/shared-catalog?cashSessionId=${encodeURIComponent(posSummary.openSession.id)}` +
+      `&stockSource=${encodeURIComponent(elements.posWarehouseSelect.value || 'DISPLAY')}` +
+      `&customerId=${encodeURIComponent(elements.posCustomerSelect.value || '')}`,
       {
       headers: { 'x-tenant-id': activeTenantId },
       },
     );
+    for (const [productId, item] of saleCart) {
+      const refreshed = posCatalog.find((product) => product.id === productId);
+      if (refreshed) saleCart.set(productId, { ...item, product: refreshed });
+      else saleCart.delete(productId);
+    }
     const sellers = new Set(posCatalog.map((product) => product.seller_company_id));
     if (sellers.size > 1) {
       elements.billingModeName.textContent = 'Cobro multiempresa';
       elements.billingModeDetail.textContent =
-        'Puedes combinar productos; MegaSuite separa inventario, impuestos y comprobantes.';
+        'Puedes combinar productos; Nubixor separa inventario, impuestos y comprobantes.';
       elements.billingModeStatus.textContent = `${sellers.size} empresas activas`;
       elements.billingModeStatus.className = 'table-status active';
     }
@@ -2459,35 +5052,33 @@ async function loadPosCatalog() {
 
 async function syncPosWorkstation() {
   const session = posSummary.openSession;
-  const currentWarehouse = elements.posWarehouseSelect.value;
-  const eligibleWarehouses = session
-    ? warehouses.filter((warehouse) =>
-      warehouse.active &&
-      warehouse.branch_id === session.branch_id &&
-      ['DISPLAY', 'AVAILABLE'].includes(warehouse.warehouse_type))
+  const currentSource = elements.posWarehouseSelect.value;
+  const cashierMode = activeMembership()?.roleCode === 'CASHIER';
+  const eligibleSources = session
+    ? [
+      { value: 'DISPLAY', label: 'Exhibición · venta normal' },
+      ...(!cashierMode
+        ? [{ value: 'AVAILABLE', label: 'Bodega · acceso avanzado' }]
+        : []),
+    ]
     : [];
-  eligibleWarehouses.sort((left, right) => {
-    const leftPriority = left.warehouse_type === 'DISPLAY' ? 0 : 1;
-    const rightPriority = right.warehouse_type === 'DISPLAY' ? 0 : 1;
-    return leftPriority - rightPriority || left.name.localeCompare(right.name, 'es');
-  });
   elements.posWarehouseSelect.replaceChildren();
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = eligibleWarehouses.length
-    ? 'Selecciona una ubicación'
-    : 'Sin ubicaciones disponibles';
+  placeholder.textContent = eligibleSources.length
+    ? 'Selecciona el origen'
+    : 'Sin origen disponible';
   elements.posWarehouseSelect.append(placeholder);
-  for (const warehouse of eligibleWarehouses) {
+  for (const source of eligibleSources) {
     const option = document.createElement('option');
-    option.value = warehouse.id;
-    option.textContent = `${warehouse.name} · ${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`;
+    option.value = source.value;
+    option.textContent = source.label;
     elements.posWarehouseSelect.append(option);
   }
-  elements.posWarehouseSelect.value = eligibleWarehouses.some(
-    (warehouse) => warehouse.id === currentWarehouse,
-  ) ? currentWarehouse : (eligibleWarehouses[0]?.id || '');
-  elements.posWarehouseSelect.disabled = !session || !eligibleWarehouses.length;
+  elements.posWarehouseSelect.value = eligibleSources.some(
+    (source) => source.value === currentSource,
+  ) ? currentSource : (eligibleSources[0]?.value || '');
+  elements.posWarehouseSelect.disabled = !session || eligibleSources.length <= 1;
   elements.posProductSearch.disabled = !session;
   elements.posSaleLock.hidden = Boolean(session);
   if (!session) {
@@ -2534,6 +5125,8 @@ function receivableStatus(invoice) {
 function setReceivableSummary(summary = {}) {
   elements.arOutstanding.textContent = formatCurrency(summary.outstanding || 0);
   elements.dashboardReceivable.textContent = formatCurrency(summary.outstanding || 0);
+  elements.dashboardReceivableSnapshot.textContent =
+    formatCurrency(summary.outstanding || 0);
   elements.arOpenCount.textContent =
     `${summary.open_count || 0} ${Number(summary.open_count) === 1 ? 'factura abierta' : 'facturas abiertas'}`;
   elements.arCurrent.textContent = formatCurrency(summary.current || 0);
@@ -2951,6 +5544,316 @@ async function submitPayment(event) {
   } finally {
     elements.savePaymentButton.disabled = false;
     elements.savePaymentButton.textContent = 'Aplicar abono';
+  }
+}
+
+function setThirdPartySummary(summary = {}) {
+  elements.thirdPartyTotal.textContent = String(summary.total || 0);
+  elements.thirdPartyCustomers.textContent = String(summary.customers || 0);
+  elements.thirdPartySuppliers.textContent = String(summary.suppliers || 0);
+  elements.thirdPartyDual.textContent = String(summary.dual_role || 0);
+}
+
+function showThirdPartiesError(message) {
+  thirdParties = [];
+  selectedThirdParty = null;
+  setThirdPartySummary();
+  elements.thirdPartyList.replaceChildren();
+  elements.thirdPartyDataState.hidden = false;
+  elements.thirdPartyDataState.classList.add('error');
+  elements.thirdPartyDataState.querySelector('strong').textContent =
+    'No pudimos consultar los terceros';
+  elements.thirdPartyDataState.querySelector('p').textContent = message;
+  elements.thirdPartyDetailContent.hidden = true;
+  elements.thirdPartyDetailEmpty.hidden = false;
+}
+
+function appendThirdPartyRole(container, label, className) {
+  const badge = document.createElement('span');
+  badge.className = `party-role-badge ${className}`;
+  badge.textContent = label;
+  container.append(badge);
+}
+
+function renderThirdPartyList() {
+  elements.thirdPartyList.replaceChildren();
+  elements.thirdPartyDataState.hidden = thirdParties.length > 0;
+  elements.thirdPartyDataState.classList.remove('error');
+  if (!thirdParties.length) {
+    elements.thirdPartyDataState.querySelector('strong').textContent =
+      'No encontramos terceros';
+    elements.thirdPartyDataState.querySelector('p').textContent =
+      'Registra un cliente o proveedor, o cambia los filtros.';
+    return;
+  }
+  for (const party of thirdParties) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'party-list-card';
+    if (selectedThirdParty?.id === party.id) button.classList.add('selected');
+
+    const avatar = document.createElement('span');
+    avatar.className = 'party-avatar';
+    avatar.textContent = accountInitials(party.name);
+    const identity = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = party.name;
+    const documentLabel = document.createElement('small');
+    documentLabel.textContent = party.document_number
+      ? `${party.document_type} ${party.document_number}`
+      : 'Documento pendiente';
+    const roles = document.createElement('div');
+    roles.className = 'party-role-row';
+    if (party.is_customer) appendThirdPartyRole(roles, 'Cliente', 'customer');
+    if (party.is_supplier) appendThirdPartyRole(roles, 'Proveedor', 'supplier');
+    identity.append(name, documentLabel, roles);
+
+    const balances = document.createElement('div');
+    balances.className = 'party-card-balances';
+    const receivable = document.createElement('span');
+    receivable.textContent = `Cobra ${formatCurrency(party.receivable_balance || 0)}`;
+    const payable = document.createElement('span');
+    payable.textContent = `Paga ${formatCurrency(party.payable_balance || 0)}`;
+    balances.append(receivable, payable);
+    button.append(avatar, identity, balances);
+    button.addEventListener('click', () => loadThirdPartyDetail(party.id));
+    elements.thirdPartyList.append(button);
+  }
+}
+
+const thirdPartyActivityLabels = {
+  RECEIVABLE: 'Cuenta por cobrar',
+  PAYABLE: 'Cuenta por pagar',
+  PURCHASE: 'Orden de compra',
+  EXPENSE: 'Gasto',
+};
+
+function renderThirdPartyDetail(party) {
+  selectedThirdParty = party;
+  elements.thirdPartyDetailEmpty.hidden = true;
+  elements.thirdPartyDetailContent.hidden = false;
+  elements.thirdPartyDetailDocument.textContent = party.document_number
+    ? `${party.document_type} ${party.document_number}${party.verification_digit
+      ? `-${party.verification_digit}` : ''}`
+    : 'Documento pendiente';
+  elements.thirdPartyDetailName.textContent = party.name;
+  elements.thirdPartyDetailRoles.replaceChildren();
+  if (party.is_customer) {
+    appendThirdPartyRole(elements.thirdPartyDetailRoles, 'Cliente', 'customer');
+  }
+  if (party.is_supplier) {
+    appendThirdPartyRole(elements.thirdPartyDetailRoles, 'Proveedor', 'supplier');
+  }
+  if (!party.active) {
+    appendThirdPartyRole(elements.thirdPartyDetailRoles, 'Inactivo', 'inactive');
+  }
+  elements.thirdPartyDetailContact.textContent =
+    party.email || party.phone || 'Sin datos de contacto';
+  elements.thirdPartyDetailAddress.textContent =
+    [party.phone, party.address].filter(Boolean).join(' · ') || 'Sin dirección';
+  elements.thirdPartyDetailReceivable.textContent =
+    formatCurrency(party.receivable_balance || 0);
+  elements.thirdPartyDetailPayable.textContent =
+    formatCurrency(party.payable_balance || 0);
+  elements.thirdPartyDetailPurchases.textContent = formatCurrency(
+    Number(party.purchase_total || 0) + Number(party.expense_total || 0),
+  );
+  const activity = party.activity || [];
+  elements.thirdPartyActivityCount.textContent =
+    `${activity.length} ${activity.length === 1 ? 'movimiento' : 'movimientos'}`;
+  elements.thirdPartyActivityList.replaceChildren();
+  if (!activity.length) {
+    const empty = document.createElement('p');
+    empty.className = 'party-activity-empty';
+    empty.textContent = 'Este tercero todavía no tiene movimientos comerciales.';
+    elements.thirdPartyActivityList.append(empty);
+  }
+  for (const movement of activity) {
+    const row = document.createElement('article');
+    const symbol = document.createElement('span');
+    symbol.className = 'party-activity-symbol';
+    symbol.textContent = movement.kind === 'RECEIVABLE' ? '↙' : '↗';
+    const identity = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = thirdPartyActivityLabels[movement.kind] || movement.kind;
+    const reference = document.createElement('small');
+    reference.textContent =
+      `${movement.reference} · ${formatShortDate(movement.activity_date)}`;
+    identity.append(title, reference);
+    const value = document.createElement('div');
+    const total = document.createElement('strong');
+    total.textContent = formatCurrency(movement.total || 0);
+    const status = document.createElement('small');
+    status.textContent = movement.status;
+    value.append(total, status);
+    row.append(symbol, identity, value);
+    elements.thirdPartyActivityList.append(row);
+  }
+  renderThirdPartyList();
+}
+
+async function loadThirdPartyDetail(partyId) {
+  try {
+    const detail = await getJson(`/api/third-parties/${partyId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderThirdPartyDetail(detail);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadThirdParties() {
+  if (!activeTenantId) {
+    showThirdPartiesError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  const params = new URLSearchParams({
+    role: elements.thirdPartyRoleFilter.value,
+    status: elements.thirdPartyStatusFilter.value,
+  });
+  const search = elements.thirdPartySearch.value.trim();
+  if (search) params.set('search', search);
+  try {
+    const [summary, parties] = await Promise.all([
+      getJson('/api/third-parties/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson(`/api/third-parties?${params}`, {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    thirdParties = parties;
+    setThirdPartySummary(summary);
+    renderThirdPartyList();
+    if (selectedThirdParty) {
+      const stillVisible = parties.some((party) => party.id === selectedThirdParty.id);
+      if (stillVisible) await loadThirdPartyDetail(selectedThirdParty.id);
+      else {
+        selectedThirdParty = null;
+        elements.thirdPartyDetailContent.hidden = true;
+        elements.thirdPartyDetailEmpty.hidden = false;
+      }
+    }
+    return parties;
+  } catch (error) {
+    showThirdPartiesError(error.message);
+    throw error;
+  }
+}
+
+function setThirdPartyFormValue(name, value) {
+  const field = elements.thirdPartyForm.elements[name];
+  if (field) field.value = value ?? '';
+}
+
+function openThirdPartyDialog(party = null) {
+  editingThirdParty = party;
+  elements.thirdPartyForm.reset();
+  elements.thirdPartyFormError.hidden = true;
+  elements.thirdPartyActiveField.hidden = !party;
+  elements.thirdPartyDialogEyebrow.textContent =
+    party ? 'Identidad consolidada' : 'Directorio comercial';
+  elements.thirdPartyDialogTitle.textContent =
+    party ? 'Editar tercero' : 'Registrar tercero';
+  elements.thirdPartyDialogCopy.textContent = party
+    ? 'Los cambios se reflejarán en sus perfiles de cliente y proveedor.'
+    : 'Una sola identidad puede alimentar Caja, Cartera, Compras y Gastos.';
+  elements.saveThirdPartyButton.textContent =
+    party ? 'Guardar cambios' : 'Registrar tercero';
+  if (party) {
+    setThirdPartyFormValue('partyType', party.party_type);
+    setThirdPartyFormValue('name', party.name);
+    setThirdPartyFormValue('tradeName', party.trade_name);
+    setThirdPartyFormValue('documentType', party.document_type);
+    setThirdPartyFormValue('documentNumber', party.document_number);
+    setThirdPartyFormValue('verificationDigit', party.verification_digit);
+    setThirdPartyFormValue('email', party.email);
+    setThirdPartyFormValue('phone', party.phone);
+    setThirdPartyFormValue('address', party.address);
+    setThirdPartyFormValue('municipalityCode', party.municipality_code);
+    setThirdPartyFormValue('paymentTermsDays', party.payment_terms_days || 0);
+    setThirdPartyFormValue('notes', party.notes);
+    elements.thirdPartyForm.elements.isCustomer.checked = party.is_customer;
+    elements.thirdPartyForm.elements.isSupplier.checked = party.is_supplier;
+    elements.thirdPartyForm.elements.obligatedToInvoice.checked =
+      Boolean(party.obligated_to_invoice);
+    elements.thirdPartyForm.elements.electronicInvoicer.checked =
+      Boolean(party.electronic_invoicer);
+    elements.thirdPartyForm.elements.active.checked = party.active;
+  }
+  elements.thirdPartyDialog.showModal();
+  elements.thirdPartyForm.elements.name.focus();
+}
+
+function closeThirdPartyDialog() {
+  elements.thirdPartyDialog.close();
+  editingThirdParty = null;
+}
+
+async function submitThirdParty(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.thirdPartyForm);
+  const payload = {
+    partyType: formData.get('partyType'),
+    name: formData.get('name'),
+    tradeName: formData.get('tradeName'),
+    documentType: formData.get('documentType'),
+    documentNumber: formData.get('documentNumber'),
+    verificationDigit: formData.get('verificationDigit'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    address: formData.get('address'),
+    municipalityCode: formData.get('municipalityCode'),
+    paymentTermsDays: Number(formData.get('paymentTermsDays') || 0),
+    notes: formData.get('notes'),
+    reason: formData.get('reason'),
+    isCustomer: formData.has('isCustomer'),
+    isSupplier: formData.has('isSupplier'),
+    obligatedToInvoice: formData.has('obligatedToInvoice'),
+    electronicInvoicer: formData.has('electronicInvoicer'),
+    active: editingThirdParty ? formData.has('active') : true,
+  };
+  if (!payload.isCustomer && !payload.isSupplier) {
+    elements.thirdPartyFormError.textContent =
+      'Selecciona si es cliente, proveedor o ambos.';
+    elements.thirdPartyFormError.hidden = false;
+    return;
+  }
+  elements.thirdPartyFormError.hidden = true;
+  elements.saveThirdPartyButton.disabled = true;
+  elements.saveThirdPartyButton.textContent = 'Guardando…';
+  try {
+    const endpoint = editingThirdParty
+      ? `/api/third-parties/${editingThirdParty.id}`
+      : '/api/third-parties';
+    const saved = await getJson(endpoint, {
+      method: editingThirdParty ? 'PATCH' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(payload),
+    });
+    elements.thirdPartyDialog.close();
+    editingThirdParty = null;
+    await loadThirdParties();
+    await loadThirdPartyDetail(saved.id);
+    await Promise.allSettled([
+      hasAnyPermission('purchases.manage') ? loadPurchases() : Promise.resolve(),
+      hasAnyPermission('receivables.manage') ? loadReceivables() : Promise.resolve(),
+      hasAnyPermission('expenses.view', 'expenses.manage')
+        ? loadExpenses() : Promise.resolve(),
+      hasAnyPermission('sales.operate') ? loadPos() : Promise.resolve(),
+    ]);
+    showToast('Tercero guardado y conectado con los módulos operativos.');
+  } catch (error) {
+    elements.thirdPartyFormError.textContent = error.message;
+    elements.thirdPartyFormError.hidden = false;
+  } finally {
+    elements.saveThirdPartyButton.disabled = false;
+    elements.saveThirdPartyButton.textContent =
+      editingThirdParty ? 'Guardar cambios' : 'Registrar tercero';
   }
 }
 
@@ -3521,6 +6424,8 @@ function payableStatus(invoice) {
 function setPayableSummary(summary = {}) {
   elements.apOutstanding.textContent = formatCurrency(summary.outstanding || 0);
   elements.dashboardPayable.textContent = formatCurrency(summary.outstanding || 0);
+  elements.dashboardPayableSnapshot.textContent =
+    formatCurrency(summary.outstanding || 0);
   elements.apOpenCount.textContent =
     `${summary.open_count || 0} ${Number(summary.open_count) === 1 ? 'obligación abierta' : 'obligaciones abiertas'}`;
   elements.apCurrent.textContent = formatCurrency(summary.current || 0);
@@ -3859,6 +6764,609 @@ async function submitPayablePayment(event) {
   } finally {
     elements.savePayablePaymentButton.disabled = false;
     elements.savePayablePaymentButton.textContent = 'Aplicar pago';
+  }
+}
+
+const expenseStatusLabels = {
+  DRAFT: { label: 'Borrador', className: 'draft' },
+  SUBMITTED: { label: 'Por aprobar', className: 'submitted' },
+  APPROVED: { label: 'Aprobado', className: 'approved' },
+  PARTIAL: { label: 'Pago parcial', className: 'partial' },
+  PAID: { label: 'Pagado', className: 'paid' },
+  REJECTED: { label: 'Rechazado', className: 'rejected' },
+  VOID: { label: 'Anulado', className: 'void' },
+};
+
+function expenseStatusMeta(status) {
+  return expenseStatusLabels[status] || expenseStatusLabels.DRAFT;
+}
+
+function setExpenseSummary(summary = {}) {
+  elements.expenseMonthTotal.textContent = formatCurrency(summary.month_total || 0);
+  elements.expensePendingApproval.textContent =
+    String(summary.pending_approval || 0);
+  elements.expensePendingPayment.textContent =
+    formatCurrency(summary.pending_payment || 0);
+  elements.expenseRecurringTotal.textContent =
+    formatCurrency(summary.recurring_total || 0);
+  elements.expenseUnsupportedTotal.textContent =
+    formatCurrency(summary.unsupported_total || 0);
+}
+
+function renderExpenseCenters() {
+  elements.expenseCenterStrip.replaceChildren();
+  for (const center of expenseSetup.costCenters) {
+    const card = document.createElement('article');
+    const copy = document.createElement('div');
+    const code = document.createElement('span');
+    code.textContent = center.code;
+    const name = document.createElement('strong');
+    name.textContent = center.name;
+    const scope = document.createElement('small');
+    scope.textContent = center.branch_name || 'Toda la empresa';
+    copy.append(code, name, scope);
+    const budget = document.createElement('div');
+    budget.append(
+      Object.assign(document.createElement('span'), { textContent: 'Presupuesto' }),
+      Object.assign(document.createElement('strong'), {
+        textContent: center.monthly_budget == null
+          ? 'Sin límite'
+          : formatCurrency(center.monthly_budget),
+      }),
+    );
+    card.append(copy, budget);
+    elements.expenseCenterStrip.append(card);
+  }
+}
+
+function showExpensesError(message) {
+  businessExpenses = [];
+  selectedExpense = null;
+  setExpenseSummary();
+  elements.expenseList.replaceChildren();
+  elements.expenseCenterStrip.replaceChildren();
+  elements.expenseDataState.hidden = false;
+  elements.expenseDataState.classList.add('error');
+  elements.expenseDataState.querySelector('strong').textContent =
+    'No pudimos consultar los gastos';
+  elements.expenseDataState.querySelector('p').textContent = message;
+  elements.expenseRecordCount.textContent = '—';
+  elements.expenseDetailContent.hidden = true;
+  elements.expenseDetailEmpty.hidden = false;
+}
+
+function renderExpenseList() {
+  const search = normalizeSearch(elements.expenseSearch.value.trim());
+  const status = elements.expenseStatusFilter.value;
+  const filtered = businessExpenses.filter((expense) => {
+    const haystack = normalizeSearch([
+      expense.expense_number,
+      expense.description,
+      expense.beneficiary,
+      expense.category_name,
+      expense.cost_center_name,
+      expense.branch_name,
+    ].filter(Boolean).join(' '));
+    return (!search || haystack.includes(search)) &&
+      (status === 'ALL' || expense.status === status);
+  });
+  elements.expenseList.replaceChildren();
+  elements.expenseRecordCount.textContent = String(filtered.length);
+  elements.expenseDataState.hidden = filtered.length > 0;
+  elements.expenseDataState.classList.remove('error');
+  if (!filtered.length) {
+    elements.expenseDataState.querySelector('strong').textContent =
+      search || status !== 'ALL' ? 'No hay coincidencias' : 'Sin gastos registrados';
+    elements.expenseDataState.querySelector('p').textContent =
+      search || status !== 'ALL'
+        ? 'Cambia la búsqueda o consulta todos los estados.'
+        : 'El primer gasto aparecerá después de enviarlo para aprobación.';
+    return;
+  }
+  for (const expense of filtered) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'expense-list-card';
+    if (selectedExpense?.id === expense.id) button.classList.add('selected');
+    const top = document.createElement('div');
+    const number = document.createElement('strong');
+    number.textContent = expense.expense_number;
+    const meta = expenseStatusMeta(expense.status);
+    const badge = document.createElement('span');
+    badge.className = `expense-status ${meta.className}`;
+    badge.textContent = meta.label;
+    top.append(number, badge);
+    const description = document.createElement('span');
+    description.className = 'expense-list-description';
+    description.textContent = expense.description;
+    const beneficiary = document.createElement('small');
+    beneficiary.textContent =
+      `${expense.beneficiary} · ${expense.category_name} · ${expense.cost_center_name}`;
+    const amounts = document.createElement('div');
+    const date = document.createElement('span');
+    date.textContent = formatShortDate(expense.issue_date);
+    const total = document.createElement('strong');
+    total.textContent = formatCurrency(expense.total);
+    amounts.append(date, total);
+    button.append(top, description, beneficiary, amounts);
+    button.addEventListener('click', () => loadExpenseDetail(expense.id));
+    elements.expenseList.append(button);
+  }
+}
+
+function renderExpenseDetail(expense) {
+  selectedExpense = expense;
+  elements.expenseDetailEmpty.hidden = true;
+  elements.expenseDetailContent.hidden = false;
+  elements.expenseDetailNumber.textContent = expense.expense_number;
+  elements.expenseDetailDescription.textContent = expense.description;
+  elements.expenseDetailBeneficiary.textContent =
+    expense.supplier_name || expense.beneficiary_name;
+  const status = expenseStatusMeta(expense.status);
+  elements.expenseDetailStatus.textContent = status.label;
+  elements.expenseDetailStatus.className = `expense-status ${status.className}`;
+  elements.expenseDetailDate.textContent = formatShortDate(expense.issue_date);
+  elements.expenseDetailCategory.textContent =
+    `${expense.category_name} · ${expense.account_code}`;
+  elements.expenseDetailCenter.textContent =
+    `${expense.cost_center_name} · ${expense.cost_center_code}`;
+  elements.expenseDetailBranch.textContent = expense.branch_name;
+  elements.expenseDetailTotal.textContent = formatCurrency(expense.total);
+  elements.expenseDetailBalance.textContent = formatCurrency(expense.balance);
+  elements.expenseDetailSupport.textContent =
+    expense.support_document_name || 'Sin archivo adjunto';
+  elements.expenseDetailDocument.textContent = expense.supplier_document_number
+    ? `Comprobante ${expense.supplier_document_number}`
+    : 'Sin número de comprobante';
+  elements.expenseSupportLink.hidden = !expense.support_url;
+  if (expense.support_url) elements.expenseSupportLink.href = expense.support_url;
+  if (expense.status === 'REJECTED') {
+    elements.expenseDecisionOwner.textContent =
+      `Rechazado por ${expense.rejected_by_name || 'responsable'}`;
+  } else if (['APPROVED', 'PARTIAL', 'PAID'].includes(expense.status)) {
+    elements.expenseDecisionOwner.textContent =
+      `Aprobado por ${expense.approved_by_name || 'responsable'}`;
+  } else {
+    elements.expenseDecisionOwner.textContent = 'Esperando aprobación';
+  }
+  elements.expenseDecisionNotes.textContent =
+    expense.decision_notes || 'Todavía no se ha registrado una decisión.';
+  elements.approveExpenseButton.hidden =
+    expense.status !== 'SUBMITTED' || !hasAnyPermission('expenses.approve');
+  elements.rejectExpenseButton.hidden =
+    expense.status !== 'SUBMITTED' || !hasAnyPermission('expenses.approve');
+  elements.payExpenseButton.hidden =
+    !['APPROVED', 'PARTIAL'].includes(expense.status) ||
+    !hasAnyPermission('expenses.pay');
+  elements.expensePaymentList.replaceChildren();
+  elements.expensePaymentCount.textContent =
+    `${expense.payments.length} ${expense.payments.length === 1 ? 'pago' : 'pagos'}`;
+  if (!expense.payments.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ar-no-payments';
+    empty.textContent = expense.status === 'SUBMITTED'
+      ? 'El gasto debe aprobarse antes de pagar.'
+      : 'Todavía no se han registrado pagos.';
+    elements.expensePaymentList.append(empty);
+  }
+  for (const payment of expense.payments) {
+    const row = document.createElement('div');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = formatShortDate(payment.payment_date);
+    const detail = document.createElement('small');
+    detail.textContent = [
+      payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es'),
+      payment.bank_name
+        ? `${payment.bank_name} ${payment.masked_account}`
+        : payment.cash_register_name,
+      payment.reference,
+    ].filter(Boolean).join(' · ');
+    copy.append(title, detail);
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(payment.amount);
+    row.append(copy, amount);
+    elements.expensePaymentList.append(row);
+  }
+  renderExpenseList();
+}
+
+async function loadExpenseDetail(expenseId) {
+  try {
+    const expense = await getJson(`/api/expenses/${expenseId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderExpenseDetail(expense);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadExpenses() {
+  if (!activeTenantId) {
+    showExpensesError('Primero debes registrar o seleccionar una empresa.');
+    return [];
+  }
+  try {
+    const [summary, setup, expenses] = await Promise.all([
+      getJson('/api/expenses/summary', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/expenses/setup', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+      getJson('/api/expenses', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
+    ]);
+    expenseSetup = setup;
+    businessExpenses = expenses;
+    setExpenseSummary(summary);
+    renderExpenseCenters();
+    renderExpenseList();
+    elements.newExpenseButton.disabled =
+      !setup.branches.length || !setup.categories.length || !setup.costCenters.length;
+    if (selectedExpense) {
+      const exists = expenses.some((expense) => expense.id === selectedExpense.id);
+      if (exists) await loadExpenseDetail(selectedExpense.id);
+      else {
+        selectedExpense = null;
+        elements.expenseDetailContent.hidden = true;
+        elements.expenseDetailEmpty.hidden = false;
+      }
+    }
+    return expenses;
+  } catch (error) {
+    showExpensesError(error.message);
+    throw error;
+  }
+}
+
+function syncExpenseCostCenters() {
+  const branchId = elements.expenseBranchId.value;
+  fillInventorySelect(
+    elements.expenseCostCenterId,
+    'Selecciona un centro',
+    expenseSetup.costCenters.filter(
+      (center) => !center.branch_id || center.branch_id === branchId,
+    ),
+    (center) => `${center.name} · ${center.code}`,
+  );
+}
+
+function syncExpenseBeneficiary() {
+  const hasSupplier = Boolean(elements.expenseSupplierId.value);
+  elements.expenseBeneficiaryField.hidden = hasSupplier;
+  elements.expenseBeneficiaryName.required = !hasSupplier;
+}
+
+function syncExpenseRecurrence() {
+  elements.expenseRecurrenceField.hidden = !elements.expenseRecurring.checked;
+  elements.expenseRecurrenceRule.required = elements.expenseRecurring.checked;
+}
+
+function updateExpenseDraftTotal() {
+  const total =
+    (Number(elements.expenseSubtotal.value) || 0) +
+    (Number(elements.expenseTaxTotal.value) || 0);
+  elements.expenseDraftTotal.textContent = formatCurrency(total);
+}
+
+function openExpenseDialog() {
+  elements.expenseForm.reset();
+  elements.expenseFormError.hidden = true;
+  fillInventorySelect(
+    elements.expenseBranchId,
+    'Selecciona una sucursal',
+    expenseSetup.branches,
+    (branch) => `${branch.name} · ${branch.code}`,
+  );
+  fillInventorySelect(
+    elements.expenseCategoryId,
+    'Selecciona una categoría',
+    expenseSetup.categories,
+    (category) => `${category.name} · ${category.account_code}`,
+  );
+  fillInventorySelect(
+    elements.expenseSupplierId,
+    'Otro beneficiario',
+    expenseSetup.suppliers,
+    (supplier) => `${supplier.name}${supplier.tax_id ? ` · ${supplier.tax_id}` : ''}`,
+  );
+  fillInventorySelect(
+    elements.expenseSupportDocumentId,
+    'Sin archivo adjunto',
+    expenseSetup.documents,
+    (document) => `${document.original_name} · ${document.category}`,
+  );
+  elements.expenseIssueDate.value = isoDate();
+  elements.expenseDueDate.value = isoDate();
+  elements.expenseTaxTotal.value = '0';
+  syncExpenseCostCenters();
+  syncExpenseBeneficiary();
+  syncExpenseRecurrence();
+  updateExpenseDraftTotal();
+  elements.expenseDialog.showModal();
+  elements.expenseBranchId.focus();
+}
+
+function closeExpenseDialog() {
+  elements.expenseDialog.close();
+}
+
+async function submitExpense(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.expenseForm);
+  elements.expenseFormError.hidden = true;
+  elements.saveExpenseButton.disabled = true;
+  elements.saveExpenseButton.textContent = 'Enviando…';
+  try {
+    const expense = await getJson('/api/expenses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        branchId: formData.get('branchId'),
+        costCenterId: formData.get('costCenterId'),
+        categoryId: formData.get('categoryId'),
+        supplierId: formData.get('supplierId') || null,
+        beneficiaryName: formData.get('beneficiaryName') || null,
+        supplierDocumentNumber: formData.get('supplierDocumentNumber') || null,
+        supportDocumentId: formData.get('supportDocumentId') || null,
+        issueDate: formData.get('issueDate'),
+        dueDate: formData.get('dueDate') || null,
+        subtotal: Number(formData.get('subtotal')),
+        taxTotal: Number(formData.get('taxTotal') || 0),
+        description: formData.get('description'),
+        recurring: elements.expenseRecurring.checked,
+        recurrenceRule: elements.expenseRecurring.checked
+          ? formData.get('recurrenceRule')
+          : null,
+      }),
+    });
+    closeExpenseDialog();
+    await loadExpenses();
+    await loadExpenseDetail(expense.id);
+    showToast(`${expense.expense_number} enviado para aprobación.`);
+  } catch (error) {
+    elements.expenseFormError.textContent = error.message;
+    elements.expenseFormError.hidden = false;
+  } finally {
+    elements.saveExpenseButton.disabled = false;
+    elements.saveExpenseButton.textContent = 'Enviar para aprobación';
+  }
+}
+
+function openExpenseDecision(action) {
+  if (!selectedExpense) return;
+  elements.expenseDecisionForm.reset();
+  elements.expenseDecisionError.hidden = true;
+  elements.expenseDecisionAction.value = action;
+  const approve = action === 'approve';
+  elements.expenseDecisionKicker.textContent = selectedExpense.expense_number;
+  elements.expenseDecisionTitle.textContent =
+    approve ? 'Aprobar gasto' : 'Rechazar gasto';
+  elements.expenseDecisionCopy.textContent = approve
+    ? `Se reconocerá contablemente ${formatCurrency(selectedExpense.total)} y quedará disponible para pago.`
+    : 'El gasto quedará cerrado sin generar obligación ni asiento contable.';
+  elements.saveExpenseDecision.textContent =
+    approve ? 'Aprobar y contabilizar' : 'Confirmar rechazo';
+  elements.expenseDecisionDialog.showModal();
+  elements.expenseDecisionInput.focus();
+}
+
+function closeExpenseDecisionDialog() {
+  elements.expenseDecisionDialog.close();
+}
+
+async function submitExpenseDecision(event) {
+  event.preventDefault();
+  if (!selectedExpense) return;
+  const action = elements.expenseDecisionAction.value;
+  elements.expenseDecisionError.hidden = true;
+  elements.saveExpenseDecision.disabled = true;
+  try {
+    const expenseId = selectedExpense.id;
+    await getJson(`/api/expenses/${expenseId}/${action}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ notes: elements.expenseDecisionInput.value }),
+    });
+    closeExpenseDecisionDialog();
+    await loadExpenses();
+    await loadExpenseDetail(expenseId);
+    showToast(action === 'approve'
+      ? 'Gasto aprobado y contabilizado.'
+      : 'Gasto rechazado con trazabilidad.');
+  } catch (error) {
+    elements.expenseDecisionError.textContent = error.message;
+    elements.expenseDecisionError.hidden = false;
+  } finally {
+    elements.saveExpenseDecision.disabled = false;
+  }
+}
+
+function syncExpensePaymentSource() {
+  const method = elements.expensePaymentMethod.value;
+  const cash = method === 'CASH';
+  const bank = ['BANK_TRANSFER', 'CARD', 'CHECK'].includes(method);
+  elements.expenseBankAccountField.hidden = !bank;
+  elements.expenseCashSessionField.hidden = !cash;
+  elements.expenseBankAccountId.required = bank;
+  elements.expenseCashSessionId.required = cash;
+}
+
+function openExpensePaymentDialog() {
+  if (!selectedExpense || !['APPROVED', 'PARTIAL'].includes(selectedExpense.status)) {
+    return;
+  }
+  elements.expensePaymentForm.reset();
+  elements.expensePaymentError.hidden = true;
+  elements.expensePaymentNumber.textContent = selectedExpense.expense_number;
+  elements.expensePaymentBalance.textContent =
+    `${formatCurrency(selectedExpense.balance)} pendientes`;
+  elements.expensePaymentAmount.value = String(selectedExpense.balance);
+  elements.expensePaymentAmount.max = String(selectedExpense.balance);
+  elements.expensePaymentDate.value = isoDate();
+  fillInventorySelect(
+    elements.expenseBankAccountId,
+    expenseSetup.bankAccounts.length ? 'Selecciona una cuenta' : 'Sin cuentas bancarias',
+    expenseSetup.bankAccounts,
+    (account) => `${account.bank_name} · ${account.masked_account}`,
+  );
+  fillInventorySelect(
+    elements.expenseCashSessionId,
+    expenseSetup.cashSessions.length ? 'Selecciona un turno' : 'Sin turnos abiertos',
+    expenseSetup.cashSessions,
+    (session) => `${session.register_name} · ${session.branch_name}`,
+  );
+  elements.expensePaymentMethod.value = expenseSetup.bankAccounts.length
+    ? 'BANK_TRANSFER'
+    : expenseSetup.cashSessions.length ? 'CASH' : 'OTHER';
+  syncExpensePaymentSource();
+  elements.expensePaymentDialog.showModal();
+  elements.expensePaymentAmount.focus();
+  elements.expensePaymentAmount.select();
+}
+
+function closeExpensePaymentDialog() {
+  elements.expensePaymentDialog.close();
+}
+
+async function submitExpensePayment(event) {
+  event.preventDefault();
+  if (!selectedExpense) return;
+  const formData = new FormData(elements.expensePaymentForm);
+  const method = formData.get('paymentMethod');
+  elements.expensePaymentError.hidden = true;
+  elements.saveExpensePayment.disabled = true;
+  elements.saveExpensePayment.textContent = 'Aplicando pago…';
+  try {
+    const expenseId = selectedExpense.id;
+    await getJson(`/api/expenses/${expenseId}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        amount: Number(formData.get('amount')),
+        paymentDate: formData.get('paymentDate'),
+        paymentMethod: method,
+        bankAccountId: ['BANK_TRANSFER', 'CARD', 'CHECK'].includes(method)
+          ? formData.get('bankAccountId')
+          : null,
+        cashSessionId: method === 'CASH' ? formData.get('cashSessionId') : null,
+        reference: formData.get('reference') || null,
+        notes: formData.get('notes') || null,
+      }),
+    });
+    closeExpensePaymentDialog();
+    await loadExpenses();
+    await loadExpenseDetail(expenseId);
+    if (hasAnyPermission('sales.operate')) await loadPos();
+    showToast('Pago aplicado, contabilizado y auditado.');
+  } catch (error) {
+    elements.expensePaymentError.textContent = error.message;
+    elements.expensePaymentError.hidden = false;
+  } finally {
+    elements.saveExpensePayment.disabled = false;
+    elements.saveExpensePayment.textContent = 'Aplicar pago';
+  }
+}
+
+function openCostCenterDialog() {
+  elements.costCenterForm.reset();
+  elements.costCenterFormError.hidden = true;
+  fillInventorySelect(
+    elements.costCenterBranchId,
+    'Toda la empresa',
+    expenseSetup.branches,
+    (branch) => `${branch.name} · ${branch.code}`,
+  );
+  elements.costCenterDialog.showModal();
+  elements.costCenterForm.elements.code.focus();
+}
+
+function closeCostCenterDialog() {
+  elements.costCenterDialog.close();
+}
+
+async function submitCostCenter(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.costCenterForm);
+  elements.costCenterFormError.hidden = true;
+  elements.saveCostCenter.disabled = true;
+  try {
+    await getJson('/api/expenses/cost-centers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(formData)),
+    });
+    closeCostCenterDialog();
+    await loadExpenses();
+    showToast('Centro de costos creado.');
+  } catch (error) {
+    elements.costCenterFormError.textContent = error.message;
+    elements.costCenterFormError.hidden = false;
+  } finally {
+    elements.saveCostCenter.disabled = false;
+  }
+}
+
+function openExpenseCategoryDialog() {
+  elements.expenseCategoryForm.reset();
+  elements.expenseCategoryFormError.hidden = true;
+  fillInventorySelect(
+    elements.expenseAccountingAccountId,
+    'Selecciona una cuenta',
+    expenseSetup.expenseAccounts,
+    (account) => `${account.code} · ${account.name}`,
+  );
+  elements.expenseCategoryDialog.showModal();
+  elements.expenseCategoryForm.elements.code.focus();
+}
+
+function closeExpenseCategoryDialog() {
+  elements.expenseCategoryDialog.close();
+}
+
+async function submitExpenseCategory(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.expenseCategoryForm);
+  elements.expenseCategoryFormError.hidden = true;
+  elements.saveExpenseCategory.disabled = true;
+  try {
+    await getJson('/api/expenses/categories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        code: formData.get('code'),
+        name: formData.get('name'),
+        accountingAccountId: formData.get('accountingAccountId'),
+        approvalThreshold: Number(formData.get('approvalThreshold') || 0),
+        requiresSupport: formData.get('requiresSupport') === 'on',
+      }),
+    });
+    closeExpenseCategoryDialog();
+    await loadExpenses();
+    showToast('Categoría de gasto creada.');
+  } catch (error) {
+    elements.expenseCategoryFormError.textContent = error.message;
+    elements.expenseCategoryFormError.hidden = false;
+  } finally {
+    elements.saveExpenseCategory.disabled = false;
   }
 }
 
@@ -4376,6 +7884,28 @@ const inventoryMovementLabels = {
   ADJUSTMENT_IN: 'Ajuste de entrada',
   ADJUSTMENT_OUT: 'Ajuste de salida',
   COUNT_ADJUSTMENT: 'Ajuste por conteo',
+  CUSTOMER_RETURN: 'Devolución de cliente',
+  SUPPLIER_RETURN: 'Devolución a proveedor',
+  DAMAGE_OUT: 'Salida hacia averías',
+  DAMAGE_IN: 'Ingreso a averías',
+  LOSS: 'Pérdida confirmada',
+  QUARANTINE_OUT: 'Salida hacia cuarentena',
+  QUARANTINE_IN: 'Ingreso a cuarentena',
+  QUARANTINE_RELEASE_OUT: 'Salida de cuarentena',
+  QUARANTINE_RELEASE_IN: 'Liberación de cuarentena',
+  TRANSFER_DISPATCH: 'Despacho de transferencia',
+  TRANSFER_TRANSIT: 'Ingreso a tránsito',
+  TRANSFER_TRANSIT_OUT: 'Salida de tránsito',
+  TRANSFER_RECEIVED: 'Transferencia recibida',
+};
+
+const inventoryIncidentLabels = {
+  CUSTOMER_RETURN: 'Devolución de cliente',
+  SUPPLIER_RETURN: 'Devolución a proveedor',
+  DAMAGE: 'Avería',
+  LOSS: 'Pérdida',
+  QUARANTINE: 'Cuarentena',
+  QUARANTINE_RELEASE: 'Liberación',
 };
 
 function formatQuantity(value, { sign = false } = {}) {
@@ -4508,8 +8038,12 @@ function showInventoryError(message) {
   inventoryBalances = [];
   inventoryMovements = [];
   inventoryReplenishments = [];
+  inventoryIncidents = [];
+  inventoryTransferOrders = [];
   setInventorySummary();
   renderReplenishments();
+  renderInventoryIncidents();
+  renderInventoryTransferOrders();
   elements.inventoryBalanceList.replaceChildren();
   elements.inventoryMovementList.replaceChildren();
   elements.inventoryDataState.hidden = false;
@@ -4639,6 +8173,103 @@ function renderInventoryMovements() {
   }
 }
 
+function renderInventoryIncidents() {
+  elements.inventoryIncidentList.replaceChildren();
+  elements.inventoryIncidentCount.textContent =
+    `${inventoryIncidents.length} ` +
+    `${inventoryIncidents.length === 1 ? 'novedad' : 'novedades'}`;
+  elements.inventoryIncidentState.hidden = inventoryIncidents.length > 0;
+  for (const incident of inventoryIncidents) {
+    const item = document.createElement('article');
+    item.className =
+      `inventory-incident-card type-${incident.incident_type.toLowerCase()}`;
+    const marker = document.createElement('span');
+    marker.className = 'inventory-incident-marker';
+    marker.textContent = incident.incident_type === 'CUSTOMER_RETURN' ? '↩'
+      : incident.incident_type === 'QUARANTINE_RELEASE' ? '✓'
+        : incident.incident_type === 'QUARANTINE' ? 'Q' : '!';
+    const copy = document.createElement('div');
+    const heading = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent =
+      inventoryIncidentLabels[incident.incident_type] || incident.incident_type;
+    const status = document.createElement('span');
+    status.className = 'inventory-incident-status';
+    status.textContent = incident.status === 'RESOLVED'
+      ? 'APLICADA'
+      : incident.status;
+    heading.append(title, status);
+    const product = document.createElement('p');
+    product.textContent =
+      `${incident.product_name} · ${formatQuantity(incident.quantity)} unidades`;
+    const route = document.createElement('small');
+    route.textContent = [
+      incident.source_warehouse_name,
+      incident.destination_warehouse_name
+        ? `→ ${incident.destination_warehouse_name}`
+        : null,
+      formatShortDate(incident.created_at),
+    ].filter(Boolean).join(' ');
+    const reason = document.createElement('span');
+    reason.textContent = incident.reason;
+    copy.append(heading, product, route, reason);
+    item.append(marker, copy);
+    elements.inventoryIncidentList.append(item);
+  }
+}
+
+function renderInventoryTransferOrders() {
+  elements.inventoryTransferOrderList.replaceChildren();
+  const pending = inventoryTransferOrders.filter((transfer) =>
+    transfer.status === 'DISPATCHED');
+  elements.inventoryTransferOrderCount.textContent =
+    `${pending.length} ${pending.length === 1 ? 'pendiente' : 'pendientes'}`;
+  elements.inventoryTransferOrderState.hidden =
+    inventoryTransferOrders.length > 0;
+  for (const transfer of inventoryTransferOrders) {
+    const item = document.createElement('article');
+    item.className = `inventory-transfer-order ${transfer.status.toLowerCase()}`;
+    const route = document.createElement('div');
+    const status = document.createElement('span');
+    status.textContent = transfer.status === 'DISPATCHED'
+      ? 'EN TRÁNSITO'
+      : transfer.status === 'RECEIVED' ? 'RECIBIDA' : transfer.status;
+    const title = document.createElement('strong');
+    title.textContent =
+      `${transfer.source_branch_name} → ${transfer.destination_branch_name}`;
+    const product = document.createElement('p');
+    product.textContent =
+      `${transfer.product_name} · ${formatQuantity(transfer.quantity)} unidades`;
+    const meta = document.createElement('small');
+    meta.textContent =
+      `${transfer.source_warehouse_name} → ` +
+      `${transfer.destination_warehouse_name} · ` +
+      `${formatShortDate(transfer.dispatched_at)}`;
+    route.append(status, title, product, meta);
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.textContent = transfer.status === 'DISPATCHED'
+      ? 'Confirmar recepción'
+      : 'Recepción confirmada';
+    action.disabled = transfer.status !== 'DISPATCHED';
+    action.addEventListener('click', () =>
+      receiveTransferOrder(transfer.id, action));
+    item.append(route, action);
+    elements.inventoryTransferOrderList.append(item);
+  }
+}
+
+function syncInventoryOperationBadge() {
+  const replenishmentAlerts = inventoryReplenishments
+    .filter((item) => item.status !== 'OK').length;
+  const pendingTransfers = inventoryTransferOrders
+    .filter((item) => item.status === 'DISPATCHED').length;
+  const openIncidents = inventoryIncidents
+    .filter((item) => item.status !== 'RESOLVED').length;
+  elements.inventoryOperationAlertBadge.textContent =
+    String(replenishmentAlerts + pendingTransfers + openIncidents);
+}
+
 function syncInventoryWarehouseFilter() {
   const selected = elements.inventoryWarehouseFilter.value;
   elements.inventoryWarehouseFilter.replaceChildren(new Option('Todas las bodegas', ''));
@@ -4661,7 +8292,16 @@ async function loadInventory() {
     return [];
   }
   try {
-    const [summary, balances, movements, replenishments] = await Promise.all([
+    const logisticsEnabled = isTenantModuleEnabled('LOGISTICS');
+    const [
+      summary,
+      balances,
+      movements,
+      replenishments,
+      incidents,
+      transferOrders,
+    ] =
+      await Promise.all([
       getJson('/api/inventory/summary', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
@@ -4671,22 +8311,128 @@ async function loadInventory() {
       getJson('/api/inventory/movements?limit=40', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
-      getJson('/api/inventory/replenishments', {
+      logisticsEnabled ? getJson('/api/inventory/replenishments', {
         headers: { 'x-tenant-id': activeTenantId },
-      }),
-    ]);
+      }) : Promise.resolve([]),
+      logisticsEnabled ? getJson('/api/inventory/incidents?limit=30', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }) : Promise.resolve([]),
+      logisticsEnabled ? getJson('/api/inventory/transfer-orders', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }) : Promise.resolve([]),
+      ]);
     inventoryBalances = balances;
     inventoryMovements = movements;
     inventoryReplenishments = replenishments;
+    inventoryIncidents = incidents;
+    inventoryTransferOrders = transferOrders;
     setInventorySummary(summary);
     syncInventoryWarehouseFilter();
     renderReplenishments();
     renderInventoryBalances();
     renderInventoryMovements();
+    renderInventoryIncidents();
+    renderInventoryTransferOrders();
+    syncInventoryOperationBadge();
     return balances;
   } catch (error) {
     showInventoryError(error.message);
     throw error;
+  }
+}
+
+function openKardexDialog() {
+  const selectedProduct = elements.kardexProduct.value;
+  const selectedWarehouse = elements.kardexWarehouse.value;
+  const uniqueProducts = new Map();
+  inventoryBalances.forEach((balance) => {
+    uniqueProducts.set(balance.product_id, {
+      id: balance.product_id,
+      label: `${balance.sku} · ${balance.name}`,
+    });
+  });
+  elements.kardexProduct.replaceChildren(new Option('Todos los productos', ''));
+  [...uniqueProducts.values()].sort((a, b) => a.label.localeCompare(b.label))
+    .forEach((product) => elements.kardexProduct.append(
+      new Option(product.label, product.id),
+    ));
+  elements.kardexWarehouse.replaceChildren(new Option('Todas las bodegas', ''));
+  warehouses.filter((warehouse) => warehouse.active).forEach((warehouse) => {
+    elements.kardexWarehouse.append(
+      new Option(`${warehouse.code} · ${warehouse.name}`, warehouse.id),
+    );
+  });
+  if (uniqueProducts.has(selectedProduct)) elements.kardexProduct.value = selectedProduct;
+  if (warehouses.some((warehouse) => warehouse.id === selectedWarehouse)) {
+    elements.kardexWarehouse.value = selectedWarehouse;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  elements.kardexDateTo.value ||= today;
+  elements.kardexDateFrom.value ||= `${today.slice(0, 8)}01`;
+  elements.kardexTableBody.replaceChildren();
+  elements.kardexState.hidden = false;
+  elements.kardexDialog.showModal();
+}
+
+function closeKardexDialog() {
+  elements.kardexDialog.close();
+}
+
+async function loadKardex(event) {
+  event.preventDefault();
+  elements.loadKardexButton.disabled = true;
+  elements.kardexState.hidden = false;
+  elements.kardexState.querySelector('strong').textContent = 'Consultando kardex';
+  elements.kardexState.querySelector('p').textContent =
+    'Calculando saldos acumulados y valoración.';
+  try {
+    const params = new URLSearchParams();
+    if (elements.kardexProduct.value) {
+      params.set('productId', elements.kardexProduct.value);
+    }
+    if (elements.kardexWarehouse.value) {
+      params.set('warehouseId', elements.kardexWarehouse.value);
+    }
+    if (elements.kardexDateFrom.value) {
+      params.set('dateFrom', elements.kardexDateFrom.value);
+    }
+    if (elements.kardexDateTo.value) {
+      params.set('dateTo', elements.kardexDateTo.value);
+    }
+    const records = await getJson(`/api/inventory/kardex?${params}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    elements.kardexTableBody.replaceChildren();
+    records.forEach((record) => {
+      const row = document.createElement('tr');
+      row.append(
+        createCell('Fecha', formatShortDate(record.created_at)),
+        createCell('Producto', `${record.sku} · ${record.product_name}`),
+        createCell('Ubicación', record.warehouse_name),
+        createCell(
+          'Movimiento',
+          inventoryMovementLabels[record.movement_type] || record.movement_type,
+        ),
+        createCell('Cantidad', formatQuantity(record.quantity, { sign: true })),
+        createCell('Costo', formatCurrency(record.unit_cost)),
+        createCell('Saldo', formatQuantity(record.running_quantity)),
+        createCell('Valor acumulado', formatCurrency(record.running_value)),
+      );
+      elements.kardexTableBody.append(row);
+    });
+    elements.kardexState.hidden = records.length > 0;
+    if (!records.length) {
+      elements.kardexState.querySelector('strong').textContent = 'Sin movimientos';
+      elements.kardexState.querySelector('p').textContent =
+        'No hay registros para los filtros seleccionados.';
+    }
+  } catch (error) {
+    elements.kardexTableBody.replaceChildren();
+    elements.kardexState.querySelector('strong').textContent =
+      'No fue posible consultar el kardex';
+    elements.kardexState.querySelector('p').textContent = error.message;
+  } finally {
+    elements.loadKardexButton.disabled = false;
   }
 }
 
@@ -4696,6 +8442,138 @@ function fillInventorySelect(select, placeholder, records, label, value = '') {
     select.append(new Option(label(record), record.id));
   }
   if (records.some((record) => record.id === value)) select.value = value;
+}
+
+function syncInventoryIncidentForm() {
+  const type = elements.inventoryIncidentType.value;
+  const productId = elements.inventoryIncidentProductId.value;
+  const currentWarehouse = elements.inventoryIncidentWarehouseId.value;
+  const release = type === 'QUARANTINE_RELEASE';
+  const customerReturn = type === 'CUSTOMER_RETURN';
+  elements.inventoryIncidentDestinationField.hidden = !release;
+  elements.inventoryIncidentDestinationId.required = release;
+  elements.inventoryIncidentWarehouseLabel.innerHTML = customerReturn
+    ? 'Ubicación que recibe <b>*</b>'
+    : release
+      ? 'Ubicación de cuarentena <b>*</b>'
+      : 'Ubicación de origen <b>*</b>';
+
+  let locations;
+  if (customerReturn) {
+    locations = warehouses.filter((warehouse) =>
+      warehouse.active &&
+      ['AVAILABLE', 'DISPLAY'].includes(warehouse.warehouse_type));
+  } else {
+    const allowedType = release ? 'QUARANTINE' : null;
+    const unique = new Map();
+    inventoryBalances
+      .filter((balance) =>
+        balance.product_id === productId &&
+        Number(balance.available) > 0 &&
+        (!allowedType || balance.warehouse_type === allowedType))
+      .forEach((balance) => unique.set(balance.warehouse_id, {
+        id: balance.warehouse_id,
+        name: balance.warehouse_name,
+        code: balance.warehouse_code,
+        warehouse_type: balance.warehouse_type,
+        branch_id: warehouses.find((warehouse) =>
+          warehouse.id === balance.warehouse_id)?.branch_id,
+      }));
+    locations = [...unique.values()];
+  }
+  fillInventorySelect(
+    elements.inventoryIncidentWarehouseId,
+    customerReturn ? 'Selecciona dónde ingresa' : 'Selecciona la ubicación',
+    locations,
+    (warehouse) => `${warehouse.name} · ` +
+      `${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`,
+    currentWarehouse,
+  );
+  const source = warehouses.find((warehouse) =>
+    warehouse.id === elements.inventoryIncidentWarehouseId.value);
+  fillInventorySelect(
+    elements.inventoryIncidentDestinationId,
+    'Selecciona ubicación disponible',
+    warehouses.filter((warehouse) =>
+      warehouse.active &&
+      warehouse.branch_id === source?.branch_id &&
+      ['AVAILABLE', 'DISPLAY'].includes(warehouse.warehouse_type)),
+    (warehouse) => `${warehouse.name} · ` +
+      `${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.code}`,
+  );
+  const descriptions = {
+    CUSTOMER_RETURN:
+      'Las unidades vuelven al saldo disponible. Conserva la referencia de la venta.',
+    SUPPLIER_RETURN:
+      'Las unidades salen del inventario y quedan vinculadas a la devolución al proveedor.',
+    DAMAGE:
+      'Las unidades salen de la ubicación operativa e ingresan a una zona de averías separada.',
+    LOSS:
+      'Las unidades salen definitivamente. Usa este tipo solo con una pérdida confirmada.',
+    QUARANTINE:
+      'Las unidades se aíslan y dejan de estar disponibles para venta.',
+    QUARANTINE_RELEASE:
+      'Las unidades salen de cuarentena y vuelven a una ubicación operativa.',
+  };
+  elements.inventoryIncidentImpact.textContent = descriptions[type] || '';
+}
+
+function openInventoryIncidentDialog() {
+  if (!products.length || !warehouses.length) {
+    showToast('Necesitas productos y ubicaciones activas.');
+    return;
+  }
+  elements.inventoryIncidentForm.reset();
+  elements.inventoryIncidentFormError.hidden = true;
+  fillInventorySelect(
+    elements.inventoryIncidentProductId,
+    'Selecciona un producto',
+    products,
+    (product) => `${product.name} · ${product.sku}`,
+  );
+  syncInventoryIncidentForm();
+  elements.inventoryIncidentDialog.showModal();
+  elements.inventoryIncidentType.focus();
+}
+
+function closeInventoryIncidentDialog() {
+  elements.inventoryIncidentDialog.close();
+}
+
+async function submitInventoryIncident(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.inventoryIncidentForm);
+  const payload = Object.fromEntries(formData);
+  if (elements.inventoryIncidentDestinationField.hidden) {
+    delete payload.destinationWarehouseId;
+  }
+  elements.inventoryIncidentFormError.hidden = true;
+  elements.saveInventoryIncidentButton.disabled = true;
+  elements.saveInventoryIncidentButton.textContent = 'Aplicando movimiento…';
+  try {
+    await getJson('/api/inventory/incidents', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(payload),
+    });
+    closeInventoryIncidentDialog();
+    await loadWarehouses();
+    await Promise.all([
+      loadInventory(),
+      loadPosCatalog().catch(() => []),
+      loadCommercialCatalog().catch(() => {}),
+    ]);
+    showToast('Novedad aplicada al kardex y registrada en auditoría.');
+  } catch (error) {
+    elements.inventoryIncidentFormError.textContent = error.message;
+    elements.inventoryIncidentFormError.hidden = false;
+  } finally {
+    elements.saveInventoryIncidentButton.disabled = false;
+    elements.saveInventoryIncidentButton.textContent = 'Registrar y mover saldo';
+  }
 }
 
 function openAdjustmentDialog(balance = null) {
@@ -4854,27 +8732,65 @@ function closeTransferDialog() {
 async function submitTransfer(event) {
   event.preventDefault();
   const formData = new FormData(elements.transferForm);
+  const requiresReception = formData.has('requiresReception');
+  const payload = Object.fromEntries(formData);
+  delete payload.requiresReception;
   elements.transferFormError.hidden = true;
   elements.saveTransferButton.disabled = true;
-  elements.saveTransferButton.textContent = 'Trasladando…';
+  elements.saveTransferButton.textContent = requiresReception
+    ? 'Despachando…'
+    : 'Trasladando…';
   try {
-    await getJson('/api/inventory/transfers', {
+    await getJson(
+      requiresReception
+        ? '/api/inventory/transfer-orders'
+        : '/api/inventory/transfers',
+      {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
       },
-      body: JSON.stringify(Object.fromEntries(formData)),
-    });
+      body: JSON.stringify(payload),
+      },
+    );
     closeTransferDialog();
+    await loadWarehouses();
     await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
-    showToast('Transferencia completada en ambas bodegas.');
+    showToast(requiresReception
+      ? 'Despacho registrado. Las unidades quedaron en tránsito.'
+      : 'Transferencia completada en ambas bodegas.');
   } catch (error) {
     elements.transferFormError.textContent = error.message;
     elements.transferFormError.hidden = false;
   } finally {
     elements.saveTransferButton.disabled = false;
     elements.saveTransferButton.textContent = 'Confirmar traslado';
+  }
+}
+
+async function receiveTransferOrder(transferId, button) {
+  const receptionNotes = window.prompt(
+    'Describe el estado recibido, la persona responsable o cualquier diferencia.',
+  )?.trim();
+  if (!receptionNotes) return;
+  button.disabled = true;
+  button.textContent = 'Recibiendo…';
+  try {
+    await getJson(`/api/inventory/transfer-orders/${transferId}/receive`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ receptionNotes }),
+    });
+    await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
+    showToast('Recepción confirmada y saldo habilitado en el destino.');
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = 'Confirmar recepción';
+    showToast(error.message);
   }
 }
 
@@ -4943,16 +8859,552 @@ async function submitReplenishmentRule(event) {
   }
 }
 
+function advancedEmptyList(container, message) {
+  const empty = document.createElement('p');
+  empty.className = 'advanced-record-empty';
+  empty.textContent = message;
+  container.append(empty);
+}
+
+function appendAdvancedRecord(container, { symbol, title, meta, value, action }) {
+  const row = document.createElement('article');
+  const icon = document.createElement('span');
+  icon.textContent = symbol;
+  const identity = document.createElement('div');
+  const name = document.createElement('strong');
+  name.textContent = title;
+  const detail = document.createElement('small');
+  detail.textContent = meta;
+  identity.append(name, detail);
+  const end = document.createElement('div');
+  const amount = document.createElement('strong');
+  amount.textContent = value;
+  end.append(amount);
+  if (action) end.append(action);
+  row.append(icon, identity, end);
+  container.append(row);
+}
+
+function renderAdvancedInventory() {
+  const summary = advancedInventory.summary || {};
+  elements.advancedLocationCount.textContent = String(summary.locations || 0);
+  elements.advancedUnitCount.textContent = String(summary.units || 0);
+  elements.advancedLotCount.textContent = String(summary.lots || 0);
+  elements.advancedExpiringCount.textContent = String(summary.expiring_lots || 0);
+  elements.advancedSerialCount.textContent = String(summary.serials || 0);
+  elements.advancedReservedCount.textContent = formatQuantity(summary.reserved_units || 0);
+  elements.advancedInventoryAlertBadge.textContent = String(summary.expiring_lots || 0);
+
+  elements.advancedLocationList.replaceChildren();
+  elements.advancedLocationRecordCount.textContent =
+    String(advancedInventory.locations.length);
+  if (!advancedInventory.locations.length) {
+    advancedEmptyList(elements.advancedLocationList, 'Aún no hay ubicaciones internas.');
+  }
+  advancedInventory.locations.slice(0, 12).forEach((location) => {
+    appendAdvancedRecord(elements.advancedLocationList, {
+      symbol: '⌖',
+      title: `${location.warehouse_name} · ${location.code}`,
+      meta: [location.zone_type, location.aisle, location.rack, location.level]
+        .filter(Boolean).join(' · '),
+      value: location.sellable ? 'Vendible' : 'Control',
+    });
+  });
+
+  const lotAndSerials = [
+    ...advancedInventory.lots.map((item) => ({ ...item, recordType: 'LOT' })),
+    ...advancedInventory.serials.map((item) => ({ ...item, recordType: 'SERIAL' })),
+  ];
+  elements.advancedLotList.replaceChildren();
+  elements.advancedLotRecordCount.textContent = String(lotAndSerials.length);
+  if (!lotAndSerials.length) {
+    advancedEmptyList(elements.advancedLotList, 'Sin lotes ni series registrados.');
+  }
+  lotAndSerials.slice(0, 16).forEach((item) => {
+    const isLot = item.recordType === 'LOT';
+    appendAdvancedRecord(elements.advancedLotList, {
+      symbol: isLot ? 'L' : '#',
+      title: `${item.product_name} · ${isLot ? item.lot_number : item.serial_number}`,
+      meta: `${item.warehouse_name}${isLot && item.expiration_date
+        ? ` · vence ${formatShortDate(item.expiration_date)}` : ''}`,
+      value: isLot ? `${formatQuantity(item.on_hand)} und.` : item.status,
+    });
+  });
+
+  elements.advancedReservationList.replaceChildren();
+  const activeReservations = advancedInventory.reservations
+    .filter((reservation) => reservation.status === 'ACTIVE');
+  elements.advancedReservationRecordCount.textContent = String(activeReservations.length);
+  if (!activeReservations.length) {
+    advancedEmptyList(elements.advancedReservationList, 'No hay existencias reservadas.');
+  }
+  activeReservations.forEach((reservation) => {
+    const release = document.createElement('button');
+    release.type = 'button';
+    release.className = 'sync-link';
+    release.textContent = 'Liberar';
+    release.addEventListener('click', () => releaseInventoryReservation(
+      reservation.id,
+      release,
+    ));
+    appendAdvancedRecord(elements.advancedReservationList, {
+      symbol: 'R',
+      title: reservation.product_name,
+      meta: `${reservation.warehouse_name} · ${reservation.reference_type} ${reservation.reference_id}`,
+      value: formatQuantity(reservation.quantity),
+      action: release,
+    });
+  });
+
+  elements.advancedClosureList.replaceChildren();
+  elements.advancedClosureRecordCount.textContent =
+    String(advancedInventory.closures.length);
+  if (!advancedInventory.closures.length) {
+    advancedEmptyList(elements.advancedClosureList, 'Todavía no hay cierres valorizados.');
+  }
+  advancedInventory.closures.forEach((closure) => {
+    appendAdvancedRecord(elements.advancedClosureList, {
+      symbol: '✓',
+      title: `Cierre ${formatShortDate(closure.closure_date)}`,
+      meta: `${formatQuantity(closure.total_units)} unidades · ${closure.valuation_method}`,
+      value: formatCurrency(closure.total_value),
+    });
+  });
+
+  elements.advancedLabelList.replaceChildren();
+  elements.advancedLabelRecordCount.textContent = String(advancedInventory.labels.length);
+  if (!advancedInventory.labels.length) {
+    advancedEmptyList(elements.advancedLabelList, 'No hay etiquetas preparadas.');
+  }
+  advancedInventory.labels.slice(0, 12).forEach((label) => {
+    appendAdvancedRecord(elements.advancedLabelList, {
+      symbol: '▥',
+      title: `${label.product_name} · ${label.label_type}`,
+      meta: `${label.quantity} etiqueta${Number(label.quantity) === 1 ? '' : 's'} · ${
+        formatShortDate(label.requested_at)
+      }`,
+      value: label.status,
+    });
+  });
+
+  elements.advancedPermissionList.replaceChildren();
+  elements.advancedPermissionRecordCount.textContent =
+    String(advancedInventory.permissions.length);
+  if (!advancedInventory.permissions.length) {
+    advancedEmptyList(
+      elements.advancedPermissionList,
+      'Sin restricciones particulares; aplican los permisos del rol.',
+    );
+  }
+  advancedInventory.permissions.slice(0, 16).forEach((permission) => {
+    const capabilities = [
+      permission.can_view && 'Ver',
+      permission.can_adjust && 'Ajustar',
+      permission.can_dispatch && 'Despachar',
+      permission.can_receive && 'Recibir',
+      permission.can_sell && 'Vender',
+    ].filter(Boolean);
+    appendAdvancedRecord(elements.advancedPermissionList, {
+      symbol: 'U',
+      title: `${permission.user_name} · ${permission.warehouse_name}`,
+      meta: capabilities.join(' · ') || 'Sin acciones habilitadas',
+      value: 'Activo',
+    });
+  });
+}
+
+async function loadAdvancedInventory() {
+  if (
+    !activeTenantId ||
+    !isTenantModuleEnabled('LOGISTICS') ||
+    !hasAnyPermission('inventory.view', 'inventory.adjust')
+  ) return null;
+  advancedInventory = await getJson('/api/inventory-advanced/overview', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderAdvancedInventory();
+  return advancedInventory;
+}
+
+function advancedSelectOptions(items, label) {
+  return [
+    { value: '', label },
+    ...items.map((item) => ({ value: item.id, label: item.label || item.name })),
+  ];
+}
+
+function createAdvancedField(field) {
+  const label = document.createElement('label');
+  if (field.wide) label.classList.add('form-span-2');
+  const title = document.createElement('span');
+  title.textContent = field.label;
+  let input;
+  if (field.type === 'select') {
+    input = document.createElement('select');
+    (field.options || []).forEach((option) =>
+      input.append(new Option(option.label, option.value)));
+  } else if (field.type === 'checkbox') {
+    label.className = 'advanced-checkbox';
+    input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = Boolean(field.checked);
+  } else {
+    input = document.createElement(field.type === 'textarea' ? 'textarea' : 'input');
+    if (field.type !== 'textarea') input.type = field.type || 'text';
+    if (field.min != null) input.min = String(field.min);
+    if (field.max != null) input.max = String(field.max);
+    if (field.step != null) input.step = String(field.step);
+    if (field.value != null) input.value = String(field.value);
+    if (field.placeholder) input.placeholder = field.placeholder;
+  }
+  input.name = field.name;
+  input.required = Boolean(field.required);
+  if (field.type === 'checkbox') {
+    const copy = document.createElement('span');
+    copy.textContent = field.label;
+    label.append(input, copy);
+  } else {
+    label.append(title, input);
+  }
+  return label;
+}
+
+function advancedInventoryActionConfig(action) {
+  const productOptions = advancedSelectOptions(
+    products.map((product) => ({
+      id: product.id,
+      name: `${product.name} · ${product.sku}`,
+    })),
+    'Selecciona un producto',
+  );
+  const warehouseOptions = advancedSelectOptions(
+    warehouses.filter((warehouse) => warehouse.active).map((warehouse) => ({
+      id: warehouse.id,
+      name: `${warehouse.name} · ${warehouse.code}`,
+    })),
+    'Selecciona una bodega',
+  );
+  const unitOptions = advancedSelectOptions(
+    advancedInventory.units.filter((unit) => unit.active).map((unit) => ({
+      id: unit.id,
+      name: `${unit.name} · ${unit.symbol}`,
+    })),
+    'Selecciona una unidad',
+  );
+  const locationOptions = advancedSelectOptions(
+    advancedInventory.locations.filter((location) => location.active).map((location) => ({
+      id: location.id,
+      name: `${location.warehouse_name} · ${location.code}`,
+    })),
+    'Ubicación general / sin asignar',
+  );
+  const configs = {
+    tracking: {
+      title: 'Política del producto',
+      copy: 'Define cómo se mide, repone y rastrea esta referencia.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true, wide: true },
+        { name: 'baseUomId', label: 'Unidad base', type: 'select', options: unitOptions, required: true },
+        { name: 'minimumStock', label: 'Stock mínimo', type: 'number', min: 0, step: .0001, value: 0 },
+        { name: 'maximumStock', label: 'Stock máximo', type: 'number', min: 0, step: .0001 },
+        { name: 'warrantyDays', label: 'Garantía en días', type: 'number', min: 0, value: 0 },
+        { name: 'trackLots', label: 'Controlar por lotes', type: 'checkbox' },
+        { name: 'trackExpiration', label: 'Controlar vencimientos', type: 'checkbox' },
+        { name: 'trackSerials', label: 'Controlar números de serie', type: 'checkbox' },
+      ],
+    },
+    location: {
+      title: 'Nueva ubicación interna',
+      copy: 'Construye el mapa físico dentro de una bodega.',
+      fields: [
+        { name: 'warehouseId', label: 'Bodega', type: 'select', options: warehouseOptions, required: true, wide: true },
+        { name: 'code', label: 'Código', required: true, placeholder: 'A-01-02' },
+        { name: 'name', label: 'Nombre', required: true, placeholder: 'Pasillo A · Estante 01' },
+        { name: 'zoneType', label: 'Tipo de zona', type: 'select', options: [
+          { value: 'STORAGE', label: 'Almacenamiento' }, { value: 'PICKING', label: 'Alistamiento' },
+          { value: 'RECEIVING', label: 'Recepción' }, { value: 'DISPLAY', label: 'Exhibición' },
+          { value: 'QUARANTINE', label: 'Cuarentena' }, { value: 'DAMAGED', label: 'Averías' },
+          { value: 'DISPATCH', label: 'Despacho' }, { value: 'RETURNS', label: 'Devoluciones' },
+        ] },
+        { name: 'aisle', label: 'Pasillo' }, { name: 'rack', label: 'Estante' },
+        { name: 'level', label: 'Nivel' }, { name: 'position', label: 'Posición' },
+        { name: 'sellable', label: 'Permitir venta desde esta zona', type: 'checkbox' },
+      ],
+    },
+    unit: {
+      title: 'Unidad de medida',
+      copy: 'Crea una unidad propia y conserva su equivalencia DIAN.',
+      fields: [
+        { name: 'code', label: 'Código', required: true }, { name: 'name', label: 'Nombre', required: true },
+        { name: 'symbol', label: 'Símbolo', required: true },
+        { name: 'category', label: 'Categoría', type: 'select', options: [
+          { value: 'UNIT', label: 'Unidad' }, { value: 'WEIGHT', label: 'Peso' },
+          { value: 'LENGTH', label: 'Longitud' }, { value: 'VOLUME', label: 'Volumen' },
+          { value: 'AREA', label: 'Área' }, { value: 'OTHER', label: 'Otra' },
+        ] },
+        { name: 'dianCode', label: 'Código DIAN' },
+        { name: 'allowsDecimals', label: 'Permitir decimales', type: 'checkbox' },
+      ],
+    },
+    conversion: {
+      title: 'Conversión comercial',
+      copy: 'Relaciona una presentación con la unidad base del producto.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true, wide: true },
+        { name: 'uomId', label: 'Presentación', type: 'select', options: unitOptions, required: true },
+        { name: 'conversionFactor', label: 'Equivale a unidades base', type: 'number', min: .000001, step: .000001, required: true },
+        { name: 'barcode', label: 'Código de barras' }, { name: 'price', label: 'Precio de venta', type: 'number', min: 0 },
+        { name: 'purchaseEnabled', label: 'Disponible en compras', type: 'checkbox', checked: true },
+        { name: 'saleEnabled', label: 'Disponible en ventas', type: 'checkbox', checked: true },
+      ],
+    },
+    variant: {
+      title: 'Nueva variante',
+      copy: 'Crea una presentación con identidad y precio propios.',
+      fields: [
+        { name: 'productId', label: 'Producto padre', type: 'select', options: productOptions, required: true, wide: true },
+        { name: 'sku', label: 'SKU de variante', required: true }, { name: 'name', label: 'Nombre', required: true },
+        { name: 'barcode', label: 'Código de barras' }, { name: 'attributesText', label: 'Atributos', placeholder: 'Color: azul, Talla: M' },
+        { name: 'cost', label: 'Costo', type: 'number', min: 0 }, { name: 'salePrice', label: 'Precio', type: 'number', min: 0 },
+      ],
+    },
+    lot: {
+      title: 'Asignar lote',
+      copy: 'La cantidad debe existir previamente en la bodega y no estar asignada a otro lote.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true },
+        { name: 'warehouseId', label: 'Bodega', type: 'select', options: warehouseOptions, required: true },
+        { name: 'locationId', label: 'Ubicación interna', type: 'select', options: locationOptions },
+        { name: 'lotNumber', label: 'Número de lote', required: true },
+        { name: 'quantity', label: 'Unidades existentes a asignar', type: 'number', min: 0, step: .0001, required: true },
+        { name: 'unitCost', label: 'Costo unitario', type: 'number', min: 0, value: 0 },
+        { name: 'manufacturingDate', label: 'Fabricación', type: 'date' },
+        { name: 'expirationDate', label: 'Vencimiento', type: 'date' },
+        { name: 'reason', label: 'Evidencia', wide: true, required: true },
+      ],
+    },
+    serial: {
+      title: 'Registrar número de serie',
+      copy: 'Identifica una unidad existente para garantía y trazabilidad individual.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true },
+        { name: 'warehouseId', label: 'Bodega', type: 'select', options: warehouseOptions, required: true },
+        { name: 'locationId', label: 'Ubicación', type: 'select', options: locationOptions },
+        { name: 'serialNumber', label: 'Número de serie', required: true },
+        { name: 'warrantyUntil', label: 'Garantía hasta', type: 'date' },
+        { name: 'notes', label: 'Notas', type: 'textarea', wide: true },
+      ],
+    },
+    reservation: {
+      title: 'Reservar existencias',
+      copy: 'Las unidades dejan de estar disponibles hasta liberar o cumplir la reserva.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true },
+        { name: 'warehouseId', label: 'Bodega', type: 'select', options: warehouseOptions, required: true },
+        { name: 'quantity', label: 'Cantidad', type: 'number', min: .0001, step: .0001, required: true },
+        { name: 'referenceType', label: 'Origen', type: 'select', options: [
+          { value: 'ORDER', label: 'Pedido' }, { value: 'QUOTE', label: 'Cotización' },
+          { value: 'TRANSFER', label: 'Transferencia' }, { value: 'MANUAL', label: 'Reserva manual' },
+        ] },
+        { name: 'referenceId', label: 'Número o referencia', required: true },
+        { name: 'expiresAt', label: 'Vence', type: 'datetime-local' },
+        { name: 'notes', label: 'Notas', type: 'textarea', wide: true },
+      ],
+    },
+    label: {
+      title: 'Preparar etiquetas',
+      copy: 'Genera una solicitud imprimible para identificar el inventario.',
+      fields: [
+        { name: 'productId', label: 'Producto', type: 'select', options: productOptions, required: true, wide: true },
+        { name: 'labelType', label: 'Tipo', type: 'select', options: [
+          { value: 'PRODUCT', label: 'Producto' }, { value: 'PRICE', label: 'Precio' },
+          { value: 'LOT', label: 'Lote' }, { value: 'SERIAL', label: 'Serie' },
+        ] },
+        { name: 'quantity', label: 'Cantidad de etiquetas', type: 'number', min: 1, max: 1000, value: 1 },
+        { name: 'barcodeValue', label: 'Código personalizado', wide: true },
+      ],
+    },
+    permission: {
+      title: 'Permiso por bodega',
+      copy: 'Asigna capacidades específicas sin ampliar el rol general.',
+      fields: [
+        { name: 'warehouseId', label: 'Bodega', type: 'select', options: warehouseOptions, required: true },
+        { name: 'userId', label: 'Usuario', type: 'select', options: advancedSelectOptions(
+          advancedInventory.users.map((user) => ({ id: user.id, name: `${user.full_name} · ${user.role_name}` })),
+          'Selecciona un usuario',
+        ), required: true },
+        { name: 'canView', label: 'Puede consultar', type: 'checkbox', checked: true },
+        { name: 'canAdjust', label: 'Puede ajustar', type: 'checkbox' },
+        { name: 'canDispatch', label: 'Puede despachar', type: 'checkbox' },
+        { name: 'canReceive', label: 'Puede recibir', type: 'checkbox' },
+        { name: 'canSell', label: 'Puede vender', type: 'checkbox' },
+      ],
+    },
+    closure: {
+      title: 'Cerrar valoración',
+      copy: 'Conserva una fotografía de unidades y costo promedio para auditoría.',
+      fields: [
+        { name: 'closureDate', label: 'Fecha de cierre', type: 'date', value: isoDate(new Date()), required: true },
+        { name: 'notes', label: 'Motivo y observaciones', type: 'textarea', required: true, wide: true },
+      ],
+    },
+  };
+  return configs[action];
+}
+
+function openAdvancedInventoryDialog(action) {
+  const config = advancedInventoryActionConfig(action);
+  if (!config) return;
+  advancedInventoryAction = action;
+  elements.advancedInventoryForm.reset();
+  elements.advancedInventoryFormError.hidden = true;
+  elements.advancedInventoryDialogTitle.textContent = config.title;
+  elements.advancedInventoryDialogCopy.textContent = config.copy;
+  elements.advancedInventoryFields.replaceChildren(
+    ...config.fields.map(createAdvancedField),
+  );
+  elements.advancedInventoryDialog.showModal();
+  elements.advancedInventoryFields.querySelector('input,select,textarea')?.focus();
+}
+
+function closeAdvancedInventoryDialog() {
+  elements.advancedInventoryDialog.close();
+  advancedInventoryAction = null;
+}
+
+async function submitAdvancedInventory(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.advancedInventoryForm);
+  const payload = Object.fromEntries(formData);
+  elements.advancedInventoryForm.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    payload[input.name] = formData.has(input.name);
+  });
+  if (advancedInventoryAction === 'variant') {
+    payload.attributes = payload.attributesText
+      ? { description: payload.attributesText } : {};
+    delete payload.attributesText;
+  }
+  const action = advancedInventoryAction;
+  const routes = {
+    tracking: { method: 'PATCH', url: `/api/inventory-advanced/products/${payload.productId}/tracking` },
+    location: { method: 'POST', url: '/api/inventory-advanced/locations' },
+    unit: { method: 'POST', url: '/api/inventory-advanced/units' },
+    conversion: { method: 'POST', url: '/api/inventory-advanced/conversions' },
+    variant: { method: 'POST', url: '/api/inventory-advanced/variants' },
+    lot: { method: 'POST', url: '/api/inventory-advanced/lots' },
+    serial: { method: 'POST', url: '/api/inventory-advanced/serials' },
+    reservation: { method: 'POST', url: '/api/inventory-advanced/reservations' },
+    label: { method: 'POST', url: '/api/inventory-advanced/labels' },
+    permission: { method: 'PUT', url: '/api/inventory-advanced/warehouse-permissions' },
+    closure: { method: 'POST', url: '/api/inventory-advanced/valuation-closures' },
+  };
+  if (!routes[action]) return;
+  if (action === 'tracking') delete payload.productId;
+  elements.advancedInventoryFormError.hidden = true;
+  elements.saveAdvancedInventoryButton.disabled = true;
+  try {
+    await getJson(routes[action].url, {
+      method: routes[action].method,
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify(payload),
+    });
+    closeAdvancedInventoryDialog();
+    await Promise.all([loadAdvancedInventory(), loadInventory()]);
+    showToast('Control avanzado guardado correctamente.');
+  } catch (error) {
+    elements.advancedInventoryFormError.textContent = error.message;
+    elements.advancedInventoryFormError.hidden = false;
+  } finally {
+    elements.saveAdvancedInventoryButton.disabled = false;
+  }
+}
+
+async function releaseInventoryReservation(reservationId, button) {
+  button.disabled = true;
+  try {
+    await getJson(`/api/inventory-advanced/reservations/${reservationId}/release`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await Promise.all([loadAdvancedInventory(), loadInventory()]);
+    showToast('Reserva liberada y disponibilidad actualizada.');
+  } catch (error) {
+    button.disabled = false;
+    showToast(error.message);
+  }
+}
+
 function selectInventoryPanel(panelName) {
-  document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
+  const logisticsPanels = new Set([
+    'flow',
+    'labels',
+    'operations',
+    'advanced',
+    'configuration',
+  ]);
+  const section = document.querySelector(
+    logisticsPanels.has(panelName) ? '#logistica' : '#inventario',
+  );
+  if (!section) return;
+  section.querySelectorAll('[data-inventory-tab]').forEach((button) => {
     const selected = button.dataset.inventoryTab === panelName;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-selected', String(selected));
   });
-  document.querySelectorAll('[data-inventory-panel]').forEach((panel) => {
+  section.querySelectorAll('[data-inventory-panel]').forEach((panel) => {
     panel.hidden = panel.dataset.inventoryPanel !== panelName;
   });
+  if (panelName === 'advanced' || panelName === 'configuration') {
+    loadAdvancedInventory().catch(() => {});
+  }
+  if (panelName === 'labels') {
+    const firstCompleted = logisticsOverview.batches.find((batch) =>
+      batch.status === 'COMPLETED');
+    if (!logisticsLabelBatchId && firstCompleted) {
+      selectLogisticsLabelBatch(firstCompleted.id).catch(() => {});
+    } else {
+      renderLogisticsLabelCenter();
+    }
+  }
 }
+
+function organizeInventoryModules() {
+  const operationsWorkspace = document.querySelector('#inventoryOperationsWorkspace');
+  [
+    '#inventoryReplenishmentPanel',
+    '#inventoryCommandBar',
+    '#inventoryIncidentsPanel',
+    '#inventoryTransferOrdersPanel',
+  ].forEach((selector) => {
+    const section = document.querySelector(selector);
+    if (section && operationsWorkspace) operationsWorkspace.append(section);
+  });
+
+  const configurationActions = document.querySelector('#advancedConfigurationActions');
+  const configurationActionNames = new Set([
+    'tracking', 'location', 'unit', 'conversion', 'variant',
+    'label', 'permission', 'closure',
+  ]);
+  document.querySelectorAll('[data-advanced-inventory-action]').forEach((button) => {
+    if (configurationActionNames.has(button.dataset.advancedInventoryAction)) {
+      configurationActions?.append(button);
+    }
+  });
+
+  const configurationBoard = document.querySelector('#advancedConfigurationBoard');
+  ['#advancedLocationsBoard', '#advancedClosuresBoard'].forEach((selector) => {
+    const section = document.querySelector(selector);
+    if (section && configurationBoard) configurationBoard.append(section);
+  });
+
+  const logisticsWorkspace = document.querySelector('#logisticsWorkspace');
+  ['labels', 'operations', 'advanced', 'configuration'].forEach((panelName) => {
+    const panel = document.querySelector(`[data-inventory-panel="${panelName}"]`);
+    if (panel && logisticsWorkspace) logisticsWorkspace.append(panel);
+  });
+}
+
+organizeInventoryModules();
 
 const countStatusLabels = {
   DRAFT: 'Borrador',
@@ -5444,6 +9896,15 @@ function renderElectronicBilling(overview = {}) {
   elements.billingPendingCount.textContent = String(counts.pending || 0);
   elements.billingAcceptedCount.textContent = String(counts.accepted || 0);
   elements.billingRejectedCount.textContent = String(counts.rejected || 0);
+  const contingency = overview.contingency;
+  const contingencyOpen = contingency?.status === 'OPEN';
+  elements.billingContingencyStrip.hidden = !contingencyOpen;
+  elements.billingContingencyButton.hidden = contingencyOpen;
+  if (contingencyOpen) {
+    elements.billingContingencyReason.textContent = contingency.reason;
+    elements.billingContingencyStarted.textContent =
+      `Desde ${formatShortDate(contingency.started_at)} · los documentos siguen visibles y pendientes`;
+  }
   elements.billingDocumentList.replaceChildren();
   elements.billingDocumentState.hidden = (overview.documents || []).length > 0;
   for (const document of overview.documents || []) {
@@ -5451,7 +9912,9 @@ function renderElectronicBilling(overview = {}) {
     row.className = 'billing-document-row';
     const identity = window.document.createElement('div');
     const number = window.document.createElement('strong');
-    number.textContent = document.document_number
+    number.textContent = document.provider_reference
+      ? document.provider_reference
+      : document.document_number
       ? `${document.prefix || ''}${document.document_number}`
       : `Venta #${document.sequence_number}`;
     const type = window.document.createElement('small');
@@ -5484,7 +9947,85 @@ function renderElectronicBilling(overview = {}) {
     queue.disabled = !readiness.connectionReady || !readiness.resolutionReady ||
       !['PENDING', 'REJECTED'].includes(document.status);
     queue.addEventListener('click', () => queueElectronicDocument(document.id, queue));
-    row.append(identity, status, amount, date, queue);
+    const actions = window.document.createElement('div');
+    actions.className = 'billing-document-actions';
+    actions.append(queue);
+    if (document.pdf_document_id) {
+      const pdf = window.document.createElement('a');
+      pdf.className = 'billing-artifact-link';
+      pdf.href = `/api/assets/documents/${document.pdf_document_id}`;
+      pdf.target = '_blank';
+      pdf.rel = 'noopener';
+      pdf.textContent = 'Ver PDF';
+      actions.append(pdf);
+    }
+    if (document.xml_document_id) {
+      const xml = window.document.createElement('a');
+      xml.className = 'billing-artifact-link';
+      xml.href = `/api/assets/documents/${document.xml_document_id}`;
+      xml.target = '_blank';
+      xml.rel = 'noopener';
+      xml.textContent = 'Ver XML';
+      actions.append(xml);
+    }
+    if (
+      document.status === 'ACCEPTED' &&
+      (!document.pdf_document_id || !document.xml_document_id)
+    ) {
+      const recover = window.document.createElement('button');
+      recover.type = 'button';
+      recover.className = 'sandbox-process-button';
+      recover.textContent = 'Recuperar PDF/XML';
+      recover.addEventListener('click', async () => {
+        recover.disabled = true;
+        recover.textContent = 'Recuperando…';
+        try {
+          await getJson(
+            `/api/electronic-billing/documents/${document.id}/sync-artifacts`,
+            {
+              method: 'POST',
+              headers: { 'x-tenant-id': activeTenantId },
+            },
+          );
+          await loadElectronicBilling();
+          showToast('PDF y XML fiscales archivados.');
+        } catch (error) {
+          recover.disabled = false;
+          recover.textContent = 'Reintentar archivos';
+          showToast(error.message);
+        }
+      });
+      actions.append(recover);
+    }
+    const sandboxReady = overview.account?.provider_code === 'SANDBOX' &&
+      overview.account?.environment === 'TEST' &&
+      ['QUEUED', 'RETRYABLE'].includes(document.transmission_status);
+    if (sandboxReady) {
+      const process = window.document.createElement('button');
+      process.type = 'button';
+      process.className = 'sandbox-process-button';
+      process.textContent = 'Probar respuesta';
+      process.addEventListener('click', () =>
+        processSandboxDocument(document.id, process));
+      actions.append(process);
+    }
+    const providerReady = overview.account?.provider_code !== 'SANDBOX' &&
+      ['QUEUED', 'RETRYABLE'].includes(document.transmission_status);
+    if (providerReady) {
+      const process = window.document.createElement('button');
+      process.type = 'button';
+      process.className = 'sandbox-process-button';
+      process.textContent = document.transmission_status === 'RETRYABLE'
+        ? 'Reintentar envío'
+        : 'Enviar a Factus';
+      process.addEventListener('click', () =>
+        processElectronicDocument(document.id, process));
+      actions.append(process);
+    }
+    if (document.failure_reason) {
+      status.title = document.failure_reason;
+    }
+    row.append(identity, status, amount, date, actions);
     elements.billingDocumentList.append(row);
   }
 }
@@ -5498,18 +10039,495 @@ async function loadElectronicBilling() {
   return overview;
 }
 
+const billingStatusLabels = {
+  DRAFT: 'Borrador',
+  SENT: 'Enviada al cliente',
+  ACCEPTED: 'Aceptado',
+  CONFIRMED: 'Confirmado',
+  READY_TO_INVOICE: 'Listo para facturar',
+  CONVERTED: 'Convertida',
+  INVOICED: 'Facturado',
+  EXPIRED: 'Vencido',
+  CANCELLED: 'Cancelado',
+  PENDING: 'Pendiente',
+  QUEUED: 'En cola',
+  SUBMITTED: 'Enviado',
+  REJECTED: 'Rechazado',
+};
+
+function billingStatusLabel(status) {
+  return billingStatusLabels[status] || status || 'Pendiente';
+}
+
+function appendBillingFact(container, label, value) {
+  const fact = window.document.createElement('div');
+  fact.append(
+    Object.assign(window.document.createElement('span'), { textContent: label }),
+    Object.assign(window.document.createElement('strong'), { textContent: value }),
+  );
+  container.append(fact);
+}
+
+function renderBillingCommercialDocuments(documents = []) {
+  elements.billingCommercialList.replaceChildren();
+  elements.billingCommercialState.hidden = documents.length > 0;
+  documents.forEach((document) => {
+    const row = window.document.createElement('article');
+    row.className = 'billing-flow-row';
+    const badge = window.document.createElement('span');
+    badge.className = `billing-kind ${document.document_type.toLowerCase()}`;
+    badge.textContent = document.document_type === 'QUOTE' ? 'COT' : 'PED';
+    const identity = window.document.createElement('div');
+    identity.className = 'billing-flow-identity';
+    identity.append(
+      Object.assign(window.document.createElement('strong'), {
+        textContent: document.document_number,
+      }),
+      Object.assign(window.document.createElement('small'), {
+        textContent: `${document.customer_name || 'Cliente por definir'} · ${document.branch_name}`,
+      }),
+    );
+    const facts = window.document.createElement('div');
+    facts.className = 'billing-flow-facts';
+    appendBillingFact(facts, 'Total', formatCurrency(document.total));
+    appendBillingFact(facts, 'Estado', billingStatusLabel(document.status));
+    appendBillingFact(
+      facts,
+      document.document_type === 'QUOTE' ? 'Vigencia' : 'Entrega',
+      formatShortDate(document.valid_until || document.expected_date),
+    );
+    const actions = window.document.createElement('div');
+    actions.className = 'billing-flow-actions';
+    if (
+      document.document_type === 'QUOTE' &&
+      !['CONVERTED', 'CANCELLED', 'EXPIRED'].includes(document.status)
+    ) {
+      const convert = window.document.createElement('button');
+      convert.type = 'button';
+      convert.className = 'billing-action-button';
+      convert.textContent = 'Convertir en pedido →';
+      convert.addEventListener('click', () => convertQuoteToOrder(document, convert));
+      actions.append(convert);
+    } else if (document.document_type === 'ORDER' && document.status === 'CONFIRMED') {
+      const ready = window.document.createElement('button');
+      ready.type = 'button';
+      ready.className = 'billing-action-button';
+      ready.textContent = 'Aprobar para facturar →';
+      ready.addEventListener('click', () => markOrderReady(document, ready));
+      actions.append(ready);
+    } else if (
+      document.document_type === 'ORDER' &&
+      document.status === 'READY_TO_INVOICE'
+    ) {
+      const pos = window.document.createElement('a');
+      pos.href = '#caja';
+      pos.textContent = 'Ir a Caja & POS →';
+      actions.append(pos);
+    } else {
+      const trace = window.document.createElement('small');
+      trace.textContent = document.source_document_number
+        ? `Origen: ${document.source_document_number}`
+        : `${document.item_count} productos`;
+      actions.append(trace);
+    }
+    row.append(badge, identity, facts, actions);
+    elements.billingCommercialList.append(row);
+  });
+}
+
+function addFiscalLinks(actions, document) {
+  [
+    ['PDF', document.pdf_url],
+    ['XML', document.xml_url],
+  ].forEach(([label, url]) => {
+    if (!url) return;
+    const link = window.document.createElement('a');
+    link.href = resolvePublicAsset(url);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = label;
+    actions.append(link);
+  });
+}
+
+function renderBillingFiscalDocuments(invoices = [], notes = []) {
+  elements.billingFiscalList.replaceChildren();
+  const records = [
+    ...invoices.map((item) => ({ ...item, fiscalKind: 'INVOICE' })),
+    ...notes.map((item) => ({ ...item, fiscalKind: item.note_type })),
+  ].sort((left, right) =>
+    new Date(right.created_at || right.updated_at) -
+    new Date(left.created_at || left.updated_at));
+  elements.billingFiscalState.hidden = records.length > 0;
+  records.forEach((document) => {
+    const row = window.document.createElement('article');
+    row.className = 'billing-flow-row fiscal';
+    const badge = window.document.createElement('span');
+    badge.className = 'billing-kind fiscal';
+    badge.textContent = document.fiscalKind === 'INVOICE'
+      ? 'FE'
+      : document.fiscalKind === 'CREDIT_NOTE' ? 'NC' : 'ND';
+    const identity = window.document.createElement('div');
+    identity.className = 'billing-flow-identity';
+    const documentNumber = document.fiscalKind === 'INVOICE'
+      ? (document.document_number
+        ? `${document.prefix || ''}${document.document_number}`
+        : `Venta #${document.sequence_number}`)
+      : `${document.fiscalKind === 'CREDIT_NOTE' ? 'Nota crédito' : 'Nota débito'} · ${document.prefix || ''}${document.document_number || ''}`;
+    identity.append(
+      Object.assign(window.document.createElement('strong'), {
+        textContent: documentNumber,
+      }),
+      Object.assign(window.document.createElement('small'), {
+        textContent: document.customer_name || document.reason || 'Documento electrónico',
+      }),
+    );
+    const facts = window.document.createElement('div');
+    facts.className = 'billing-flow-facts';
+    appendBillingFact(facts, 'Total', formatCurrency(document.total));
+    appendBillingFact(facts, 'Estado', billingStatusLabel(document.status));
+    const fiscalCode = document.cufe || document.cude;
+    appendBillingFact(
+      facts,
+      document.fiscalKind === 'INVOICE' ? 'CUFE' : 'CUDE',
+      fiscalCode ? `${fiscalCode.slice(0, 12)}…` : 'Aún no emitido',
+    );
+    const actions = window.document.createElement('div');
+    actions.className = 'billing-flow-actions';
+    if (fiscalCode) {
+      const code = window.document.createElement('button');
+      code.type = 'button';
+      code.className = 'billing-action-button';
+      code.textContent = 'Ver código completo';
+      code.addEventListener('click', () => window.prompt(
+        document.fiscalKind === 'INVOICE' ? 'CUFE verificado' : 'CUDE verificado',
+        fiscalCode,
+      ));
+      actions.append(code);
+    }
+    if (document.qr_url) {
+      const qr = window.document.createElement('a');
+      qr.href = resolvePublicAsset(document.qr_url);
+      qr.target = '_blank';
+      qr.rel = 'noopener noreferrer';
+      qr.textContent = 'Ver QR';
+      actions.append(qr);
+    }
+    addFiscalLinks(actions, document);
+    if (
+      document.fiscalKind !== 'INVOICE' &&
+      ['PENDING', 'REJECTED'].includes(document.status)
+    ) {
+      const queue = window.document.createElement('button');
+      queue.type = 'button';
+      queue.className = 'billing-action-button';
+      queue.textContent = document.status === 'REJECTED' ? 'Reintentar' : 'Preparar envío';
+      queue.addEventListener('click', () => queueBillingNote(document.id, queue));
+      actions.append(queue);
+    }
+    if (!actions.children.length) {
+      actions.append(Object.assign(window.document.createElement('small'), {
+        textContent: document.status === 'ACCEPTED'
+          ? 'Esperando archivos del proveedor'
+          : 'Sin representación fiscal todavía',
+      }));
+    }
+    row.append(badge, identity, facts, actions);
+    elements.billingFiscalList.append(row);
+  });
+}
+
+function renderBillingWorkflow(overview = {}) {
+  billingWorkflowOverview = overview;
+  const counts = overview.counts || {};
+  elements.billingFlowQuoteCount.textContent = String(counts.open_quotes || 0);
+  elements.billingFlowOrderCount.textContent = String(counts.open_orders || 0);
+  elements.billingFlowNoteCount.textContent = String(counts.pending_notes || 0);
+  elements.billingFlowAcceptedCount.textContent = String(
+    (overview.invoices || []).filter((invoice) => invoice.status === 'ACCEPTED').length,
+  );
+  renderBillingCommercialDocuments(overview.documents || []);
+  renderBillingFiscalDocuments(overview.invoices || [], overview.notes || []);
+  elements.newBillingNoteButton.disabled =
+    !(overview.invoices || []).some((invoice) => invoice.status === 'ACCEPTED');
+}
+
+async function loadBillingWorkflow() {
+  if (!activeTenantId || !hasAnyPermission('billing.manage')) return null;
+  const overview = await getJson('/api/billing-workflow/overview', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderBillingWorkflow(overview);
+  return overview;
+}
+
+function quoteProductOptions(selected = '') {
+  const fragment = window.document.createDocumentFragment();
+  const placeholder = window.document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Selecciona un producto';
+  fragment.append(placeholder);
+  products.filter((product) => product.active !== false).forEach((product) => {
+    const option = window.document.createElement('option');
+    option.value = product.id;
+    option.textContent = `${product.name} · ${product.sku} · ${formatCurrency(product.sale_price)}`;
+    option.selected = product.id === selected;
+    fragment.append(option);
+  });
+  return fragment;
+}
+
+function addQuoteItemRow(selectedProductId = '') {
+  const row = window.document.createElement('div');
+  row.className = 'quote-item-row';
+  const product = window.document.createElement('select');
+  product.required = true;
+  product.className = 'quote-product';
+  product.append(quoteProductOptions(selectedProductId));
+  const quantity = window.document.createElement('input');
+  quantity.type = 'number';
+  quantity.className = 'quote-quantity';
+  quantity.min = '0.0001';
+  quantity.step = '0.0001';
+  quantity.value = '1';
+  quantity.required = true;
+  const remove = window.document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'icon-button';
+  remove.setAttribute('aria-label', 'Quitar línea');
+  remove.textContent = '×';
+  remove.addEventListener('click', () => {
+    if (elements.quoteItems.children.length > 1) row.remove();
+  });
+  row.append(product, quantity, remove);
+  elements.quoteItems.append(row);
+}
+
+function fillQuoteSources() {
+  elements.quoteBranchId.replaceChildren();
+  branches.filter((branch) => branch.active !== false).forEach((branch) => {
+    const option = window.document.createElement('option');
+    option.value = branch.id;
+    option.textContent = `${branch.name} · ${branch.code}`;
+    elements.quoteBranchId.append(option);
+  });
+  elements.quoteCustomerId.replaceChildren(
+    Object.assign(window.document.createElement('option'), {
+      value: '',
+      textContent: 'Consumidor final / por definir',
+    }),
+  );
+  const customerMap = new Map(
+    [...receivableCustomers, ...posCustomers].map((customer) => [customer.id, customer]),
+  );
+  customerMap.forEach((customer) => {
+    const option = window.document.createElement('option');
+    option.value = customer.id;
+    option.textContent = customer.name;
+    elements.quoteCustomerId.append(option);
+  });
+}
+
+function openQuoteDialog() {
+  if (!branches.length || !products.length) {
+    showToast('Necesitas al menos una sucursal y un producto configurado.');
+    return;
+  }
+  elements.quoteForm.reset();
+  elements.quoteFormError.hidden = true;
+  elements.quoteItems.replaceChildren();
+  fillQuoteSources();
+  const validUntil = new Date();
+  validUntil.setDate(validUntil.getDate() + 15);
+  elements.quoteValidUntil.value = isoDate(validUntil);
+  addQuoteItemRow();
+  elements.quoteDialog.showModal();
+}
+
+function closeQuoteDialog() {
+  elements.quoteDialog.close();
+}
+
+async function submitQuote(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.quoteForm);
+  const items = [...elements.quoteItems.querySelectorAll('.quote-item-row')]
+    .map((row) => ({
+      productId: row.querySelector('.quote-product').value,
+      quantity: Number(row.querySelector('.quote-quantity').value),
+    }));
+  elements.saveQuoteButton.disabled = true;
+  elements.quoteFormError.hidden = true;
+  try {
+    await getJson('/api/billing-workflow/quotes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        branchId: formData.get('branchId'),
+        customerId: formData.get('customerId') || null,
+        validUntil: formData.get('validUntil'),
+        notes: formData.get('notes'),
+        items,
+      }),
+    });
+    closeQuoteDialog();
+    await loadBillingWorkflow();
+    showToast('Cotización creada sin consumir numeración fiscal.');
+  } catch (error) {
+    elements.quoteFormError.textContent = error.message;
+    elements.quoteFormError.hidden = false;
+  } finally {
+    elements.saveQuoteButton.disabled = false;
+  }
+}
+
+async function convertQuoteToOrder(document, button) {
+  button.disabled = true;
+  const expectedDate = new Date();
+  expectedDate.setDate(expectedDate.getDate() + 7);
+  try {
+    await getJson(`/api/billing-workflow/quotes/${document.id}/convert-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ expectedDate: isoDate(expectedDate) }),
+    });
+    await loadBillingWorkflow();
+    showToast(`${document.document_number} convertida en pedido.`);
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+  }
+}
+
+async function markOrderReady(document, button) {
+  button.disabled = true;
+  try {
+    await getJson(`/api/billing-workflow/orders/${document.id}/ready-to-invoice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ reason: 'Pedido comercial revisado antes de facturar' }),
+    });
+    await loadBillingWorkflow();
+    showToast(`${document.document_number} quedó listo para facturar.`);
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+  }
+}
+
+function openBillingNoteDialog() {
+  const accepted = (billingWorkflowOverview.invoices || [])
+    .filter((invoice) => invoice.status === 'ACCEPTED');
+  if (!accepted.length) {
+    showToast('No hay facturas electrónicas aceptadas para ajustar.');
+    return;
+  }
+  elements.billingNoteForm.reset();
+  elements.billingNoteFormError.hidden = true;
+  elements.billingNoteDocumentId.replaceChildren();
+  accepted.forEach((invoice) => {
+    const option = window.document.createElement('option');
+    option.value = invoice.id;
+    option.textContent = `${invoice.prefix || ''}${invoice.document_number || invoice.sequence_number} · ${formatCurrency(invoice.total)}`;
+    elements.billingNoteDocumentId.append(option);
+  });
+  elements.billingNoteDialog.showModal();
+}
+
+function closeBillingNoteDialog() {
+  elements.billingNoteDialog.close();
+}
+
+async function submitBillingNote(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.billingNoteForm);
+  elements.saveBillingNoteButton.disabled = true;
+  elements.billingNoteFormError.hidden = true;
+  try {
+    await getJson('/api/billing-workflow/notes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        originalDocumentId: formData.get('originalDocumentId'),
+        noteType: formData.get('noteType'),
+        reasonCode: formData.get('reasonCode'),
+        reason: formData.get('reason'),
+        total: Number(formData.get('total')),
+      }),
+    });
+    closeBillingNoteDialog();
+    await loadBillingWorkflow();
+    showToast('Nota creada y vinculada a la factura original.');
+  } catch (error) {
+    elements.billingNoteFormError.textContent = error.message;
+    elements.billingNoteFormError.hidden = false;
+  } finally {
+    elements.saveBillingNoteButton.disabled = false;
+  }
+}
+
+async function queueBillingNote(noteId, button) {
+  button.disabled = true;
+  try {
+    await getJson(`/api/billing-workflow/notes/${noteId}/queue`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    await loadBillingWorkflow();
+    showToast('Nota preparada para transmisión.');
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+  }
+}
+
 function openBillingConnectionDialog() {
   const account = electronicBillingOverview?.account;
   elements.billingConnectionForm.reset();
   elements.billingConnectionFormError.hidden = true;
-  elements.billingProviderCode.value = account?.provider_code || 'SANDBOX';
+  elements.billingProviderCode.value = account?.provider_code || 'FACTUS';
   elements.billingProviderDisplayName.value =
-    account?.display_name || 'Simulador MegaSuite';
+    account?.display_name || 'Factus API V2';
   elements.billingProviderEnvironmentInput.value = account?.environment || 'TEST';
   elements.billingProviderBaseUrl.value = account?.base_url || '';
-  elements.billingProviderCredentials.value = '';
+  syncBillingProviderFields();
   elements.billingConnectionDialog.showModal();
   elements.billingProviderCode.focus();
+}
+
+function syncBillingProviderFields() {
+  const isFactus = elements.billingProviderCode.value === 'FACTUS';
+  const environment = elements.billingProviderEnvironmentInput.value || 'TEST';
+  elements.factusCredentialFields.hidden = !isFactus;
+  if (isFactus) {
+    elements.billingProviderDisplayName.value =
+      elements.billingProviderDisplayName.value === 'Simulador Nubixor'
+        ? 'Factus API V2'
+        : elements.billingProviderDisplayName.value;
+    elements.billingProviderBaseUrl.value = environment === 'PRODUCTION'
+      ? 'https://api.factus.com.co'
+      : 'https://api-sandbox.factus.com.co';
+    elements.billingProviderBaseUrl.readOnly = true;
+  } else {
+    elements.billingProviderDisplayName.value =
+      elements.billingProviderDisplayName.value === 'Factus API V2'
+        ? 'Simulador Nubixor'
+        : elements.billingProviderDisplayName.value;
+    elements.billingProviderBaseUrl.value = '';
+    elements.billingProviderBaseUrl.readOnly = false;
+  }
 }
 
 function closeBillingConnectionDialog() {
@@ -5520,14 +10538,21 @@ async function saveBillingConnection(event) {
   event.preventDefault();
   const formData = new FormData(elements.billingConnectionForm);
   let credentials;
-  const credentialText = formData.get('credentials').trim();
-  try {
-    credentials = credentialText ? JSON.parse(credentialText) : undefined;
-  } catch {
-    elements.billingConnectionFormError.textContent =
-      'Las credenciales deben usar JSON válido.';
-    elements.billingConnectionFormError.hidden = false;
-    return;
+  if (formData.get('providerCode') === 'FACTUS') {
+    const credentialValues = {
+      username: formData.get('factusUsername').trim(),
+      password: formData.get('factusPassword').trim(),
+      client_id: formData.get('factusClientId').trim(),
+      client_secret: formData.get('factusClientSecret').trim(),
+    };
+    const providedCount = Object.values(credentialValues).filter(Boolean).length;
+    if (providedCount > 0 && providedCount < 4) {
+      elements.billingConnectionFormError.textContent =
+        'Para cambiar las credenciales pega los cuatro datos de Factus.';
+      elements.billingConnectionFormError.hidden = false;
+      return;
+    }
+    credentials = providedCount === 4 ? credentialValues : undefined;
   }
   elements.saveBillingConnectionButton.disabled = true;
   elements.billingConnectionFormError.hidden = true;
@@ -5576,6 +10601,66 @@ async function testBillingConnection() {
   }
 }
 
+function factusRangeRows(payload) {
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload)) return payload;
+  return [];
+}
+
+function factusDate(value) {
+  if (!value) return '';
+  const normalized = String(value).slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return normalized;
+  const match = normalized.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
+}
+
+async function loadFactusRangesIntoDialog() {
+  elements.factusNumberingRangeSelect.replaceChildren(
+    new Option('Selecciona un rango real…', ''),
+  );
+  try {
+    const payload = await getJson('/api/electronic-billing/factus/numbering-ranges', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    const ranges = factusRangeRows(payload);
+    for (const range of ranges) {
+      const documentCode = range.document?.code || range.document_code || range.document;
+      const option = new Option(
+        `${range.prefix || 'Sin prefijo'} · ${range.from || range.number_from}–${range.to || range.number_to} · ${documentCode || 'documento'}`,
+        String(range.id),
+      );
+      option._factusRange = range;
+      elements.factusNumberingRangeSelect.add(option);
+    }
+    if (!ranges.length) {
+      elements.factusNumberingRangeSelect.add(
+        new Option('La cuenta no devolvió rangos activos', ''),
+      );
+    }
+  } catch (error) {
+    elements.factusNumberingRangeSelect.add(
+      new Option(`No fue posible consultar: ${error.message}`, ''),
+    );
+  }
+}
+
+function applySelectedFactusRange() {
+  const option = elements.factusNumberingRangeSelect.selectedOptions[0];
+  const range = option?._factusRange;
+  if (!range) return;
+  const form = elements.billingResolutionForm.elements;
+  form.providerNumberingRangeId.value = range.id || '';
+  form.providerDocumentCode.value =
+    range.document?.code || range.document_code || range.document || '';
+  form.prefix.value = range.prefix || '';
+  form.numberFrom.value = range.from || range.number_from || '';
+  form.numberTo.value = range.to || range.number_to || '';
+  form.validFrom.value = factusDate(range.start_date || range.valid_from);
+  form.validUntil.value = factusDate(range.end_date || range.valid_until);
+}
+
 function openBillingResolutionDialog() {
   elements.billingResolutionForm.reset();
   elements.billingResolutionFormError.hidden = true;
@@ -5585,6 +10670,9 @@ function openBillingResolutionDialog() {
     branches.filter((branch) => branch.active),
     (branch) => `${branch.name} · ${branch.code}`,
   );
+  const usesFactus = electronicBillingOverview?.account?.provider_code === 'FACTUS';
+  elements.factusRangeField.hidden = !usesFactus;
+  if (usesFactus) loadFactusRangesIntoDialog();
   elements.billingResolutionDialog.showModal();
   elements.billingResolutionBranchId.focus();
 }
@@ -5599,13 +10687,17 @@ async function saveBillingResolution(event) {
   elements.saveBillingResolutionButton.disabled = true;
   elements.billingResolutionFormError.hidden = true;
   try {
+    const payload = Object.fromEntries(formData);
+    const selectedRange =
+      elements.factusNumberingRangeSelect.selectedOptions[0]?._factusRange;
+    if (selectedRange) payload.providerSnapshot = selectedRange;
     await getJson('/api/electronic-billing/resolutions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
       },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(payload),
     });
     closeBillingResolutionDialog();
     await Promise.all([loadElectronicBilling(), loadPos()]);
@@ -5632,6 +10724,96 @@ async function queueElectronicDocument(documentId, button) {
     showToast(error.message);
     button.disabled = false;
     button.textContent = 'Preparar envío';
+  }
+}
+
+async function processSandboxDocument(documentId, button) {
+  button.disabled = true;
+  button.textContent = 'Procesando…';
+  try {
+    await getJson(
+      `/api/electronic-billing/documents/${documentId}/process-sandbox`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ outcome: 'ACCEPTED' }),
+      },
+    );
+    await loadElectronicBilling();
+    showToast('Respuesta SANDBOX registrada. No representa aceptación DIAN.');
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+    button.textContent = 'Probar respuesta';
+  }
+}
+
+async function processElectronicDocument(documentId, button) {
+  button.disabled = true;
+  button.textContent = 'Transmitiendo…';
+  try {
+    await getJson(
+      `/api/electronic-billing/documents/${documentId}/process`,
+      {
+        method: 'POST',
+        headers: { 'x-tenant-id': activeTenantId },
+      },
+    );
+    await loadElectronicBilling();
+    showToast('La respuesta de Factus quedó registrada y auditada.');
+  } catch (error) {
+    showToast(error.message);
+    await loadElectronicBilling().catch(() => {});
+  }
+}
+
+async function startBillingContingency() {
+  const reason = window.prompt(
+    'Describe la causa verificable: caída del proveedor, conectividad o indisponibilidad técnica.',
+  )?.trim();
+  if (!reason) return;
+  try {
+    await getJson('/api/electronic-billing/contingencies', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ reason }),
+    });
+    await loadElectronicBilling();
+    showToast('Contingencia abierta y registrada en auditoría.');
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function closeBillingContingency() {
+  const contingency = electronicBillingOverview?.contingency;
+  if (!contingency || contingency.status !== 'OPEN') return;
+  const resolutionNotes = window.prompt(
+    'Indica cómo se restableció el servicio y qué documentos quedan por transmitir.',
+  )?.trim();
+  if (!resolutionNotes) return;
+  try {
+    await getJson(
+      `/api/electronic-billing/contingencies/${contingency.id}/close`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ resolutionNotes }),
+      },
+    );
+    await loadElectronicBilling();
+    showToast('Contingencia cerrada con evidencia de resolución.');
+  } catch (error) {
+    showToast(error.message);
   }
 }
 
@@ -5699,8 +10881,10 @@ async function refreshTenantData() {
     showInventoryError('Primero debes registrar o seleccionar una empresa.');
     showCountsError('Primero debes registrar o seleccionar una empresa.');
     showCatalogError('Primero debes registrar o seleccionar una empresa.');
+    showThirdPartiesError('Primero debes registrar o seleccionar una empresa.');
     showPurchasesError('Primero debes registrar o seleccionar una empresa.');
     showPayablesError('Primero debes registrar o seleccionar una empresa.');
+    showExpensesError('Primero debes registrar o seleccionar una empresa.');
     showUsersError('Primero debes registrar o seleccionar una empresa.');
     showPosError('Primero debes registrar o seleccionar una empresa.');
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
@@ -5713,8 +10897,29 @@ async function refreshTenantData() {
     return;
   }
 
+  if (hasAnyPermission(
+    'inventory.view',
+    'inventory.adjust',
+    'logistics.view',
+    'users.manage',
+  )) {
+    try {
+      await loadTenantModules();
+    } catch (error) {
+      elements.moduleSettingMessage.textContent =
+        `No fue posible consultar los módulos: ${error.message}`;
+      elements.moduleSettingMessage.hidden = false;
+    }
+  }
+
   const results = await Promise.allSettled([
-    hasAnyPermission('dashboard.view', 'branches.manage', 'inventory.view', 'sales.operate')
+    hasAnyPermission(
+      'dashboard.view',
+      'branches.manage',
+      'inventory.view',
+      'sales.operate',
+      'billing.manage',
+    )
       ? loadBranches() : Promise.resolve([]),
     hasAnyPermission('inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate')
       ? loadWarehouses() : Promise.resolve([]),
@@ -5722,10 +10927,18 @@ async function refreshTenantData() {
       ? loadInventory() : Promise.resolve([]),
     hasAnyPermission('inventory.view', 'inventory.adjust')
       ? loadPhysicalCounts() : Promise.resolve([]),
-    hasAnyPermission('inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate')
+    hasAnyPermission(
+      'inventory.view',
+      'catalog.manage',
+      'purchases.manage',
+      'sales.operate',
+      'billing.manage',
+    )
       ? loadCatalog() : Promise.resolve([]),
     hasAnyPermission('purchases.manage') ? loadPurchases() : Promise.resolve([]),
     hasAnyPermission('payables.manage') ? loadPayables() : Promise.resolve([]),
+    hasAnyPermission('expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay')
+      ? loadExpenses() : Promise.resolve([]),
     hasAnyPermission('sales.operate') ? loadPos() : Promise.resolve([]),
     hasAnyPermission('receivables.manage') ? loadReceivables() : Promise.resolve([]),
     hasAnyPermission('users.manage') ? loadUsers() : Promise.resolve([]),
@@ -5734,6 +10947,15 @@ async function refreshTenantData() {
       ? loadAudit() : Promise.resolve({}),
     hasAnyPermission('reports.view') ? loadReports() : Promise.resolve({}),
     hasAnyPermission('billing.manage') ? loadElectronicBilling() : Promise.resolve({}),
+    hasAnyPermission('billing.manage') ? loadBillingWorkflow() : Promise.resolve({}),
+    hasAnyPermission('parties.view', 'parties.manage')
+      ? loadThirdParties() : Promise.resolve([]),
+    isTenantModuleEnabled('LOGISTICS') &&
+      hasAnyPermission('inventory.view', 'inventory.adjust')
+      ? loadAdvancedInventory() : Promise.resolve({}),
+    isTenantModuleEnabled('LOGISTICS') && hasAnyPermission('logistics.view')
+      ? loadLogisticsOverview() : Promise.resolve({}),
+    hasAnyPermission('dashboard.view') ? loadOnboardingStatus() : Promise.resolve(null),
   ]);
   syncInventoryWarehouseFilter();
   renderInventoryBalances();
@@ -5981,7 +11203,7 @@ async function exportActiveReport() {
     }
     const disposition = response.headers.get('content-disposition') || '';
     const filename = disposition.match(/filename="([^"]+)"/)?.[1] ||
-      `megasuite-${activeReportType}.csv`;
+      `nubixor-${activeReportType}.csv`;
     const url = URL.createObjectURL(await response.blob());
     const download = document.createElement('a');
     download.href = url;
@@ -6044,6 +11266,935 @@ function setAuditSummary(summary = {}) {
   elements.auditActionTypes.textContent = String(summary.action_types || 0);
   elements.auditTotal.textContent =
     `${summary.total || 0} ${(summary.total || 0) === 1 ? 'evento histórico' : 'eventos históricos'}`;
+}
+
+function ensureAuditPeriod() {
+  if (elements.auditPeriodFrom.value && elements.auditPeriodTo.value) return;
+  const today = new Date();
+  const end = today.toISOString().slice(0, 10);
+  elements.auditPeriodFrom.value = `${end.slice(0, 8)}01`;
+  elements.auditPeriodTo.value = end;
+}
+
+function auditPeriodQuery() {
+  ensureAuditPeriod();
+  const params = new URLSearchParams({
+    dateFrom: elements.auditPeriodFrom.value,
+    dateTo: elements.auditPeriodTo.value,
+  });
+  return params.toString();
+}
+
+function renderAuditReadiness(readiness) {
+  auditReadiness = readiness;
+  elements.auditReadinessScore.dataset.status = readiness.status;
+  elements.auditReadinessScore.replaceChildren();
+  const score = document.createElement('strong');
+  score.textContent = `${readiness.score}%`;
+  const status = document.createElement('span');
+  status.textContent = readiness.status === 'PASS'
+    ? 'Listo'
+    : readiness.status === 'WARNING' ? 'Con alertas' : 'No listo';
+  elements.auditReadinessScore.append(score, status);
+  elements.auditControlGrid.replaceChildren();
+  readiness.controls.forEach((control) => {
+    const card = document.createElement('article');
+    card.className = 'audit-control-card';
+    card.dataset.status = control.status;
+    const state = document.createElement('span');
+    state.className = 'audit-control-state';
+    state.textContent = control.status === 'PASS' ? '✓' : '!';
+    const copy = document.createElement('div');
+    copy.className = 'audit-control-copy';
+    const area = document.createElement('span');
+    area.textContent = control.area;
+    const title = document.createElement('strong');
+    title.textContent = control.title;
+    const detail = document.createElement('small');
+    detail.textContent = control.detail;
+    copy.append(area, title, detail);
+    card.append(state, copy);
+    elements.auditControlGrid.append(card);
+  });
+}
+
+function renderAuditReadinessError(message) {
+  elements.auditReadinessScore.dataset.status = 'FAIL';
+  elements.auditReadinessScore.innerHTML = '<strong>—</strong><span>No disponible</span>';
+  elements.auditControlGrid.replaceChildren();
+  const state = document.createElement('div');
+  state.className = 'data-state compact';
+  const copy = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = 'No fue posible ejecutar los controles';
+  const detail = document.createElement('p');
+  detail.textContent = message;
+  copy.append(title, detail);
+  state.append(copy);
+  elements.auditControlGrid.append(state);
+}
+
+async function loadAuditReadiness() {
+  if (!activeTenantId) return null;
+  const readiness = await getJson(`/api/audit/readiness?${auditPeriodQuery()}`, {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderAuditReadiness(readiness);
+  return readiness;
+}
+
+function accountingSourceLabel(sourceType) {
+  return {
+    SALE: 'Venta',
+    CASH_OPEN: 'Apertura de caja',
+    CASH_MOVEMENT: 'Movimiento de caja',
+    CASH_CLOSE: 'Cierre de caja',
+    AR_INVOICE: 'Cuenta por cobrar',
+    AR_PAYMENT: 'Recaudo de cartera',
+    PURCHASE_RECEIPT: 'Recepción de compra',
+    AP_INVOICE: 'Cuenta por pagar',
+    AP_PAYMENT: 'Pago a proveedor',
+    REVERSAL: 'Contraasiento',
+  }[sourceType] || sourceType;
+}
+
+function renderAccountingLedger(ledger = {}) {
+  const summary = ledger.summary || {};
+  elements.accountingPostedCount.textContent = String(summary.posted_count || 0);
+  elements.accountingDebitTotal.textContent = formatCurrency(summary.debit_total || 0);
+  elements.accountingCreditTotal.textContent = formatCurrency(summary.credit_total || 0);
+  elements.accountingPendingAccounts.textContent =
+    String(summary.accounts_pending_review || 0);
+  elements.accountingBalanceBadge.dataset.status =
+    summary.balanced && Number(summary.draft_count || 0) === 0 ? 'PASS' : 'FAIL';
+  elements.accountingBalanceBadge.textContent =
+    summary.balanced && Number(summary.draft_count || 0) === 0
+      ? 'Débitos = créditos'
+      : 'Requiere revisión';
+  elements.accountingEntryList.replaceChildren();
+  if (!ledger.entries?.length) {
+    const empty = document.createElement('div');
+    empty.className = 'data-state compact';
+    empty.innerHTML =
+      '<div><strong>Sin operaciones en el período</strong>' +
+      '<p>Los asientos aparecerán al registrar movimientos operativos.</p></div>';
+    elements.accountingEntryList.append(empty);
+    return;
+  }
+  ledger.entries.forEach((entry) => {
+    const row = document.createElement('article');
+    row.className = 'accounting-entry-row';
+    const number = document.createElement('span');
+    number.className = 'accounting-entry-number';
+    number.textContent = `#${entry.entry_number}`;
+    const copy = document.createElement('div');
+    copy.className = 'accounting-entry-copy';
+    const title = document.createElement('strong');
+    title.textContent = entry.description;
+    const detail = document.createElement('small');
+    detail.textContent =
+      `${accountingSourceLabel(entry.source_type)} · ${entry.entry_date} · ` +
+      `${entry.line_count} líneas · ${entry.actor_name}`;
+    copy.append(title, detail);
+    const amount = document.createElement('div');
+    amount.className = 'accounting-entry-amount';
+    const value = document.createElement('strong');
+    value.textContent = formatCurrency(entry.total_debit);
+    const seal = document.createElement('small');
+    seal.textContent = entry.entry_hash
+      ? `Sellado ${entry.entry_hash.slice(0, 10)}…`
+      : entry.status;
+    amount.append(value, seal);
+    const voucher = document.createElement('button');
+    voucher.className = 'accounting-row-action';
+    voucher.type = 'button';
+    voucher.textContent = 'Imprimir comprobante';
+    voucher.addEventListener('click', () => printAccountingVoucher(entry));
+    amount.append(voucher);
+    if (hasAnyPermission('accounting.manage') &&
+        entry.source_type !== 'REVERSAL' && !entry.has_reversal) {
+      const reverse = document.createElement('button');
+      reverse.className = 'accounting-row-action';
+      reverse.type = 'button';
+      reverse.textContent = 'Crear contraasiento';
+      reverse.addEventListener('click', () => openAccountingAction({
+        type: 'REVERSE',
+        id: entry.id,
+        kicker: `Asiento #${entry.entry_number}`,
+        title: 'Crear contraasiento',
+        description: 'Se registrará un asiento nuevo con débitos y créditos invertidos.',
+        requiresDate: true,
+      }));
+      amount.append(reverse);
+    }
+    row.append(number, copy, amount);
+    elements.accountingEntryList.append(row);
+  });
+}
+
+async function loadAccountingLedger() {
+  const ledger = await getJson(`/api/audit/accounting-ledger?${auditPeriodQuery()}`, {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderAccountingLedger(ledger);
+  return ledger;
+}
+
+async function printAccountingVoucher(entry) {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/audit/accounting/entries/${entry.id}/voucher.html`,
+      {
+        credentials: 'include',
+        headers: { 'x-tenant-id': activeTenantId },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No fue posible generar el comprobante.');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!popup) {
+      URL.revokeObjectURL(url);
+      throw new Error('Permite ventanas emergentes para imprimir el comprobante.');
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function fillBankAccountSelect(select) {
+  select.replaceChildren();
+  bankReconciliationData.accounts.forEach((account) => {
+    const option = document.createElement('option');
+    option.value = account.id;
+    option.textContent = `${account.bank_name} · ${account.masked_account}`;
+    select.append(option);
+  });
+}
+
+function renderBankReconciliation(data = {}) {
+  bankReconciliationData = data;
+  const canManageAccounting = hasAnyPermission('accounting.manage');
+  elements.newBankAccountButton.hidden = !canManageAccounting;
+  elements.newBankTransactionButton.hidden = !canManageAccounting;
+  elements.completeBankReconciliationButton.hidden = !canManageAccounting;
+  const summary = data.summary || {};
+  elements.bankTransactionCount.textContent = String(summary.total || 0);
+  elements.bankMatchedCount.textContent = String(summary.matched || 0);
+  elements.bankUnmatchedCount.textContent = String(summary.unmatched || 0);
+  elements.newBankTransactionButton.disabled = !(data.accounts || []).length;
+  elements.completeBankReconciliationButton.disabled = !(data.accounts || []).length;
+  elements.bankTransactionList.replaceChildren();
+  if (!data.transactions?.length) {
+    const empty = document.createElement('div');
+    empty.className = 'data-state compact';
+    empty.innerHTML = '<div><strong>Sin movimientos del extracto</strong>' +
+      '<p>Registra la cuenta bancaria y sus movimientos para iniciar la conciliación.</p></div>';
+    elements.bankTransactionList.append(empty);
+    return;
+  }
+  data.transactions.forEach((transaction) => {
+    const row = document.createElement('article');
+    row.className = 'bank-transaction-row';
+    const status = document.createElement('span');
+    status.className = 'bank-match-state';
+    status.dataset.status = transaction.status;
+    status.textContent = transaction.status === 'MATCHED' ? '✓' : '!';
+    const copy = document.createElement('div');
+    copy.append(
+      Object.assign(document.createElement('strong'), {
+        textContent: transaction.description,
+      }),
+      Object.assign(document.createElement('small'), {
+        textContent: `${transaction.transaction_date} · ${transaction.bank_name} ${transaction.masked_account} · ${transaction.reference}`,
+      }),
+    );
+    const amount = document.createElement('div');
+    amount.className = 'bank-transaction-amount';
+    amount.append(
+      Object.assign(document.createElement('strong'), {
+        textContent: formatCurrency(transaction.amount),
+      }),
+      Object.assign(document.createElement('small'), {
+        textContent: transaction.status === 'MATCHED'
+          ? `Comprobante #${transaction.entry_number}`
+          : 'Pendiente de conciliar',
+      }),
+    );
+    if (transaction.status === 'UNMATCHED' &&
+        hasAnyPermission('accounting.manage')) {
+      const match = document.createElement('button');
+      match.className = 'accounting-row-action';
+      match.type = 'button';
+      match.textContent = 'Conciliar';
+      match.addEventListener('click', () => matchBankTransaction(transaction));
+      amount.append(match);
+    }
+    row.append(status, copy, amount);
+    elements.bankTransactionList.append(row);
+  });
+}
+
+function renderTrialBalance(data = {}) {
+  trialBalanceData = data;
+  elements.trialBalanceState.textContent = data.balanced ? 'Cuadrado' : 'Revisar';
+  elements.trialBalanceState.dataset.status = data.balanced ? 'PASS' : 'FAIL';
+  elements.trialBalanceList.replaceChildren();
+  const activeAccounts = (data.accounts || []).filter((account) =>
+    Number(account.ending_debit) !== 0 || Number(account.ending_credit) !== 0 ||
+    Number(account.movement_debit) !== 0 || Number(account.movement_credit) !== 0);
+  if (!activeAccounts.length) {
+    const empty = document.createElement('div');
+    empty.className = 'data-state compact';
+    empty.innerHTML = '<div><strong>Sin saldos en el período</strong>' +
+      '<p>El balance aparecerá cuando existan asientos contabilizados.</p></div>';
+    elements.trialBalanceList.append(empty);
+    return;
+  }
+  activeAccounts.forEach((account) => {
+    const row = document.createElement('button');
+    row.className = 'trial-balance-row';
+    row.type = 'button';
+    const net = Number(account.ending_debit) - Number(account.ending_credit);
+    const code = document.createElement('span');
+    code.textContent = account.code;
+    const name = document.createElement('strong');
+    name.textContent = account.name;
+    const balance = document.createElement('small');
+    balance.textContent = `${formatCurrency(net)} saldo neto`;
+    row.append(code, name, balance);
+    row.addEventListener('click', () => openAccountingAuxiliary(account));
+    elements.trialBalanceList.append(row);
+  });
+}
+
+async function loadAccountingControls() {
+  const periodQuery = auditPeriodQuery();
+  const [bank, trial] = await Promise.all([
+    getJson(`/api/audit/accounting/bank-reconciliation?${periodQuery}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    }),
+    getJson(`/api/audit/accounting/trial-balance?${periodQuery}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    }),
+  ]);
+  renderBankReconciliation(bank);
+  renderTrialBalance(trial);
+  return { bank, trial };
+}
+
+async function openAccountingAuxiliary(account) {
+  try {
+    const auxiliary = await getJson(
+      `/api/audit/accounting/auxiliary/${account.id}?${auditPeriodQuery()}`,
+      { headers: { 'x-tenant-id': activeTenantId } },
+    );
+    const details = auxiliary.items.map((item) =>
+      `${item.entry_date} · #${item.entry_number} · ` +
+      `D ${formatCurrency(item.debit)} / C ${formatCurrency(item.credit)} · ` +
+      `Saldo ${formatCurrency(item.running_balance)}`).join('\n');
+    window.alert(
+      `${account.code} · ${account.name}\n` +
+      `Saldo inicial: ${formatCurrency(auxiliary.openingBalance)}\n\n` +
+      `${details || 'Sin movimientos'}\n\n` +
+      `Saldo final: ${formatCurrency(auxiliary.endingBalance)}`,
+    );
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function openBankAccountDialog() {
+  elements.bankAccountForm.reset();
+  elements.bankAccountError.hidden = true;
+  elements.bankAccountingAccountId.replaceChildren();
+  accountingGovernanceData.accounts
+    .filter((account) => account.active && account.account_type === 'ASSET')
+    .forEach((account) => {
+      const option = document.createElement('option');
+      option.value = account.id;
+      option.textContent = `${account.code} · ${account.name}`;
+      elements.bankAccountingAccountId.append(option);
+    });
+  elements.bankAccountDialog.showModal();
+}
+
+function closeBankAccountDialog() {
+  elements.bankAccountDialog.close();
+}
+
+async function submitBankAccount(event) {
+  event.preventDefault();
+  elements.saveBankAccount.disabled = true;
+  elements.bankAccountError.hidden = true;
+  try {
+    await getJson('/api/audit/accounting/bank-accounts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        accountingAccountId: elements.bankAccountingAccountId.value,
+        bankName: elements.bankName.value,
+        accountName: elements.bankAccountName.value,
+        maskedAccount: elements.bankMaskedAccount.value,
+        openingBalance: Number(elements.bankOpeningBalance.value),
+      }),
+    });
+    closeBankAccountDialog();
+    await loadAccountingControls();
+    showToast('Cuenta bancaria creada para conciliación.');
+  } catch (error) {
+    elements.bankAccountError.textContent = error.message;
+    elements.bankAccountError.hidden = false;
+  } finally {
+    elements.saveBankAccount.disabled = false;
+  }
+}
+
+function openBankTransactionDialog() {
+  if (!bankReconciliationData.accounts.length) return;
+  elements.bankTransactionForm.reset();
+  elements.bankTransactionError.hidden = true;
+  fillBankAccountSelect(elements.bankTransactionAccountId);
+  elements.bankTransactionDate.value = new Date().toISOString().slice(0, 10);
+  elements.bankTransactionDialog.showModal();
+}
+
+function closeBankTransactionDialog() {
+  elements.bankTransactionDialog.close();
+}
+
+async function submitBankTransaction(event) {
+  event.preventDefault();
+  elements.saveBankTransaction.disabled = true;
+  elements.bankTransactionError.hidden = true;
+  try {
+    const transaction = await getJson('/api/audit/accounting/bank-transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        bankAccountId: elements.bankTransactionAccountId.value,
+        transactionDate: elements.bankTransactionDate.value,
+        reference: elements.bankTransactionReference.value,
+        description: elements.bankTransactionDescription.value,
+        amount: Number(elements.bankTransactionAmount.value),
+        statementBalance: elements.bankStatementBalance.value,
+      }),
+    });
+    closeBankTransactionDialog();
+    await loadAccountingControls();
+    showToast(transaction.matched_sale_tender_id
+      ? 'Movimiento registrado y transferencia de caja conciliada automáticamente.'
+      : 'Movimiento bancario registrado.');
+  } catch (error) {
+    elements.bankTransactionError.textContent = error.message;
+    elements.bankTransactionError.hidden = false;
+  } finally {
+    elements.saveBankTransaction.disabled = false;
+  }
+}
+
+async function matchBankTransaction(transaction) {
+  const reference = window.prompt(
+    'Escribe el número del comprobante contable contabilizado que contiene la cuenta bancaria.',
+  );
+  if (!reference) return;
+  try {
+    await getJson(
+      `/api/audit/accounting/bank-transactions/${transaction.id}/match`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({
+          entryNumber: Number(reference),
+          notes: `Conciliación de ${transaction.reference}`,
+        }),
+      },
+    );
+    await loadAccountingControls();
+    showToast('Movimiento conciliado con el comprobante.');
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function openBankReconciliationDialog() {
+  if (!bankReconciliationData.accounts.length) return;
+  elements.bankReconciliationForm.reset();
+  elements.bankReconciliationError.hidden = true;
+  fillBankAccountSelect(elements.bankReconciliationAccountId);
+  elements.bankReconciliationDialog.showModal();
+}
+
+function closeBankReconciliationDialog() {
+  elements.bankReconciliationDialog.close();
+}
+
+async function submitBankReconciliation(event) {
+  event.preventDefault();
+  elements.saveBankReconciliation.disabled = true;
+  elements.bankReconciliationError.hidden = true;
+  ensureAuditPeriod();
+  try {
+    await getJson('/api/audit/accounting/bank-reconciliations/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        bankAccountId: elements.bankReconciliationAccountId.value,
+        periodStart: elements.auditPeriodFrom.value,
+        periodEnd: elements.auditPeriodTo.value,
+        statementEndingBalance: Number(elements.bankReconciliationBalance.value),
+        notes: elements.bankReconciliationNotes.value,
+      }),
+    });
+    closeBankReconciliationDialog();
+    await loadAccountingControls();
+    showToast('Conciliación calculada, sellada y auditada.');
+  } catch (error) {
+    elements.bankReconciliationError.textContent = error.message;
+    elements.bankReconciliationError.hidden = false;
+  } finally {
+    elements.saveBankReconciliation.disabled = false;
+  }
+}
+
+async function downloadMonthlyPackage() {
+  ensureAuditPeriod();
+  const month = elements.auditPeriodFrom.value.slice(0, 7);
+  const response = await fetch(
+    `${API_BASE_URL}/api/audit/accounting/monthly-package.json?month=${month}`,
+    {
+      credentials: 'include',
+      headers: { 'x-tenant-id': activeTenantId },
+    },
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    showToast(body.error || 'No fue posible generar el expediente mensual.');
+    return;
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `nubixor-expediente-contable-${month}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast('Expediente mensual generado con sello SHA-256.');
+}
+
+const accountingPurposeLabels = {
+  CASH_MAIN: 'Caja principal',
+  CASH_REGISTER: 'Caja registradora',
+  BANK: 'Bancos y transferencias',
+  RECEIVABLES: 'Clientes por cobrar',
+  INPUT_TAX: 'Impuesto descontable',
+  INVENTORY: 'Inventario',
+  PAYABLES: 'Proveedores por pagar',
+  RECEIVED_NOT_INVOICED: 'Mercancía recibida sin factura',
+  OUTPUT_TAX: 'Impuesto generado',
+  EQUITY: 'Patrimonio',
+  SALES_REVENUE: 'Ingreso por ventas',
+  OTHER_INCOME: 'Otros ingresos',
+  GENERAL_EXPENSE: 'Gastos generales',
+  CASH_OVER_SHORT: 'Diferencias de caja',
+  COST_OF_SALES: 'Costo de ventas',
+};
+
+function accountingPeriodLabel(period) {
+  return `${String(period.period_start).slice(0, 10)} — ` +
+    `${String(period.period_end).slice(0, 10)}`;
+}
+
+function renderAccountingGovernance(data = {}) {
+  accountingGovernanceData = data;
+  const canManage = hasAnyPermission('accounting.manage');
+  elements.newAccountingAccount.hidden = !canManage;
+  elements.accountingPeriodList.replaceChildren();
+  if (!data.periods?.length) {
+    const empty = document.createElement('p');
+    empty.className = 'accounting-governance-empty';
+    empty.textContent = 'Los períodos aparecerán al contabilizar la primera operación.';
+    elements.accountingPeriodList.append(empty);
+  }
+  data.periods?.forEach((period) => {
+    const row = document.createElement('article');
+    row.className = 'accounting-governance-row';
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = accountingPeriodLabel(period);
+    const detail = document.createElement('small');
+    detail.textContent = `${period.entry_count} asientos · ` +
+      `${formatCurrency(period.debit_total)} débito · ${period.status}`;
+    copy.append(title, detail);
+    const badge = document.createElement('span');
+    badge.className = 'accounting-period-state';
+    badge.dataset.status = period.permanently_locked ? 'LOCKED' : period.status;
+    badge.textContent = period.permanently_locked
+      ? 'Bloqueado'
+      : period.status === 'CLOSED' ? 'Cerrado' : 'Abierto';
+    row.append(copy, badge);
+    if (canManage && !period.permanently_locked) {
+      const action = document.createElement('button');
+      action.className = 'accounting-row-action';
+      action.type = 'button';
+      action.textContent = period.status === 'CLOSED' ? 'Reabrir' : 'Cerrar período';
+      action.addEventListener('click', () => openAccountingAction({
+        type: period.status === 'CLOSED' ? 'REOPEN_PERIOD' : 'CLOSE_PERIOD',
+        id: period.id,
+        kicker: accountingPeriodLabel(period),
+        title: period.status === 'CLOSED' ? 'Reabrir período' : 'Cerrar período',
+        description: period.status === 'CLOSED'
+          ? 'La reapertura quedará registrada en la bitácora inalterable.'
+          : 'Después del cierre no se admitirán operaciones con fecha en este período.',
+      }));
+      row.append(action);
+      if (period.status === 'CLOSED') {
+        const finalLock = document.createElement('button');
+        finalLock.className = 'accounting-row-action danger';
+        finalLock.type = 'button';
+        finalLock.textContent = 'Bloqueo definitivo';
+        finalLock.addEventListener('click', () => openAccountingAction({
+          type: 'FINAL_LOCK',
+          id: period.id,
+          kicker: accountingPeriodLabel(period),
+          title: 'Bloquear período definitivamente',
+          description: 'Esta acción es irreversible. Exige conciliaciones bancarias sin diferencias y sellará el período.',
+        }));
+        row.append(finalLock);
+      }
+    }
+    elements.accountingPeriodList.append(row);
+  });
+
+  elements.accountingMappingList.replaceChildren();
+  data.mappings?.forEach((mapping) => {
+    const row = document.createElement('article');
+    row.className = 'accounting-mapping-row';
+    const label = document.createElement('label');
+    const title = document.createElement('span');
+    title.textContent = accountingPurposeLabels[mapping.purpose] || mapping.purpose;
+    const select = document.createElement('select');
+    select.disabled = !canManage;
+    data.accounts.filter((account) => account.active && account.allows_posting)
+      .forEach((account) => {
+        const option = document.createElement('option');
+        option.value = account.id;
+        option.textContent = `${account.code} · ${account.name}`;
+        option.selected = account.id === mapping.account_id;
+        select.append(option);
+      });
+    label.append(title, select);
+    row.append(label);
+    if (canManage) {
+      const save = document.createElement('button');
+      save.className = 'accounting-row-action';
+      save.type = 'button';
+      save.textContent = 'Aplicar';
+      save.addEventListener('click', () => openAccountingAction({
+        type: 'MAPPING',
+        id: mapping.purpose,
+        accountId: select.value,
+        kicker: accountingPurposeLabels[mapping.purpose] || mapping.purpose,
+        title: 'Cambiar asignación contable',
+        description: `Las próximas operaciones usarán ${select.selectedOptions[0]?.textContent}.`,
+      }));
+      row.append(save);
+    }
+    elements.accountingMappingList.append(row);
+  });
+
+  elements.accountingAccountList.replaceChildren();
+  data.accounts?.forEach((account) => {
+    const row = document.createElement('article');
+    row.className = 'accounting-account-row';
+    const code = document.createElement('span');
+    code.className = 'accounting-account-code';
+    code.textContent = account.code;
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = account.name;
+    const detail = document.createElement('small');
+    detail.textContent = `${account.account_type} · ${account.normal_balance} · ` +
+      `${account.usage_count} movimientos`;
+    copy.append(title, detail);
+    const state = document.createElement('span');
+    state.className = 'accounting-review-state';
+    state.dataset.status = account.accountant_review_required ? 'PENDING' : 'REVIEWED';
+    state.textContent = account.accountant_review_required ? 'Por validar' : 'Validada';
+    row.append(code, copy, state);
+    if (canManage && account.accountant_review_required) {
+      const review = document.createElement('button');
+      review.className = 'accounting-row-action';
+      review.type = 'button';
+      review.textContent = 'Registrar revisión';
+      review.addEventListener('click', () => openAccountingAction({
+        type: 'REVIEW_ACCOUNT',
+        id: account.id,
+        kicker: `${account.code} · ${account.name}`,
+        title: 'Validar cuenta contable',
+        description: 'Registra la conclusión del contador o responsable financiero.',
+      }));
+      row.append(review);
+    }
+    elements.accountingAccountList.append(row);
+  });
+}
+
+async function loadAccountingGovernance() {
+  const data = await getJson('/api/audit/accounting-governance', {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderAccountingGovernance(data);
+  return data;
+}
+
+function openAccountingAction(options) {
+  pendingAccountingAction = options;
+  elements.accountingActionForm.reset();
+  elements.accountingActionType.value = options.type;
+  elements.accountingActionId.value = options.id;
+  elements.accountingActionKicker.textContent = options.kicker || 'Gobierno contable';
+  elements.accountingActionTitle.textContent = options.title;
+  elements.accountingActionDescription.textContent = options.description;
+  elements.accountingActionDateField.hidden = !options.requiresDate;
+  elements.accountingActionDate.required = Boolean(options.requiresDate);
+  if (options.requiresDate) {
+    elements.accountingActionDate.value = new Date().toISOString().slice(0, 10);
+  }
+  elements.accountingActionError.hidden = true;
+  elements.accountingActionDialog.showModal();
+}
+
+function closeAccountingAction() {
+  pendingAccountingAction = null;
+  elements.accountingActionDialog.close();
+}
+
+async function saveAccountingAction(event) {
+  event.preventDefault();
+  if (!pendingAccountingAction) return;
+  elements.saveAccountingAction.disabled = true;
+  elements.accountingActionError.hidden = true;
+  try {
+    const action = pendingAccountingAction;
+    let path;
+    let method = 'POST';
+    let body;
+    if (action.type === 'CLOSE_PERIOD') {
+      path = `/api/audit/accounting/periods/${action.id}/close`;
+      body = { notes: elements.accountingActionNotes.value };
+    } else if (action.type === 'REOPEN_PERIOD') {
+      path = `/api/audit/accounting/periods/${action.id}/reopen`;
+      body = { reason: elements.accountingActionNotes.value };
+    } else if (action.type === 'FINAL_LOCK') {
+      path = `/api/audit/accounting/periods/${action.id}/final-lock`;
+      body = {
+        confirmation: 'BLOQUEAR DEFINITIVAMENTE',
+        notes: elements.accountingActionNotes.value,
+      };
+    } else if (action.type === 'REVIEW_ACCOUNT') {
+      path = `/api/audit/accounting/accounts/${action.id}/review`;
+      body = { notes: elements.accountingActionNotes.value };
+    } else if (action.type === 'REVERSE') {
+      path = `/api/audit/accounting/entries/${action.id}/reverse`;
+      body = {
+        entryDate: elements.accountingActionDate.value,
+        reason: elements.accountingActionNotes.value,
+      };
+    } else {
+      path = `/api/audit/accounting/mappings/${action.id}`;
+      method = 'PUT';
+      body = {
+        accountId: action.accountId,
+        reason: elements.accountingActionNotes.value,
+      };
+    }
+    await getJson(path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify(body),
+    });
+    closeAccountingAction();
+    await Promise.all([
+      loadAccountingGovernance(),
+      loadAccountingLedger(),
+      loadAccountingControls(),
+      loadAuditReadiness(),
+    ]);
+    showToast('Control contable actualizado y registrado en auditoría.');
+  } catch (error) {
+    elements.accountingActionError.textContent = error.message;
+    elements.accountingActionError.hidden = false;
+  } finally {
+    elements.saveAccountingAction.disabled = false;
+  }
+}
+
+function openAccountingAccountDialog() {
+  elements.accountingAccountForm.reset();
+  elements.accountingAccountError.hidden = true;
+  elements.accountingAccountDialog.showModal();
+}
+
+function closeAccountingAccountDialog() {
+  elements.accountingAccountDialog.close();
+}
+
+async function saveAccountingAccount(event) {
+  event.preventDefault();
+  elements.saveAccountingAccount.disabled = true;
+  elements.accountingAccountError.hidden = true;
+  try {
+    await getJson('/api/audit/accounting/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({
+        code: elements.accountingAccountCode.value,
+        name: elements.accountingAccountName.value,
+        accountType: elements.accountingAccountType.value,
+        normalBalance: elements.accountingNormalBalance.value,
+        reason: elements.accountingAccountReason.value,
+      }),
+    });
+    closeAccountingAccountDialog();
+    await loadAccountingGovernance();
+    showToast('Cuenta creada y pendiente de revisión profesional.');
+  } catch (error) {
+    elements.accountingAccountError.textContent = error.message;
+    elements.accountingAccountError.hidden = false;
+  } finally {
+    elements.saveAccountingAccount.disabled = false;
+  }
+}
+
+async function runAndSealAuditControls() {
+  elements.runAuditControls.disabled = true;
+  elements.runAuditControls.textContent = 'Sellando evidencia…';
+  try {
+    const result = await getJson('/api/audit/control-runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({
+        dateFrom: elements.auditPeriodFrom.value,
+        dateTo: elements.auditPeriodTo.value,
+      }),
+    });
+    renderAuditReadiness(result.readiness);
+    await loadAudit();
+    showToast(`Control sellado con resultado ${result.readiness.status}.`);
+  } catch (error) {
+    renderAuditReadinessError(error.message);
+    showToast(error.message);
+  } finally {
+    elements.runAuditControls.disabled = false;
+    elements.runAuditControls.textContent = 'Ejecutar controles';
+  }
+}
+
+function openAccountantReviewDialog() {
+  ensureAuditPeriod();
+  elements.accountantReviewError.hidden = true;
+  elements.accountantReviewError.textContent = '';
+  elements.accountantReviewForm.reset();
+  const existing = auditReadiness?.accountantReviews?.[0];
+  if (existing) {
+    elements.accountantReviewerName.value = existing.reviewer_name || '';
+    elements.accountantReviewerDocument.value = existing.reviewer_document || '';
+    elements.accountantProfessionalCard.value = existing.professional_card || '';
+  }
+  elements.accountantReviewDialog.showModal();
+}
+
+function closeAccountantReviewDialog() {
+  elements.accountantReviewDialog.close();
+}
+
+async function saveAccountantReview(event) {
+  event.preventDefault();
+  elements.accountantReviewError.hidden = true;
+  elements.saveAccountantReview.disabled = true;
+  elements.saveAccountantReview.textContent = 'Guardando…';
+  try {
+    await getJson('/api/audit/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({
+        periodStart: elements.auditPeriodFrom.value,
+        periodEnd: elements.auditPeriodTo.value,
+        reviewType: elements.accountantReviewType.value,
+        status: elements.accountantReviewStatus.value,
+        reviewerName: elements.accountantReviewerName.value,
+        reviewerDocument: elements.accountantReviewerDocument.value,
+        professionalCard: elements.accountantProfessionalCard.value,
+        evidenceReference: elements.accountantEvidenceReference.value,
+        notes: elements.accountantReviewNotes.value,
+      }),
+    });
+    closeAccountantReviewDialog();
+    await loadAudit();
+    showToast('Validación del contador registrada y auditada.');
+  } catch (error) {
+    elements.accountantReviewError.textContent = error.message;
+    elements.accountantReviewError.hidden = false;
+  } finally {
+    elements.saveAccountantReview.disabled = false;
+    elements.saveAccountantReview.textContent = 'Guardar validación';
+  }
+}
+
+async function exportAuditEvidence() {
+  elements.exportAuditEvidence.disabled = true;
+  elements.exportAuditEvidence.textContent = 'Preparando expediente…';
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/audit/evidence.json?${auditPeriodQuery()}`,
+      {
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No fue posible preparar el expediente.');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const download = document.createElement('a');
+    download.href = url;
+    download.download = `nubixor-expediente-${elements.auditPeriodFrom.value}-${elements.auditPeriodTo.value}.json`;
+    document.body.append(download);
+    download.click();
+    download.remove();
+    URL.revokeObjectURL(url);
+    showToast('Expediente de auditoría descargado.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.exportAuditEvidence.disabled = false;
+    elements.exportAuditEvidence.replaceChildren();
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '↓';
+    elements.exportAuditEvidence.append(icon, ' Descargar expediente');
+  }
 }
 
 function fillAuditSelect(select, placeholder, rows, valueKey, labelFor) {
@@ -6200,7 +12351,12 @@ async function showAuditDetail(eventId) {
     elements.auditDetailReason.textContent = detail.reason || 'Sin motivo registrado';
     renderAuditObject(elements.auditBeforeData, detail.before_data);
     renderAuditObject(elements.auditAfterData, detail.after_data);
-    renderAuditObject(elements.auditMetadata, detail.metadata);
+    renderAuditObject(elements.auditMetadata, {
+      ...(detail.metadata || {}),
+      integrityVersion: detail.integrity_version,
+      previousHash: detail.previous_hash,
+      eventHash: detail.event_hash,
+    });
   } catch (error) {
     showToast(error.message);
   }
@@ -6230,7 +12386,8 @@ async function loadAudit({ append = false } = {}) {
   }
   try {
     const needsFacets = auditFacetsLoadedForTenant !== activeTenantId;
-    const [summary, facets, page] = await Promise.all([
+    ensureAuditPeriod();
+    const [summary, facets, page, readiness] = await Promise.all([
       getJson('/api/audit/summary', { headers: { 'x-tenant-id': activeTenantId } }),
       needsFacets
         ? getJson('/api/audit/facets', { headers: { 'x-tenant-id': activeTenantId } })
@@ -6238,8 +12395,18 @@ async function loadAudit({ append = false } = {}) {
       getJson(`/api/audit/events?${auditFiltersQuery()}`, {
         headers: { 'x-tenant-id': activeTenantId },
       }),
+      append
+        ? Promise.resolve(null)
+        : Promise.all([
+            loadAuditReadiness(),
+            loadAccountingLedger(),
+            loadAccountingGovernance(),
+            loadAccountingControls(),
+          ])
+          .then(([result]) => result),
     ]);
     setAuditSummary(summary);
+    if (readiness) renderAuditReadiness(readiness);
     if (facets) {
       renderAuditFacets(facets);
       auditFacetsLoadedForTenant = activeTenantId;
@@ -6301,7 +12468,7 @@ async function exportAuditCsv() {
     const download = document.createElement('a');
     download.href = url;
     download.download =
-      `megasuite-auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
+      `nubixor-auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.append(download);
     download.click();
     download.remove();
@@ -6342,21 +12509,59 @@ function toggleMenu(forceOpen) {
     ? forceOpen
     : !elements.sidebar.classList.contains('open');
   elements.sidebar.classList.toggle('open', open);
+  document.body.classList.toggle('sidebar-open', open);
   elements.menuButton.setAttribute('aria-expanded', String(open));
+}
+
+function setSidebarGroup(group, open) {
+  if (!group) return;
+  group.classList.toggle('open', open);
+  group.querySelector('.nav-group-toggle')
+    ?.setAttribute('aria-expanded', String(open));
+}
+
+function toggleSidebarGroup(selectedGroup) {
+  const shouldOpen = !selectedGroup.classList.contains('open');
+  document.querySelectorAll('.nav-group').forEach((group) => {
+    setSidebarGroup(group, group === selectedGroup && shouldOpen);
+  });
+}
+
+function syncSidebarGroup(view) {
+  const activeLink = elements.sidebar
+    .querySelector(`[data-view-link="${view}"]:not([hidden])`);
+  const activeGroup = activeLink?.closest('.nav-group') || null;
+  document.querySelectorAll('.nav-group').forEach((group) => {
+    group.classList.toggle('contains-active', group === activeGroup);
+    setSidebarGroup(group, group === activeGroup);
+  });
+}
+
+function updateSidebarGroupVisibility() {
+  document.querySelectorAll('.nav-group').forEach((group) => {
+    const hasVisibleLink = [...group.querySelectorAll('[data-view-link]')]
+      .some((link) => !link.hidden);
+    group.hidden = !hasVisibleLink;
+    if (!hasVisibleLink) setSidebarGroup(group, false);
+  });
 }
 
 const availableViews = new Set([
   'inicio',
   'empresas',
   'sucursales',
+  'terceros',
   'bodegas',
   'inventario',
+  'logistica',
   'productos',
   'compras',
   'cuentas-pagar',
+  'gastos',
   'usuarios',
   'caja',
   'cartera',
+  'facturacion',
   'reportes',
   'modulos',
   'auditoria',
@@ -6373,14 +12578,18 @@ const viewTitles = {
   inicio: 'Dashboard',
   empresas: 'Empresas',
   sucursales: 'Sucursales',
+  terceros: 'Terceros',
   bodegas: 'Bodegas',
   inventario: 'Inventario',
+  logistica: 'Logística',
   productos: 'Catálogo',
   compras: 'Compras',
   'cuentas-pagar': 'Cuentas por pagar',
+  gastos: 'Gastos',
   usuarios: 'Usuarios y accesos',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
+  facturacion: 'Facturación',
   reportes: 'Reportes',
   modulos: 'Mapa del ERP',
   auditoria: 'Auditoría',
@@ -6410,10 +12619,14 @@ function showView(requestedView, { scroll = true } = {}) {
     if (isActive) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
+  syncSidebarGroup(view);
   document.body.dataset.activeView = view;
-  document.title = `MegaSuite — ${viewTitles[view]}`;
+  document.title = `Nubixor — ${viewTitles[view]}`;
   if (view === 'inventario') {
     selectInventoryPanel(requestedView === 'conteos' ? 'counts' : 'stock');
+  }
+  if (view === 'logistica') {
+    selectInventoryPanel('flow');
   }
   if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
 }
@@ -6427,6 +12640,111 @@ function openCompanyDialog() {
 
 function closeCompanyDialog() {
   elements.companyDialog.close();
+}
+
+function renderCompanyLogoPreview(source = null, company = identityCompany) {
+  const fallback = company?.legal_name?.slice(0, 1).toUpperCase() || 'LOGO';
+  elements.companyLogoPlaceholder.textContent = fallback;
+  elements.companyLogoPreview.hidden = !source;
+  elements.companyLogoPlaceholder.hidden = Boolean(source);
+  if (source) {
+    elements.companyLogoPreview.src = source;
+    elements.companyLogoPreview.alt =
+      `Logo de ${company?.trade_name || company?.legal_name || 'la empresa'}`;
+  } else {
+    elements.companyLogoPreview.removeAttribute('src');
+  }
+}
+
+function openCompanyIdentityDialog(company) {
+  identityCompany = company;
+  elements.companyIdentityForm.reset();
+  elements.companyIdentityError.hidden = true;
+  elements.companyIdentityName.textContent =
+    `${company.legal_name} · ${company.tax_id || 'Identificación pendiente'}`;
+  elements.removeCompanyLogoButton.hidden = !company.logo_document_id;
+  renderCompanyLogoPreview(company.logo_url, company);
+  elements.companyIdentityDialog.showModal();
+}
+
+function closeCompanyIdentityDialog() {
+  elements.companyIdentityDialog.close();
+  identityCompany = null;
+}
+
+async function previewCompanyLogo() {
+  const file = elements.companyLogoFile.files[0];
+  if (!file) {
+    renderCompanyLogoPreview(identityCompany?.logo_url || null);
+    return;
+  }
+  const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowed.includes(file.type) || file.size > 2 * 1024 * 1024) {
+    elements.companyIdentityError.textContent =
+      'El logo debe ser PNG, JPG o WEBP y pesar máximo 2 MB.';
+    elements.companyIdentityError.hidden = false;
+    elements.companyLogoFile.value = '';
+    renderCompanyLogoPreview(identityCompany?.logo_url || null);
+    return;
+  }
+  elements.companyIdentityError.hidden = true;
+  renderCompanyLogoPreview(await fileToDataUrl(file));
+}
+
+async function submitCompanyIdentity(event) {
+  event.preventDefault();
+  if (!identityCompany) return;
+  const file = elements.companyLogoFile.files[0];
+  if (!file) {
+    elements.companyIdentityError.textContent =
+      'Selecciona una imagen para guardar el logo del negocio.';
+    elements.companyIdentityError.hidden = false;
+    return;
+  }
+  elements.companyIdentityError.hidden = true;
+  elements.saveCompanyLogoButton.disabled = true;
+  elements.saveCompanyLogoButton.textContent = 'Guardando…';
+  try {
+    await getJson(`/api/companies/${identityCompany.id}/logo`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': identityCompany.id,
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        dataUrl: await fileToDataUrl(file),
+      }),
+    });
+    closeCompanyIdentityDialog();
+    await loadCompanies();
+    showToast('Logo guardado exclusivamente para esta empresa.');
+  } catch (error) {
+    elements.companyIdentityError.textContent = error.message;
+    elements.companyIdentityError.hidden = false;
+  } finally {
+    elements.saveCompanyLogoButton.disabled = false;
+    elements.saveCompanyLogoButton.textContent = 'Guardar identidad';
+  }
+}
+
+async function removeCompanyLogo() {
+  if (!identityCompany?.logo_document_id) return;
+  elements.removeCompanyLogoButton.disabled = true;
+  try {
+    await getJson(`/api/companies/${identityCompany.id}/logo`, {
+      method: 'DELETE',
+      headers: { 'x-tenant-id': identityCompany.id },
+    });
+    closeCompanyIdentityDialog();
+    await loadCompanies();
+    showToast('Logo retirado; el archivo histórico permanece auditado.');
+  } catch (error) {
+    elements.companyIdentityError.textContent = error.message;
+    elements.companyIdentityError.hidden = false;
+  } finally {
+    elements.removeCompanyLogoButton.disabled = false;
+  }
 }
 
 async function submitCompany(event) {
@@ -6470,6 +12788,102 @@ async function submitCompany(event) {
   } finally {
     elements.saveCompanyButton.disabled = false;
     elements.saveCompanyButton.textContent = 'Crear empresa y continuar';
+  }
+}
+
+function openTaxProfileDialog(company) {
+  taxProfileCompany = company;
+  elements.taxProfileForm.reset();
+  elements.taxProfileError.hidden = true;
+  elements.taxProfileCompanyName.textContent =
+    `${company.legal_name} · ${company.tax_id || 'Identificación pendiente'}`;
+  elements.taxpayerType.value = ['NATURAL_PERSON', 'LEGAL_ENTITY']
+    .includes(company.taxpayer_type) ? company.taxpayer_type : 'NATURAL_PERSON';
+  elements.vatResponsibility.value = ['RESPONSIBLE', 'NOT_RESPONSIBLE']
+    .includes(company.vat_responsibility)
+    ? company.vat_responsibility
+    : 'NOT_RESPONSIBLE';
+  elements.taxRegime.value = ['ORDINARY', 'SIMPLE', 'NOT_APPLICABLE']
+    .includes(company.tax_regime) ? company.tax_regime : 'ORDINARY';
+  elements.taxDocumentType.value = [
+    'INTERNAL_RECEIPT',
+    'EQUIVALENT_DOCUMENT',
+    'ELECTRONIC_INVOICE',
+  ].includes(company.default_document_type)
+    ? company.default_document_type
+    : 'INTERNAL_RECEIPT';
+  elements.electronicInvoicingRequired.checked =
+    Boolean(company.electronic_invoicing_required);
+  elements.taxValidationStatus.value =
+    company.validation_status === 'OBSERVED' ? 'OBSERVED' : 'VALIDATED';
+  elements.taxValidationNotes.value = company.validation_notes || '';
+  elements.taxProfileDialog.showModal();
+}
+
+function closeTaxProfileDialog() {
+  elements.taxProfileDialog.close();
+  taxProfileCompany = null;
+}
+
+async function submitTaxProfile(event) {
+  event.preventDefault();
+  if (!taxProfileCompany) return;
+  elements.taxProfileError.hidden = true;
+  elements.saveTaxProfileButton.disabled = true;
+  try {
+    let rutDocumentId = taxProfileCompany.rut_document_id || null;
+    const rutFile = elements.taxRutFile.files[0];
+    if (rutFile) {
+      const allowed = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      ];
+      if (!allowed.includes(rutFile.type) || rutFile.size > 8 * 1024 * 1024) {
+        throw new Error('El RUT debe ser PDF, JPG, PNG o WEBP y pesar máximo 8 MB.');
+      }
+      const uploaded = await getJson('/api/secure-files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': taxProfileCompany.id,
+        },
+        body: JSON.stringify({
+          category: 'RUT',
+          fileName: rutFile.name,
+          description: `RUT de ${taxProfileCompany.legal_name}`,
+          dataUrl: await fileToDataUrl(rutFile),
+        }),
+      });
+      rutDocumentId = uploaded.id;
+    }
+    await getJson(`/api/companies/${taxProfileCompany.id}/tax-profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': taxProfileCompany.id,
+      },
+      body: JSON.stringify({
+        taxpayerType: elements.taxpayerType.value,
+        vatResponsibility: elements.vatResponsibility.value,
+        taxRegime: elements.taxRegime.value,
+        defaultDocumentType: elements.taxDocumentType.value,
+        electronicInvoicingRequired:
+          elements.electronicInvoicingRequired.checked,
+        validationStatus: elements.taxValidationStatus.value,
+        validationNotes: elements.taxValidationNotes.value,
+        rutDocumentId,
+      }),
+    });
+    closeTaxProfileDialog();
+    await loadCompanies();
+    showToast('Perfil tributario validado exclusivamente para esta empresa.');
+  } catch (error) {
+    elements.taxProfileError.textContent = error.message;
+    elements.taxProfileError.hidden = false;
+  } finally {
+    elements.saveTaxProfileButton.disabled = false;
   }
 }
 
@@ -6813,6 +13227,499 @@ function closeProductDialog() {
   elements.productDialog.close();
 }
 
+function resetCatalogImportPreview() {
+  catalogImportCsv = null;
+  catalogImportPreview = null;
+  elements.catalogImportSummary.hidden = true;
+  elements.catalogImportPreview.hidden = true;
+  elements.catalogImportTableBody.replaceChildren();
+  elements.catalogImportError.hidden = true;
+  elements.commitCatalogImport.disabled = true;
+  elements.commitCatalogImport.textContent = 'Importar productos';
+}
+
+function openCatalogImportDialog() {
+  const company = getActiveCompany();
+  if (!company) {
+    showToast('Selecciona la empresa que recibirá la carga.');
+    return;
+  }
+  resetCatalogImportPreview();
+  elements.catalogImportFile.value = '';
+  elements.catalogImportFileLabel.textContent = 'Seleccionar CSV';
+  elements.catalogImportCompany.textContent =
+    company.trade_name || company.legal_name || 'Empresa activa';
+  elements.catalogImportDialog.showModal();
+}
+
+function closeCatalogImportDialog() {
+  elements.catalogImportDialog.close();
+  resetCatalogImportPreview();
+}
+
+async function downloadCatalogImportTemplate() {
+  elements.downloadCatalogTemplate.disabled = true;
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/catalog-import/template.csv`,
+      {
+        credentials: 'include',
+        headers: {
+          Accept: 'text/csv',
+          'x-tenant-id': activeTenantId,
+        },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No fue posible generar la plantilla.');
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla-productos-nubixor.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast('Plantilla preparada con los códigos de la empresa activa.');
+  } catch (error) {
+    elements.catalogImportError.textContent = error.message;
+    elements.catalogImportError.hidden = false;
+  } finally {
+    elements.downloadCatalogTemplate.disabled = false;
+  }
+}
+
+function catalogImportFileChanged() {
+  resetCatalogImportPreview();
+  const file = elements.catalogImportFile.files[0];
+  elements.catalogImportFileLabel.textContent = file
+    ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB`
+    : 'Seleccionar CSV';
+  if (file && file.size > 1_500_000) {
+    elements.catalogImportError.textContent =
+      'El archivo supera 1,5 MB. Divídelo en varias cargas.';
+    elements.catalogImportError.hidden = false;
+  }
+}
+
+function renderCatalogImportPreview(preview) {
+  elements.catalogImportSummary.hidden = false;
+  elements.catalogImportPreview.hidden = false;
+  elements.catalogImportTotal.textContent = preview.summary.total;
+  elements.catalogImportCreates.textContent = preview.summary.creates;
+  elements.catalogImportUpdates.textContent = preview.summary.updates;
+  elements.catalogImportErrors.textContent = preview.summary.errorRows;
+  elements.catalogImportSummary
+    .querySelector('[data-import-errors]')
+    .classList.toggle('has-errors', preview.summary.errorRows > 0);
+  elements.catalogImportStatus.textContent = preview.summary.valid
+    ? 'Listo para importar'
+    : 'Requiere correcciones';
+  elements.catalogImportStatus.className = preview.summary.valid ? 'valid' : 'invalid';
+  elements.catalogImportTableBody.replaceChildren();
+  const visibleRows = [...preview.rows]
+    .sort((left, right) =>
+      Number(Boolean(right.errors.length)) - Number(Boolean(left.errors.length)) ||
+      left.rowNumber - right.rowNumber)
+    .slice(0, 250);
+  visibleRows.forEach((row) => {
+    const tableRow = document.createElement('tr');
+    if (row.errors.length) tableRow.classList.add('import-row-error');
+    const number = document.createElement('td');
+    number.textContent = row.rowNumber;
+    const action = document.createElement('td');
+    const actionBadge = document.createElement('span');
+    actionBadge.className = `import-action ${row.action.toLowerCase()}`;
+    actionBadge.textContent = row.action === 'CREATE' ? 'Nuevo' : 'Actualizar';
+    action.append(actionBadge);
+    const product = document.createElement('td');
+    const productName = document.createElement('strong');
+    productName.textContent = row.name || 'Sin nombre';
+    const productSku = document.createElement('small');
+    productSku.textContent = row.sku || 'Sin SKU';
+    product.append(productName, productSku);
+    const warehouse = document.createElement('td');
+    warehouse.textContent = row.warehouseCode || '—';
+    const stock = document.createElement('td');
+    stock.textContent = row.stock === null
+      ? `${Number(row.currentStock).toLocaleString('es-CO')} → sin cambios`
+      : `${Number(row.currentStock).toLocaleString('es-CO')} → ${
+        Number(row.stock).toLocaleString('es-CO')
+      }`;
+    const validation = document.createElement('td');
+    const validationList = document.createElement('div');
+    validationList.className = 'import-validation-list';
+    if (!row.errors.length && !row.warnings.length) {
+      const valid = document.createElement('span');
+      valid.className = 'ok';
+      valid.textContent = '✓ Validado';
+      validationList.append(valid);
+    }
+    row.errors.forEach((message) => {
+      const error = document.createElement('span');
+      error.className = 'error';
+      error.textContent = message;
+      validationList.append(error);
+    });
+    row.warnings.forEach((message) => {
+      const warning = document.createElement('span');
+      warning.className = 'warning';
+      warning.textContent = message;
+      validationList.append(warning);
+    });
+    validation.append(validationList);
+    tableRow.append(number, action, product, warehouse, stock, validation);
+    elements.catalogImportTableBody.append(tableRow);
+  });
+  elements.commitCatalogImport.disabled = !preview.summary.valid;
+  if (preview.rows.length > visibleRows.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 6;
+    cell.className = 'catalog-import-more';
+    cell.textContent =
+      `${preview.rows.length - visibleRows.length} filas adicionales fueron validadas.`;
+    row.append(cell);
+    elements.catalogImportTableBody.append(row);
+  }
+}
+
+async function previewCatalogImportFile() {
+  const file = elements.catalogImportFile.files[0];
+  if (!file) {
+    elements.catalogImportError.textContent = 'Selecciona primero el archivo CSV.';
+    elements.catalogImportError.hidden = false;
+    return;
+  }
+  elements.catalogImportError.hidden = true;
+  elements.previewCatalogImport.disabled = true;
+  elements.previewCatalogImport.textContent = 'Validando…';
+  try {
+    catalogImportCsv = await file.text();
+    catalogImportPreview = await getJson('/api/catalog-import/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv: catalogImportCsv }),
+    });
+    renderCatalogImportPreview(catalogImportPreview);
+    showToast(catalogImportPreview.summary.valid
+      ? 'Archivo validado. Revisa y confirma la importación.'
+      : 'Encontramos filas que debes corregir.');
+  } catch (error) {
+    resetCatalogImportPreview();
+    elements.catalogImportError.textContent = error.message;
+    elements.catalogImportError.hidden = false;
+  } finally {
+    elements.previewCatalogImport.disabled = false;
+    elements.previewCatalogImport.textContent = 'Revisar archivo';
+  }
+}
+
+async function commitCatalogImportFile() {
+  if (!catalogImportCsv || !catalogImportPreview?.summary.valid) return;
+  elements.catalogImportError.hidden = true;
+  elements.commitCatalogImport.disabled = true;
+  elements.commitCatalogImport.textContent = 'Importando de forma segura…';
+  try {
+    const result = await getJson('/api/catalog-import/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        csv: catalogImportCsv,
+        confirmation: 'IMPORTAR',
+      }),
+    });
+    await Promise.all([loadCatalog(), loadInventory()]);
+    closeCatalogImportDialog();
+    showToast(
+      `${result.total} productos procesados: ${result.creates} nuevos y ` +
+      `${result.updates} actualizados.`,
+    );
+  } catch (error) {
+    elements.catalogImportError.textContent = error.message;
+    elements.catalogImportError.hidden = false;
+    elements.commitCatalogImport.disabled = false;
+    elements.commitCatalogImport.textContent = 'Importar productos';
+  }
+}
+
+function selectProductStructurePanel(panelName) {
+  document.querySelectorAll('[data-product-structure-tab]').forEach((button) => {
+    const active = button.dataset.productStructureTab === panelName;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('[data-product-structure-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.productStructurePanel !== panelName;
+  });
+}
+
+function syncProductStructureWarehouses() {
+  for (const select of [
+    elements.productVariantWarehouse,
+    elements.productComboWarehouse,
+  ]) {
+    const current = select.value;
+    select.replaceChildren(new Option('Selecciona una bodega', ''));
+    warehouses.filter((warehouse) => warehouse.active).forEach((warehouse) => {
+      select.append(new Option(
+        `${warehouse.name} · ${warehouseTypeLabels[warehouse.warehouse_type] || warehouse.warehouse_type}`,
+        warehouse.id,
+      ));
+    });
+    if ([...select.options].some((option) => option.value === current)) {
+      select.value = current;
+    }
+  }
+}
+
+function comboComponentCandidates() {
+  return products.filter((product) =>
+    product.id !== structuredProduct?.id &&
+    product.active !== false &&
+    !['COMBO', 'VARIANT_PARENT'].includes(product.product_kind));
+}
+
+function addComboComponentRow(component = {}) {
+  const row = document.createElement('div');
+  row.className = 'product-combo-component';
+  const select = document.createElement('select');
+  select.required = true;
+  select.append(new Option('Selecciona un producto', ''));
+  comboComponentCandidates().forEach((product) => {
+    select.append(new Option(
+      `${product.name} · ${product.sku}`,
+      product.id,
+    ));
+  });
+  select.value = component.component_product_id || component.productId || '';
+  const quantity = document.createElement('input');
+  quantity.type = 'number';
+  quantity.min = '0.0001';
+  quantity.step = '0.0001';
+  quantity.value = String(component.quantity || 1);
+  quantity.required = true;
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'icon-button';
+  remove.setAttribute('aria-label', 'Quitar componente');
+  remove.textContent = '×';
+  remove.addEventListener('click', () => {
+    row.remove();
+    if (!elements.productComboComponents.children.length) addComboComponentRow();
+  });
+  row.append(select, quantity, remove);
+  elements.productComboComponents.append(row);
+}
+
+function renderProductStructure() {
+  if (!productStructure) return;
+  const { product, variants, components, assemblies } = productStructure;
+  structuredProduct = product;
+  elements.productStructureProduct.textContent =
+    `${product.name} · ${product.sku}`;
+  elements.productVariantList.replaceChildren();
+  if (!variants.length) {
+    const empty = document.createElement('p');
+    empty.className = 'product-structure-empty';
+    empty.textContent =
+      'Todavía no tiene opciones. Agrega el primer color, talla o presentación.';
+    elements.productVariantList.append(empty);
+  }
+  variants.forEach((variant) => {
+    const card = document.createElement('article');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = variant.name;
+    const attributes = Object.entries(variant.variant_attributes || {})
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(' · ');
+    const meta = document.createElement('small');
+    meta.textContent = `${attributes || 'Opción'} · ${variant.sku}`;
+    copy.append(title, meta);
+    const values = document.createElement('div');
+    const price = document.createElement('strong');
+    price.textContent = formatCurrency(variant.sale_price);
+    const stock = document.createElement('small');
+    stock.textContent = `${Number(variant.total_stock || 0).toLocaleString('es-CO')} unidades`;
+    values.append(price, stock);
+    card.append(copy, values);
+    elements.productVariantList.append(card);
+  });
+
+  elements.productComboComponents.replaceChildren();
+  if (components.length) {
+    components.forEach(addComboComponentRow);
+  } else {
+    addComboComponentRow();
+    addComboComponentRow();
+  }
+  elements.productComboAssemblyForm.hidden = product.product_kind !== 'COMBO';
+  elements.productComboAssemblyList.replaceChildren();
+  if (!assemblies.length) {
+    const empty = document.createElement('p');
+    empty.className = 'product-structure-empty';
+    empty.textContent = product.product_kind === 'COMBO'
+      ? 'Todavía no se han armado unidades de este combo.'
+      : 'Guarda primero la composición del combo.';
+    elements.productComboAssemblyList.append(empty);
+  }
+  assemblies.forEach((assembly) => {
+    const row = document.createElement('article');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent =
+      `${Number(assembly.quantity).toLocaleString('es-CO')} combo(s) armados`;
+    const meta = document.createElement('small');
+    meta.textContent = `${assembly.warehouse_name} · ${
+      new Date(assembly.created_at).toLocaleString('es-CO')
+    }`;
+    copy.append(title, meta);
+    const user = document.createElement('span');
+    user.textContent = assembly.created_by_name || 'Usuario';
+    row.append(copy, user);
+    elements.productComboAssemblyList.append(row);
+  });
+  syncProductStructureWarehouses();
+}
+
+async function loadProductStructure(productId) {
+  productStructure = await getJson(`/api/product-structures/${productId}`, {
+    headers: { 'x-tenant-id': activeTenantId },
+  });
+  renderProductStructure();
+  return productStructure;
+}
+
+async function openProductStructureDialog(product) {
+  structuredProduct = product;
+  productStructure = null;
+  elements.productVariantForm.reset();
+  elements.productVariantError.hidden = true;
+  elements.productComboError.hidden = true;
+  elements.productComboAssemblyError.hidden = true;
+  syncProductStructureWarehouses();
+  selectProductStructurePanel(
+    product.product_kind === 'COMBO' ? 'combo' : 'variants',
+  );
+  elements.productStructureDialog.showModal();
+  try {
+    await loadProductStructure(product.id);
+  } catch (error) {
+    closeProductStructureDialog();
+    showToast(error.message);
+  }
+}
+
+function closeProductStructureDialog() {
+  elements.productStructureDialog.close();
+  structuredProduct = null;
+  productStructure = null;
+}
+
+async function submitProductVariant(event) {
+  event.preventDefault();
+  if (!structuredProduct) return;
+  const data = new FormData(elements.productVariantForm);
+  elements.productVariantError.hidden = true;
+  elements.saveProductVariant.disabled = true;
+  try {
+    await getJson(`/api/product-structures/${structuredProduct.id}/variants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({
+        optionName: data.get('optionName'),
+        optionValue: data.get('optionValue'),
+        sku: data.get('sku'),
+        barcode: data.get('barcode') || null,
+        cost: data.get('cost') || null,
+        salePrice: data.get('salePrice') || null,
+        warehouseId: data.get('warehouseId') || null,
+        initialQuantity: data.get('initialQuantity') || 0,
+      }),
+    });
+    const productId = structuredProduct.id;
+    elements.productVariantForm.reset();
+    await Promise.all([loadCatalog(), loadInventory()]);
+    await loadProductStructure(productId);
+    showToast('Opción creada con SKU e inventario independientes.');
+  } catch (error) {
+    elements.productVariantError.textContent = error.message;
+    elements.productVariantError.hidden = false;
+  } finally {
+    elements.saveProductVariant.disabled = false;
+  }
+}
+
+async function submitProductCombo(event) {
+  event.preventDefault();
+  if (!structuredProduct) return;
+  const components = [...elements.productComboComponents.children].map((row) => ({
+    productId: row.querySelector('select').value,
+    quantity: Number(row.querySelector('input').value),
+  }));
+  elements.productComboError.hidden = true;
+  elements.saveProductCombo.disabled = true;
+  try {
+    await getJson(`/api/product-structures/${structuredProduct.id}/combo`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify({ components }),
+    });
+    const productId = structuredProduct.id;
+    await loadCatalog();
+    await loadProductStructure(productId);
+    showToast('Composición guardada. Ya puedes armar existencias del combo.');
+  } catch (error) {
+    elements.productComboError.textContent = error.message;
+    elements.productComboError.hidden = false;
+  } finally {
+    elements.saveProductCombo.disabled = false;
+  }
+}
+
+async function submitProductComboAssembly(event) {
+  event.preventDefault();
+  if (!structuredProduct) return;
+  const data = new FormData(elements.productComboAssemblyForm);
+  elements.productComboAssemblyError.hidden = true;
+  elements.assembleProductCombo.disabled = true;
+  try {
+    await getJson(
+      `/api/product-structures/${structuredProduct.id}/combo/assemble`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({
+          warehouseId: data.get('warehouseId'),
+          quantity: Number(data.get('quantity')),
+        }),
+      },
+    );
+    const productId = structuredProduct.id;
+    await Promise.all([loadCatalog(), loadInventory(), loadPosCatalog()]);
+    await loadProductStructure(productId);
+    showToast('Combo armado: componentes descontados y existencia agregada.');
+  } catch (error) {
+    elements.productComboAssemblyError.textContent = error.message;
+    elements.productComboAssemblyError.hidden = false;
+  } finally {
+    elements.assembleProductCombo.disabled = false;
+  }
+}
+
 function validateImageFile(file) {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   if (!file || !allowedTypes.includes(file.type)) {
@@ -7045,6 +13952,10 @@ function cashCountLines() {
 
 function updateCashClosePreview() {
   const expected = Number(posSummary.openSession?.calculated_cash || 0);
+  const cardSales = Number(posSummary.openSession?.card_sales || 0);
+  const transferSales = Number(posSummary.openSession?.transfer_sales || 0);
+  const salesTotal =
+    Number(posSummary.openSession?.cash_sales || 0) + cardSales + transferSales;
   const counted = cashCountLines().reduce(
     (total, line) => total + line.denomination * line.quantity,
     0,
@@ -7053,8 +13964,54 @@ function updateCashClosePreview() {
   elements.cashCloseExpected.textContent = formatCurrency(expected);
   elements.cashCloseCounted.textContent = formatCurrency(counted);
   elements.cashCloseDifference.textContent = formatCurrency(difference);
+  elements.cashCloseSalesTotal.textContent = formatCurrency(salesTotal);
+  elements.cashCloseCardTotal.textContent = formatCurrency(cardSales);
+  elements.cashCloseTransferTotal.textContent = formatCurrency(transferSales);
   elements.cashCloseDifference.style.color =
     Math.abs(difference) < 0.01 ? '#126579' : 'var(--color-purple-strong)';
+}
+
+function showCashCloseReceipt(session) {
+  elements.cashCloseReceiptPeriod.textContent =
+    `${new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(session.opened_at))} — ` +
+    `${new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(session.closed_at))}`;
+  elements.cashCloseReceiptSales.textContent = formatCurrency(session.sales_total || 0);
+  elements.cashCloseReceiptCount.textContent =
+    `${session.sale_count || 0} ${Number(session.sale_count) === 1 ? 'comprobante' : 'comprobantes'}`;
+  elements.cashCloseReceiptExpected.textContent = formatCurrency(session.expected_cash || 0);
+  elements.cashCloseReceiptCounted.textContent = formatCurrency(session.closing_amount || 0);
+  elements.cashCloseReceiptDifference.textContent = formatCurrency(session.difference || 0);
+  elements.cashCloseReceiptCards.textContent = formatCurrency(session.card_sales || 0);
+  elements.cashCloseReceiptTransfers.textContent = formatCurrency(session.transfer_sales || 0);
+  elements.cashCloseReceiptDifference.style.color =
+    Math.abs(Number(session.difference || 0)) < 0.01
+      ? '#126579'
+      : 'var(--color-purple-strong)';
+  elements.cashCloseReceiptDenominations.replaceChildren();
+  const usedCounts = (session.count_lines || []).filter((line) => Number(line.quantity) > 0);
+  for (const line of usedCounts) {
+    const chip = document.createElement('span');
+    chip.textContent = `${line.quantity} × ${formatCurrency(line.denomination)}`;
+    elements.cashCloseReceiptDenominations.append(chip);
+  }
+  if (!usedCounts.length) {
+    elements.cashCloseReceiptDenominations.textContent = 'Sin denominaciones registradas.';
+  }
+  elements.cashCloseReceiptNote.textContent = session.closing_notes ||
+    (Math.abs(Number(session.difference || 0)) < 0.01
+      ? 'Cierre sin diferencias.'
+      : 'Diferencia registrada en el cierre.');
+  elements.cashCloseReceiptDialog.showModal();
+}
+
+function closeCashCloseReceiptDialog() {
+  elements.cashCloseReceiptDialog.close();
 }
 
 async function submitCloseCash(event) {
@@ -7064,7 +14021,7 @@ async function submitCloseCash(event) {
   elements.saveCloseCashButton.disabled = true;
   elements.saveCloseCashButton.textContent = 'Cerrando turno…';
   try {
-    await getJson(`/api/pos/sessions/${posSummary.openSession.id}/close`, {
+    const closedSession = await getJson(`/api/pos/sessions/${posSummary.openSession.id}/close`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -7078,7 +14035,8 @@ async function submitCloseCash(event) {
     closeCloseCashDialog();
     await Promise.all([loadPos(), loadExecutiveSummary()]);
     await syncPosWorkstation();
-    showToast('Turno cerrado y efectivo registrado.');
+    showCashCloseReceipt(closedSession);
+    showToast('Turno cerrado, conciliado y listo para imprimir.');
   } catch (error) {
     elements.closeCashFormError.textContent = error.message;
     elements.closeCashFormError.hidden = false;
@@ -7131,7 +14089,24 @@ async function submitCashMovement(event) {
 }
 
 function showReceipt(receipt) {
+  selectedReceiptForReturn = receipt;
   const groupedReceipts = Array.isArray(receipt.receipts) ? receipt.receipts : [];
+  const receiptCompanyId =
+    receipt.seller_company_id || receipt.company_id || receipt.tenant_id || activeTenantId;
+  const receiptCompany = companies.find((company) => company.id === receiptCompanyId);
+  const businessLogo = !receipt.grouped ? receiptCompany?.logo_url : null;
+  elements.receiptBrandLogo.onerror = businessLogo
+    ? () => {
+      elements.receiptBrandLogo.onerror = null;
+      elements.receiptBrandLogo.src = './assets/brand/nubixor-logo.png';
+      elements.receiptBrandLogo.alt = 'Nubixor';
+    }
+    : null;
+  elements.receiptBrandLogo.src =
+    businessLogo || './assets/brand/nubixor-logo.png';
+  elements.receiptBrandLogo.alt = businessLogo
+    ? `Logo de ${receiptCompany.trade_name || receiptCompany.legal_name}`
+    : 'Nubixor';
   elements.receiptNumber.textContent = receipt.grouped
     ? `${receipt.documentCount} comprobantes`
     : receipt.receiptNumber;
@@ -7178,27 +14153,218 @@ function showReceipt(receipt) {
   elements.receiptCustomer.textContent = receipt.customer?.name || 'Consumidor final';
   elements.receiptPaymentMethod.textContent =
     paymentMethodLabels[receipt.payment_method] || receipt.payment_method;
-  const transferPayment = receipt.payment_method === 'TRANSFER';
+  const receiptPayments = Array.isArray(receipt.payments) ? receipt.payments : [];
+  elements.receiptPaymentBreakdown.replaceChildren();
+  elements.receiptPaymentBreakdown.hidden = receiptPayments.length <= 1;
+  for (const payment of receiptPayments) {
+    const row = document.createElement('div');
+    const label = document.createElement('span');
+    label.textContent = paymentMethodLabels[payment.method] || payment.method;
+    if (payment.method === 'TRANSFER' && payment.bankName) {
+      label.textContent += ` · ${payment.bankName} ${payment.maskedAccount || ''}`;
+    }
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(payment.amount);
+    row.append(label, amount);
+    elements.receiptPaymentBreakdown.append(row);
+  }
+  const transferLines = receiptPayments.filter((payment) => payment.method === 'TRANSFER');
+  const transferPayment = receipt.payment_method === 'TRANSFER' || transferLines.length > 0;
   elements.receiptTransferRow.hidden = !transferPayment;
   elements.receiptTransferReference.textContent = transferPayment
-    ? `${receipt.receiving_company_name || 'Cuenta registrada'} · ` +
-      `${receipt.payment_reference || 'Sin referencia'}`
+    ? transferLines.length
+      ? transferLines.map((payment) =>
+        `${payment.bankName || payment.receivingCompanyName || 'Cuenta registrada'} ` +
+        `${payment.maskedAccount || ''} · ${payment.reference || 'Sin referencia'}`,
+      ).join(' / ')
+      : `${receipt.receiving_company_name || 'Cuenta registrada'} · ` +
+        `${receipt.payment_reference || 'Sin referencia'}`
     : '—';
   const creditSale = receipt.sale_terms === 'CREDIT';
   elements.receiptCreditRow.hidden = !creditSale;
   elements.receiptCreditReference.textContent = creditSale
     ? `${receipt.receivable?.invoice_number || 'Generada'} · vence ${formatShortDate(receipt.due_date)}`
     : '—';
-  const cashPayment = receipt.payment_method === 'CASH';
+  const cashLines = receiptPayments.filter((payment) => payment.method === 'CASH');
+  const cashPayment = receipt.payment_method === 'CASH' || cashLines.length > 0;
   elements.receiptCashReceivedRow.hidden = !cashPayment;
   elements.receiptCashChangeRow.hidden = !cashPayment;
-  elements.receiptCashReceived.textContent = formatCurrency(receipt.cash_received || 0);
-  elements.receiptCashChange.textContent = formatCurrency(receipt.cash_change || 0);
+  elements.receiptCashReceived.textContent = formatCurrency(
+    cashLines.length
+      ? cashLines.reduce((sum, payment) =>
+        sum + Number(payment.tenderedAmount || payment.amount), 0)
+      : receipt.cash_received || 0,
+  );
+  elements.receiptCashChange.textContent = formatCurrency(
+    cashLines.length
+      ? cashLines.reduce((sum, payment) =>
+        sum + Number(payment.changeAmount || 0), 0)
+      : receipt.cash_change || 0,
+  );
+  const hasReturnableItems = !receipt.grouped &&
+    receipt.sale_terms !== 'CREDIT' &&
+    receipt.return_status !== 'FULL' &&
+    Array.isArray(receipt.items) &&
+    receipt.items.some((item) => Number(item.returnableQuantity ?? item.quantity) > 0);
+  elements.openReturnDialogButton.hidden = !hasReturnableItems;
   elements.receiptDialog.showModal();
 }
 
 function closeReceiptDialog() {
   elements.receiptDialog.close();
+}
+
+function syncReturnRefundFields() {
+  const method = elements.returnRefundMethod.value;
+  const transfer = method === 'TRANSFER';
+  const referenced = transfer || method === 'CARD';
+  elements.returnBankAccountField.hidden = !transfer;
+  elements.returnReferenceField.hidden = !referenced;
+  elements.returnBankAccount.required = transfer;
+  elements.returnRefundReference.required = referenced;
+}
+
+function updateReturnEstimate() {
+  if (!selectedReceiptForReturn) return;
+  let total = 0;
+  for (const input of elements.returnItems.querySelectorAll('[data-return-quantity]')) {
+    const item = selectedReceiptForReturn.items.find((line) => line.id === input.dataset.saleItemId);
+    if (!item) continue;
+    const quantity = Math.max(0, Number(input.value) || 0);
+    const sold = Number(item.quantity) || 1;
+    total += Number(item.lineTotal) * (quantity / sold);
+  }
+  elements.returnEstimatedTotal.textContent = formatCurrency(total);
+}
+
+function closeReturnDialog() {
+  elements.returnDialog.close();
+}
+
+function openReturnDialog() {
+  const receipt = selectedReceiptForReturn;
+  if (!receipt || receipt.grouped) return;
+  if (!posSummary.openSession) {
+    showToast('Abre un turno de caja antes de registrar una devolución.');
+    return;
+  }
+  elements.returnForm.reset();
+  elements.returnFormError.hidden = true;
+  elements.returnItems.replaceChildren();
+  elements.returnCorrectionField.hidden = !receipt.electronic_document_id;
+  elements.returnCorrectionConcept.required = Boolean(receipt.electronic_document_id);
+  const returnableItems = receipt.items.filter((item) =>
+    Number(item.returnableQuantity ?? item.quantity) > 0);
+  for (const item of returnableItems) {
+    const row = document.createElement('label');
+    row.className = 'return-item-row';
+    const copy = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = item.name;
+    const available = document.createElement('small');
+    available.textContent =
+      `${formatQuantity(item.returnableQuantity ?? item.quantity)} disponibles para devolver`;
+    copy.append(name, available);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = String(item.returnableQuantity ?? item.quantity);
+    input.step = '0.0001';
+    input.value = '0';
+    input.dataset.returnQuantity = 'true';
+    input.dataset.saleItemId = item.id;
+    input.addEventListener('input', updateReturnEstimate);
+    row.append(copy, input);
+    elements.returnItems.append(row);
+  }
+  const accounts = posBankAccounts.filter((account) =>
+    account.company_id === (receipt.company_id || activeTenantId));
+  elements.returnBankAccount.replaceChildren(
+    new Option(accounts.length ? 'Selecciona una cuenta' : 'No hay cuentas configuradas', ''),
+  );
+  for (const account of accounts) {
+    elements.returnBankAccount.append(new Option(
+      `${account.bank_name} · ${account.masked_account}`,
+      account.id,
+    ));
+  }
+  syncReturnRefundFields();
+  updateReturnEstimate();
+  closeReceiptDialog();
+  elements.returnDialog.showModal();
+}
+
+async function submitSaleReturn(event) {
+  event.preventDefault();
+  const receipt = selectedReceiptForReturn;
+  if (!receipt || !posSummary.openSession) return;
+  const items = [...elements.returnItems.querySelectorAll('[data-return-quantity]')]
+    .map((input) => ({
+      saleItemId: input.dataset.saleItemId,
+      quantity: Number(input.value),
+    }))
+    .filter((item) => item.quantity > 0);
+  if (!items.length) {
+    elements.returnFormError.textContent = 'Selecciona al menos una unidad para devolver.';
+    elements.returnFormError.hidden = false;
+    return;
+  }
+  elements.returnFormError.hidden = true;
+  elements.saveReturnButton.disabled = true;
+  elements.saveReturnButton.textContent = 'Registrando…';
+  try {
+    const saleReturn = await getJson(`/api/pos/sales/${receipt.id}/returns`, {
+      method: 'POST',
+      headers: { 'x-tenant-id': receipt.company_id || activeTenantId },
+      body: JSON.stringify({
+        cashSessionId: posSummary.openSession.id,
+        refundMethod: elements.returnRefundMethod.value,
+        bankAccountId: elements.returnRefundMethod.value === 'TRANSFER'
+          ? elements.returnBankAccount.value
+          : null,
+        refundReference: elements.returnRefundReference.value || null,
+        correctionConceptCode: elements.returnCorrectionConcept.value || null,
+        reason: elements.returnReason.value,
+        idempotencyKey: crypto.randomUUID(),
+        items,
+      }),
+    });
+    closeReturnDialog();
+    showToast(
+      `${saleReturn.return_number}: devolución registrada por ` +
+      `${formatCurrency(saleReturn.total)}.`,
+    );
+    await loadPos();
+  } catch (error) {
+    elements.returnFormError.textContent = error.message;
+    elements.returnFormError.hidden = false;
+  } finally {
+    elements.saveReturnButton.disabled = false;
+    elements.saveReturnButton.textContent = 'Confirmar devolución';
+  }
+}
+
+function posPaymentPayload() {
+  if (!posMixedPayment) return null;
+  const state = mixedPaymentState();
+  return [
+    state.cash > 0 ? {
+      method: 'CASH',
+      amount: state.cash,
+      tenderedAmount: Number(elements.posCashReceived.value),
+    } : null,
+    state.card > 0 ? {
+      method: 'CARD',
+      amount: state.card,
+    } : null,
+    state.transfer > 0 ? {
+      method: 'TRANSFER',
+      amount: state.transfer,
+      receivingCompanyId: elements.posTransferCompany.value,
+      bankAccountId: elements.posTransferBankAccount.value,
+      reference: elements.posTransferReference.value.trim(),
+    } : null,
+  ].filter(Boolean);
 }
 
 async function completeSale() {
@@ -7208,6 +14374,7 @@ async function completeSale() {
   elements.completeSaleButton.textContent = 'Confirmando venta…';
   try {
     const sharedCheckout = posSaleTerms === 'IMMEDIATE';
+    const firstCartItem = saleCart.values().next().value;
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
       method: 'POST',
       headers: {
@@ -7216,8 +14383,11 @@ async function completeSale() {
       },
       body: JSON.stringify({
         cashSessionId: posSummary.openSession.id,
-        ...(sharedCheckout ? {} : { warehouseId: elements.posWarehouseSelect.value }),
+        ...(sharedCheckout
+          ? { stockSource: elements.posWarehouseSelect.value }
+          : { warehouseId: firstCartItem?.product?.warehouse_id }),
         paymentMethod: elements.posPaymentMethod.value,
+        payments: posMixedPayment ? posPaymentPayload() : null,
         saleTerms: posSaleTerms,
         customerId: elements.posCustomerSelect.value || null,
         dueDate: posSaleTerms === 'CREDIT' ? elements.posCreditDueDate.value : null,
@@ -7226,13 +14396,21 @@ async function completeSale() {
           ? Number(elements.posCashReceived.value)
           : null,
         transferReceivingCompanyId: elements.posPaymentMethod.value === 'TRANSFER'
+          && !posMixedPayment
           ? elements.posTransferCompany.value
           : null,
+        transferBankAccountId: (
+          elements.posPaymentMethod.value === 'TRANSFER' || posMixedPayment
+        )
+          ? elements.posTransferBankAccount.value
+          : null,
         paymentReference: elements.posPaymentMethod.value === 'TRANSFER'
+          && !posMixedPayment
           ? elements.posTransferReference.value.trim()
           : null,
         items: [...saleCart.values()].map((item) => ({
           productId: item.product.id,
+          ...(sharedCheckout ? { warehouseId: item.product.warehouse_id } : {}),
           quantity: item.quantity,
         })),
       }),
@@ -7240,6 +14418,9 @@ async function completeSale() {
     saleCart.clear();
     elements.posCashReceived.value = '';
     elements.posTransferReference.value = '';
+    elements.posMixedCashAmount.value = '0';
+    elements.posMixedCardAmount.value = '0';
+    elements.posMixedTransferAmount.value = '0';
     elements.posCustomerSelect.value = '';
     posSaleTerms = 'IMMEDIATE';
     elements.posSaleTermButtons.forEach((button) => {
@@ -7271,6 +14452,11 @@ elements.refreshButton.addEventListener('click', () => refreshStatus({ notify: t
 elements.setupAccessForm.addEventListener('submit', submitSetupAccess);
 elements.loginAccessForm.addEventListener('submit', submitLoginAccess);
 elements.activateAccessForm.addEventListener('submit', submitActivateAccess);
+elements.forgotPasswordButton.addEventListener('click', showRecoveryGate);
+elements.backToLoginButton.addEventListener('click', () =>
+  showAuthGate({ setupRequired: false }));
+elements.recoveryRequestForm.addEventListener('submit', submitRecoveryRequest);
+elements.resetPasswordForm.addEventListener('submit', submitResetPassword);
 elements.accountTrigger.addEventListener('click', () => {
   elements.accountMenu.hidden = !elements.accountMenu.hidden;
   elements.accountTrigger.setAttribute('aria-expanded', String(!elements.accountMenu.hidden));
@@ -7294,18 +14480,35 @@ elements.moduleSearch.addEventListener('input', () => {
     window.location.hash = 'modulos';
   }
 });
+elements.quickLookupButton.addEventListener('click', openQuickLookup);
+elements.closeQuickLookup.addEventListener('click', closeQuickLookup);
+elements.quickLookupSearch.addEventListener('input', scheduleQuickLookup);
+elements.quickLookupDialog.addEventListener('click', (event) => {
+  if (event.target === elements.quickLookupDialog) closeQuickLookup();
+});
+elements.quickLookupDialog.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  closeQuickLookup();
+});
 elements.companySearch.addEventListener('input', renderCompanies);
 elements.branchSearch.addEventListener('input', renderBranches);
 elements.warehouseSearch.addEventListener('input', renderWarehouses);
 elements.productSearch.addEventListener('input', renderProducts);
 elements.companyContext.addEventListener('change', async () => {
   activeTenantId = elements.companyContext.value;
+  if (elements.productStructureDialog.open) closeProductStructureDialog();
   saleCart.clear();
   posCatalog = [];
   selectedReceivable = null;
   selectedPhysicalCount = null;
   selectedPurchase = null;
   selectedPayable = null;
+  selectedExpense = null;
+  selectedThirdParty = null;
+  thirdParties = [];
+  selectedLogisticsBatch = null;
+  logisticsLabelBatchId = null;
+  logisticsOverview = { summary: {}, batches: [], labelSettings: {} };
   selectedTeamUser = null;
   selectedAuditEventId = null;
   auditEvents = [];
@@ -7327,8 +14530,22 @@ elements.newCompanyButton.addEventListener('click', openCompanyDialog);
 elements.closeCompanyDialog.addEventListener('click', closeCompanyDialog);
 elements.cancelCompanyButton.addEventListener('click', closeCompanyDialog);
 elements.companyForm.addEventListener('submit', submitCompany);
+elements.closeTaxProfileDialog.addEventListener('click', closeTaxProfileDialog);
+elements.cancelTaxProfileButton.addEventListener('click', closeTaxProfileDialog);
+elements.taxProfileForm.addEventListener('submit', submitTaxProfile);
+elements.taxProfileDialog.addEventListener('click', (event) => {
+  if (event.target === elements.taxProfileDialog) closeTaxProfileDialog();
+});
 elements.companyDialog.addEventListener('click', (event) => {
   if (event.target === elements.companyDialog) closeCompanyDialog();
+});
+elements.companyIdentityForm.addEventListener('submit', submitCompanyIdentity);
+elements.companyLogoFile.addEventListener('change', previewCompanyLogo);
+elements.closeCompanyIdentityDialog.addEventListener('click', closeCompanyIdentityDialog);
+elements.cancelCompanyIdentityButton.addEventListener('click', closeCompanyIdentityDialog);
+elements.removeCompanyLogoButton.addEventListener('click', removeCompanyLogo);
+elements.companyIdentityDialog.addEventListener('click', (event) => {
+  if (event.target === elements.companyIdentityDialog) closeCompanyIdentityDialog();
 });
 elements.reloadBranchesButton.addEventListener('click', () => {
   loadBranches()
@@ -7359,16 +14576,170 @@ elements.reloadInventoryButton.addEventListener('click', () => {
     .then(() => showToast('Inventario sincronizado.'))
     .catch(() => showToast('No fue posible sincronizar el inventario.'));
 });
+elements.reloadAdvancedInventoryButton.addEventListener('click', () => {
+  loadAdvancedInventory()
+    .then(() => showToast('Control avanzado actualizado.'))
+    .catch((error) => showToast(error.message));
+});
+elements.reloadLogisticsButton.addEventListener('click', () => {
+  Promise.all([loadLogisticsOverview(), loadInventory(), loadAdvancedInventory()])
+    .then(() => showToast('Operación logística sincronizada.'))
+    .catch((error) => showToast(error.message));
+});
+elements.logisticsModuleToggle.addEventListener('change', toggleTenantModule);
+elements.logisticsBatchSearch.addEventListener('input', renderLogisticsBatches);
+elements.logisticsBatchStatusFilter.addEventListener('change', renderLogisticsBatches);
+elements.newLogisticsBatchButton.addEventListener('click', openLogisticsBatchDialog);
+elements.closeLogisticsBatchDialog.addEventListener('click', closeLogisticsBatchDialog);
+elements.cancelLogisticsBatchButton.addEventListener('click', closeLogisticsBatchDialog);
+elements.logisticsBatchDialog.addEventListener('click', (event) => {
+  if (event.target === elements.logisticsBatchDialog) closeLogisticsBatchDialog();
+});
+elements.logisticsBatchBranchId.addEventListener('change', syncLogisticsBatchWarehouses);
+elements.logisticsBatchForm.addEventListener('submit', submitLogisticsBatch);
+elements.logisticsScanForm.addEventListener('submit', submitLogisticsScan);
+elements.logisticsScanForm
+  .querySelector('[name="createIfMissing"]')
+  .addEventListener('change', (event) => {
+    const field = elements.logisticsScanForm.querySelector('.logistics-new-product-name');
+    field.hidden = !event.currentTarget.checked;
+    field.querySelector('input').required = event.currentTarget.checked;
+  });
+elements.logisticsDetailActions.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-logistics-action]');
+  if (button) runLogisticsAction(button.dataset.logisticsAction)
+    .catch((error) => showToast(error.message));
+});
+elements.logisticsItemList.addEventListener('click', (event) => {
+  const pricingButton = event.target.closest('[data-logistics-price-save]');
+  if (pricingButton) saveLogisticsPricing(pricingButton);
+  const labelButton = event.target.closest('[data-logistics-label-item]');
+  if (labelButton) {
+    logisticsLabelBatchId = selectedLogisticsBatch.batch.id;
+    renderLogisticsLabelCenter();
+    openLogisticsLabelPrint(labelButton.dataset.logisticsLabelItem);
+  }
+});
+elements.logisticsLabelBatchList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-logistics-label-batch]');
+  if (button) selectLogisticsLabelBatch(button.dataset.logisticsLabelBatch)
+    .catch((error) => showToast(error.message));
+});
+elements.logisticsLabelProductList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-logistics-print-item]');
+  if (button) openLogisticsLabelPrint(button.dataset.logisticsPrintItem);
+});
+elements.printLogisticsBatchLabels.addEventListener(
+  'click',
+  () => openLogisticsLabelPrint(),
+);
+[
+  elements.logisticsLabelSize,
+  elements.logisticsLabelShowCompany,
+  elements.logisticsLabelShowProduct,
+  elements.logisticsLabelShowPrice,
+  elements.logisticsLabelShowSku,
+  elements.logisticsLabelShowBarcode,
+  elements.logisticsLabelFooter,
+].forEach((control) => {
+  control.addEventListener('input', updateLogisticsLabelPreview);
+  control.addEventListener('change', updateLogisticsLabelPreview);
+});
+elements.saveLogisticsLabelSettings.addEventListener(
+  'click',
+  saveLogisticsLabelConfiguration,
+);
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin ||
+      event.data?.type !== 'nubixor:labels-printed') return;
+  markLogisticsLabelsPrinted(event.data.batchId, event.data.items)
+    .catch((error) => showToast(error.message));
+  try {
+    window.localStorage.removeItem(`nubixor.label-job.${event.data.jobId}`);
+  } catch {
+    // La limpieza local no afecta el registro de impresión.
+  }
+});
+window.addEventListener('online', flushLogisticsOfflineScans);
+window.addEventListener('offline', syncLogisticsConnectionState);
+document.querySelectorAll('[data-advanced-inventory-action]').forEach((button) => {
+  button.addEventListener('click', () =>
+    openAdvancedInventoryDialog(button.dataset.advancedInventoryAction));
+});
+elements.closeAdvancedInventoryDialog.addEventListener(
+  'click',
+  closeAdvancedInventoryDialog,
+);
+elements.cancelAdvancedInventoryButton.addEventListener(
+  'click',
+  closeAdvancedInventoryDialog,
+);
+elements.advancedInventoryForm.addEventListener('submit', submitAdvancedInventory);
+elements.advancedInventoryDialog.addEventListener('click', (event) => {
+  if (event.target === elements.advancedInventoryDialog) closeAdvancedInventoryDialog();
+});
 elements.inventorySearch.addEventListener('input', renderInventoryBalances);
 elements.inventoryWarehouseFilter.addEventListener('change', renderInventoryBalances);
+elements.openKardexButton.addEventListener('click', openKardexDialog);
+elements.closeKardexDialog.addEventListener('click', closeKardexDialog);
+elements.kardexForm.addEventListener('submit', loadKardex);
+elements.kardexDialog.addEventListener('click', (event) => {
+  if (event.target === elements.kardexDialog) closeKardexDialog();
+});
 document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
   button.addEventListener('click', () => selectInventoryPanel(button.dataset.inventoryTab));
+});
+document.querySelectorAll('[data-inventory-route]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const panel = button.dataset.inventoryRoute;
+    const targetView = panel === 'counts' ? 'inventario' : 'logistica';
+    window.location.hash = targetView;
+    showView(targetView);
+    selectInventoryPanel(panel);
+  });
+});
+document.querySelectorAll('[data-view-target]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const view = button.dataset.viewTarget;
+    window.location.hash = view;
+    showView(view);
+  });
 });
 elements.openCountsPanelButton.addEventListener('click', () => {
   selectInventoryPanel('counts');
   elements.newCountButton.focus();
 });
 elements.newAdjustmentButton.addEventListener('click', () => openAdjustmentDialog());
+elements.newInventoryIncidentButton.addEventListener(
+  'click',
+  openInventoryIncidentDialog,
+);
+elements.closeInventoryIncidentDialog.addEventListener(
+  'click',
+  closeInventoryIncidentDialog,
+);
+elements.cancelInventoryIncidentButton.addEventListener(
+  'click',
+  closeInventoryIncidentDialog,
+);
+elements.inventoryIncidentForm.addEventListener(
+  'submit',
+  submitInventoryIncident,
+);
+elements.inventoryIncidentType.addEventListener('change', syncInventoryIncidentForm);
+elements.inventoryIncidentProductId.addEventListener(
+  'change',
+  syncInventoryIncidentForm,
+);
+elements.inventoryIncidentWarehouseId.addEventListener(
+  'change',
+  syncInventoryIncidentForm,
+);
+elements.inventoryIncidentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.inventoryIncidentDialog) {
+    closeInventoryIncidentDialog();
+  }
+});
 elements.closeAdjustmentDialog.addEventListener('click', closeAdjustmentDialog);
 elements.cancelAdjustmentButton.addEventListener('click', closeAdjustmentDialog);
 elements.adjustmentForm.addEventListener('submit', submitAdjustment);
@@ -7381,6 +14752,10 @@ elements.cancelTransferButton.addEventListener('click', closeTransferDialog);
 elements.transferForm.addEventListener('submit', submitTransfer);
 elements.transferProductId.addEventListener('change', syncTransferWarehouses);
 elements.transferSourceWarehouseId.addEventListener('change', updateTransferAvailability);
+elements.transferRequiresReception.addEventListener('change', () => {
+  elements.transferDispatchReferenceField.hidden =
+    !elements.transferRequiresReception.checked;
+});
 elements.transferDialog.addEventListener('click', (event) => {
   if (event.target === elements.transferDialog) closeTransferDialog();
 });
@@ -7389,6 +14764,29 @@ elements.cancelReplenishmentButton.addEventListener('click', closeReplenishmentD
 elements.replenishmentForm.addEventListener('submit', submitReplenishmentRule);
 elements.replenishmentDialog.addEventListener('click', (event) => {
   if (event.target === elements.replenishmentDialog) closeReplenishmentDialog();
+});
+elements.reloadThirdPartiesButton.addEventListener('click', () => {
+  loadThirdParties()
+    .then(() => showToast('Directorio de terceros actualizado.'))
+    .catch(() => showToast('No fue posible actualizar los terceros.'));
+});
+elements.thirdPartySearch.addEventListener('input', () => {
+  window.clearTimeout(thirdPartySearchTimer);
+  thirdPartySearchTimer = window.setTimeout(() => loadThirdParties().catch(() => {}), 250);
+});
+elements.thirdPartyRoleFilter.addEventListener('change', () =>
+  loadThirdParties().catch(() => {}));
+elements.thirdPartyStatusFilter.addEventListener('change', () =>
+  loadThirdParties().catch(() => {}));
+elements.newThirdPartyButton.addEventListener('click', () => openThirdPartyDialog());
+elements.editThirdPartyButton.addEventListener('click', () => {
+  if (selectedThirdParty) openThirdPartyDialog(selectedThirdParty);
+});
+elements.closeThirdPartyDialog.addEventListener('click', closeThirdPartyDialog);
+elements.cancelThirdPartyButton.addEventListener('click', closeThirdPartyDialog);
+elements.thirdPartyForm.addEventListener('submit', submitThirdParty);
+elements.thirdPartyDialog.addEventListener('click', (event) => {
+  if (event.target === elements.thirdPartyDialog) closeThirdPartyDialog();
 });
 elements.reloadPurchasesButton.addEventListener('click', () => {
   loadPurchases()
@@ -7445,6 +14843,73 @@ elements.cancelPayablePaymentButton.addEventListener('click', closePayablePaymen
 elements.payablePaymentForm.addEventListener('submit', submitPayablePayment);
 elements.payablePaymentDialog.addEventListener('click', (event) => {
   if (event.target === elements.payablePaymentDialog) closePayablePaymentDialog();
+});
+elements.reloadExpensesButton.addEventListener('click', () => {
+  loadExpenses()
+    .then(() => showToast('Gastos actualizados.'))
+    .catch(() => showToast('No fue posible actualizar los gastos.'));
+});
+elements.expenseSearch.addEventListener('input', renderExpenseList);
+elements.expenseStatusFilter.addEventListener('change', renderExpenseList);
+elements.newExpenseButton.addEventListener('click', openExpenseDialog);
+elements.closeExpenseDialog.addEventListener('click', closeExpenseDialog);
+elements.cancelExpenseButton.addEventListener('click', closeExpenseDialog);
+elements.expenseForm.addEventListener('submit', submitExpense);
+elements.expenseBranchId.addEventListener('change', syncExpenseCostCenters);
+elements.expenseSupplierId.addEventListener('change', syncExpenseBeneficiary);
+elements.expenseRecurring.addEventListener('change', syncExpenseRecurrence);
+elements.expenseSubtotal.addEventListener('input', updateExpenseDraftTotal);
+elements.expenseTaxTotal.addEventListener('input', updateExpenseDraftTotal);
+elements.expenseDialog.addEventListener('click', (event) => {
+  if (event.target === elements.expenseDialog) closeExpenseDialog();
+});
+elements.approveExpenseButton.addEventListener(
+  'click',
+  () => openExpenseDecision('approve'),
+);
+elements.rejectExpenseButton.addEventListener(
+  'click',
+  () => openExpenseDecision('reject'),
+);
+elements.expenseDecisionForm.addEventListener('submit', submitExpenseDecision);
+elements.closeExpenseDecisionDialog.addEventListener(
+  'click',
+  closeExpenseDecisionDialog,
+);
+elements.cancelExpenseDecision.addEventListener('click', closeExpenseDecisionDialog);
+elements.expenseDecisionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.expenseDecisionDialog) closeExpenseDecisionDialog();
+});
+elements.payExpenseButton.addEventListener('click', openExpensePaymentDialog);
+elements.expensePaymentMethod.addEventListener('change', syncExpensePaymentSource);
+elements.expensePaymentForm.addEventListener('submit', submitExpensePayment);
+elements.closeExpensePaymentDialog.addEventListener(
+  'click',
+  closeExpensePaymentDialog,
+);
+elements.cancelExpensePayment.addEventListener('click', closeExpensePaymentDialog);
+elements.expensePaymentDialog.addEventListener('click', (event) => {
+  if (event.target === elements.expensePaymentDialog) closeExpensePaymentDialog();
+});
+elements.newCostCenterButton.addEventListener('click', openCostCenterDialog);
+elements.costCenterForm.addEventListener('submit', submitCostCenter);
+elements.closeCostCenterDialog.addEventListener('click', closeCostCenterDialog);
+elements.cancelCostCenter.addEventListener('click', closeCostCenterDialog);
+elements.costCenterDialog.addEventListener('click', (event) => {
+  if (event.target === elements.costCenterDialog) closeCostCenterDialog();
+});
+elements.newExpenseCategoryButton.addEventListener(
+  'click',
+  openExpenseCategoryDialog,
+);
+elements.expenseCategoryForm.addEventListener('submit', submitExpenseCategory);
+elements.closeExpenseCategoryDialog.addEventListener(
+  'click',
+  closeExpenseCategoryDialog,
+);
+elements.cancelExpenseCategory.addEventListener('click', closeExpenseCategoryDialog);
+elements.expenseCategoryDialog.addEventListener('click', (event) => {
+  if (event.target === elements.expenseCategoryDialog) closeExpenseCategoryDialog();
 });
 elements.showTeamPanelButton.addEventListener('click', () => showUserPanel('team'));
 elements.showRolesPanelButton.addEventListener('click', () => showUserPanel('roles'));
@@ -7530,13 +14995,75 @@ elements.productTaxForm.addEventListener('submit', submitProductTax);
 elements.productTaxDialog.addEventListener('click', (event) => {
   if (event.target === elements.productTaxDialog) closeProductTaxDialog();
 });
+elements.openCatalogImportButton.addEventListener('click', openCatalogImportDialog);
+elements.closeCatalogImportDialog.addEventListener('click', closeCatalogImportDialog);
+elements.cancelCatalogImport.addEventListener('click', closeCatalogImportDialog);
+elements.catalogImportDialog.addEventListener('click', (event) => {
+  if (event.target === elements.catalogImportDialog) closeCatalogImportDialog();
+});
+elements.downloadCatalogTemplate.addEventListener(
+  'click',
+  downloadCatalogImportTemplate,
+);
+elements.catalogImportFile.addEventListener('change', catalogImportFileChanged);
+elements.previewCatalogImport.addEventListener('click', previewCatalogImportFile);
+elements.commitCatalogImport.addEventListener('click', commitCatalogImportFile);
 elements.newProductButton.addEventListener('click', openProductDialog);
+elements.newComboProductButton.addEventListener('click', () => {
+  showCatalogPanel('products');
+  openProductDialog();
+  showToast('Crea el producto y luego selecciona “Colores o combo”.');
+});
+elements.productPriceForm.addEventListener('submit', submitProductPrice);
+elements.customerPriceListForm.addEventListener(
+  'submit',
+  submitCustomerPriceList,
+);
+elements.promotionForm.addEventListener('submit', submitPromotion);
+elements.pricingCustomerId.addEventListener('change', () => {
+  const customer = pricingOverview.customers.find(
+    (item) => item.id === elements.pricingCustomerId.value,
+  );
+  elements.customerPriceListId.value = customer?.sales_price_list_id || '';
+});
+elements.pricingProductId.addEventListener('change', () => {
+  const product = pricingOverview.products.find(
+    (item) => item.id === elements.pricingProductId.value,
+  );
+  if (product) {
+    elements.productPriceForm.elements.unitPrice.value =
+      String(Number(product.sale_price));
+  }
+});
 elements.closeProductDialog.addEventListener('click', closeProductDialog);
 elements.cancelProductButton.addEventListener('click', closeProductDialog);
 elements.productForm.addEventListener('submit', submitProduct);
 elements.productDialog.addEventListener('click', (event) => {
   if (event.target === elements.productDialog) closeProductDialog();
 });
+elements.closeProductStructureDialog.addEventListener(
+  'click',
+  closeProductStructureDialog,
+);
+elements.productStructureDialog.addEventListener('click', (event) => {
+  if (event.target === elements.productStructureDialog) {
+    closeProductStructureDialog();
+  }
+});
+document.querySelectorAll('[data-product-structure-tab]').forEach((button) => {
+  button.addEventListener('click', () => {
+    selectProductStructurePanel(button.dataset.productStructureTab);
+  });
+});
+elements.productVariantForm.addEventListener('submit', submitProductVariant);
+elements.addComboComponent.addEventListener('click', () => {
+  addComboComponentRow();
+});
+elements.productComboForm.addEventListener('submit', submitProductCombo);
+elements.productComboAssemblyForm.addEventListener(
+  'submit',
+  submitProductComboAssembly,
+);
 elements.productImageFile.addEventListener('change', previewProductImage);
 elements.closeProductImageDialog.addEventListener('click', closeProductImageDialog);
 elements.cancelProductImageButton.addEventListener('click', closeProductImageDialog);
@@ -7565,6 +15092,12 @@ elements.closeCashDialog.addEventListener('click', (event) => {
   if (event.target === elements.closeCashDialog) closeCloseCashDialog();
 });
 elements.cashDenominationGrid.addEventListener('input', updateCashClosePreview);
+elements.closeCashCloseReceipt.addEventListener('click', closeCashCloseReceiptDialog);
+elements.finishCashCloseReceipt.addEventListener('click', closeCashCloseReceiptDialog);
+elements.printCashCloseReceipt.addEventListener('click', () => window.print());
+elements.cashCloseReceiptDialog.addEventListener('click', (event) => {
+  if (event.target === elements.cashCloseReceiptDialog) closeCashCloseReceiptDialog();
+});
 elements.closeCashMovementDialog.addEventListener('click', closeCashMovementDialog);
 elements.cancelCashMovementButton.addEventListener('click', closeCashMovementDialog);
 elements.cashMovementForm.addEventListener('submit', submitCashMovement);
@@ -7603,9 +15136,21 @@ elements.posProductSearch.addEventListener('keydown', (event) => {
   showToast(`${exactProduct.name} agregado a la venta.`);
 });
 elements.clearCartButton.addEventListener('click', clearCart);
-elements.posCustomerSelect.addEventListener('change', () => {
+elements.posCustomerSelect.addEventListener('change', async () => {
   renderPosCustomerContext();
-  renderCart();
+  try {
+    await loadPosCatalog();
+    const customer = posCustomers.find(
+      (item) => item.id === elements.posCustomerSelect.value,
+    );
+    showToast(
+      customer?.price_list_name
+        ? `Precios de ${customer.price_list_name} aplicados.`
+        : 'Precio unitario y promociones vigentes aplicados.',
+    );
+  } catch {
+    renderCart();
+  }
 });
 elements.posNewCustomerButton.addEventListener('click', () => openCustomerDialog('pos'));
 elements.posSaleTermButtons.forEach((button) => {
@@ -7627,9 +15172,33 @@ elements.posCashReceived.addEventListener('input', () => {
   updateCashSettlement(calculateCartTotals());
 });
 elements.posTransferCompany.addEventListener('change', renderCart);
+elements.posTransferBankAccount.addEventListener('change', renderCart);
 elements.posTransferReference.addEventListener('input', renderCart);
+elements.toggleMixedPaymentButton.addEventListener('click', () => {
+  posMixedPayment = !posMixedPayment;
+  if (posMixedPayment) {
+    elements.posMixedCashAmount.value = String(calculateCartTotals().total);
+    elements.posMixedCardAmount.value = '0';
+    elements.posMixedTransferAmount.value = '0';
+    elements.posPaymentMethod.value = 'CASH';
+  }
+  elements.posCashReceived.value = '';
+  renderCart();
+});
+elements.posMixedCashAmount.addEventListener('input', renderCart);
+for (const input of [elements.posMixedCardAmount, elements.posMixedTransferAmount]) {
+  input.addEventListener('input', () => {
+    const totals = calculateCartTotals();
+    const otherAmount =
+      Number(elements.posMixedCardAmount.value || 0) +
+      Number(elements.posMixedTransferAmount.value || 0);
+    elements.posMixedCashAmount.value = String(Math.max(0, totals.total - otherAmount));
+    renderCart();
+  });
+}
 elements.posPaymentButtons.forEach((button) => {
   button.addEventListener('click', () => {
+    posMixedPayment = false;
     elements.posPaymentMethod.value = button.dataset.paymentMethod;
     elements.posPaymentButtons.forEach((option) => {
       option.classList.toggle('active', option === button);
@@ -7649,10 +15218,18 @@ document.addEventListener('keydown', (event) => {
 });
 elements.completeSaleButton.addEventListener('click', completeSale);
 elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
+elements.openReturnDialogButton.addEventListener('click', openReturnDialog);
 elements.printReceiptButton.addEventListener('click', () => window.print());
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();
+});
+elements.returnRefundMethod.addEventListener('change', syncReturnRefundFields);
+elements.returnForm.addEventListener('submit', submitSaleReturn);
+elements.closeReturnDialog.addEventListener('click', closeReturnDialog);
+elements.cancelReturnButton.addEventListener('click', closeReturnDialog);
+elements.returnDialog.addEventListener('click', (event) => {
+  if (event.target === elements.returnDialog) closeReturnDialog();
 });
 document.querySelectorAll('[data-report-type]').forEach((button) => {
   button.addEventListener('click', () => setReportType(button.dataset.reportType));
@@ -7687,6 +15264,11 @@ elements.configureBillingConnectionButton.addEventListener(
   openBillingConnectionDialog,
 );
 elements.testBillingConnectionButton.addEventListener('click', testBillingConnection);
+elements.billingContingencyButton.addEventListener('click', startBillingContingency);
+elements.closeBillingContingencyButton.addEventListener(
+  'click',
+  closeBillingContingency,
+);
 elements.closeBillingConnectionDialog.addEventListener(
   'click',
   closeBillingConnectionDialog,
@@ -7696,6 +15278,11 @@ elements.cancelBillingConnectionButton.addEventListener(
   closeBillingConnectionDialog,
 );
 elements.billingConnectionForm.addEventListener('submit', saveBillingConnection);
+elements.billingProviderCode.addEventListener('change', syncBillingProviderFields);
+elements.billingProviderEnvironmentInput.addEventListener(
+  'change',
+  syncBillingProviderFields,
+);
 elements.billingConnectionDialog.addEventListener('click', (event) => {
   if (event.target === elements.billingConnectionDialog) closeBillingConnectionDialog();
 });
@@ -7712,8 +15299,32 @@ elements.cancelBillingResolutionButton.addEventListener(
   closeBillingResolutionDialog,
 );
 elements.billingResolutionForm.addEventListener('submit', saveBillingResolution);
+elements.factusNumberingRangeSelect.addEventListener(
+  'change',
+  applySelectedFactusRange,
+);
 elements.billingResolutionDialog.addEventListener('click', (event) => {
   if (event.target === elements.billingResolutionDialog) closeBillingResolutionDialog();
+});
+elements.reloadBillingWorkflowButton.addEventListener('click', () => {
+  loadBillingWorkflow()
+    .then(() => showToast('Estados de facturación actualizados.'))
+    .catch((error) => showToast(error.message));
+});
+elements.newQuoteButton.addEventListener('click', openQuoteDialog);
+elements.addQuoteItemButton.addEventListener('click', () => addQuoteItemRow());
+elements.closeQuoteDialog.addEventListener('click', closeQuoteDialog);
+elements.cancelQuoteButton.addEventListener('click', closeQuoteDialog);
+elements.quoteForm.addEventListener('submit', submitQuote);
+elements.quoteDialog.addEventListener('click', (event) => {
+  if (event.target === elements.quoteDialog) closeQuoteDialog();
+});
+elements.newBillingNoteButton.addEventListener('click', openBillingNoteDialog);
+elements.closeBillingNoteDialog.addEventListener('click', closeBillingNoteDialog);
+elements.cancelBillingNoteButton.addEventListener('click', closeBillingNoteDialog);
+elements.billingNoteForm.addEventListener('submit', submitBillingNote);
+elements.billingNoteDialog.addEventListener('click', (event) => {
+  if (event.target === elements.billingNoteDialog) closeBillingNoteDialog();
 });
 elements.auditSearch.addEventListener('input', scheduleAuditReload);
 [
@@ -7727,6 +15338,88 @@ elements.auditSearch.addEventListener('input', scheduleAuditReload);
 }));
 elements.clearAuditFilters.addEventListener('click', clearAuditFilters);
 elements.exportAuditButton.addEventListener('click', exportAuditCsv);
+elements.runAuditControls.addEventListener('click', runAndSealAuditControls);
+elements.exportAuditEvidence.addEventListener('click', exportAuditEvidence);
+elements.openAccountantReview.addEventListener('click', openAccountantReviewDialog);
+elements.closeAccountantReview.addEventListener('click', closeAccountantReviewDialog);
+elements.cancelAccountantReview.addEventListener('click', closeAccountantReviewDialog);
+elements.accountantReviewForm.addEventListener('submit', saveAccountantReview);
+elements.accountantReviewDialog.addEventListener('click', (event) => {
+  if (event.target === elements.accountantReviewDialog) closeAccountantReviewDialog();
+});
+elements.newAccountingAccount.addEventListener('click', openAccountingAccountDialog);
+elements.closeAccountingAccount.addEventListener('click', closeAccountingAccountDialog);
+elements.cancelAccountingAccount.addEventListener('click', closeAccountingAccountDialog);
+elements.accountingAccountForm.addEventListener('submit', saveAccountingAccount);
+elements.accountingAccountDialog.addEventListener('click', (event) => {
+  if (event.target === elements.accountingAccountDialog) closeAccountingAccountDialog();
+});
+elements.newBankAccountButton.addEventListener('click', openBankAccountDialog);
+elements.closeBankAccountDialog.addEventListener('click', closeBankAccountDialog);
+elements.cancelBankAccount.addEventListener('click', closeBankAccountDialog);
+elements.bankAccountForm.addEventListener('submit', submitBankAccount);
+elements.bankAccountDialog.addEventListener('click', (event) => {
+  if (event.target === elements.bankAccountDialog) closeBankAccountDialog();
+});
+elements.newBankTransactionButton.addEventListener(
+  'click',
+  openBankTransactionDialog,
+);
+elements.closeBankTransactionDialog.addEventListener(
+  'click',
+  closeBankTransactionDialog,
+);
+elements.cancelBankTransaction.addEventListener(
+  'click',
+  closeBankTransactionDialog,
+);
+elements.bankTransactionForm.addEventListener('submit', submitBankTransaction);
+elements.bankTransactionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.bankTransactionDialog) {
+    closeBankTransactionDialog();
+  }
+});
+elements.completeBankReconciliationButton.addEventListener(
+  'click',
+  openBankReconciliationDialog,
+);
+elements.closeBankReconciliationDialog.addEventListener(
+  'click',
+  closeBankReconciliationDialog,
+);
+elements.cancelBankReconciliation.addEventListener(
+  'click',
+  closeBankReconciliationDialog,
+);
+elements.bankReconciliationForm.addEventListener(
+  'submit',
+  submitBankReconciliation,
+);
+elements.bankReconciliationDialog.addEventListener('click', (event) => {
+  if (event.target === elements.bankReconciliationDialog) {
+    closeBankReconciliationDialog();
+  }
+});
+elements.downloadMonthlyPackageButton.addEventListener(
+  'click',
+  downloadMonthlyPackage,
+);
+elements.closeAccountingAction.addEventListener('click', closeAccountingAction);
+elements.cancelAccountingAction.addEventListener('click', closeAccountingAction);
+elements.accountingActionForm.addEventListener('submit', saveAccountingAction);
+elements.accountingActionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.accountingActionDialog) closeAccountingAction();
+});
+[elements.auditPeriodFrom, elements.auditPeriodTo].forEach((input) => {
+  input.addEventListener('change', () => {
+    Promise.all([
+      loadAuditReadiness(),
+      loadAccountingLedger(),
+      loadAccountingControls(),
+    ])
+      .catch((error) => renderAuditReadinessError(error.message));
+  });
+});
 elements.auditLoadMore.addEventListener('click', () => {
   auditPagination.page += 1;
   loadAudit({ append: true }).catch(() => {
@@ -7766,6 +15459,22 @@ document.querySelectorAll('[data-catalog-tab]').forEach((tab) => {
   tab.addEventListener('click', () => showCatalogPanel(tab.dataset.catalogTab));
 });
 elements.menuButton.addEventListener('click', () => toggleMenu());
+elements.sidebarScrim.addEventListener('click', () => toggleMenu(false));
+document.querySelectorAll('.nav-group-toggle').forEach((button) => {
+  button.addEventListener('click', () => {
+    toggleSidebarGroup(button.closest('.nav-group'));
+  });
+  button.addEventListener('keydown', (event) => {
+    const buttons = [...document.querySelectorAll('.nav-group-toggle')]
+      .filter((item) => !item.closest('.nav-group')?.hidden);
+    const currentIndex = buttons.indexOf(button);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      buttons[(currentIndex + direction + buttons.length) % buttons.length]?.focus();
+    }
+  });
+});
 document.querySelectorAll('[data-view-link]').forEach((link) => {
   link.addEventListener('click', () => {
     showView(link.dataset.viewLink);
@@ -7775,5 +15484,74 @@ document.querySelectorAll('[data-view-link]').forEach((link) => {
 window.addEventListener('hashchange', () => {
   showView(window.location.hash.replace(/^#/, '') || 'inicio');
 });
+window.addEventListener('keydown', (event) => {
+  if (
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    event.key.toLowerCase() === 'k'
+  ) {
+    event.preventDefault();
+    openQuickLookup();
+    return;
+  }
+  if (event.key === 'F2' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    if (
+      document.body.dataset.activeView === 'caja' &&
+      !elements.posProductSearch.disabled
+    ) {
+      elements.posProductSearch.focus();
+      elements.posProductSearch.select();
+    } else {
+      openQuickLookup();
+    }
+    return;
+  }
+  if (event.key === 'Escape' && elements.sidebar.classList.contains('open')) {
+    toggleMenu(false);
+    elements.menuButton.focus();
+  }
+});
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 820 && elements.sidebar.classList.contains('open')) {
+    toggleMenu(false);
+  }
+});
 
+const macKeyboard = /Mac|iPhone|iPad|iPod/i.test(
+  navigator.userAgentData?.platform || navigator.platform || '',
+);
+elements.quickLookupShortcut.textContent = macKeyboard ? '⌘ K' : 'Ctrl K';
+
+function initNetworkStatusMonitor() {
+  const statusBar = document.createElement('div');
+  statusBar.className = 'network-status-bar online';
+  statusBar.innerHTML = '<span class="network-status-dot"></span><span class="network-status-text">Conectado</span>';
+  document.body.appendChild(statusBar);
+
+  function updateStatus() {
+    const isOnline = navigator.onLine;
+    statusBar.className = `network-status-bar ${isOnline ? 'online' : 'offline'}`;
+    statusBar.querySelector('.network-status-text').textContent = isOnline ? 'Conectado' : 'Sin conexión';
+  }
+
+  window.addEventListener('online', updateStatus);
+  window.addEventListener('offline', updateStatus);
+}
+
+initNetworkStatusMonitor();
+
+function startLiveRealtimeUpdates() {
+  setInterval(async () => {
+    if (!document.hidden && activeTenantId) {
+      try {
+        await loadExecutiveSummary();
+      } catch {}
+    }
+  }, 5000);
+}
+
+startLiveRealtimeUpdates();
 startApplication();
+
+

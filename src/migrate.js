@@ -6,7 +6,9 @@ import { logger } from './shared/logger.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(here, '../database/migrations');
-const files = (await fs.readdir(migrationsDir)).filter((name) => name.endsWith('.sql')).sort();
+const files = (await fs.readdir(migrationsDir))
+  .filter((name) => name.endsWith('.sql') && !name.startsWith('._'))
+  .sort();
 
 async function runMigrations() {
   const pool = getPool();

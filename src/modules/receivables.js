@@ -4,6 +4,10 @@ import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
+import {
+  postReceivableInvoiceAccounting,
+  postReceivablePaymentAccounting,
+} from '../accounting.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -322,6 +326,11 @@ router.post('/invoices', asyncHandler(async (req, res) => {
         ],
       );
     }
+    await postReceivableInvoiceAccounting(client, {
+      tenantId: req.context.tenantId,
+      invoiceId: result.rows[0].id,
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -409,6 +418,11 @@ router.post('/invoices/:id/payments', asyncHandler(async (req, res) => {
        WHERE id = $3`,
       [nextPaid, nextStatus, invoice.id],
     );
+    await postReceivablePaymentAccounting(client, {
+      tenantId: req.context.tenantId,
+      payment: paymentResult.rows[0],
+      userId: req.context.userId,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,

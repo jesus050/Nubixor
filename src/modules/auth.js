@@ -6,15 +6,27 @@ import {
   activateUserWithToken,
   bootstrapPassword,
   loginWithPassword,
+  requestPasswordReset,
   requireAuthenticatedSession,
+  resetPasswordWithToken,
   resolveSession,
   rotateCsrfToken,
   revokeCurrentSession,
 } from '../authentication.js';
 import { AppError } from '../shared/errors.js';
+import { setTimeout as delay } from 'node:timers/promises';
+
+import { createRateLimiter } from '../middleware/rate-limiter.js';
 
 const router = Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const authLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Demasiados intentos de acceso. Por favor, espera 15 minutos.',
+});
+
 
 router.use((_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -52,7 +64,7 @@ router.get('/status', asyncHandler(async (req, res) => {
   });
 }));
 
-router.post('/bootstrap', asyncHandler(async (req, res) => {
+router.post('/bootstrap', authLimiter, asyncHandler(async (req, res) => {
   requireLocalBootstrap(req);
   const email = typeof req.body.email === 'string' ? req.body.email.trim() : '';
   if (!EMAIL_PATTERN.test(email)) {
@@ -66,7 +78,7 @@ router.post('/bootstrap', asyncHandler(async (req, res) => {
   res.status(201).json({ user: profile, csrfToken: result.csrfToken });
 }));
 
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   const result = await loginWithPassword(req, res, req.body);
   const profile = await authenticatedUserProfile(result.user.id);
   res.json({ user: profile, csrfToken: result.csrfToken });
@@ -74,6 +86,26 @@ router.post('/login', asyncHandler(async (req, res) => {
 
 router.post('/activate', asyncHandler(async (req, res) => {
   const result = await activateUserWithToken(req, res, req.body);
+  const profile = await authenticatedUserProfile(result.user.id);
+  res.json({ user: profile, csrfToken: result.csrfToken });
+}));
+
+router.post('/password-recovery/request', authLimiter, asyncHandler(async (req, res) => {
+  const startedAt = performance.now();
+  const email = typeof req.body.email === 'string' ? req.body.email.trim() : '';
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new AppError('Escribe un correo válido.', 422, 'INVALID_EMAIL');
+  }
+  const result = await requestPasswordReset(req, { email });
+  await delay(Math.max(0, 350 - (performance.now() - startedAt)));
+  res.status(202).json({
+    message: 'Si la cuenta existe, enviaremos las instrucciones de recuperación.',
+    ...(result.resetUrl ? { resetUrl: result.resetUrl } : {}),
+  });
+}));
+
+router.post('/password-recovery/complete', asyncHandler(async (req, res) => {
+  const result = await resetPasswordWithToken(req, res, req.body);
   const profile = await authenticatedUserProfile(result.user.id);
   res.json({ user: profile, csrfToken: result.csrfToken });
 }));

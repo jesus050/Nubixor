@@ -68,11 +68,33 @@ const corsOrigins = readCorsOrigins(process.env.CORS_ORIGINS);
 if (nodeEnv === 'production' && corsOrigins.includes('*')) {
   throw new Error('CORS_ORIGINS debe declarar orígenes explícitos en producción.');
 }
+const publicBaseUrl = readOptionalUrl(
+  'PUBLIC_BASE_URL',
+  process.env.PUBLIC_BASE_URL,
+  ['http:', 'https:'],
+);
+if (nodeEnv === 'production' &&
+    (!publicBaseUrl || !publicBaseUrl.startsWith('https://'))) {
+  throw new Error('PUBLIC_BASE_URL es obligatoria y debe usar HTTPS en producción.');
+}
+const passwordResetWebhookUrl = readOptionalUrl(
+  'PASSWORD_RESET_WEBHOOK_URL',
+  process.env.PASSWORD_RESET_WEBHOOK_URL,
+  ['https:'],
+);
+const passwordResetWebhookSecret =
+  process.env.PASSWORD_RESET_WEBHOOK_SECRET?.trim() || null;
+if (nodeEnv === 'production' &&
+    (!passwordResetWebhookUrl || !passwordResetWebhookSecret)) {
+  throw new Error(
+    'PASSWORD_RESET_WEBHOOK_URL y PASSWORD_RESET_WEBHOOK_SECRET son obligatorias en producción.',
+  );
+}
 
 export const config = {
   nodeEnv,
   port: readPort(process.env.PORT),
-  appName: process.env.APP_NAME || 'MegaSuite',
+  appName: process.env.APP_NAME || 'Nubixor',
   databaseUrl: readOptionalUrl('DATABASE_URL', process.env.DATABASE_URL, ['postgres:', 'postgresql:']),
   databaseSsl: readBoolean('DATABASE_SSL', process.env.DATABASE_SSL),
   databaseSslRejectUnauthorized: readBoolean(
@@ -90,6 +112,24 @@ export const config = {
   corsOrigins,
   trustProxy: readBoolean('TRUST_PROXY', process.env.TRUST_PROXY),
   jsonBodyLimit: readBodyLimit(process.env.JSON_BODY_LIMIT),
+  publicBaseUrl,
+  passwordResetWebhookUrl,
+  passwordResetWebhookSecret,
+  storageDir: process.env.STORAGE_DIR?.trim() || './storage',
+  backupEnabled: readBoolean('BACKUP_ENABLED', process.env.BACKUP_ENABLED),
+  backupIntervalHours: readPositiveInteger(
+    'BACKUP_INTERVAL_HOURS',
+    process.env.BACKUP_INTERVAL_HOURS,
+    24,
+  ),
+  backupDir: process.env.BACKUP_DIR?.trim() || './backups',
+  backupRetentionDays: readPositiveInteger(
+    'BACKUP_RETENTION_DAYS',
+    process.env.BACKUP_RETENTION_DAYS,
+    30,
+  ),
+  backupEncryptionKey:
+    process.env.BACKUP_ENCRYPTION_KEY?.trim() || null,
   electronicBillingEncryptionKey:
     process.env.ELECTRONIC_BILLING_ENCRYPTION_KEY?.trim() || null,
 };

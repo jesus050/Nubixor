@@ -7,3 +7,5 @@ coverage/
 .DS_Store
 public/uploads/product-images/*
 !public/uploads/product-images/.gitkeep
+storage/
+backups/

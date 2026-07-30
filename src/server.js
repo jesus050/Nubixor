@@ -2,6 +2,8 @@ import { app } from './app.js';
 import { config } from './config.js';
 import { closeDatabase } from './db.js';
 import { logger } from './shared/logger.js';
+import { startBillingRetryScheduler } from './electronic-billing/retry-scheduler.js';
+import { startBackupScheduler } from './backup-scheduler.js';
 
 const server = app.listen(config.port, () => {
   logger.info('server.started', {
@@ -13,11 +15,15 @@ const server = app.listen(config.port, () => {
     redisConfigured: Boolean(config.redisUrl),
   });
 });
+const stopBillingRetryScheduler = startBillingRetryScheduler();
+const stopBackupScheduler = startBackupScheduler();
 
 let shuttingDown = false;
 async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
+  stopBillingRetryScheduler();
+  stopBackupScheduler();
   logger.info('server.stopping', { signal });
 
   server.close(async (error) => {

@@ -42,7 +42,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4100
-      APP_NAME: ${APP_NAME:-MegaSuite}
+      APP_NAME: ${APP_NAME:-Nubixor}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-megasuite}
       DATABASE_SSL: ${DATABASE_SSL:-false}
       DATABASE_SSL_REJECT_UNAUTHORIZED: ${DATABASE_SSL_REJECT_UNAUTHORIZED:-true}
