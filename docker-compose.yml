@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: megasuite
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD}
     volumes:
-      - megasuite_pg:/var/lib/postgresql/data
+      - megasuite_pg_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U megasuite -d megasuite"]
       interval: 5s
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - megasuite_redis:/data
+      - megasuite_redis_v2:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -72,8 +72,8 @@ services:
       - caddy_config:/config
 
 volumes:
-  megasuite_pg:
-  megasuite_redis:
+  megasuite_pg_v2:
+  megasuite_redis_v2:
   megasuite_storage:
   megasuite_backups:
   caddy_data:
