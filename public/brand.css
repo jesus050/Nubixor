@@ -30,7 +30,7 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
   color: var(--color-ink);
 }
 
-.eyebrow, .sidebar-section-title {
+.eyebrow, .sidebar-section-title, .nav-label {
   color: var(--color-ink-soft);
   text-transform: uppercase;
   font-size: 11px;

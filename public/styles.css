@@ -15611,7 +15611,12 @@ h4,
   pointer-events: none;
 }
 
-.brand-name,
+.sidebar .brand-name {
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: -.025em;
+}
+
 .auth-brand > span:last-child {
   font-size: 24px;
   letter-spacing: -.025em;
@@ -15633,41 +15638,51 @@ h4,
   padding: 0 9px;
 }
 
-.sidebar-section-title {
+.sidebar-section-title,
+.nav-label {
   margin: 23px 9px 8px;
   color: rgba(79, 210, 233, .9);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: .16em;
+  text-transform: uppercase;
 }
 
-.sidebar-nav a {
+.sidebar-nav a,
+.nav-item {
   position: relative;
   min-height: 43px;
   margin: 2px 0;
   border: 1px solid transparent;
   border-radius: 13px;
   color: rgba(255, 255, 255, .7);
-  font-size: 12px;
-  font-weight: 720;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
   transition: color .18s ease, background .18s ease, transform .18s ease, border-color .18s ease;
 }
 
-.sidebar-nav a:hover {
+.sidebar-nav a:hover,
+.nav-item:hover,
+.nav-item:focus-visible {
   border-color: rgba(79, 210, 233, .14);
   background: rgba(255, 255, 255, .075);
   color: #fff;
   transform: translateX(3px);
+  outline: none;
 }
 
-.sidebar-nav a.active {
+.sidebar-nav a.active,
+.nav-item.active {
   border-color: rgba(255, 255, 255, .68);
   background: #fff;
   box-shadow: 0 13px 32px rgba(7, 13, 66, .25);
   color: var(--color-ink);
+  font-weight: 600;
 }
 
-.sidebar-nav a.active::before {
+.sidebar-nav a.active::before,
+.nav-item.active::before {
   position: absolute;
   top: 50%;
   left: -6px;
@@ -15677,6 +15692,14 @@ h4,
   background: linear-gradient(var(--color-cyan), var(--color-purple));
   content: "";
   transform: translateY(-50%);
+}
+
+.nav-item span {
+  color: rgba(255, 255, 255, .5);
+}
+
+.nav-item.active span {
+  color: var(--color-purple);
 }
 
 .sidebar-note {
