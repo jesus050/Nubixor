@@ -27,7 +27,7 @@ services:
       retries: 20
 
   api:
-    build: .
+    image: ghcr.io/jesus050/nubixor-api:latest
     restart: unless-stopped
     depends_on:
       postgres:
