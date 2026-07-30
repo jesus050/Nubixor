@@ -14,6 +14,19 @@ SET taxpayer_type = 'LEGAL_PERSON_DEMO',
     updated_at = now()
 WHERE company_id = '00000000-0000-0000-0000-000000000001';
 
+INSERT INTO tenants(id,legal_name,trade_name,tax_id)
+VALUES ('21935393-1ae3-48f2-9467-13fa37620fe2','Vision Creativa','Crative','123456789')
+ON CONFLICT(id) DO NOTHING;
+
+INSERT INTO branches(id,tenant_id,name,code)
+VALUES ('75b7b9e7-5789-4ba8-963e-6a58bc6ebcb0','21935393-1ae3-48f2-9467-13fa37620fe2','Sede Principal','MAIN-CR')
+ON CONFLICT(id) DO NOTHING;
+
+INSERT INTO warehouses(id,tenant_id,branch_id,name,code,warehouse_type)
+VALUES ('3efdba57-797c-4748-a849-f6d2328ac028','21935393-1ae3-48f2-9467-13fa37620fe2','75b7b9e7-5789-4ba8-963e-6a58bc6ebcb0','Bodega Central','BOD-CR','AVAILABLE')
+ON CONFLICT(id) DO NOTHING;
+
+
 UPDATE company_tax_profiles
 SET taxpayer_type = 'NATURAL_PERSON_DEMO',
     electronic_invoicing_required = FALSE,
