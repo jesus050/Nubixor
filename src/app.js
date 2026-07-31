@@ -102,6 +102,21 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   }));
 
   application.use('/api/health', health);
+  application.get('/api/seed-billing', async (req, res, next) => {
+    try {
+      const { query } = await import('./db.js');
+      const tenantId = '00000000-0000-0000-0000-000000000001';
+      await query(`
+        UPDATE electronic_billing_reference_mappings
+        SET provider_value = '01'
+        WHERE company_id = $1 AND provider_code = 'FACTUS' AND environment = 'TEST'
+          AND catalog_type = 'DOCUMENT_TYPE' AND internal_code = 'ELECTRONIC_INVOICE'
+      `, [tenantId]);
+      res.json({ success: true, updated: 'DOCUMENT_TYPE to 01' });
+    } catch(err) {
+      next(err);
+    }
+  });
   application.use('/api/auth', authRouter);
   if (security) {
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
