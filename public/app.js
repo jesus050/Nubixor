@@ -3405,11 +3405,49 @@ function renderProducts() {
     return !query || searchable.includes(query);
   });
 
+  const parentMap = new Map();
+  const standalone = [];
+
+  for (const prod of filtered) {
+    if (prod.parent_product_id) {
+      if (!parentMap.has(prod.parent_product_id)) {
+        parentMap.set(prod.parent_product_id, []);
+      }
+      parentMap.get(prod.parent_product_id).push(prod);
+    } else {
+      standalone.push(prod);
+    }
+  }
+
+  const skuMap = new Map();
+  for (const prod of standalone) {
+    const baseSku = (prod.sku || '').trim().toUpperCase();
+    if (!skuMap.has(baseSku)) {
+      skuMap.set(baseSku, []);
+    }
+    skuMap.get(baseSku).push(prod);
+  }
+
+  const finalUnifiedList = [];
+  for (const [baseSku, items] of skuMap.entries()) {
+    const master = items[0];
+    const childVariants = [
+      ...(parentMap.get(master.id) || []),
+      ...items.slice(1),
+    ];
+
+    finalUnifiedList.push({
+      master,
+      variants: childVariants,
+      totalCount: 1 + childVariants.length,
+    });
+  }
+
   elements.productTableBody.replaceChildren();
-  elements.productDataState.hidden = filtered.length > 0;
+  elements.productDataState.hidden = finalUnifiedList.length > 0;
   elements.productDataState.classList.remove('error');
 
-  if (!filtered.length) {
+  if (!finalUnifiedList.length) {
     const hasSearch = Boolean(query);
     elements.productDataState.querySelector('strong').textContent =
       hasSearch ? 'No encontramos productos' : 'Esta empresa todavía no tiene productos';
@@ -3419,7 +3457,11 @@ function renderProducts() {
         : 'Agrega el primer producto para comenzar a construir el catálogo.';
   }
 
-  for (const product of filtered) {
+  for (const group of finalUnifiedList) {
+    const product = group.master;
+    const variants = group.variants;
+    const hasVariants = variants.length > 0;
+
     const row = document.createElement('tr');
     const nameCell = document.createElement('td');
     nameCell.dataset.label = 'Producto';
@@ -3436,25 +3478,29 @@ function renderProducts() {
       visual.textContent = product.name.slice(0, 1).toUpperCase();
     }
     const name = document.createElement('strong');
-    name.textContent = product.name;
+    name.textContent = hasVariants
+      ? product.name.replace(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i, '').trim()
+      : product.name;
+
     const nameCopy = document.createElement('div');
     nameCopy.className = 'product-name-copy';
     nameCopy.append(name);
-    if (product.product_kind && product.product_kind !== 'SIMPLE') {
+
+    if (hasVariants || product.product_kind === 'VARIANT_PARENT' || product.product_kind === 'COMBO') {
       const kind = document.createElement('small');
-      kind.className = `product-kind-badge ${product.product_kind.toLowerCase()}`;
-      if (product.product_kind === 'COMBO') kind.textContent = 'Combo';
-      else if (product.product_kind === 'VARIANT_PARENT') {
-        kind.textContent = 'Producto con opciones';
+      kind.className = `product-kind-badge ${product.product_kind ? product.product_kind.toLowerCase() : 'variant_parent'}`;
+      if (product.product_kind === 'COMBO') {
+        kind.textContent = 'Combo';
       } else {
-        const attributes = product.variant_attributes || {};
-        kind.textContent = Object.entries(attributes)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(' · ') || 'Variante';
+        const optionCount = 1 + variants.length;
+        const colorNames = [product, ...variants].map(v => v.variant_attributes?.Color || v.color || v.name).slice(0, 3).join(', ');
+        kind.textContent = `🎨 ${optionCount} Opciones (${colorNames}${optionCount > 3 ? '...' : ''})`;
       }
       nameCopy.append(kind);
     }
+
     nameWrap.append(visual, nameCopy);
+
     const productActions = document.createElement('div');
     productActions.className = 'product-row-actions';
     const imageButton = document.createElement('button');
@@ -3463,13 +3509,14 @@ function renderProducts() {
     imageButton.textContent = product.image_url ? 'Cambiar foto' : 'Adjuntar foto';
     imageButton.addEventListener('click', () => openProductImageDialog(product));
     productActions.append(imageButton);
-    if (hasAnyPermission('catalog.manage') && product.product_kind !== 'VARIANT') {
+
+    if (hasAnyPermission('catalog.manage')) {
       const organizeButton = document.createElement('button');
       organizeButton.className = 'product-structure-action';
       organizeButton.type = 'button';
       organizeButton.textContent = product.product_kind === 'COMBO'
         ? 'Configurar combo'
-        : product.product_kind === 'VARIANT_PARENT'
+        : (hasVariants || product.product_kind === 'VARIANT_PARENT')
           ? 'Administrar opciones'
           : 'Colores o combo';
       organizeButton.addEventListener(
@@ -3478,12 +3525,21 @@ function renderProducts() {
       );
       productActions.append(organizeButton);
     }
+
     nameCell.append(nameWrap, productActions);
     row.append(nameCell);
     row.append(createCell('SKU', product.sku));
     row.append(createCell('Categoría', product.category_name));
     row.append(createCell('Marca', product.brand_name));
-    row.append(createCell('Precio de venta', formatCurrency(product.sale_price)));
+
+    let priceText = formatCurrency(product.sale_price);
+    if (hasVariants) {
+      const prices = [product, ...variants].map(v => Number(v.sale_price)).filter(Boolean);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      priceText = minP === maxP ? formatCurrency(minP) : `${formatCurrency(minP)} - ${formatCurrency(maxP)}`;
+    }
+    row.append(createCell('Precio de venta', priceText));
 
     const taxCell = document.createElement('td');
     taxCell.dataset.label = 'Impuesto';
@@ -3493,6 +3549,7 @@ function renderProducts() {
       ? `${product.tax_name} · ${Number(product.tax_rate)}%`
       : 'Pendiente';
     taxCell.append(taxStatus);
+
     if (hasAnyPermission('catalog.manage')) {
       const taxButton = document.createElement('button');
       taxButton.className = 'tax-action';
@@ -3502,11 +3559,50 @@ function renderProducts() {
       taxCell.append(taxButton);
     }
     row.append(taxCell);
+
     elements.productTableBody.append(row);
+
+    if (hasVariants) {
+      for (const variant of variants) {
+        const vRow = document.createElement('tr');
+        vRow.style.cssText = 'background: rgba(248, 250, 252, 0.7); font-size: 13px;';
+        
+        const vNameCell = document.createElement('td');
+        vNameCell.style.paddingLeft = '36px';
+        const vWrap = document.createElement('div');
+        vWrap.className = 'company-name';
+        const vBadge = document.createElement('span');
+        vBadge.style.cssText = 'font-weight:700; color:#6366f1; background:#e0e7ff; padding:2px 8px; border-radius:12px; font-size:11px; margin-right:8px;';
+        const colorName = variant.variant_attributes?.Color || variant.color || variant.name;
+        vBadge.textContent = `🎨 ${colorName}`;
+        
+        const vName = document.createElement('strong');
+        vName.textContent = variant.name;
+        vWrap.append(vBadge, vName);
+        vNameCell.append(vWrap);
+
+        vRow.append(vNameCell);
+        vRow.append(createCell('SKU', variant.sku));
+        vRow.append(createCell('Categoría', variant.category_name || product.category_name));
+        vRow.append(createCell('Marca', variant.brand_name || product.brand_name));
+        vRow.append(createCell('Precio de venta', formatCurrency(variant.sale_price)));
+
+        const vTaxCell = document.createElement('td');
+        const vTaxStatus = document.createElement('span');
+        vTaxStatus.className = `table-status ${variant.tax_review_status === 'REVIEWED' ? 'active' : 'pending'}`;
+        vTaxStatus.textContent = variant.tax_name
+          ? `${variant.tax_name} · ${Number(variant.tax_rate)}%`
+          : 'Pendiente';
+        vTaxCell.append(vTaxStatus);
+        vRow.append(vTaxCell);
+
+        elements.productTableBody.append(vRow);
+      }
+    }
   }
 
   elements.productRecordCount.textContent =
-    `${filtered.length} ${filtered.length === 1 ? 'producto' : 'productos'}`;
+    `${finalUnifiedList.length} ${finalUnifiedList.length === 1 ? 'producto unificado' : 'productos unificados'}`;
 }
 
 function updateCatalogCounters() {
@@ -4723,17 +4819,54 @@ function renderPosCatalog() {
   const filtered = posCatalog.filter((product) => {
     const searchable = normalizeSearch(
       `${product.name} ${product.sku} ${product.barcode || ''} ${product.category_name || ''} ` +
-      `${product.seller_company_name || ''}`,
+      `${product.seller_company_name || ''} ${product.color || ''}`,
     );
     const matchesCategory =
       activePosCategory === 'ALL' || product.category_id === activePosCategory;
     return matchesCategory && (!search || searchable.includes(search));
   });
+
+  const skuGroups = new Map();
+  for (const item of filtered) {
+    const baseSku = (item.sku || '').trim().toUpperCase();
+    if (!skuGroups.has(baseSku)) {
+      skuGroups.set(baseSku, []);
+    }
+    skuGroups.get(baseSku).push(item);
+  }
+
+  const groupedProducts = [];
+  for (const [baseSku, items] of skuGroups.entries()) {
+    if (items.length === 1) {
+      groupedProducts.push({ ...items[0], isGrouped: false, variants: items });
+    } else {
+      const mainItem = items[0];
+      const totalStock = items.reduce((sum, i) => sum + Number(i.on_hand || 0), 0);
+      const variants = items.map((item) => {
+        let colorName = item.color || item.variant_name;
+        if (!colorName) {
+          const match = item.name.match(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i);
+          colorName = match ? match[1].trim() : item.name;
+        }
+        return {
+          ...item,
+          colorLabel: colorName,
+        };
+      });
+      groupedProducts.push({
+        ...mainItem,
+        isGrouped: true,
+        totalStock,
+        variants,
+      });
+    }
+  }
+
   elements.posProductGrid.replaceChildren();
-  elements.posCatalogState.hidden = filtered.length > 0;
+  elements.posCatalogState.hidden = groupedProducts.length > 0;
   elements.posCatalogState.classList.remove('error');
 
-  if (!filtered.length) {
+  if (!groupedProducts.length) {
     elements.posCatalogState.querySelector('strong').textContent =
       search ? 'No encontramos ese producto' : 'No hay productos disponibles';
     elements.posCatalogState.querySelector('p').textContent =
@@ -4742,31 +4875,39 @@ function renderPosCatalog() {
         : 'Registra existencias en esta bodega para habilitar la venta.';
   }
 
-  for (const product of filtered) {
+  for (const group of groupedProducts) {
     const card = document.createElement('article');
     card.className = 'pos-product-card';
-    card.classList.toggle('combo', product.product_kind === 'COMBO');
-    const visual = product.image_url
+    card.classList.toggle('combo', group.product_kind === 'COMBO');
+
+    let activeVariant = group.variants[0];
+
+    const visual = group.image_url
       ? document.createElement('img')
       : document.createElement('span');
     visual.className = 'pos-product-visual';
-    if (product.image_url) {
-      visual.src = resolvePublicAsset(product.image_url);
-      visual.alt = product.image_alt || product.name;
+    if (group.image_url) {
+      visual.src = resolvePublicAsset(group.image_url);
+      visual.alt = group.image_alt || group.name;
     } else {
-      visual.textContent = product.name.slice(0, 1).toUpperCase();
+      visual.textContent = group.name.slice(0, 1).toUpperCase();
     }
+
     const info = document.createElement('div');
     info.className = 'pos-product-info';
     const sku = document.createElement('small');
     sku.textContent = [
-      product.seller_company_name,
-      product.category_name,
-      product.sku,
+      group.seller_company_name,
+      group.category_name,
+      group.sku,
     ].filter(Boolean).join(' · ');
+
     const name = document.createElement('strong');
-    name.textContent = product.name;
-    if (product.product_kind === 'COMBO') {
+    name.textContent = group.isGrouped
+      ? group.name.replace(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i, '').trim()
+      : group.name;
+
+    if (group.product_kind === 'COMBO') {
       const comboBadge = document.createElement('em');
       comboBadge.className = 'pos-combo-badge';
       comboBadge.textContent = 'Combo';
@@ -4774,8 +4915,28 @@ function renderPosCatalog() {
     } else {
       info.append(sku, name);
     }
+
+    if (group.isGrouped && group.variants.length > 1) {
+      const colorSelect = document.createElement('select');
+      colorSelect.className = 'pos-color-select';
+      colorSelect.style.cssText = 'margin-top:4px; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; font-weight:600; width:100%; background: #f8fafc; color: #1e293b;';
+      for (const variant of group.variants) {
+        const option = new Option(
+          `🎨 Color: ${variant.colorLabel || variant.name} (${variant.on_hand} disp.)`,
+          variant.id,
+        );
+        colorSelect.append(option);
+      }
+      colorSelect.addEventListener('change', () => {
+        const selectedId = colorSelect.value;
+        activeVariant = group.variants.find((v) => v.id === selectedId) || group.variants[0];
+        updateCardState();
+      });
+      info.append(colorSelect);
+    }
+
     const price = document.createElement('b');
-    const commercialPrice = productCommercialPrice(product, 1);
+    const commercialPrice = productCommercialPrice(group, 1);
     price.textContent = formatCurrency(commercialPrice.unitPrice);
     if (commercialPrice.source !== 'BASE') {
       const offer = document.createElement('small');
@@ -4788,19 +4949,30 @@ function renderPosCatalog() {
 
     const footer = document.createElement('div');
     footer.className = 'pos-product-footer';
-    const stock = Number(product.on_hand);
     const stockLabel = document.createElement('span');
-    stockLabel.textContent =
-      `${stock} · ${warehouseTypeLabels[product.warehouse_type] || 'Disponible'}`;
-    const currentQuantity = saleCart.get(product.id)?.quantity || 0;
     const addButton = document.createElement('button');
     addButton.type = 'button';
-    addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
-    addButton.disabled =
-      stock <= 0 ||
-      currentQuantity >= stock ||
-      product.tax_review_status !== 'REVIEWED';
-    addButton.addEventListener('click', () => addProductToCart(product));
+
+    function updateCardState() {
+      const targetProduct = activeVariant || group;
+      const stock = Number(targetProduct.on_hand || 0);
+      stockLabel.textContent =
+        `${stock} · ${warehouseTypeLabels[targetProduct.warehouse_type] || 'Disponible'}`;
+      const currentQuantity = saleCart.get(targetProduct.id)?.quantity || 0;
+      addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
+      addButton.disabled =
+        stock <= 0 ||
+        currentQuantity >= stock ||
+        targetProduct.tax_review_status !== 'REVIEWED';
+    }
+
+    addButton.addEventListener('click', () => {
+      const targetProduct = activeVariant || group;
+      addProductToCart(targetProduct);
+      updateCardState();
+    });
+
+    updateCardState();
     footer.append(stockLabel, addButton);
     card.append(visual, info, footer);
     elements.posProductGrid.append(card);
@@ -13711,6 +13883,23 @@ async function openProductStructureDialog(product) {
   elements.productVariantError.hidden = true;
   elements.productComboError.hidden = true;
   elements.productComboAssemblyError.hidden = true;
+  
+  const optionValueInput = elements.productVariantForm.querySelector('[name="optionValue"]');
+  const skuInput = elements.productVariantForm.querySelector('[name="sku"]');
+  if (skuInput) {
+    skuInput.placeholder = `${product.sku}-COLOR`;
+  }
+  if (optionValueInput && skuInput) {
+    optionValueInput.oninput = () => {
+      const val = optionValueInput.value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-');
+      if (val) {
+        skuInput.value = `${product.sku}-${val}`;
+      } else {
+        skuInput.value = '';
+      }
+    };
+  }
+
   syncProductStructureWarehouses();
   selectProductStructurePanel(
     product.product_kind === 'COMBO' ? 'combo' : 'variants',

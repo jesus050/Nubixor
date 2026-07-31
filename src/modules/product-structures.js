@@ -141,10 +141,21 @@ router.get(
              WHERE balance.tenant_id=child.tenant_id
                AND balance.product_id=child.id
            ) stock ON TRUE
-           WHERE child.tenant_id=$1 AND child.parent_product_id=$2
+           WHERE child.tenant_id=$1
+             AND (
+               child.parent_product_id = $2
+               OR (
+                 child.id <> $2
+                 AND (
+                   UPPER(child.sku) = UPPER($3)
+                   OR UPPER(child.sku) LIKE UPPER($3 || '-%')
+                   OR UPPER(child.sku) LIKE UPPER($3 || '_%')
+                 )
+               )
+             )
              AND child.deleted_at IS NULL
            ORDER BY child.name`,
-          [req.context.tenantId, product.id],
+          [req.context.tenantId, product.id, product.sku],
         ),
         client.query(
           `SELECT component.*, product.name product_name,product.sku,
