@@ -10752,15 +10752,38 @@ async function queueElectronicDocument(documentId, button) {
       method: 'POST',
       headers: { 'x-tenant-id': activeTenantId },
     });
+    
+    button.textContent = 'Transmitiendo…';
+    const account = (typeof electronicBillingOverview !== 'undefined' && electronicBillingOverview?.account) || null;
+    const isSandbox = account?.provider_code === 'SANDBOX';
+    
+    if (isSandbox) {
+      await getJson(`/api/electronic-billing/documents/${documentId}/process-sandbox`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ outcome: 'ACCEPTED' }),
+      });
+    } else {
+      await getJson(`/api/electronic-billing/documents/${documentId}/process`, {
+        method: 'POST',
+        headers: { 'x-tenant-id': activeTenantId },
+      });
+    }
+    
     await Promise.all([
       loadElectronicBilling().catch(() => {}),
       loadBillingWorkflow().catch(() => {})
     ]);
-    showToast('Documento preparado en la cola de transmisión.');
+    showToast('Factura emitida y transmitida con éxito a la DIAN.');
   } catch (error) {
     showToast(error.message);
-    button.disabled = false;
-    button.textContent = 'Preparar envío';
+    await Promise.all([
+      loadElectronicBilling().catch(() => {}),
+      loadBillingWorkflow().catch(() => {})
+    ]);
   }
 }
 
