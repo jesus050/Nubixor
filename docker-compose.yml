@@ -1,3 +1,17 @@
+x-nubixor-environment: &nubixor-environment
+  NODE_ENV: production
+  DATABASE_URL: postgresql://megasuite:${POSTGRES_PASSWORD}@postgres:5432/megasuite
+  DATABASE_SSL: "false"
+  REDIS_URL: redis://redis:6379/0
+  TRUST_PROXY: "true"
+  PUBLIC_BASE_URL: https://${APP_DOMAIN:?Configura APP_DOMAIN}
+  CORS_ORIGINS: https://${APP_DOMAIN}
+  STORAGE_DIR: /var/lib/megasuite/storage
+  BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?Configura BACKUP_ENCRYPTION_KEY}
+  PASSWORD_RESET_WEBHOOK_URL: ${PASSWORD_RESET_WEBHOOK_URL:-}
+  PASSWORD_RESET_WEBHOOK_SECRET: ${PASSWORD_RESET_WEBHOOK_SECRET:-}
+  ELECTRONIC_BILLING_ENCRYPTION_KEY: ${ELECTRONIC_BILLING_ENCRYPTION_KEY:?Configura ELECTRONIC_BILLING_ENCRYPTION_KEY}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -35,26 +49,31 @@ services:
       redis:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      <<: *nubixor-environment
       PORT: 4100
-      DATABASE_URL: postgresql://megasuite:${POSTGRES_PASSWORD}@postgres:5432/megasuite
-      DATABASE_SSL: "false"
-      REDIS_URL: redis://redis:6379/0
-      TRUST_PROXY: "true"
-      PUBLIC_BASE_URL: https://${APP_DOMAIN:?Configura APP_DOMAIN}
-      CORS_ORIGINS: https://${APP_DOMAIN}
-      STORAGE_DIR: /var/lib/megasuite/storage
       BACKUP_ENABLED: "true"
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       BACKUP_DIR: /var/lib/megasuite/backups
-      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?Configura BACKUP_ENCRYPTION_KEY}
-      PASSWORD_RESET_WEBHOOK_URL: ${PASSWORD_RESET_WEBHOOK_URL:-}
-      PASSWORD_RESET_WEBHOOK_SECRET: ${PASSWORD_RESET_WEBHOOK_SECRET:-}
-      ELECTRONIC_BILLING_ENCRYPTION_KEY: ${ELECTRONIC_BILLING_ENCRYPTION_KEY:?Configura ELECTRONIC_BILLING_ENCRYPTION_KEY}
     volumes:
       - megasuite_storage:/var/lib/megasuite/storage
       - megasuite_backups:/var/lib/megasuite/backups
+
+  billing-worker:
+    image: ghcr.io/jesus050/nubixor-api:latest
+    restart: unless-stopped
+    command: ["npm", "run", "billing:worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *nubixor-environment
+      BILLING_WORKER_POLL_MS: ${BILLING_WORKER_POLL_MS:-5000}
+      BILLING_WORKER_STALE_SECONDS: ${BILLING_WORKER_STALE_SECONDS:-600}
+    volumes:
+      - megasuite_storage:/var/lib/megasuite/storage
 
   caddy:
     image: caddy:2-alpine
