@@ -1301,7 +1301,7 @@ dialog::backdrop, .app-dialog::backdrop, .company-dialog::backdrop {
 }
 
 /* 5. Menú de Usuario Flotante */
-.account-menu {
+.account-menu:not([hidden]) {
   position: absolute !important;
   right: 28px !important;
   top: 58px !important;
@@ -1315,6 +1315,81 @@ dialog::backdrop, .app-dialog::backdrop, .company-dialog::backdrop {
   flex-direction: column !important;
   gap: 8px !important;
   animation: slideDownMenu 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.account-menu[hidden] {
+  display: none !important;
+}
+
+.billing-document-actions {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+
+.billing-document-actions button,
+.billing-document-actions a.billing-artifact-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  font-family: var(--font-body) !important;
+}
+
+/* Botón preparar envío / acción principal */
+.billing-document-actions button:not(.sandbox-process-button) {
+  background: var(--brand-primary-light) !important;
+  color: var(--brand-primary) !important;
+  border: 1px solid rgba(124, 58, 237, 0.15) !important;
+}
+
+.billing-document-actions button:not(.sandbox-process-button):hover:not(:disabled) {
+  background: var(--brand-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.2) !important;
+}
+
+/* Botón enviar a Factus / Probar respuesta */
+.billing-document-actions button.sandbox-process-button {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25) !important;
+}
+
+.billing-document-actions button.sandbox-process-button:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 15px rgba(124, 58, 237, 0.35) !important;
+}
+
+/* Enlaces PDF / XML */
+.billing-document-actions a.billing-artifact-link {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.billing-document-actions a.billing-artifact-link:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Deshabilitados */
+.billing-document-actions button:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 @keyframes slideDownMenu {

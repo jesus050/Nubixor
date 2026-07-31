@@ -102,6 +102,26 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   }));
 
   application.use('/api/health', health);
+  application.get('/api/test-billing-queue', async (req, res, next) => {
+    try {
+      const { query } = await import('./db.js');
+      const docs = await query(`
+        SELECT doc.id, doc.prefix, doc.document_number, doc.status,
+               (SELECT JSON_AGG(t) FROM (
+                  SELECT id, status, error_message, attempt_number, created_at 
+                  FROM electronic_document_transmissions 
+                  WHERE electronic_document_id = doc.id 
+                  ORDER BY attempt_number DESC
+                ) t) transmissions
+        FROM electronic_documents doc
+        ORDER BY doc.created_at DESC
+        LIMIT 5
+      `);
+      res.json(docs.rows);
+    } catch(err) {
+      next(err);
+    }
+  });
   application.use('/api/auth', authRouter);
   if (security) {
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
