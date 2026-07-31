@@ -102,6 +102,24 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   }));
 
   application.use('/api/health', health);
+  application.get('/api/seed-billing', async (req, res, next) => {
+    try {
+      const { query } = await import('./db.js');
+      const tenantId = '00000000-0000-0000-0000-000000000001';
+      await query(`
+        INSERT INTO electronic_billing_reference_mappings(
+          company_id, provider_code, environment, catalog_type, internal_code, provider_value, source_url
+        )
+        VALUES
+          ('${tenantId}', 'FACTUS', 'TEST', 'DOCUMENT_TYPE', 'ELECTRONIC_INVOICE', '1', 'auto-seed'),
+          ('${tenantId}', 'FACTUS', 'TEST', 'OPERATION_TYPE', 'ELECTRONIC_INVOICE', '10', 'auto-seed')
+        ON CONFLICT (company_id, provider_code, environment, catalog_type, internal_code) DO NOTHING
+      `);
+      res.json({ success: true, seeded: ['DOCUMENT_TYPE', 'OPERATION_TYPE'] });
+    } catch(err) {
+      next(err);
+    }
+  });
   application.use('/api/auth', authRouter);
   if (security) {
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
