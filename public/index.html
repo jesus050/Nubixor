@@ -14,9 +14,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260730-REALTIME-v13">
-    <link rel="stylesheet" href="./brand.css?v=20260730-REALTIME-v13">
-    <script src="./app.js?v=20260730-REALTIME-v13" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260731-REALTIME-SYNC-v101">
+    <link rel="stylesheet" href="./brand.css?v=20260731-REALTIME-SYNC-v101">
+    <script src="./app.js?v=20260731-REALTIME-SYNC-v101" defer></script>
 
   </head>
   <body>
@@ -6457,6 +6457,14 @@
           <div id="receiptCreditRow"><span>Cuenta por cobrar</span><strong id="receiptCreditReference">—</strong></div>
           <div id="receiptCashReceivedRow"><span>Efectivo recibido</span><strong id="receiptCashReceived">$0</strong></div>
           <div id="receiptCashChangeRow"><span>Cambio entregado</span><strong id="receiptCashChange">$0</strong></div>
+        </div>
+        <div class="receipt-dian-qr-block" id="receiptDianQrBlock" hidden style="margin-top: 16px; padding: 16px; background: #fafafa; border: 1px dashed #cbd5e1; border-radius: 12px; text-align: center;">
+          <p style="margin: 0 0 8px; font-size: 11px; font-weight: 800; color: #0284c7; letter-spacing: 0.05em; text-transform: uppercase;">Factura Electrónica de Venta — DIAN</p>
+          <div id="receiptQrContainer" style="display: flex; justify-content: center; margin-bottom: 8px;">
+            <img id="receiptQrImage" src="" alt="Código QR DIAN" style="width: 140px; height: 140px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff;">
+          </div>
+          <p style="margin: 4px 0 0; font-size: 10px; font-weight: 600; color: #64748b;">CUFE / CUDE:</p>
+          <code id="receiptCufeText" style="display: block; word-break: break-all; font-size: 9px; color: #0f172a; font-family: monospace; background: #fff; padding: 6px; border-radius: 6px; border: 1px solid #e2e8f0; margin-top: 4px;"></code>
         </div>
         <div class="dialog-actions">
           <button class="secondary-button danger-soft" id="openReturnDialogButton" type="button">

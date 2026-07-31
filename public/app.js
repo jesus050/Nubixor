@@ -860,6 +860,9 @@ const elements = {
   receiptCashReceived: document.querySelector('#receiptCashReceived'),
   receiptCashChangeRow: document.querySelector('#receiptCashChangeRow'),
   receiptCashChange: document.querySelector('#receiptCashChange'),
+  receiptDianQrBlock: document.querySelector('#receiptDianQrBlock'),
+  receiptQrImage: document.querySelector('#receiptQrImage'),
+  receiptCufeText: document.querySelector('#receiptCufeText'),
   openReturnDialogButton: document.querySelector('#openReturnDialogButton'),
   returnDialog: document.querySelector('#returnDialog'),
   returnForm: document.querySelector('#returnForm'),
@@ -10197,12 +10200,16 @@ function renderBillingFiscalDocuments(invoices = [], notes = []) {
     if (fiscalCode) {
       const code = window.document.createElement('button');
       code.type = 'button';
-      code.className = 'billing-action-button';
-      code.textContent = 'Ver código completo';
-      code.addEventListener('click', () => window.prompt(
-        document.fiscalKind === 'INVOICE' ? 'CUFE verificado' : 'CUDE verificado',
-        fiscalCode,
-      ));
+      code.addEventListener('click', () => {
+        const fullCode = fiscalCode;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(fullCode)
+            .then(() => showToast(`${document.fiscalKind === 'INVOICE' ? 'CUFE' : 'CUDE'} copiado al portapapeles.`))
+            .catch(() => showToast(`Código: ${fullCode}`));
+        } else {
+          showToast(`Código: ${fullCode}`);
+        }
+      });
       actions.append(code);
     }
     if (document.qr_url) {
@@ -10746,14 +10753,14 @@ async function saveBillingResolution(event) {
 
 async function queueElectronicDocument(documentId, button) {
   button.disabled = true;
-  button.textContent = 'Preparando…';
+  button.textContent = 'Procesando…';
   try {
     await getJson(`/api/electronic-billing/documents/${documentId}/queue`, {
       method: 'POST',
       headers: { 'x-tenant-id': activeTenantId },
     });
     
-    button.textContent = 'Transmitiendo…';
+    button.textContent = 'Emitiendo DIAN…';
     const account = (typeof electronicBillingOverview !== 'undefined' && electronicBillingOverview?.account) || null;
     const isSandbox = account?.provider_code === 'SANDBOX';
     
@@ -10777,7 +10784,7 @@ async function queueElectronicDocument(documentId, button) {
       loadElectronicBilling().catch(() => {}),
       loadBillingWorkflow().catch(() => {})
     ]);
-    showToast('Factura emitida y transmitida con éxito a la DIAN.');
+    showToast('Factura emitida y aceptada con éxito.');
   } catch (error) {
     showToast(error.message);
     await Promise.all([
@@ -14304,6 +14311,65 @@ function showReceipt(receipt) {
         sum + Number(payment.changeAmount || 0), 0)
       : receipt.cash_change || 0,
   );
+  const docId = billing?.id || receipt.electronic_document_id || receipt.billing_document_id;
+  const cufe = billing?.cufe || receipt.cufe || receipt.billingDocument?.cufe;
+  const qrUrl = billing?.qrUrl || billing?.qr_url || receipt.qr_url || receipt.qrUrl || receipt.billingDocument?.qr_url;
+
+  if (cufe || qrUrl) {
+    elements.receiptDianQrBlock.hidden = false;
+    elements.receiptCufeText.textContent = cufe || 'CUFE verificado';
+    if (qrUrl) {
+      elements.receiptQrImage.src = resolvePublicAsset(qrUrl);
+    } else if (cufe) {
+      elements.receiptQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(cufe)}`;
+    }
+  } else {
+    elements.receiptDianQrBlock.hidden = true;
+  }
+
+  if (electronic && docId && (billing?.status !== 'ACCEPTED' && receipt.electronic_document_status !== 'ACCEPTED')) {
+    (async () => {
+      try {
+        await getJson(`/api/electronic-billing/documents/${docId}/queue`, {
+          method: 'POST',
+          headers: { 'x-tenant-id': activeTenantId },
+        });
+        const account = (typeof electronicBillingOverview !== 'undefined' && electronicBillingOverview?.account) || null;
+        const isSandbox = account?.provider_code === 'SANDBOX';
+        if (isSandbox) {
+          await getJson(`/api/electronic-billing/documents/${docId}/process-sandbox`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+            body: JSON.stringify({ outcome: 'ACCEPTED' }),
+          });
+        } else {
+          await getJson(`/api/electronic-billing/documents/${docId}/process`, {
+            method: 'POST',
+            headers: { 'x-tenant-id': activeTenantId },
+          });
+        }
+        const overview = await getJson('/api/electronic-billing/overview', {
+          headers: { 'x-tenant-id': activeTenantId },
+        }).catch(() => null);
+        const updatedDoc = overview?.documents?.find((item) => item.id === docId);
+        if (updatedDoc && updatedDoc.status === 'ACCEPTED') {
+          elements.receiptDocumentStatus.textContent = 'Aceptada por la DIAN';
+          const newCufe = updatedDoc.cufe;
+          const newQrUrl = updatedDoc.qr_url || updatedDoc.qrUrl;
+          if (newCufe || newQrUrl) {
+            elements.receiptDianQrBlock.hidden = false;
+            elements.receiptCufeText.textContent = newCufe || 'CUFE verificado';
+            if (newQrUrl) {
+              elements.receiptQrImage.src = resolvePublicAsset(newQrUrl);
+            } else if (newCufe) {
+              elements.receiptQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newCufe)}`;
+            }
+          }
+        }
+      } catch (_) {}
+    })();
+  }
+
   const hasReturnableItems = !receipt.grouped &&
     receipt.sale_terms !== 'CREDIT' &&
     receipt.return_status !== 'FULL' &&
@@ -15644,14 +15710,39 @@ function initNetworkStatusMonitor() {
 
 initNetworkStatusMonitor();
 
+async function triggerRealtimeDataRefresh(hint = {}) {
+  if (!activeTenantId) return;
+  const currentView = document.body.dataset.activeView;
+  try {
+    if (currentView === 'facturacion-electronica' || hint.module === 'billing') {
+      if (typeof loadElectronicBillingOverview === 'function') {
+        await loadElectronicBillingOverview().catch(() => {});
+      }
+    }
+    if (currentView === 'caja' || hint.module === 'pos') {
+      if (typeof loadPosOverview === 'function') {
+        await loadPosOverview().catch(() => {});
+      }
+    }
+    if (currentView === 'dashboard' || hint.module === 'dashboard') {
+      if (typeof loadExecutiveSummary === 'function') {
+        await loadExecutiveSummary().catch(() => {});
+      }
+    }
+    if (currentView === 'inventario' || hint.module === 'inventory') {
+      if (typeof loadProducts === 'function') {
+        await loadProducts().catch(() => {});
+      }
+    }
+  } catch (_) {}
+}
+
 function startLiveRealtimeUpdates() {
   setInterval(async () => {
     if (!document.hidden && activeTenantId) {
-      try {
-        await loadExecutiveSummary();
-      } catch {}
+      await triggerRealtimeDataRefresh().catch(() => {});
     }
-  }, 5000);
+  }, 3000);
 }
 
 startLiveRealtimeUpdates();

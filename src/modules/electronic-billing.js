@@ -218,14 +218,14 @@ async function buildFactusInvoicePayload(client, record) {
     mappings.get(mappingKey(type, internalCode)),
     label,
   );
-  const customer = customerResult.rows[0] || record.provider_config?.consumerFinal;
-  if (!customer) {
-    throw new AppError(
-      'Configura el consumidor final de esta empresa o selecciona un cliente.',
-      409,
-      'FACTUS_CUSTOMER_REQUIRED',
-    );
-  }
+  const DEFAULT_CONSUMER_FINAL = {
+    electronic_identification_code: '13',
+    document_number: '222222222222',
+    electronic_legal_organization_code: '2',
+    electronic_tribute_code: 'ZY',
+    name: 'Consumidor Final',
+  };
+  const customer = customerResult.rows[0] || record.provider_config?.consumerFinal || DEFAULT_CONSUMER_FINAL;
   const customerIdentification = customer.document_number || customer.identification;
   const customerName = customer.name || customer.names || customer.company;
   const customerPayload = {
@@ -1516,5 +1516,191 @@ router.post('/contingencies/:contingencyId/close', asyncHandler(async (req, res)
   });
   res.json(result);
 }));
+
+export async function autoProcessElectronicDocument({ tenantId, userId, documentId }) {
+  if (!UUID_PATTERN.test(documentId || '')) return null;
+  try {
+    const account = await query(
+      `SELECT id, provider_code, environment, connection_status
+       FROM electronic_billing_accounts
+       WHERE company_id = $1 AND active = TRUE
+       ORDER BY updated_at DESC LIMIT 1`,
+      [tenantId],
+    );
+    if (!account.rowCount || account.rows[0].connection_status !== 'READY') {
+      return null;
+    }
+    const acc = account.rows[0];
+
+    await withTransaction(async (client) => {
+      const docRes = await client.query(
+        `SELECT id, status, prefix, document_number, sale_id, document_type, billing_resolution_id, customer_id
+         FROM electronic_documents
+         WHERE id = $1 AND company_id = $2
+         FOR UPDATE`,
+        [documentId, tenantId],
+      );
+      if (!docRes.rowCount || docRes.rows[0].status === 'ACCEPTED') return;
+      const record = docRes.rows[0];
+
+      const activeAttempt = await client.query(
+        `SELECT id FROM electronic_document_transmissions
+         WHERE electronic_document_id = $1 AND status IN ('QUEUED', 'SENDING')`,
+        [documentId],
+      );
+      if (activeAttempt.rowCount) return;
+
+      const attempts = await client.query(
+        `SELECT COALESCE(MAX(attempt_number), 0)::integer + 1 next_attempt
+         FROM electronic_document_transmissions WHERE electronic_document_id = $1`,
+        [documentId],
+      );
+      const attemptNumber = attempts.rows[0].next_attempt;
+
+      const docAccount = await client.query(
+        `SELECT account.id billing_account_id, account.provider_code, account.environment,
+                account.provider_config, resolution.provider_numbering_range_id,
+                sale.total, sale.tax_total, sale.created_at, sale.sale_terms, sale.due_date, sale.payment_method
+         FROM electronic_billing_accounts account
+         LEFT JOIN billing_resolutions resolution ON resolution.id = $1
+         JOIN sales sale ON sale.id = $2 AND sale.company_id = $3
+         WHERE account.id = $4 AND account.company_id = $3`,
+        [record.billing_resolution_id, record.sale_id, tenantId, acc.id],
+      );
+      if (!docAccount.rowCount) return;
+      const fullRecord = { ...record, ...docAccount.rows[0], company_id: tenantId };
+
+      const payload = acc.provider_code === 'FACTUS'
+        ? await buildFactusInvoicePayload(client, fullRecord)
+        : {
+            schema: 'nubixor-electronic-document-v1',
+            companyId: tenantId,
+            documentId,
+            documentType: record.document_type,
+            number: `${record.prefix}${record.document_number}`,
+            saleId: record.sale_id,
+          };
+
+      const requestHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+      await client.query(
+        `INSERT INTO electronic_document_transmissions(
+           company_id, electronic_document_id, billing_account_id,
+           attempt_number, idempotency_key, status, request_hash,
+           payload_snapshot, created_by
+         )
+         VALUES($1,$2,$3,$4,$5,'QUEUED',$6,$7,$8)`,
+        [
+          tenantId,
+          documentId,
+          acc.id,
+          attemptNumber,
+          `factus:${documentId}:${attemptNumber}`,
+          requestHash,
+          payload,
+          userId,
+        ],
+      );
+    });
+
+    if (acc.provider_code === 'SANDBOX') {
+      const claimed = await withTransaction(async (client) => {
+        const tr = await client.query(
+          `SELECT transmission.*, account.provider_code, account.environment
+           FROM electronic_document_transmissions transmission
+           JOIN electronic_billing_accounts account ON account.id = transmission.billing_account_id
+           WHERE transmission.electronic_document_id = $1 AND transmission.company_id = $2
+             AND transmission.status IN ('QUEUED', 'RETRYABLE')
+           ORDER BY transmission.attempt_number DESC LIMIT 1 FOR UPDATE`,
+          [documentId, tenantId],
+        );
+        return tr.rows[0] || null;
+      });
+      if (claimed) {
+        const adapter = createBillingAdapter(claimed);
+        const providerResult = await adapter.submitDocument(claimed.payload_snapshot, { outcome: 'ACCEPTED' });
+        await withTransaction(async (client) => {
+          await client.query(
+            `UPDATE electronic_document_transmissions
+             SET status = 'ACCEPTED', completed_at = now(), provider_reference = $2, provider_status = 'ACCEPTED', http_status = 200
+             WHERE id = $1`,
+            [claimed.id, providerResult.providerReference],
+          );
+          await client.query(
+            `UPDATE electronic_documents
+             SET status = 'ACCEPTED', provider_reference = $2, provider_document_id = $2, cufe = $3, qr_url = $4, accepted_at = now(), last_synced_at = now()
+             WHERE id = $1`,
+            [documentId, providerResult.providerReference, providerResult.cufe, providerResult.qrUrl],
+          );
+        });
+      }
+    } else if (acc.provider_code === 'FACTUS') {
+      const claimed = await withTransaction(async (client) => {
+        const tr = await client.query(
+          `SELECT transmission.*, account.company_id account_company_id,
+                  account.provider_code, account.environment, account.base_url,
+                  account.encrypted_credentials, account.provider_config
+           FROM electronic_document_transmissions transmission
+           JOIN electronic_billing_accounts account ON account.id = transmission.billing_account_id
+           WHERE transmission.electronic_document_id = $1 AND transmission.company_id = $2
+             AND transmission.status IN ('QUEUED', 'RETRYABLE')
+           ORDER BY transmission.attempt_number DESC LIMIT 1 FOR UPDATE`,
+          [documentId, tenantId],
+        );
+        if (!tr.rowCount) return null;
+        const rec = tr.rows[0];
+        await client.query(
+          `UPDATE electronic_document_transmissions SET status = 'SENDING', started_at = COALESCE(started_at, now()) WHERE id = $1`,
+          [rec.id],
+        );
+        return rec;
+      });
+      if (claimed) {
+        try {
+          const adapter = createBillingAdapter(claimed);
+          const providerResult = await adapter.submitDocument(claimed.payload_snapshot);
+          const finalStatus = providerResult.status === 'ACCEPTED' ? 'ACCEPTED' : 'SUBMITTED';
+          await withTransaction(async (client) => {
+            await client.query(
+              `UPDATE electronic_document_transmissions
+               SET status = $2, completed_at = now(), provider_reference = $3, provider_status = $2, http_status = 200, response_summary = $4
+               WHERE id = $1`,
+              [claimed.id, finalStatus, providerResult.providerReference, providerResult.response],
+            );
+            await client.query(
+              `UPDATE electronic_documents
+               SET status = $2, provider_reference = $3, provider_document_id = $3, cufe = $4, qr_url = $5, accepted_at = CASE WHEN $2 = 'ACCEPTED' THEN now() ELSE accepted_at END, last_synced_at = now()
+               WHERE id = $1`,
+              [documentId, finalStatus, providerResult.providerReference, providerResult.cufe, providerResult.qrUrl],
+            );
+          });
+        } catch (err) {
+          await withTransaction(async (client) => {
+            await client.query(
+              `UPDATE electronic_document_transmissions
+               SET status = 'REJECTED', completed_at = now(), http_status = $2, error_message = $3
+               WHERE id = $1`,
+              [claimed.id, err.status || 500, err.message],
+            );
+            await client.query(
+              `UPDATE electronic_documents
+               SET status = 'REJECTED', failure_reason = $2, updated_at = now()
+               WHERE id = $1`,
+              [documentId, err.message],
+            );
+          });
+        }
+      }
+    }
+
+    const finalDoc = await query(
+      `SELECT id, status, provider_reference, cufe, qr_url, failure_reason FROM electronic_documents WHERE id = $1`,
+      [documentId],
+    );
+    return finalDoc.rows[0] || null;
+  } catch (err) {
+    console.error('Error auto-processing electronic document:', err);
+    return null;
+  }
+}
 
 export default router;

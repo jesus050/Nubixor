@@ -9,7 +9,7 @@ import {
   postCashSessionClosingAccounting,
   postCashSessionOpeningAccounting,
   postSaleAccounting,
-} from '../accounting.js';
+import { autoProcessElectronicDocument } from './electronic-billing.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -2302,6 +2302,21 @@ router.post('/sales', asyncHandler(async (req, res) => {
       })),
     };
   });
+
+  if (receipt.billingDocument?.id) {
+    const updatedBilling = await autoProcessElectronicDocument({
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      documentId: receipt.billingDocument.id,
+    });
+    if (updatedBilling) {
+      receipt.billingDocument = {
+        ...receipt.billingDocument,
+        ...updatedBilling,
+      };
+    }
+  }
+
   res.status(201).json(receipt);
 }));
 
