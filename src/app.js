@@ -126,48 +126,90 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.get('/api/test-billing-run-queue/:documentId', async (req, res, next) => {
     try {
       const { documentId } = req.params;
-      const { query, withTransaction } = await import('./db.js');
-      const { buildFactusInvoicePayload } = await import('./modules/electronic-billing.js');
+      const { query } = await import('./db.js');
       
       const tenantId = '00000000-0000-0000-0000-000000000001';
-      const result = await withTransaction(async (client) => {
-        const document = await client.query(
-          `SELECT document.id, document.status, document.document_type,
-                  document.prefix, document.document_number, document.sale_id,
-                  document.company_id,
-                  sale.total, sale.tax_total, sale.created_at, sale.customer_id,
-                  sale.sale_terms, sale.due_date, sale.payment_method,
-                  account.id billing_account_id, account.connection_status,
-                  account.provider_code, account.environment, account.provider_config,
-                  resolution.provider_numbering_range_id,
-                  resolution.provider_document_code
-           FROM electronic_documents document
-           JOIN sales sale
-             ON sale.id = document.sale_id AND sale.company_id = document.company_id
-           JOIN electronic_billing_accounts account
-             ON account.company_id = document.company_id AND account.active = TRUE
-           LEFT JOIN billing_resolutions resolution
-             ON resolution.id = document.billing_resolution_id
-            AND resolution.company_id = document.company_id
-           WHERE document.id = $1 AND document.company_id = $2
-           ORDER BY account.updated_at DESC
-           LIMIT 1`,
-          [documentId, tenantId]
-        );
-        if (!document.rowCount) {
-          return { error: 'No document found' };
-        }
-        const record = document.rows[0];
-        const payload = await buildFactusInvoicePayload(client, record);
-        return { success: true, payload };
+      const docRes = await query(
+        `SELECT document.id, document.status, document.document_type,
+                document.prefix, document.document_number, document.sale_id,
+                document.company_id,
+                sale.total, sale.tax_total, sale.created_at, sale.customer_id,
+                sale.sale_terms, sale.due_date, sale.payment_method,
+                account.id billing_account_id, account.connection_status,
+                account.provider_code, account.environment, account.provider_config,
+                resolution.provider_numbering_range_id,
+                resolution.provider_document_code
+         FROM electronic_documents document
+         JOIN sales sale
+           ON sale.id = document.sale_id AND sale.company_id = document.company_id
+         JOIN electronic_billing_accounts account
+           ON account.company_id = document.company_id AND account.active = TRUE
+         LEFT JOIN billing_resolutions resolution
+           ON resolution.id = document.billing_resolution_id
+          AND resolution.company_id = document.company_id
+         WHERE document.id = $1 AND document.company_id = $2`,
+        [documentId, tenantId]
+      );
+      
+      if (!docRes.rowCount) {
+        return res.json({ error: 'No document found' });
+      }
+      
+      const record = docRes.rows[0];
+      
+      const [items, tenders, mappings, customer] = await Promise.all([
+        query(
+          `SELECT item.product_id, item.sku_snapshot, item.name_snapshot,
+                  item.quantity, item.unit_price, item.discount_amount,
+                  item.tax_rate, item.tax_category_id,
+                  product.electronic_unit_measure_code,
+                  product.electronic_standard_code,
+                  tax.code tax_internal_code, tax.treatment tax_treatment
+           FROM sale_items item
+           JOIN products product
+             ON product.id = item.product_id
+            AND product.seller_company_id = item.seller_company_id
+           LEFT JOIN tax_categories tax
+             ON tax.id = item.tax_category_id
+            AND tax.tenant_id = item.seller_company_id
+           WHERE item.sale_id = $1 AND item.seller_company_id = $2`,
+          [record.sale_id, record.company_id]
+        ),
+        query(
+          `SELECT method, amount, reference
+           FROM sale_payment_tenders
+           WHERE sale_id = $1 AND seller_company_id = $2
+             AND reconciliation_status <> 'REVERSED'`,
+          [record.sale_id, record.company_id]
+        ),
+        query(
+          `SELECT catalog_type, internal_code, provider_value
+           FROM electronic_billing_reference_mappings
+           WHERE company_id = $1 AND provider_code = 'FACTUS' AND environment = $2`,
+          [record.company_id, record.environment]
+        ),
+        record.customer_id
+          ? query(
+              `SELECT id, name, document_type, document_number, email, phone, address,
+                      electronic_identification_code,
+                      electronic_legal_organization_code, electronic_tribute_code,
+                      municipality_code, country_code
+               FROM customers
+               WHERE id = $1 AND tenant_id = $2 AND active = TRUE`,
+              [record.customer_id, record.company_id]
+            )
+          : Promise.resolve({ rows: [] })
+      ]);
+      
+      res.json({
+        record,
+        items: items.rows,
+        tenders: tenders.rows,
+        mappings: mappings.rows,
+        customer: customer.rows[0] || null
       });
-      res.json(result);
     } catch(err) {
-      res.status(err.status || 500).json({
-        error: err.message,
-        code: err.code,
-        status: err.status
-      });
+      res.status(500).json({ error: err.message });
     }
   });
 
