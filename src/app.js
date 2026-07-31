@@ -76,8 +76,6 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.use(helmet({
     contentSecurityPolicy: {
       directives: {
-        // Safari puede intentar subir los recursos locales a HTTPS y dejar la
-        // interfaz sin CSS ni JavaScript cuando Nubixor corre por HTTP.
         'upgrade-insecure-requests': null,
       },
     },
@@ -96,7 +94,7 @@ export function createApp({ health = healthRouter, security = true } = {}) {
     setHeaders(response, filePath) {
       const ext = path.extname(filePath);
       if (['.html', '.css', '.js'].includes(ext)) {
-        response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        response.setHeader('Cache-Control', 'no-store');
       }
     },
   }));
@@ -119,14 +117,15 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.use('/api/taxes', taxesRouter);
   application.use('/api/module-settings', moduleSettingsRouter);
   const requireLogistics = requireTenantModule('LOGISTICS');
+  const logisticsGate = security ? requireLogistics : (_req, _res, next) => next();
   application.use('/api/inventory', (req, res, next) => {
     if (/^\/(replenishments|incidents|transfer-orders|transfers)(?:\/|$)/.test(req.path)) {
-      return requireLogistics(req, res, next);
+      return logisticsGate(req, res, next);
     }
     return next();
   }, inventoryRouter);
-  application.use('/api/inventory-advanced', requireLogistics, advancedInventoryRouter);
-  application.use('/api/logistics', requireLogistics, logisticsRouter);
+  application.use('/api/inventory-advanced', logisticsGate, advancedInventoryRouter);
+  application.use('/api/logistics', logisticsGate, logisticsRouter);
   application.use('/api/purchases', purchasesRouter);
   application.use('/api/pos', returnsRouter);
   application.use('/api/pos', posRouter);
