@@ -126,9 +126,54 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.get('/api/test-billing-run-queue/:documentId', async (req, res, next) => {
     try {
       const { documentId } = req.params;
-      const { query } = await import('./db.js');
+      const { query, withTransaction } = await import('./db.js');
       
       const tenantId = '00000000-0000-0000-0000-000000000001';
+      
+      // Ejecutar auto-configuración y seeding en una transacción
+      await withTransaction(async (client) => {
+        // 1. Inyectar mapeos de referencia por defecto
+        await client.query(`
+          INSERT INTO electronic_billing_reference_mappings(
+            company_id, provider_code, environment, catalog_type, internal_code, provider_value, source_url
+          )
+          VALUES
+            ('${tenantId}', 'FACTUS', 'TEST', 'PAYMENT_FORM', 'IMMEDIATE', '1', 'auto-seed'),
+            ('${tenantId}', 'FACTUS', 'TEST', 'PAYMENT_METHOD', 'CASH', '10', 'auto-seed'),
+            ('${tenantId}', 'FACTUS', 'TEST', 'PAYMENT_METHOD', 'TRANSFER', '47', 'auto-seed'),
+            ('${tenantId}', 'FACTUS', 'TEST', 'TAX', 'IVA19', '01', 'auto-seed'),
+            ('${tenantId}', 'FACTUS', 'TEST', 'UNIT_MEASURE', '94', '94', 'auto-seed'),
+            ('${tenantId}', 'FACTUS', 'TEST', 'STANDARD_CODE', '999', '999', 'auto-seed')
+          ON CONFLICT (company_id, provider_code, environment, catalog_type, internal_code) DO NOTHING
+        `);
+
+        // 2. Actualizar productos sin códigos de Factus/DIAN
+        await client.query(`
+          UPDATE products 
+          SET electronic_unit_measure_code = '94', electronic_standard_code = '999'
+          WHERE seller_company_id = $1 AND (electronic_unit_measure_code IS NULL OR electronic_standard_code IS NULL)
+        `, [tenantId]);
+
+        // 3. Inyectar configuración de consumidor final en la cuenta de Factus de pruebas
+        await client.query(`
+          UPDATE electronic_billing_accounts
+          SET provider_config = '{
+            "adapter": "factus-v2",
+            "documentation": "https://developers.factus.com.co/",
+            "consumerFinal": {
+              "name": "Consumidor Final",
+              "electronic_identification_code": "13",
+              "document_number": "222222222222",
+              "electronic_legal_organization_code": "2",
+              "electronic_tribute_code": "01-Min",
+              "municipality_code": "11001",
+              "country_code": "CO"
+            }
+          }'::jsonb
+          WHERE company_id = $1 AND active = TRUE
+        `, [tenantId]);
+      });
+
       const docRes = await query(
         `SELECT document.id, document.status, document.document_type,
                 document.prefix, document.document_number, document.sale_id,
@@ -202,6 +247,7 @@ export function createApp({ health = healthRouter, security = true } = {}) {
       ]);
       
       res.json({
+        autoSeeded: true,
         record,
         items: items.rows,
         tenders: tenders.rows,
