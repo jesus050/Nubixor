@@ -122,6 +122,55 @@ export function createApp({ health = healthRouter, security = true } = {}) {
       next(err);
     }
   });
+
+  application.get('/api/test-billing-run-queue/:documentId', async (req, res, next) => {
+    try {
+      const { documentId } = req.params;
+      const { query, withTransaction } = await import('./db.js');
+      const { buildFactusInvoicePayload } = await import('./modules/electronic-billing.js');
+      
+      const tenantId = '00000000-0000-0000-0000-000000000001';
+      const result = await withTransaction(async (client) => {
+        const document = await client.query(
+          `SELECT document.id, document.status, document.document_type,
+                  document.prefix, document.document_number, document.sale_id,
+                  document.company_id,
+                  sale.total, sale.tax_total, sale.created_at, sale.customer_id,
+                  sale.sale_terms, sale.due_date, sale.payment_method,
+                  account.id billing_account_id, account.connection_status,
+                  account.provider_code, account.environment, account.provider_config,
+                  resolution.provider_numbering_range_id,
+                  resolution.provider_document_code
+           FROM electronic_documents document
+           JOIN sales sale
+             ON sale.id = document.sale_id AND sale.company_id = document.company_id
+           JOIN electronic_billing_accounts account
+             ON account.company_id = document.company_id AND account.active = TRUE
+           LEFT JOIN billing_resolutions resolution
+             ON resolution.id = document.billing_resolution_id
+            AND resolution.company_id = document.company_id
+           WHERE document.id = $1 AND document.company_id = $2
+           ORDER BY account.updated_at DESC
+           LIMIT 1`,
+          [documentId, tenantId]
+        );
+        if (!document.rowCount) {
+          return { error: 'No document found' };
+        }
+        const record = document.rows[0];
+        const payload = await buildFactusInvoicePayload(client, record);
+        return { success: true, payload };
+      });
+      res.json(result);
+    } catch(err) {
+      res.status(err.status || 500).json({
+        error: err.message,
+        code: err.code,
+        status: err.status
+      });
+    }
+  });
+
   application.use('/api/auth', authRouter);
   if (security) {
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
