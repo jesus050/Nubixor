@@ -11592,16 +11592,50 @@ async function openAccountingAuxiliary(account) {
       `/api/audit/accounting/auxiliary/${account.id}?${auditPeriodQuery()}`,
       { headers: { 'x-tenant-id': activeTenantId } },
     );
-    const details = auxiliary.items.map((item) =>
-      `${item.entry_date} · #${item.entry_number} · ` +
-      `D ${formatCurrency(item.debit)} / C ${formatCurrency(item.credit)} · ` +
-      `Saldo ${formatCurrency(item.running_balance)}`).join('\n');
-    window.alert(
-      `${account.code} · ${account.name}\n` +
-      `Saldo inicial: ${formatCurrency(auxiliary.openingBalance)}\n\n` +
-      `${details || 'Sin movimientos'}\n\n` +
-      `Saldo final: ${formatCurrency(auxiliary.endingBalance)}`,
-    );
+
+    const dialog = document.getElementById('accountingAuxiliaryDialog');
+    const titleEl = document.getElementById('accountingAuxiliaryTitle');
+    const balancesEl = document.getElementById('accountingAuxiliaryBalances');
+    const rowsEl = document.getElementById('accountingAuxiliaryRows');
+
+    titleEl.textContent = `${account.code} · ${account.name}`;
+    balancesEl.textContent = `Saldo inicial: ${formatCurrency(auxiliary.openingBalance)} | Saldo final: ${formatCurrency(auxiliary.endingBalance)}`;
+
+    rowsEl.innerHTML = '';
+    if (!auxiliary.items || auxiliary.items.length === 0) {
+      rowsEl.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding: 24px; text-align: center; color: var(--color-muted); font-size: 13px;">Sin movimientos en este período</td>
+        </tr>
+      `;
+    } else {
+      auxiliary.items.forEach((item) => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        
+        let dateStr = item.entry_date;
+        try {
+          dateStr = new Date(item.entry_date).toISOString().split('T')[0];
+        } catch (_) {}
+
+        tr.innerHTML = `
+          <td style="padding: 10px 12px; color: #64748b; font-weight: 500;">${dateStr}</td>
+          <td style="padding: 10px 12px; color: #0f172a; font-weight: 600;">#${item.entry_number}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #059669; font-weight: 500;">${item.debit > 0 ? formatCurrency(item.debit) : '—'}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #dc2626; font-weight: 500;">${item.credit > 0 ? formatCurrency(item.credit) : '—'}</td>
+          <td style="padding: 10px 12px; text-align: right; color: #0f172a; font-weight: 700;">${formatCurrency(item.running_balance)}</td>
+        `;
+        rowsEl.appendChild(tr);
+      });
+    }
+
+    const closeBtn = document.getElementById('closeAccountingAuxiliary');
+    const closeBtn2 = document.getElementById('closeAccountingAuxiliaryButton');
+    const onClose = () => dialog.close();
+    closeBtn.onclick = onClose;
+    closeBtn2.onclick = onClose;
+
+    dialog.showModal();
   } catch (error) {
     showToast(error.message);
   }
