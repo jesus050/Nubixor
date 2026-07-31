@@ -1665,6 +1665,23 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       items: receipts.flatMap((receipt) => receipt.items),
     };
   });
+
+  for (const receipt of purchase.receipts || []) {
+    if (receipt.billingDocument?.id) {
+      const updatedBilling = await autoProcessElectronicDocument({
+        tenantId: receipt.companyId || req.context.tenantId,
+        userId: req.context.userId,
+        documentId: receipt.billingDocument.id,
+      });
+      if (updatedBilling) {
+        receipt.billingDocument = {
+          ...receipt.billingDocument,
+          ...updatedBilling,
+        };
+      }
+    }
+  }
+
   res.status(201).json(purchase);
 }));
 
