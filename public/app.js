@@ -10215,6 +10215,40 @@ function renderBillingFiscalDocuments(invoices = [], notes = []) {
     }
     addFiscalLinks(actions, document);
     if (
+      document.fiscalKind === 'INVOICE' &&
+      ['PENDING', 'REJECTED'].includes(document.status)
+    ) {
+      const queue = window.document.createElement('button');
+      queue.type = 'button';
+      queue.className = 'billing-action-button';
+      queue.textContent = document.status === 'REJECTED' ? 'Reintentar' : 'Preparar envío';
+      const readiness = (typeof electronicBillingOverview !== 'undefined' && electronicBillingOverview?.readiness) || { connectionReady: true, resolutionReady: true };
+      queue.disabled = !readiness.connectionReady || !readiness.resolutionReady;
+      queue.addEventListener('click', () => queueElectronicDocument(document.id, queue));
+      actions.append(queue);
+    }
+    const isQueued = ['QUEUED', 'RETRYABLE'].includes(document.transmission_status || document.status);
+    if (document.fiscalKind === 'INVOICE' && isQueued) {
+      const account = (typeof electronicBillingOverview !== 'undefined' && electronicBillingOverview?.account) || null;
+      if (account?.provider_code === 'SANDBOX') {
+        const process = window.document.createElement('button');
+        process.type = 'button';
+        process.className = 'sandbox-process-button';
+        process.textContent = 'Probar respuesta';
+        process.addEventListener('click', () => processSandboxDocument(document.id, process));
+        actions.append(process);
+      } else {
+        const process = window.document.createElement('button');
+        process.type = 'button';
+        process.className = 'sandbox-process-button';
+        process.textContent = (document.transmission_status || document.status) === 'RETRYABLE'
+          ? 'Reintentar envío'
+          : 'Enviar a Factus';
+        process.addEventListener('click', () => processElectronicDocument(document.id, process));
+        actions.append(process);
+      }
+    }
+    if (
       document.fiscalKind !== 'INVOICE' &&
       ['PENDING', 'REJECTED'].includes(document.status)
     ) {
@@ -10718,7 +10752,10 @@ async function queueElectronicDocument(documentId, button) {
       method: 'POST',
       headers: { 'x-tenant-id': activeTenantId },
     });
-    await loadElectronicBilling();
+    await Promise.all([
+      loadElectronicBilling().catch(() => {}),
+      loadBillingWorkflow().catch(() => {})
+    ]);
     showToast('Documento preparado en la cola de transmisión.');
   } catch (error) {
     showToast(error.message);
@@ -10742,7 +10779,10 @@ async function processSandboxDocument(documentId, button) {
         body: JSON.stringify({ outcome: 'ACCEPTED' }),
       },
     );
-    await loadElectronicBilling();
+    await Promise.all([
+      loadElectronicBilling().catch(() => {}),
+      loadBillingWorkflow().catch(() => {})
+    ]);
     showToast('Respuesta SANDBOX registrada. No representa aceptación DIAN.');
   } catch (error) {
     showToast(error.message);
@@ -10762,11 +10802,17 @@ async function processElectronicDocument(documentId, button) {
         headers: { 'x-tenant-id': activeTenantId },
       },
     );
-    await loadElectronicBilling();
+    await Promise.all([
+      loadElectronicBilling().catch(() => {}),
+      loadBillingWorkflow().catch(() => {})
+    ]);
     showToast('La respuesta de Factus quedó registrada y auditada.');
   } catch (error) {
     showToast(error.message);
-    await loadElectronicBilling().catch(() => {});
+    await Promise.all([
+      loadElectronicBilling().catch(() => {}),
+      loadBillingWorkflow().catch(() => {})
+    ]);
   }
 }
 
