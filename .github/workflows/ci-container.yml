@@ -33,6 +33,10 @@ jobs:
         run: npm ci
 
       - name: Run checks
+        env:
+          NODE_ENV: test
+          CORS_ORIGINS: http://localhost:4100,http://127.0.0.1:4100
+          PUBLIC_BASE_URL: http://localhost:4100
         run: npm run check
 
       - name: Validate Docker Compose
@@ -41,6 +45,8 @@ jobs:
           POSTGRES_PASSWORD: validation-only-password
           BACKUP_ENCRYPTION_KEY: validation-only-backup-key
           ELECTRONIC_BILLING_ENCRYPTION_KEY: validation-only-billing-key
+          PASSWORD_RESET_WEBHOOK_URL: https://example.test/password-reset
+          PASSWORD_RESET_WEBHOOK_SECRET: validation-only-webhook-secret
         run: docker compose config --quiet
 
       - name: Build container
