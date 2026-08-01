@@ -16218,39 +16218,71 @@ function initNetworkStatusMonitor() {
 
 initNetworkStatusMonitor();
 
-async function triggerRealtimeDataRefresh(hint = {}) {
-  if (!activeTenantId) return;
-  const currentView = document.body.dataset.activeView;
+let realtimeRefreshInFlight = false;
+
+function shouldPauseRealtimeRefresh(view) {
+  // Nunca reemplazamos una pantalla mientras el usuario tiene una operación abierta.
+  // En caja esto evita perder un carrito que todavía no se ha cobrado.
+  if (document.querySelector('dialog[open]')) return true;
+  return view === 'caja' && saleCart.size > 0;
+}
+
+async function triggerRealtimeDataRefresh({ force = false } = {}) {
+  if (!activeTenantId || realtimeRefreshInFlight) return;
+  const currentView = document.body.dataset.activeView || 'inicio';
+  if (shouldPauseRealtimeRefresh(currentView) || (!force && document.hidden)) return;
+
+  realtimeRefreshInFlight = true;
   try {
-    if (currentView === 'facturacion-electronica' || hint.module === 'billing') {
-      if (typeof loadElectronicBillingOverview === 'function') {
-        await loadElectronicBillingOverview().catch(() => {});
-      }
-    }
-    if (currentView === 'caja' || hint.module === 'pos') {
-      if (typeof loadPosOverview === 'function') {
-        await loadPosOverview().catch(() => {});
-      }
-    }
-    if (currentView === 'dashboard' || hint.module === 'dashboard') {
-      if (typeof loadExecutiveSummary === 'function') {
-        await loadExecutiveSummary().catch(() => {});
-      }
-    }
-    if (currentView === 'inventario' || hint.module === 'inventory') {
-      if (typeof loadProducts === 'function') {
-        await loadProducts().catch(() => {});
-      }
-    }
-  } catch (_) {}
+    const refreshByView = {
+      inicio: () => Promise.all([
+        hasAnyPermission('dashboard.view') ? loadExecutiveSummary() : Promise.resolve(),
+        hasAnyPermission('dashboard.view') ? loadOnboardingStatus() : Promise.resolve(),
+      ]),
+      empresas: () => loadCompanies(),
+      sucursales: () => loadBranches(),
+      terceros: () => loadThirdParties(),
+      bodegas: () => loadWarehouses(),
+      inventario: () => Promise.all([
+        loadInventory(),
+        isTenantModuleEnabled('LOGISTICS') ? loadAdvancedInventory() : Promise.resolve(),
+        loadPhysicalCounts(),
+      ]),
+      logistica: () => Promise.all([
+        loadLogisticsOverview(),
+        loadInventory(),
+        loadAdvancedInventory(),
+      ]),
+      productos: () => loadCatalog(),
+      compras: () => loadPurchases(),
+      'cuentas-pagar': () => loadPayables(),
+      gastos: () => loadExpenses(),
+      usuarios: () => loadUsers(),
+      caja: async () => {
+        await loadPos();
+        await loadPosCatalog();
+      },
+      cartera: () => loadReceivables(),
+      facturacion: () => Promise.all([loadElectronicBilling(), loadBillingWorkflow()]),
+      reportes: () => loadReports(),
+      auditoria: () => Promise.all([loadAudit(), loadAuditReadiness()]),
+    };
+    await refreshByView[currentView]?.();
+  } catch (_) {
+    // La actualización silenciosa no debe interrumpir el trabajo en curso.
+  } finally {
+    realtimeRefreshInFlight = false;
+  }
 }
 
 function startLiveRealtimeUpdates() {
   setInterval(async () => {
-    if (!document.hidden && activeTenantId) {
-      await triggerRealtimeDataRefresh().catch(() => {});
-    }
-  }, 3000);
+    await triggerRealtimeDataRefresh();
+  }, 5000);
+  window.addEventListener('focus', () => triggerRealtimeDataRefresh({ force: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) triggerRealtimeDataRefresh({ force: true });
+  });
 }
 
 startLiveRealtimeUpdates();
