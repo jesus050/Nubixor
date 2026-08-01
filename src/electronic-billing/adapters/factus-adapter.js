@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { AppError } from '../../shared/errors.js';
 import { decryptBillingCredentials } from '../credentials.js';
 import { ProviderAdapter } from './provider-adapter.js';
@@ -9,6 +10,16 @@ const BASE_URLS = {
 const REQUEST_LIMIT = 80;
 const REQUEST_WINDOW_MS = 60_000;
 const accountWindows = new Map();
+const tokenSessions = new Map();
+
+function tokenSessionKey(account) {
+  const accountId = account?.id || `${account?.company_id || 'unknown'}:${account?.environment || 'TEST'}`;
+  // Las credenciales nunca salen de memoria: se usa solo su huella para invalidar
+  // el token si un administrador reemplaza la conexión de Factus.
+  const credentialVersion = account?.encrypted_credentials || JSON.stringify(account?.credentials || {});
+  const fingerprint = createHash('sha256').update(credentialVersion).digest('hex');
+  return `${accountId}:${fingerprint}`;
+}
 
 function requiredCredential(credentials, name) {
   const value = credentials?.[name];
@@ -67,9 +78,19 @@ export class FactusAdapter extends ProviderAdapter {
       (account.encrypted_credentials
         ? decryptBillingCredentials(account.encrypted_credentials)
         : null);
-    this.accessToken = null;
-    this.refreshToken = null;
-    this.tokenExpiresAt = 0;
+    this.tokenSessionKey = tokenSessionKey(account);
+    const cached = tokenSessions.get(this.tokenSessionKey);
+    this.accessToken = cached?.accessToken || null;
+    this.refreshToken = cached?.refreshToken || null;
+    this.tokenExpiresAt = cached?.tokenExpiresAt || 0;
+  }
+
+  cacheTokenSession() {
+    tokenSessions.set(this.tokenSessionKey, {
+      accessToken: this.accessToken,
+      refreshToken: this.refreshToken,
+      tokenExpiresAt: this.tokenExpiresAt,
+    });
   }
 
   consumeRateLimit() {
@@ -134,10 +155,16 @@ export class FactusAdapter extends ProviderAdapter {
     this.refreshToken = payload.refresh_token || this.refreshToken;
     const expiresIn = Math.max(60, Number(payload.expires_in) || 3600);
     this.tokenExpiresAt = this.now() + (expiresIn * 1000) - 30_000;
+    this.cacheTokenSession();
     return payload;
   }
 
   async authenticate({ force = false } = {}) {
+    if (force) {
+      tokenSessions.delete(this.tokenSessionKey);
+      this.accessToken = null;
+      this.tokenExpiresAt = 0;
+    }
     if (!force && this.accessToken && this.now() < this.tokenExpiresAt) {
       return this.accessToken;
     }

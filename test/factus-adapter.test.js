@@ -83,6 +83,27 @@ test('Factus renueva el token después de 401 y conserva la solicitud', async ()
   assert.equal(rangeCalls, 2);
 });
 
+test('Factus reutiliza el token temporal de la misma conexión', async () => {
+  const sharedAccount = account();
+  let tokenCalls = 0;
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/oauth/token')) {
+      tokenCalls += 1;
+      return jsonResponse(200, {
+        expires_in: 600,
+        access_token: 'shared-token',
+        refresh_token: 'shared-refresh-token',
+      });
+    }
+    return jsonResponse(200, { data: [] });
+  };
+
+  await new FactusAdapter(sharedAccount, { fetchImpl }).listNumberingRanges();
+  await new FactusAdapter(sharedAccount, { fetchImpl }).listDianNumberingRanges();
+
+  assert.equal(tokenCalls, 1);
+});
+
 test('Factus crea la factura con reference_code idempotente y conserva CUFE', async () => {
   const payload = {
     reference_code: 'nubixor-sale-stable-reference',

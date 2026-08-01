@@ -123,6 +123,45 @@ async function persistFactusDocumentArtifacts({
   }
 }
 
+function archiveFactusArtifactsInBackground({
+  adapter,
+  companyId,
+  documentId,
+  providerReference,
+  userId,
+}) {
+  // El CUFE y el QR ya fueron confirmados por Factus. PDF y XML no deben
+  // retrasar el cobro en caja; se conservan de inmediato en segundo plano.
+  setImmediate(() => {
+    persistFactusDocumentArtifacts({
+      adapter,
+      companyId,
+      documentId,
+      providerReference,
+      userId,
+    }).catch(async (artifactError) => {
+      try {
+        await withTransaction(async (client) => {
+          await writeAudit(client, {
+            tenantId: companyId,
+            userId,
+            action: 'electronic_billing.artifacts_pending',
+            entityType: 'electronic_document',
+            entityId: documentId,
+            after: {
+              providerReference,
+              errorCode: artifactError.code || 'FISCAL_ARTIFACT_SYNC_FAILED',
+            },
+            reason: artifactError.message,
+          });
+        });
+      } catch (auditError) {
+        console.error('No fue posible registrar el fallo al archivar Factus:', auditError);
+      }
+    });
+  });
+}
+
 function moneyString(value) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) {
@@ -1723,30 +1762,13 @@ export async function autoProcessElectronicDocument({ tenantId, userId, document
             );
           });
           if (finalStatus === 'ACCEPTED' && providerResult.providerReference) {
-            try {
-              await persistFactusDocumentArtifacts({
-                adapter,
-                companyId: tenantId,
-                documentId,
-                providerReference: providerResult.providerReference,
-                userId,
-              });
-            } catch (artifactError) {
-              await withTransaction(async (client) => {
-                await writeAudit(client, {
-                  tenantId,
-                  userId,
-                  action: 'electronic_billing.artifacts_pending',
-                  entityType: 'electronic_document',
-                  entityId: documentId,
-                  after: {
-                    providerReference: providerResult.providerReference,
-                    errorCode: artifactError.code || 'FISCAL_ARTIFACT_SYNC_FAILED',
-                  },
-                  reason: artifactError.message,
-                });
-              });
-            }
+            archiveFactusArtifactsInBackground({
+              adapter,
+              companyId: tenantId,
+              documentId,
+              providerReference: providerResult.providerReference,
+              userId,
+            });
           }
         } catch (err) {
           const retryable = [429, 500, 503].includes(Number(err.status));
