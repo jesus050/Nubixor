@@ -12611,8 +12611,14 @@ footer {
 
   #receiptDialog::backdrop,
   #receiptDialog .dialog-heading button,
-  #receiptDialog .dialog-actions {
-    display: none;
+  #receiptDialog .dialog-actions,
+  #receiptDialog .dialog-actions *,
+  #receiptDialog #openReturnDialogButton,
+  #receiptDialog #receiptOfficialPdfLink,
+  #receiptDialog #printReceiptButton,
+  #receiptDialog #finishReceiptButton {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   #receiptDialog .company-form {
