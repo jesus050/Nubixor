@@ -2732,14 +2732,43 @@ async function getJson(url, options = {}) {
   if (csrfToken && !['GET', 'HEAD'].includes((requestOptions.method || 'GET').toUpperCase())) {
     requestHeaders['x-csrf-token'] = csrfToken;
   }
-  const response = await fetch(`${API_BASE_URL}${url}`, {
-    ...requestOptions,
-    credentials: 'include',
-    headers: requestHeaders,
-  });
-  const body = response.status === 204 ? null : await response.json();
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${url}`, {
+      ...requestOptions,
+      credentials: 'include',
+      headers: requestHeaders,
+    });
+  } catch (cause) {
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    const error = new Error(
+      offline
+        ? 'Este equipo está sin conexión. Conéctate a internet y vuelve a intentarlo.'
+        : 'No pudimos enviar la solicitud. Tu información sigue intacta; espera unos segundos y vuelve a intentarlo.',
+      { cause },
+    );
+    error.code = 'NETWORK_REQUEST_FAILED';
+    throw error;
+  }
+
+  let body = null;
+  if (response.status !== 204) {
+    try {
+      body = await response.json();
+    } catch (cause) {
+      const error = new Error(
+        response.ok
+          ? 'El servidor respondió en un formato inesperado. Actualiza la página y vuelve a intentarlo.'
+          : 'El servicio está temporalmente ocupado. Espera unos segundos y vuelve a intentarlo.',
+        { cause },
+      );
+      error.status = response.status;
+      error.code = 'INVALID_API_RESPONSE';
+      throw error;
+    }
+  }
   if (!response.ok) {
-    const error = new Error(body.error || 'No fue posible consultar la API.');
+    const error = new Error(body?.error || 'No fue posible consultar la API.');
     error.status = response.status;
     error.body = body;
     if (response.status === 401 && !url.startsWith('/api/auth')) {
