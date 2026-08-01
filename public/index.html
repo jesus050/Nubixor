@@ -14,9 +14,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260801-DELETE-PRODUCT-AND-QUANTITY-v106">
-    <link rel="stylesheet" href="./brand.css?v=20260801-DELETE-PRODUCT-AND-QUANTITY-v106">
-    <script src="./app.js?v=20260801-DELETE-PRODUCT-AND-QUANTITY-v106" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v107">
+    <link rel="stylesheet" href="./brand.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v107">
+    <script src="./app.js?v=20260801-POS-MODAL-COLOR-SELECTOR-v107" defer></script>
 
   </head>
   <body>
@@ -6268,6 +6268,24 @@
           <button class="primary-button compact" id="saveOpenCashButton" type="submit">Abrir turno de caja</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="company-dialog pos-variant-dialog" id="posVariantSelectorDialog" aria-labelledby="posVariantSelectorTitle" style="max-width: 520px; border-radius: 20px;">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">🎨 Selección de Color / Opción</p>
+            <h2 id="posVariantSelectorTitle">Selecciona una opción</h2>
+          </div>
+          <button class="icon-button" id="closePosVariantSelectorDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="posVariantSelectorSub">Elige el color o presentación deseada para agregar al carrito:</p>
+        <div class="pos-variant-list" id="posVariantSelectorList" style="display: grid; gap: 10px; margin: 16px 0; max-height: 360px; overflow-y: auto;">
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPosVariantSelectorButton" type="button">Cancelar</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog class="company-dialog" id="closeCashDialog" aria-labelledby="closeCashDialogTitle">

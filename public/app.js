@@ -4961,22 +4961,10 @@ function renderPosCatalog() {
     }
 
     if (group.isGrouped && group.variants.length > 1) {
-      const colorSelect = document.createElement('select');
-      colorSelect.className = 'pos-color-select';
-      colorSelect.style.cssText = 'margin-top:4px; padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; font-weight:600; width:100%; background: #f8fafc; color: #1e293b;';
-      for (const variant of group.variants) {
-        const option = new Option(
-          `🎨 Color: ${variant.colorLabel || variant.name} (${variant.on_hand} disp.)`,
-          variant.id,
-        );
-        colorSelect.append(option);
-      }
-      colorSelect.addEventListener('change', () => {
-        const selectedId = colorSelect.value;
-        activeVariant = group.variants.find((v) => v.id === selectedId) || group.variants[0];
-        updateCardState();
-      });
-      info.append(colorSelect);
+      const variantBadge = document.createElement('div');
+      variantBadge.style.cssText = 'margin-top:6px; font-size:12px; font-weight:700; color:#6366f1; background:#e0e7ff; padding:4px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; width:fit-content;';
+      variantBadge.textContent = `🎨 ${group.variants.length} colores disponibles`;
+      info.append(variantBadge);
     }
 
     const price = document.createElement('b');
@@ -4997,23 +4985,49 @@ function renderPosCatalog() {
     const addButton = document.createElement('button');
     addButton.type = 'button';
 
+    const hasMultipleVariants = group.isGrouped && group.variants.length > 1;
+
     function updateCardState() {
       const targetProduct = activeVariant || group;
-      const stock = Number(targetProduct.on_hand || 0);
-      stockLabel.textContent =
-        `${stock} · ${warehouseTypeLabels[targetProduct.warehouse_type] || 'Disponible'}`;
-      const currentQuantity = saleCart.get(targetProduct.id)?.quantity || 0;
-      addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
-      addButton.disabled =
-        stock <= 0 ||
-        currentQuantity >= stock ||
-        targetProduct.tax_review_status !== 'REVIEWED';
+      const stock = hasMultipleVariants ? group.totalStock : Number(targetProduct.on_hand || 0);
+      stockLabel.textContent = hasMultipleVariants
+        ? `${stock} un. en ${group.variants.length} colores`
+        : `${stock} · ${warehouseTypeLabels[targetProduct.warehouse_type] || 'Disponible'}`;
+      
+      if (hasMultipleVariants) {
+        addButton.textContent = '🎨 Elegir color';
+        addButton.style.cssText = 'background: linear-gradient(135deg, #6366f1, #8b5cf6); color:#fff; border:none;';
+      } else {
+        const currentQuantity = saleCart.get(targetProduct.id)?.quantity || 0;
+        addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
+        addButton.disabled =
+          stock <= 0 ||
+          currentQuantity >= stock ||
+          targetProduct.tax_review_status !== 'REVIEWED';
+      }
     }
 
-    addButton.addEventListener('click', () => {
-      const targetProduct = activeVariant || group;
-      addProductToCart(targetProduct);
-      updateCardState();
+    addButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (hasMultipleVariants) {
+        openPosVariantSelectorModal(group);
+      } else {
+        const targetProduct = activeVariant || group;
+        addProductToCart(targetProduct);
+        updateCardState();
+      }
+    });
+
+    card.addEventListener('click', () => {
+      if (hasMultipleVariants) {
+        openPosVariantSelectorModal(group);
+      } else {
+        const targetProduct = activeVariant || group;
+        if (Number(targetProduct.on_hand || 0) > 0) {
+          addProductToCart(targetProduct);
+          updateCardState();
+        }
+      }
     });
 
     updateCardState();
@@ -5021,6 +5035,88 @@ function renderPosCatalog() {
     card.append(visual, info, footer);
     elements.posProductGrid.append(card);
   }
+}
+
+function openPosVariantSelectorModal(group) {
+  const dialog = document.querySelector('#posVariantSelectorDialog');
+  const title = document.querySelector('#posVariantSelectorTitle');
+  const sub = document.querySelector('#posVariantSelectorSub');
+  const list = document.querySelector('#posVariantSelectorList');
+  const closeBtn = document.querySelector('#closePosVariantSelectorDialog');
+  const cancelBtn = document.querySelector('#cancelPosVariantSelectorButton');
+
+  if (!dialog || !list) return;
+
+  const baseName = group.name.replace(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i, '').trim();
+  title.textContent = baseName;
+  sub.textContent = `Selecciona el color o presentación para agregar a la venta:`;
+
+  list.replaceChildren();
+
+  group.variants.forEach((variant) => {
+    const colorName = variant.colorLabel || variant.color || variant.name;
+    const stock = Number(variant.on_hand || 0);
+    const inCart = saleCart.get(variant.id)?.quantity || 0;
+    const available = stock - inCart;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pos-variant-option-btn';
+    button.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid ${available > 0 ? '#cbd5e1' : '#f1f5f9'};
+      background: ${available > 0 ? '#ffffff' : '#f8fafc'};
+      cursor: ${available > 0 ? 'pointer' : 'not-allowed'};
+      opacity: ${available > 0 ? '1' : '0.6'};
+      transition: all 0.2s ease;
+      text-align: left;
+    `;
+
+    const left = document.createElement('div');
+    const colorTitle = document.createElement('strong');
+    colorTitle.style.cssText = 'display:block; font-size:14px; color:#0f172a;';
+    colorTitle.textContent = `🎨 Color: ${colorName}`;
+
+    const meta = document.createElement('small');
+    meta.style.cssText = 'color:#64748b; font-size:12px;';
+    meta.textContent = `SKU: ${variant.sku} · ${stock} en bodega`;
+
+    left.append(colorTitle, meta);
+
+    const right = document.createElement('div');
+    right.style.cssText = 'text-align:right;';
+    const price = document.createElement('strong');
+    price.style.cssText = 'display:block; font-size:14px; color:#4f46e5;';
+    price.textContent = formatCurrency(variant.sale_price);
+
+    const badge = document.createElement('span');
+    badge.style.cssText = `font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; ${available > 0 ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#b91c1c;'}`;
+    badge.textContent = available > 0 ? `${available} disp.` : 'Agotado';
+
+    right.append(price, badge);
+    button.append(left, right);
+
+    if (available > 0) {
+      button.addEventListener('click', () => {
+        addProductToCart(variant);
+        showToast(`🎨 Color ${colorName} agregado al carrito.`);
+        dialog.close();
+        renderPosCatalog();
+      });
+    }
+
+    list.append(button);
+  });
+
+  const closeHandler = () => dialog.close();
+  if (closeBtn) closeBtn.onclick = closeHandler;
+  if (cancelBtn) cancelBtn.onclick = closeHandler;
+
+  dialog.showModal();
 }
 
 function renderPosCategories() {

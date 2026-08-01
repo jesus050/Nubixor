@@ -215,9 +215,10 @@ router.post('/', asyncHandler(async (req, res) => {
       const result = await client.query(
          `INSERT INTO products(
            tenant_id, sku, name, barcode, category_id, brand_id,
-           sales_tax_category_id, cost, sale_price, tax_review_status, active
+           sales_tax_category_id, cost, sale_price, tax_review_status,
+           electronic_unit_measure_code, electronic_standard_code, active
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'94','999',TRUE)
          RETURNING *`,
         [
           req.context.tenantId,
@@ -410,38 +411,44 @@ router.patch('/:id/tax', asyncHandler(async (req, res) => {
   res.json(product);
 }));
 
-router.delete('/:id', asyncHandler(async (req, res) => {
-  if (!UUID_PATTERN.test(req.params.id)) {
-    return res.status(422).json({ error: 'El producto debe tener un UUID válido.' });
-  }
-  const deleted = await withTransaction(async (client) => {
-    const current = await client.query(
-      `SELECT * FROM products WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL FOR UPDATE`,
-      [req.params.id, req.context.tenantId],
-    );
-    if (!current.rowCount) {
-      throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+router.delete(
+  '/:id',
+  requirePermission('catalog.manage'),
+  asyncHandler(async (req, res) => {
+    if (!UUID_PATTERN.test(req.params.id)) {
+      return res.status(422).json({ error: 'El producto debe tener un UUID válido.' });
     }
-    const updated = await client.query(
-      `UPDATE products SET deleted_at = now(), active = FALSE WHERE id = $1 AND tenant_id = $2 RETURNING *`,
-      [req.params.id, req.context.tenantId],
-    );
-    await client.query(
-      `UPDATE products SET deleted_at = now(), active = FALSE WHERE parent_product_id = $1 AND tenant_id = $2`,
-      [req.params.id, req.context.tenantId],
-    );
-    await writeAudit(client, {
-      tenantId: req.context.tenantId,
-      userId: req.context.userId,
-      action: 'product.deleted',
-      entityType: 'product',
-      entityId: req.params.id,
-      before: current.rows[0],
-      after: updated.rows[0],
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : 'Retirado por administración de catálogo';
+    const deleted = await withTransaction(async (client) => {
+      const current = await client.query(
+        `SELECT * FROM products WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL FOR UPDATE`,
+        [req.params.id, req.context.tenantId],
+      );
+      if (!current.rowCount) {
+        throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+      }
+      const updated = await client.query(
+        `UPDATE products SET deleted_at = now(), active = FALSE, updated_at = now() WHERE id = $1 AND tenant_id = $2 RETURNING *`,
+        [req.params.id, req.context.tenantId],
+      );
+      await client.query(
+        `UPDATE products SET deleted_at = now(), active = FALSE, updated_at = now() WHERE parent_product_id = $1 AND tenant_id = $2`,
+        [req.params.id, req.context.tenantId],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'product.deleted',
+        entityType: 'product',
+        entityId: req.params.id,
+        before: current.rows[0],
+        after: updated.rows[0],
+        reason,
+      });
+      return updated.rows[0];
     });
-    return updated.rows[0];
-  });
-  res.json({ message: 'Producto eliminado correctamente.', product: deleted });
-}));
+    res.json({ message: 'Producto retirado conforme a los protocolos de auditoría.', product: deleted });
+  }),
+);
 
 export default router;
