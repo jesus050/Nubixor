@@ -14596,6 +14596,30 @@ async function submitCashMovement(event) {
   }
 }
 
+function electronicReceiptEnvironment() {
+  return electronicBillingOverview?.account?.environment || null;
+}
+
+function electronicReceiptTitle() {
+  return electronicReceiptEnvironment() === 'PRODUCTION'
+    ? 'Factura electrónica de venta — DIAN'
+    : 'Factura electrónica de venta — Pruebas Factus';
+}
+
+function electronicReceiptAcceptedStatus() {
+  return electronicReceiptEnvironment() === 'PRODUCTION'
+    ? 'Aceptada por la DIAN'
+    : electronicReceiptEnvironment() === 'TEST'
+      ? 'Aceptada en pruebas de Factus'
+      : 'Aceptada por el proveedor electrónico';
+}
+
+function electronicReceiptAcceptedNotice() {
+  return electronicReceiptEnvironment() === 'PRODUCTION'
+    ? 'Código y enlace oficial recibidos del proveedor tecnológico.'
+    : 'CUFE y enlace recibidos en pruebas de Factus. No representa una factura emitida en producción.';
+}
+
 async function renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl }) {
   const receiptId = receipt.id;
   elements.receiptDianQrBlock.hidden = true;
@@ -14609,12 +14633,12 @@ async function renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl }) {
   if (electronic) {
     if (!cufe && !qrUrl) return;
     elements.receiptDianQrBlock.hidden = false;
-    elements.receiptQrTitle.textContent = 'Factura electrónica de venta — DIAN';
+    elements.receiptQrTitle.textContent = electronicReceiptTitle();
     elements.receiptQrCodeLabel.textContent = 'CUFE';
     elements.receiptQrCodeRow.hidden = !cufe;
     elements.receiptCufeText.textContent = cufe || '';
     elements.receiptQrNotice.textContent = billing?.status === 'ACCEPTED'
-      ? 'Código y enlace oficial recibidos del proveedor tecnológico.'
+      ? electronicReceiptAcceptedNotice()
       : 'Documento electrónico pendiente de validación definitiva.';
     const documentId = billing?.id || receipt.electronic_document_id ||
       receipt.billing_document_id;
@@ -14626,12 +14650,14 @@ async function renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl }) {
         );
         if (selectedReceiptForReturn?.id !== receiptId) return;
         elements.receiptQrImage.hidden = false;
-        elements.receiptQrImage.alt = 'Código QR oficial de consulta DIAN';
+        elements.receiptQrImage.alt = electronicReceiptEnvironment() === 'PRODUCTION'
+          ? 'Código QR oficial de consulta DIAN'
+          : 'Código QR de consulta de Factus en pruebas';
         elements.receiptQrImage.src = officialQr.dataUrl;
         elements.receiptQrNotice.textContent = officialQr.disclaimer;
       } catch {
         elements.receiptQrNotice.textContent =
-          'CUFE recibido. La representación QR oficial está pendiente de sincronización.';
+          'CUFE recibido. La representación QR del proveedor está pendiente de sincronización.';
       }
     }
     return;
@@ -14699,7 +14725,7 @@ function showReceipt(receipt) {
       .join(' · ')
     : (electronic
       ? (billing?.status === 'ACCEPTED'
-        ? 'Aceptada por la DIAN'
+        ? electronicReceiptAcceptedStatus()
         : billing?.failure_reason || 'Pendiente de transmisión a la DIAN')
       : 'Registrado localmente; no se envía a la DIAN');
   elements.receiptLines.replaceChildren();
@@ -14804,12 +14830,12 @@ function showReceipt(receipt) {
         const updatedDoc = overview?.documents?.find((item) => item.id === docId);
         if (updatedDoc && updatedDoc.status === 'ACCEPTED') {
           billing = { ...billing, ...updatedDoc };
-          elements.receiptDocumentStatus.textContent = 'Aceptada por la DIAN';
+          elements.receiptDocumentStatus.textContent = electronicReceiptAcceptedStatus();
           const newCufe = updatedDoc.cufe;
           const newQrUrl = updatedDoc.qr_url || updatedDoc.qrUrl;
           if (newCufe || newQrUrl) {
             elements.receiptDianQrBlock.hidden = false;
-            elements.receiptQrTitle.textContent = 'Factura electrónica de venta — DIAN';
+            elements.receiptQrTitle.textContent = electronicReceiptTitle();
             elements.receiptQrCodeLabel.textContent = 'CUFE';
             elements.receiptQrCodeRow.hidden = !newCufe;
             elements.receiptCufeText.textContent = newCufe || 'CUFE verificado';
