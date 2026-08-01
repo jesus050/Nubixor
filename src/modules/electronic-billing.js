@@ -259,6 +259,16 @@ async function buildFactusInvoicePayload(client, record) {
     const netPrice = rate > 0
       ? unitPriceWithTax / (1 + (rate / 100))
       : unitPriceWithTax;
+    const taxes = item.tax_treatment === 'EXCLUDED'
+      ? [{ is_excluded: true }]
+      : [{
+        code: mapped(
+          'TAX',
+          item.tax_internal_code,
+          `el impuesto del producto ${item.sku_snapshot}`,
+        ),
+        rate: moneyString(rate),
+      }];
     return {
       code_reference: requiredFactusValue(item.sku_snapshot, 'el SKU del producto'),
       name: requiredFactusValue(item.name_snapshot, 'el nombre del producto'),
@@ -277,15 +287,7 @@ async function buildFactusInvoicePayload(client, record) {
         item.electronic_standard_code,
         `el estándar del producto ${item.sku_snapshot}`,
       ),
-      taxes: [{
-        code: mapped(
-          'TAX',
-          item.tax_internal_code,
-          `el impuesto del producto ${item.sku_snapshot}`,
-        ),
-        rate: moneyString(rate),
-        ...(item.tax_treatment === 'EXCLUDED' ? { is_excluded: true } : {}),
-      }],
+      taxes,
     };
   });
   const paymentForm = mapped(

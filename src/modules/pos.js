@@ -9,6 +9,7 @@ import {
   postCashSessionClosingAccounting,
   postCashSessionOpeningAccounting,
   postSaleAccounting,
+} from '../accounting.js';
 import { autoProcessElectronicDocument } from './electronic-billing.js';
 
 const router = Router();
