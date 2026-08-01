@@ -1780,6 +1780,7 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
               ed.id electronic_document_id, ed.status electronic_document_status,
               ed.prefix billing_prefix, ed.document_number billing_number,
               ed.cufe, ed.qr_url,
+              ed.pdf_document_id electronic_pdf_document_id,
               ed.failure_reason billing_failure_reason,
               payment.reference payment_reference,
               receiver.trade_name receiving_company_name

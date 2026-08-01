@@ -12588,6 +12588,17 @@ footer {
     display: none !important;
   }
 
+  html,
+  body {
+    width: 80mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   #receiptDialog {
     position: static;
     display: block;
@@ -12605,8 +12616,48 @@ footer {
   }
 
   #receiptDialog .company-form {
-    padding: 8mm 5mm;
+    padding: 4mm;
   }
+
+  #receiptDialog .receipt-check {
+    width: 10mm;
+    height: 10mm;
+    margin: 2mm auto;
+    font-size: 15px;
+  }
+
+  #receiptDialog .receipt-message {
+    margin-bottom: 3mm;
+    font-size: 9px;
+  }
+
+  #receiptDialog .receipt-qr-block {
+    margin-top: 3mm;
+    padding: 3mm;
+  }
+
+  #receiptDialog .receipt-qr-image img {
+    width: 38mm;
+    height: 38mm;
+    border-radius: 0;
+    image-rendering: crisp-edges;
+  }
+
+  #receiptDialog .receipt-print-hint {
+    display: none !important;
+  }
+}
+
+.receipt-official-pdf {
+  text-decoration: none;
+}
+
+.receipt-print-hint {
+  margin: 2px 0 0;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: center;
 }
 
 /* Carga masiva: preparación operativa con validación previa. */
@@ -17656,4 +17707,3 @@ main,
 .primary-button:active {
   transform: translateY(0) scale(0.98);
 }
-

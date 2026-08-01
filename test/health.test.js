@@ -141,7 +141,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Últimos siete días/);
   assert.match(response.text, /Movimientos e historial/);
   assert.match(response.text, /Registrar ingreso o salida/);
-  assert.match(response.text, /Imprimir comprobante/);
+  assert.match(response.text, /Imprimir ticket 80 mm/);
+  assert.match(response.text, /Abrir factura DIAN \(PDF\)/);
   assert.match(response.text, /data-denomination="100000"/);
 });
 

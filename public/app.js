@@ -867,6 +867,7 @@ const elements = {
   receiptQrCodeLabel: document.querySelector('#receiptQrCodeLabel'),
   receiptCufeText: document.querySelector('#receiptCufeText'),
   receiptQrNotice: document.querySelector('#receiptQrNotice'),
+  receiptOfficialPdfLink: document.querySelector('#receiptOfficialPdfLink'),
   openReturnDialogButton: document.querySelector('#openReturnDialogButton'),
   returnDialog: document.querySelector('#returnDialog'),
   returnForm: document.querySelector('#returnForm'),
@@ -14680,11 +14681,12 @@ function showReceipt(receipt) {
     : receipt.receiptNumber;
   const electronic = (receipt.sale_document_type || receipt.document_type) ===
     'ELECTRONIC_INVOICE';
-  const billing = receipt.billingDocument || (
+  let billing = receipt.billingDocument || (
     receipt.electronic_document_id
       ? {
         status: receipt.electronic_document_status,
         failure_reason: receipt.billing_failure_reason,
+        pdf_document_id: receipt.electronic_pdf_document_id,
       }
       : null
   );
@@ -14773,6 +14775,7 @@ function showReceipt(receipt) {
   const cufe = billing?.cufe || receipt.cufe || receipt.billingDocument?.cufe;
   const qrUrl = billing?.qrUrl || billing?.qr_url || receipt.qr_url || receipt.qrUrl || receipt.billingDocument?.qr_url;
   renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl });
+  syncReceiptOfficialPdf({ electronic, billing, receipt });
 
   if (electronic && docId && (billing?.status !== 'ACCEPTED' && receipt.electronic_document_status !== 'ACCEPTED')) {
     (async () => {
@@ -14800,6 +14803,7 @@ function showReceipt(receipt) {
         }).catch(() => null);
         const updatedDoc = overview?.documents?.find((item) => item.id === docId);
         if (updatedDoc && updatedDoc.status === 'ACCEPTED') {
+          billing = { ...billing, ...updatedDoc };
           elements.receiptDocumentStatus.textContent = 'Aceptada por la DIAN';
           const newCufe = updatedDoc.cufe;
           const newQrUrl = updatedDoc.qr_url || updatedDoc.qrUrl;
@@ -14811,11 +14815,12 @@ function showReceipt(receipt) {
             elements.receiptCufeText.textContent = newCufe || 'CUFE verificado';
             renderReceiptQr(receipt, {
               electronic: true,
-              billing: { ...billing, ...updatedDoc },
+              billing,
               cufe: newCufe,
               qrUrl: newQrUrl,
             });
           }
+          syncReceiptOfficialPdf({ electronic: true, billing, receipt });
         }
       } catch (_) {}
     })();
@@ -14828,6 +14833,32 @@ function showReceipt(receipt) {
     receipt.items.some((item) => Number(item.returnableQuantity ?? item.quantity) > 0);
   elements.openReturnDialogButton.hidden = !hasReturnableItems;
   elements.receiptDialog.showModal();
+}
+
+function syncReceiptOfficialPdf({ electronic, billing, receipt }) {
+  const pdfDocumentId = billing?.pdf_document_id || billing?.pdfDocumentId ||
+    receipt?.electronic_pdf_document_id || receipt?.pdf_document_id;
+  const available = Boolean(
+    electronic && pdfDocumentId &&
+    (billing?.status === 'ACCEPTED' || receipt?.electronic_document_status === 'ACCEPTED'),
+  );
+  elements.receiptOfficialPdfLink.hidden = !available;
+  if (available) {
+    elements.receiptOfficialPdfLink.href =
+      `${API_BASE_URL}/api/assets/documents/${encodeURIComponent(pdfDocumentId)}`;
+  } else {
+    elements.receiptOfficialPdfLink.removeAttribute('href');
+  }
+}
+
+function printReceiptTicket() {
+  document.querySelector('#nubixor-receipt-paper-size')?.remove();
+  const paperSize = document.createElement('style');
+  paperSize.id = 'nubixor-receipt-paper-size';
+  paperSize.textContent = '@page { size: 80mm auto; margin: 0; }';
+  document.head.append(paperSize);
+  window.addEventListener('afterprint', () => paperSize.remove(), { once: true });
+  window.print();
 }
 
 function closeReceiptDialog() {
@@ -15839,7 +15870,7 @@ document.addEventListener('keydown', (event) => {
 elements.completeSaleButton.addEventListener('click', completeSale);
 elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
 elements.openReturnDialogButton.addEventListener('click', openReturnDialog);
-elements.printReceiptButton.addEventListener('click', () => window.print());
+elements.printReceiptButton.addEventListener('click', printReceiptTicket);
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();

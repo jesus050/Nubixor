@@ -1785,7 +1785,9 @@ export async function autoProcessElectronicDocument({ tenantId, userId, document
     }
 
     const finalDoc = await query(
-      `SELECT id, status, provider_reference, cufe, qr_url, failure_reason FROM electronic_documents WHERE id = $1`,
+      `SELECT id, status, provider_reference, cufe, qr_url,
+              pdf_document_id, xml_document_id, failure_reason
+       FROM electronic_documents WHERE id = $1`,
       [documentId],
     );
     return finalDoc.rows[0] || null;

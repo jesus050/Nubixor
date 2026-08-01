@@ -14,9 +14,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v108">
-    <link rel="stylesheet" href="./brand.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v108">
-    <script src="./app.js?v=20260801-POS-MODAL-COLOR-SELECTOR-v108" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v109">
+    <link rel="stylesheet" href="./brand.css?v=20260801-POS-MODAL-COLOR-SELECTOR-v109">
+    <script src="./app.js?v=20260801-POS-MODAL-COLOR-SELECTOR-v109" defer></script>
 
   </head>
   <body>
@@ -6491,13 +6491,20 @@
           <button class="secondary-button danger-soft" id="openReturnDialogButton" type="button">
             Devolver productos
           </button>
+          <a class="secondary-button receipt-official-pdf" id="receiptOfficialPdfLink"
+            href="#" target="_blank" rel="noopener" hidden>
+            Abrir factura DIAN (PDF)
+          </a>
           <button class="secondary-button" id="printReceiptButton" type="button">
-            Imprimir comprobante
+            Imprimir ticket 80 mm
           </button>
           <button class="primary-button compact" id="finishReceiptButton" type="button">
             Iniciar nueva venta
           </button>
         </div>
+        <p class="receipt-print-hint">
+          Ticket preparado para papel térmico de 80 mm. Para la representación legal usa el PDF DIAN.
+        </p>
       </div>
     </dialog>
 
