@@ -123,6 +123,13 @@ router.get('/lookup', asyncHandler(async (req, res) => {
 }));
 
 router.get('/', asyncHandler(async (req, res) => {
+  await query(
+    `UPDATE products
+     SET active = TRUE, updated_at = now()
+     WHERE tenant_id = $1 AND product_kind = 'VARIANT_PARENT' AND active = FALSE`,
+    [req.context.tenantId],
+  );
+
   const result = await query(
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,

@@ -286,7 +286,7 @@ router.post(
       const variant = result.rows[0];
       await client.query(
         `UPDATE products
-         SET product_kind='VARIANT_PARENT',active=FALSE,updated_at=now()
+         SET product_kind='VARIANT_PARENT',active=TRUE,updated_at=now()
          WHERE tenant_id=$1 AND id=$2`,
         [req.context.tenantId, parent.id],
       );
