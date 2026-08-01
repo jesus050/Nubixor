@@ -210,9 +210,9 @@ router.post(
       : positive(req.body.initialQuantity, 'La cantidad inicial no es válida.', {
         allowZero: true,
       });
-    if (!optionName || !optionValue || !sku || (initialQuantity > 0 && !warehouseId)) {
+    if (!optionName || !optionValue || (initialQuantity > 0 && !warehouseId)) {
       throw new AppError(
-        'Indica atributo, opción, SKU y bodega cuando transfieras existencias.',
+        'Indica el atributo, la opción y la bodega cuando transfieras existencias.',
         422,
         'INVALID_PRODUCT_VARIANT',
       );
@@ -250,6 +250,20 @@ router.post(
           'PRODUCT_VARIANT_OPTION_EXISTS',
         );
       }
+
+      let finalSku = sku;
+      if (!finalSku) {
+        const sanitizedVal = optionValue.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').slice(0, 30);
+        finalSku = `${parent.sku}-${sanitizedVal}`;
+        const existingSku = await client.query(
+          `SELECT 1 FROM products WHERE tenant_id=$1 AND UPPER(sku)=UPPER($2) AND deleted_at IS NULL LIMIT 1`,
+          [req.context.tenantId, finalSku],
+        );
+        if (existingSku.rowCount) {
+          finalSku = `${parent.sku}-${sanitizedVal}-${Date.now().toString().slice(-4)}`;
+        }
+      }
+
       const result = await client.query(
         `INSERT INTO products(
            tenant_id,sku,barcode,name,category_id,brand_id,
@@ -264,7 +278,7 @@ router.post(
          RETURNING *`,
         [
           req.context.tenantId,
-          sku,
+          finalSku,
           barcode,
           `${parent.name} · ${optionValue}`,
           parent.category_id,
