@@ -3660,7 +3660,10 @@ function renderProducts() {
         vNameCell.append(vWrap);
 
         vRow.append(vNameCell);
-        vRow.append(createCell('SKU', variant.sku));
+        vRow.append(createCell(
+          'SKU',
+          `${variant.sku} · Factura: ${variant.invoice_code || product.sku}`,
+        ));
         vRow.append(createCell('Categoría', variant.category_name || product.category_name));
         vRow.append(createCell('Marca', variant.brand_name || product.brand_name));
         vRow.append(createCell('Precio de venta', formatCurrency(variant.sale_price)));
@@ -13994,7 +13997,8 @@ function renderProductStructure() {
       .map(([key, value]) => `${key}: ${value}`)
       .join(' · ');
     const meta = document.createElement('small');
-    meta.textContent = `${attributes || 'Opción'} · ${variant.sku}`;
+    const invoiceCode = variant.metadata?.invoiceCode || product.sku;
+    meta.textContent = `${attributes || 'Opción'} · Inventario: ${variant.sku} · Factura: ${invoiceCode}`;
     copy.append(title, meta);
     const values = document.createElement('div');
     values.style.cssText = 'display:flex; align-items:center; gap:8px;';
@@ -14087,7 +14091,7 @@ async function openProductStructureDialog(product) {
     skuInput.required = false;
     skuInput.placeholder = `${product.sku}-COLOR (Opcional)`;
     const label = skuInput.closest('label')?.querySelector('span');
-    if (label) label.innerHTML = 'SKU propio (Opcional)';
+    if (label) label.innerHTML = 'SKU interno único (Opcional)';
   }
   if (optionValueInput && skuInput) {
     optionValueInput.oninput = () => {
@@ -14156,7 +14160,7 @@ async function submitProductVariant(event) {
     elements.productVariantForm.reset();
     await Promise.all([loadCatalog(), loadInventory()]);
     await loadProductStructure(productId);
-    showToast('Opción creada con SKU e inventario independientes.');
+    showToast('Opción creada: inventario independiente y código de factura compartido.');
   } catch (error) {
     elements.productVariantError.textContent = error.message;
     elements.productVariantError.hidden = false;

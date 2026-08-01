@@ -207,6 +207,8 @@ async function buildFactusInvoicePayload(client, record) {
       `SELECT item.product_id, item.sku_snapshot, item.name_snapshot,
               item.quantity, item.unit_price, item.discount_amount,
               item.tax_rate, item.tax_category_id,
+              COALESCE(NULLIF(product.metadata ->> 'invoiceCode', ''), item.sku_snapshot)
+                invoice_code,
               product.electronic_unit_measure_code,
               product.electronic_standard_code,
               tax.code tax_internal_code, tax.treatment tax_treatment
@@ -310,7 +312,9 @@ async function buildFactusInvoicePayload(client, record) {
         rate: moneyString(rate),
       }];
     return {
-      code_reference: requiredFactusValue(item.sku_snapshot, 'el SKU del producto'),
+      // El SKU interno identifica la variante para inventario; la referencia fiscal
+      // puede ser la del producto padre, por ejemplo una camiseta en varios colores.
+      code_reference: requiredFactusValue(item.invoice_code, 'el código de factura del producto'),
       name: requiredFactusValue(item.name_snapshot, 'el nombre del producto'),
       quantity: quantityString(item.quantity),
       ...(Number(item.discount_amount) > 0

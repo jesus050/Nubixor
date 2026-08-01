@@ -273,7 +273,10 @@ router.post(
          VALUES(
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,
            'VARIANT',$11,$12::jsonb,
-           jsonb_build_object('source','PRODUCT_VARIANT')
+           jsonb_build_object(
+             'source','PRODUCT_VARIANT',
+             'invoiceCode',$13
+           )
          )
          RETURNING *`,
         [
@@ -295,6 +298,7 @@ router.post(
           parent.tax_review_status,
           parent.id,
           JSON.stringify({ [optionName]: optionValue }),
+          parent.sku,
         ],
       );
       const variant = result.rows[0];

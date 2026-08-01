@@ -14,9 +14,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260801-SINGLE-SALE-v113">
-    <link rel="stylesheet" href="./brand.css?v=20260801-SINGLE-SALE-v113">
-    <script src="./app.js?v=20260801-SINGLE-SALE-v113" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260801-VARIANT-INVOICE-CODE-v114">
+    <link rel="stylesheet" href="./brand.css?v=20260801-VARIANT-INVOICE-CODE-v114">
+    <script src="./app.js?v=20260801-VARIANT-INVOICE-CODE-v114" defer></script>
 
   </head>
   <body>
@@ -6115,7 +6115,7 @@
                   placeholder="Ej. Rojo, XL o 500 ml">
               </label>
               <label class="form-field">
-                <span>SKU propio (Opcional)</span>
+                <span>SKU interno único (Opcional)</span>
                 <input name="sku" maxlength="60" placeholder="Autogenerado o personalizable">
               </label>
               <label class="form-field">
@@ -6141,8 +6141,10 @@
               </label>
             </div>
             <p class="form-guidance">
-              Si el producto principal ya tiene inventario, puedes repartir aquí
-              las unidades correspondientes a esta opción.
+              Cada color conserva un SKU interno único para inventario y escáner;
+              en la factura electrónica usará automáticamente el código del producto
+              principal. Si el producto principal ya tiene inventario, puedes repartir
+              aquí las unidades correspondientes a esta opción.
             </p>
             <p class="form-error" id="productVariantError" hidden></p>
             <div class="dialog-actions">

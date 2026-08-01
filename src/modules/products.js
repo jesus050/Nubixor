@@ -135,7 +135,8 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,
             p.sales_tax_category_id,p.active,p.product_kind,p.parent_product_id,
-            p.variant_attributes,
+            p.variant_attributes,p.metadata,
+            COALESCE(NULLIF(p.metadata ->> 'invoiceCode', ''), p.sku) invoice_code,
             c.name category_name, b.name brand_name,
             tc.name tax_name, tc.rate tax_rate,
             pi.public_url image_url, pi.alt_text image_alt
