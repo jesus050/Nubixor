@@ -15050,7 +15050,18 @@ async function completeSale() {
   elements.completeSaleButton.disabled = true;
   elements.completeSaleButton.textContent = 'Confirmando venta…';
   try {
-    const sharedCheckout = posSaleTerms === 'IMMEDIATE';
+    const sellerCompanies = new Set(
+      [...saleCart.values()].map(({ product }) =>
+        product.seller_company_id || product.tenant_id || activeTenantId),
+    );
+    // El cobro agrupado se reserva para pagos mixtos o productos de otra empresa.
+    // Una venta normal de la empresa activa conserva su comprobante individual,
+    // su QR y su representación fiscal desde el primer momento.
+    const sharedCheckout = posSaleTerms === 'IMMEDIATE' && (
+      posMixedPayment ||
+      sellerCompanies.size > 1 ||
+      !sellerCompanies.has(activeTenantId)
+    );
     const firstCartItem = saleCart.values().next().value;
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
       method: 'POST',
