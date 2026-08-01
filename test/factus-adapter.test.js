@@ -109,6 +109,10 @@ test('Factus crea la factura con reference_code idempotente y conserva CUFE', as
           number: 'REAL-ACCOUNT-NUMBER',
           is_validated: true,
           cufe: 'real-cufe-from-provider',
+          links: {
+            qr: 'https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=real-cufe',
+            public_url: 'https://factus.com.co/documentos/REAL-ACCOUNT-NUMBER',
+          },
         },
       });
     },
@@ -118,6 +122,14 @@ test('Factus crea la factura con reference_code idempotente y conserva CUFE', as
   assert.equal(result.status, 'ACCEPTED');
   assert.equal(result.providerReference, 'REAL-ACCOUNT-NUMBER');
   assert.equal(result.cufe, 'real-cufe-from-provider');
+  assert.equal(
+    result.qrUrl,
+    'https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=real-cufe',
+  );
+  assert.equal(
+    result.publicUrl,
+    'https://factus.com.co/documentos/REAL-ACCOUNT-NUMBER',
+  );
 });
 
 test('Factus conserva códigos HTTP y Retry-After del proveedor', async () => {

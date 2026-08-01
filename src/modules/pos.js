@@ -1,5 +1,8 @@
+import { createHash, createHmac } from 'node:crypto';
 import { Router } from 'express';
+import QRCode from 'qrcode';
 import { query, withTransaction } from '../db.js';
+import { config } from '../config.js';
 import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
@@ -46,6 +49,17 @@ function validDate(value) {
 
 function money(value) {
   return Math.round(Number(value) * 100) / 100;
+}
+
+function internalReceiptControlCode(payload) {
+  const canonical = JSON.stringify(payload);
+  return (config.receiptVerificationKey
+    ? createHmac('sha256', config.receiptVerificationKey)
+    : createHash('sha256'))
+    .update(canonical)
+    .digest('hex')
+    .slice(0, 20)
+    .toUpperCase();
 }
 
 export function resolveCommercialPrice(product, quantity, pricing = {}) {
@@ -792,7 +806,7 @@ router.get('/documents', asyncHandler(async (req, res) => {
             sale.subtotal, sale.tax_total, sale.total, sale.status,
             sale.document_type, COALESCE(customer.name, 'Consumidor final') customer_name,
             document.status electronic_status, document.prefix,
-            document.document_number,
+            document.document_number, document.cufe, document.qr_url,
             payment.receiving_company_id,
             receiver.trade_name receiving_company_name,
             payment.reference payment_reference,
@@ -814,7 +828,8 @@ router.get('/documents', asyncHandler(async (req, res) => {
        ON item.sale_id = sale.id AND item.tenant_id = sale.tenant_id
      WHERE sale.status = 'COMPLETED'
      GROUP BY sale.id, company.trade_name, customer.name, document.status,
-              document.prefix, document.document_number, payment.receiving_company_id,
+              document.prefix, document.document_number, document.cufe, document.qr_url,
+              payment.receiving_company_id,
               receiver.trade_name, payment.reference, payment.reconciliation_status
      ORDER BY sale.created_at DESC
      LIMIT 300`,
@@ -1686,6 +1701,68 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
   res.status(201).json(purchase);
 }));
 
+router.get('/sales/:id/internal-receipt-qr', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    throw new AppError('La venta debe tener un UUID válido.', 422, 'INVALID_SALE_ID');
+  }
+  const result = await query(
+    `SELECT sale.id, sale.company_id, sale.sequence_number, sale.document_type,
+            sale.total, sale.created_at, sale.status,
+            company.trade_name company_name
+     FROM sales sale
+     JOIN tenants company ON company.id = sale.company_id
+     JOIN cash_sessions session ON session.id = sale.cash_session_id
+     JOIN cash_registers register ON register.id = session.cash_register_id
+     WHERE sale.id = $1 AND sale.tenant_id = $2
+       AND ($3::uuid IS NULL OR register.branch_id = $3)`,
+    [req.params.id, req.context.tenantId, req.context.branchId],
+  );
+  if (!result.rowCount) {
+    throw new AppError('No encontramos la venta.', 404, 'SALE_NOT_FOUND');
+  }
+  const sale = result.rows[0];
+  if (sale.document_type === 'ELECTRONIC_INVOICE') {
+    throw new AppError(
+      'Las facturas electrónicas deben usar exclusivamente el QR oficial de Factus/DIAN.',
+      409,
+      'OFFICIAL_QR_REQUIRED',
+    );
+  }
+  const receiptNumber = `POS-${String(sale.sequence_number).padStart(6, '0')}`;
+  const receiptIdentity = {
+    kind: 'NUBIXOR_INTERNAL_RECEIPT',
+    companyId: sale.company_id,
+    saleId: sale.id,
+    receiptNumber,
+    issuedAt: sale.created_at,
+    total: money(sale.total).toFixed(2),
+  };
+  const controlCode = internalReceiptControlCode(receiptIdentity);
+  const qrPayload = [
+    'NUBIXOR - COMPROBANTE INTERNO',
+    `Empresa: ${sale.company_name}`,
+    `Comprobante: ${receiptNumber}`,
+    `Venta: ${sale.id}`,
+    `Fecha: ${new Date(sale.created_at).toISOString()}`,
+    `Total: COP ${receiptIdentity.total}`,
+    `Control: ${controlCode}`,
+    'No es factura electrónica ni reemplaza el documento validado por la DIAN.',
+  ].join('\n');
+  const dataUrl = await QRCode.toDataURL(qrPayload, {
+    errorCorrectionLevel: 'M',
+    margin: 1,
+    width: 280,
+    color: { dark: '#10257f', light: '#ffffff' },
+  });
+  res.json({
+    kind: 'INTERNAL_RECEIPT',
+    dataUrl,
+    controlCode,
+    receiptNumber,
+    disclaimer: 'QR de control Nubixor. No es un QR DIAN ni contiene CUFE.',
+  });
+}));
+
 router.get('/sales/:id', asyncHandler(async (req, res) => {
   if (!UUID_PATTERN.test(req.params.id)) {
     return res.status(422).json({ error: 'La venta debe tener un UUID válido.' });
@@ -1702,6 +1779,7 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
               ai.id ar_invoice_id, ai.invoice_number, ai.status receivable_status,
               ed.id electronic_document_id, ed.status electronic_document_status,
               ed.prefix billing_prefix, ed.document_number billing_number,
+              ed.cufe, ed.qr_url,
               ed.failure_reason billing_failure_reason,
               payment.reference payment_reference,
               receiver.trade_name receiving_company_name

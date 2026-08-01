@@ -17037,6 +17037,66 @@ main,
   background: rgba(79, 210, 233, .09);
 }
 
+.receipt-qr-block {
+  margin-top: 16px;
+  padding: 16px;
+  text-align: center;
+  background: linear-gradient(145deg, #f8fbff, #f8f5ff);
+  border: 1px dashed rgba(25, 37, 132, 0.28);
+  border-radius: 16px;
+}
+
+.receipt-qr-title {
+  margin: 0 0 10px;
+  color: #192584;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipt-qr-image {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.receipt-qr-image img {
+  width: 148px;
+  height: 148px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+}
+
+.receipt-qr-code p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.receipt-qr-code code {
+  display: block;
+  margin-top: 4px;
+  padding: 7px;
+  overflow-wrap: anywhere;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font: 9px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.receipt-qr-notice {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
 /* Terceros: una identidad comercial para clientes y proveedores. */
 .third-parties-section {
   display: grid;
@@ -17596,5 +17656,4 @@ main,
 .primary-button:active {
   transform: translateY(0) scale(0.98);
 }
-
 

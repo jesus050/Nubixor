@@ -394,6 +394,12 @@ test('las imágenes y la caja validan entradas antes de consultar dependencias',
     .expect(422);
   assert.match(invalidSaleDetail.body.error, /UUID válido/i);
 
+  const invalidInternalQr = await request(app)
+    .get('/api/pos/sales/invalid/internal-receipt-qr')
+    .set(headers)
+    .expect(422);
+  assert.equal(invalidInternalQr.body.code, 'INVALID_SALE_ID');
+
   const invalidReturn = await request(app)
     .post('/api/pos/sales/invalid/returns')
     .set(headers)
@@ -560,6 +566,11 @@ test('facturación electrónica valida conexión, resolución y documento', asyn
     .set('x-tenant-id', DEMO_TENANT_ID)
     .expect(422);
   assert.match(document.body.error, /UUID válido/i);
+  const documentQr = await request(application)
+    .get('/api/electronic-billing/documents/invalid/qr')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .expect(422);
+  assert.equal(documentQr.body.code, 'INVALID_ELECTRONIC_DOCUMENT_ID');
   const sandbox = await request(application)
     .post('/api/electronic-billing/documents/invalid/process-sandbox')
     .set('x-tenant-id', DEMO_TENANT_ID)

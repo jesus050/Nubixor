@@ -132,4 +132,7 @@ export const config = {
     process.env.BACKUP_ENCRYPTION_KEY?.trim() || null,
   electronicBillingEncryptionKey:
     process.env.ELECTRONIC_BILLING_ENCRYPTION_KEY?.trim() || null,
+  receiptVerificationKey:
+    process.env.RECEIPT_VERIFICATION_KEY?.trim() ||
+    process.env.ELECTRONIC_BILLING_ENCRYPTION_KEY?.trim() || null,
 };

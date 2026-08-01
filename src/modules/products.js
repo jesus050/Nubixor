@@ -8,6 +8,7 @@ import { writeAudit } from '../audit.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { config } from '../config.js';
+import { requirePermission } from '../authorization.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;

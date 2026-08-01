@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Router } from 'express';
+import QRCode from 'qrcode';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
 import { writeAudit } from '../audit.js';
@@ -405,6 +406,7 @@ router.get('/overview', asyncHandler(async (req, res) => {
       `SELECT document.id, document.document_type, document.prefix,
               document.document_number, document.status,
               document.provider_reference, document.cufe,
+              document.qr_url,
               document.pdf_document_id, document.xml_document_id,
               document.pdf_url, document.xml_url,
               document.artifacts_synced_at,
@@ -479,6 +481,51 @@ router.get('/overview', asyncHandler(async (req, res) => {
         )
       ),
     },
+  });
+}));
+
+router.get('/documents/:documentId/qr', asyncHandler(async (req, res) => {
+  const { documentId } = req.params;
+  if (!UUID_PATTERN.test(documentId || '')) {
+    throw new AppError(
+      'El documento electrónico debe tener un UUID válido.',
+      422,
+      'INVALID_ELECTRONIC_DOCUMENT_ID',
+    );
+  }
+  const result = await query(
+    `SELECT id, status, cufe, qr_url
+     FROM electronic_documents
+     WHERE id = $1 AND company_id = $2`,
+    [documentId, req.context.tenantId],
+  );
+  if (!result.rowCount) {
+    throw new AppError(
+      'No encontramos el documento electrónico.',
+      404,
+      'ELECTRONIC_DOCUMENT_NOT_FOUND',
+    );
+  }
+  const document = result.rows[0];
+  if (document.status !== 'ACCEPTED' || !document.cufe || !document.qr_url) {
+    throw new AppError(
+      'El QR oficial estará disponible cuando Factus confirme CUFE y enlace DIAN.',
+      409,
+      'OFFICIAL_QR_PENDING',
+    );
+  }
+  const dataUrl = await QRCode.toDataURL(document.qr_url, {
+    errorCorrectionLevel: 'M',
+    margin: 1,
+    width: 280,
+    color: { dark: '#111827', light: '#ffffff' },
+  });
+  res.json({
+    kind: 'DIAN_OFFICIAL',
+    dataUrl,
+    targetUrl: document.qr_url,
+    cufe: document.cufe,
+    disclaimer: 'QR generado localmente con el enlace oficial devuelto por Factus/DIAN.',
   });
 }));
 
@@ -1675,19 +1722,62 @@ export async function autoProcessElectronicDocument({ tenantId, userId, document
               [documentId, finalStatus, providerResult.providerReference, providerResult.cufe, providerResult.qrUrl],
             );
           });
+          if (finalStatus === 'ACCEPTED' && providerResult.providerReference) {
+            try {
+              await persistFactusDocumentArtifacts({
+                adapter,
+                companyId: tenantId,
+                documentId,
+                providerReference: providerResult.providerReference,
+                userId,
+              });
+            } catch (artifactError) {
+              await withTransaction(async (client) => {
+                await writeAudit(client, {
+                  tenantId,
+                  userId,
+                  action: 'electronic_billing.artifacts_pending',
+                  entityType: 'electronic_document',
+                  entityId: documentId,
+                  after: {
+                    providerReference: providerResult.providerReference,
+                    errorCode: artifactError.code || 'FISCAL_ARTIFACT_SYNC_FAILED',
+                  },
+                  reason: artifactError.message,
+                });
+              });
+            }
+          }
         } catch (err) {
+          const retryable = [429, 500, 503].includes(Number(err.status));
+          const retryAfter = Math.max(
+            1,
+            Math.min(3600, Number(err.retryAfter) || 30),
+          );
           await withTransaction(async (client) => {
             await client.query(
               `UPDATE electronic_document_transmissions
-               SET status = 'REJECTED', completed_at = now(), http_status = $2, error_message = $3
+               SET status = $2, completed_at = CASE WHEN $2 = 'REJECTED' THEN now() ELSE NULL END,
+                   http_status = $3, error_code = $4, error_message = $5,
+                   next_attempt_at = CASE WHEN $2 = 'RETRYABLE'
+                     THEN now() + ($6::integer * interval '1 second') ELSE NULL END
                WHERE id = $1`,
-              [claimed.id, err.status || 500, err.message],
+              [
+                claimed.id,
+                retryable ? 'RETRYABLE' : 'REJECTED',
+                err.status || 500,
+                err.code || 'FACTUS_SUBMISSION_FAILED',
+                err.message,
+                retryAfter,
+              ],
             );
             await client.query(
               `UPDATE electronic_documents
-               SET status = 'REJECTED', failure_reason = $2, updated_at = now()
+               SET status = $2, failure_reason = $3,
+                   retry_count = retry_count + CASE WHEN $2 = 'PENDING' THEN 1 ELSE 0 END,
+                   updated_at = now()
                WHERE id = $1`,
-              [documentId, err.message],
+              [documentId, retryable ? 'PENDING' : 'REJECTED', err.message],
             );
           });
         }

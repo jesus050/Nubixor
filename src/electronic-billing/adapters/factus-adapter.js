@@ -35,6 +35,21 @@ function factusMessage(payload, fallback) {
   return fallback;
 }
 
+function factusDocumentResult(response, fallbackReference = null) {
+  const document = response?.data || {};
+  return {
+    document,
+    providerReference:
+      document.number || document.reference_code || fallbackReference,
+    cufe: document.cufe || null,
+    cude: document.cude || null,
+    // Factus API V2 publica el enlace oficial de consulta DIAN en data.links.qr.
+    // Se conservan las formas anteriores solo para tolerar respuestas legadas.
+    qrUrl: document.links?.qr || document.qr || document.qr_url || null,
+    publicUrl: document.links?.public_url || document.public_url || null,
+  };
+}
+
 export class FactusAdapter extends ProviderAdapter {
   constructor(account, { fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
     super(account);
@@ -222,13 +237,14 @@ export class FactusAdapter extends ProviderAdapter {
       method: 'POST',
       body: payload,
     });
-    const document = response?.data || {};
+    const result = factusDocumentResult(response, payload.reference_code);
     return {
-      status: document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
-      providerReference: document.number || document.reference_code || payload.reference_code,
-      cufe: document.cufe || null,
-      cude: null,
-      qrUrl: document.qr || document.qr_url || null,
+      status: result.document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
+      providerReference: result.providerReference,
+      cufe: result.cufe,
+      cude: result.cude,
+      qrUrl: result.qrUrl,
+      publicUrl: result.publicUrl,
       response,
     };
   }
@@ -236,12 +252,13 @@ export class FactusAdapter extends ProviderAdapter {
   async getDocumentStatus(number) {
     const encoded = encodeURIComponent(number);
     const response = await this.request(`/v2/bills/${encoded}`);
-    const document = response?.data || {};
+    const result = factusDocumentResult(response, number);
     return {
-      status: document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
-      providerReference: document.number || number,
-      cufe: document.cufe || null,
-      qrUrl: document.qr || document.qr_url || null,
+      status: result.document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
+      providerReference: result.providerReference,
+      cufe: result.cufe,
+      qrUrl: result.qrUrl,
+      publicUrl: result.publicUrl,
       response,
     };
   }
@@ -296,14 +313,14 @@ export class FactusAdapter extends ProviderAdapter {
       method: 'POST',
       body: providerPayload,
     });
-    const document = response?.data || {};
+    const result = factusDocumentResult(response, providerPayload.reference_code);
     return {
-      status: document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
-      providerReference:
-        document.number || document.reference_code || providerPayload.reference_code,
-      cufe: null,
-      cude: document.cude || null,
-      qrUrl: document.qr || document.qr_url || null,
+      status: result.document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
+      providerReference: result.providerReference,
+      cufe: result.cufe,
+      cude: result.cude,
+      qrUrl: result.qrUrl,
+      publicUrl: result.publicUrl,
       response,
     };
   }

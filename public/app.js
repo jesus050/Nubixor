@@ -861,8 +861,12 @@ const elements = {
   receiptCashChangeRow: document.querySelector('#receiptCashChangeRow'),
   receiptCashChange: document.querySelector('#receiptCashChange'),
   receiptDianQrBlock: document.querySelector('#receiptDianQrBlock'),
+  receiptQrTitle: document.querySelector('#receiptQrTitle'),
   receiptQrImage: document.querySelector('#receiptQrImage'),
+  receiptQrCodeRow: document.querySelector('#receiptQrCodeRow'),
+  receiptQrCodeLabel: document.querySelector('#receiptQrCodeLabel'),
   receiptCufeText: document.querySelector('#receiptCufeText'),
+  receiptQrNotice: document.querySelector('#receiptQrNotice'),
   openReturnDialogButton: document.querySelector('#openReturnDialogButton'),
   returnDialog: document.querySelector('#returnDialog'),
   returnForm: document.querySelector('#returnForm'),
@@ -14562,6 +14566,67 @@ async function submitCashMovement(event) {
   }
 }
 
+async function renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl }) {
+  const receiptId = receipt.id;
+  elements.receiptDianQrBlock.hidden = true;
+  elements.receiptQrImage.hidden = true;
+  elements.receiptQrImage.removeAttribute('src');
+  elements.receiptQrCodeRow.hidden = true;
+  elements.receiptCufeText.textContent = '';
+  elements.receiptQrNotice.textContent = '';
+
+  if (receipt.grouped) return;
+  if (electronic) {
+    if (!cufe && !qrUrl) return;
+    elements.receiptDianQrBlock.hidden = false;
+    elements.receiptQrTitle.textContent = 'Factura electrónica de venta — DIAN';
+    elements.receiptQrCodeLabel.textContent = 'CUFE';
+    elements.receiptQrCodeRow.hidden = !cufe;
+    elements.receiptCufeText.textContent = cufe || '';
+    elements.receiptQrNotice.textContent = billing?.status === 'ACCEPTED'
+      ? 'Código y enlace oficial recibidos del proveedor tecnológico.'
+      : 'Documento electrónico pendiente de validación definitiva.';
+    const documentId = billing?.id || receipt.electronic_document_id ||
+      receipt.billing_document_id;
+    if (qrUrl && documentId) {
+      try {
+        const officialQr = await getJson(
+          `/api/electronic-billing/documents/${documentId}/qr`,
+          { headers: { 'x-tenant-id': receipt.company_id || activeTenantId } },
+        );
+        if (selectedReceiptForReturn?.id !== receiptId) return;
+        elements.receiptQrImage.hidden = false;
+        elements.receiptQrImage.alt = 'Código QR oficial de consulta DIAN';
+        elements.receiptQrImage.src = officialQr.dataUrl;
+        elements.receiptQrNotice.textContent = officialQr.disclaimer;
+      } catch {
+        elements.receiptQrNotice.textContent =
+          'CUFE recibido. La representación QR oficial está pendiente de sincronización.';
+      }
+    }
+    return;
+  }
+
+  if (!receiptId) return;
+  try {
+    const internalQr = await getJson(`/api/pos/sales/${receiptId}/internal-receipt-qr`, {
+      headers: { 'x-tenant-id': receipt.company_id || activeTenantId },
+    });
+    if (selectedReceiptForReturn?.id !== receiptId) return;
+    elements.receiptDianQrBlock.hidden = false;
+    elements.receiptQrTitle.textContent = 'Comprobante interno — control Nubixor';
+    elements.receiptQrImage.hidden = false;
+    elements.receiptQrImage.alt = 'Código QR de control interno Nubixor';
+    elements.receiptQrImage.src = internalQr.dataUrl;
+    elements.receiptQrCodeLabel.textContent = 'Código de control';
+    elements.receiptQrCodeRow.hidden = false;
+    elements.receiptCufeText.textContent = internalQr.controlCode;
+    elements.receiptQrNotice.textContent = internalQr.disclaimer;
+  } catch {
+    // La venta sigue siendo imprimible aunque el QR interno no esté disponible.
+  }
+}
+
 function showReceipt(receipt) {
   selectedReceiptForReturn = receipt;
   const groupedReceipts = Array.isArray(receipt.receipts) ? receipt.receipts : [];
@@ -14678,18 +14743,7 @@ function showReceipt(receipt) {
   const docId = billing?.id || receipt.electronic_document_id || receipt.billing_document_id;
   const cufe = billing?.cufe || receipt.cufe || receipt.billingDocument?.cufe;
   const qrUrl = billing?.qrUrl || billing?.qr_url || receipt.qr_url || receipt.qrUrl || receipt.billingDocument?.qr_url;
-
-  if (cufe || qrUrl) {
-    elements.receiptDianQrBlock.hidden = false;
-    elements.receiptCufeText.textContent = cufe || 'CUFE verificado';
-    if (qrUrl) {
-      elements.receiptQrImage.src = resolvePublicAsset(qrUrl);
-    } else if (cufe) {
-      elements.receiptQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(cufe)}`;
-    }
-  } else {
-    elements.receiptDianQrBlock.hidden = true;
-  }
+  renderReceiptQr(receipt, { electronic, billing, cufe, qrUrl });
 
   if (electronic && docId && (billing?.status !== 'ACCEPTED' && receipt.electronic_document_status !== 'ACCEPTED')) {
     (async () => {
@@ -14722,12 +14776,16 @@ function showReceipt(receipt) {
           const newQrUrl = updatedDoc.qr_url || updatedDoc.qrUrl;
           if (newCufe || newQrUrl) {
             elements.receiptDianQrBlock.hidden = false;
+            elements.receiptQrTitle.textContent = 'Factura electrónica de venta — DIAN';
+            elements.receiptQrCodeLabel.textContent = 'CUFE';
+            elements.receiptQrCodeRow.hidden = !newCufe;
             elements.receiptCufeText.textContent = newCufe || 'CUFE verificado';
-            if (newQrUrl) {
-              elements.receiptQrImage.src = resolvePublicAsset(newQrUrl);
-            } else if (newCufe) {
-              elements.receiptQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(newCufe)}`;
-            }
+            renderReceiptQr(receipt, {
+              electronic: true,
+              billing: { ...billing, ...updatedDoc },
+              cufe: newCufe,
+              qrUrl: newQrUrl,
+            });
           }
         }
       } catch (_) {}
@@ -16111,5 +16169,3 @@ function startLiveRealtimeUpdates() {
 
 startLiveRealtimeUpdates();
 startApplication();
-
-
