@@ -410,4 +410,38 @@ router.patch('/:id/tax', asyncHandler(async (req, res) => {
   res.json(product);
 }));
 
+router.delete('/:id', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    return res.status(422).json({ error: 'El producto debe tener un UUID válido.' });
+  }
+  const deleted = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM products WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL FOR UPDATE`,
+      [req.params.id, req.context.tenantId],
+    );
+    if (!current.rowCount) {
+      throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+    }
+    const updated = await client.query(
+      `UPDATE products SET deleted_at = now(), active = FALSE WHERE id = $1 AND tenant_id = $2 RETURNING *`,
+      [req.params.id, req.context.tenantId],
+    );
+    await client.query(
+      `UPDATE products SET deleted_at = now(), active = FALSE WHERE parent_product_id = $1 AND tenant_id = $2`,
+      [req.params.id, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'product.deleted',
+      entityType: 'product',
+      entityId: req.params.id,
+      before: current.rows[0],
+      after: updated.rows[0],
+    });
+    return updated.rows[0];
+  });
+  res.json({ message: 'Producto eliminado correctamente.', product: deleted });
+}));
+
 export default router;

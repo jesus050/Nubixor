@@ -3524,6 +3524,27 @@ function renderProducts() {
         () => openProductStructureDialog(product),
       );
       productActions.append(organizeButton);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'photo-action danger-action';
+      deleteButton.type = 'button';
+      deleteButton.style.cssText = 'color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); margin-left: 4px;';
+      deleteButton.textContent = '🗑️ Eliminar';
+      deleteButton.addEventListener('click', async () => {
+        if (confirm(`¿Estás seguro de eliminar el producto "${product.name}"?`)) {
+          try {
+            await getJson(`/api/products/${product.id}`, {
+              method: 'DELETE',
+              headers: { 'x-tenant-id': activeTenantId },
+            });
+            showToast(`Producto "${product.name}" eliminado correctamente.`);
+            await Promise.all([loadCatalog(), loadInventory()]);
+          } catch (err) {
+            showToast(err.message);
+          }
+        }
+      });
+      productActions.append(deleteButton);
     }
 
     nameCell.append(nameWrap, productActions);
@@ -3579,6 +3600,29 @@ function renderProducts() {
         const vName = document.createElement('strong');
         vName.textContent = variant.name;
         vWrap.append(vBadge, vName);
+
+        if (hasAnyPermission('catalog.manage')) {
+          const vDeleteBtn = document.createElement('button');
+          vDeleteBtn.type = 'button';
+          vDeleteBtn.style.cssText = 'color:#ef4444; background:none; border:none; cursor:pointer; font-size:12px; margin-left:8px; font-weight:600;';
+          vDeleteBtn.textContent = '🗑️ Eliminar';
+          vDeleteBtn.addEventListener('click', async () => {
+            if (confirm(`¿Eliminar la opción "${variant.name}"?`)) {
+              try {
+                await getJson(`/api/products/${variant.id}`, {
+                  method: 'DELETE',
+                  headers: { 'x-tenant-id': activeTenantId },
+                });
+                showToast(`Opción "${variant.name}" eliminada.`);
+                await Promise.all([loadCatalog(), loadInventory()]);
+              } catch (err) {
+                showToast(err.message);
+              }
+            }
+          });
+          vWrap.append(vDeleteBtn);
+        }
+
         vNameCell.append(vWrap);
 
         vRow.append(vNameCell);
@@ -13823,11 +13867,33 @@ function renderProductStructure() {
     meta.textContent = `${attributes || 'Opción'} · ${variant.sku}`;
     copy.append(title, meta);
     const values = document.createElement('div');
+    values.style.cssText = 'display:flex; align-items:center; gap:8px;';
     const price = document.createElement('strong');
     price.textContent = formatCurrency(variant.sale_price);
     const stock = document.createElement('small');
     stock.textContent = `${Number(variant.total_stock || 0).toLocaleString('es-CO')} unidades`;
-    values.append(price, stock);
+    
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.style.cssText = 'color:#ef4444; background:none; border:none; cursor:pointer; font-size:12px; font-weight:700; padding:2px 6px;';
+    delBtn.textContent = '🗑️ Eliminar';
+    delBtn.addEventListener('click', async () => {
+      if (confirm(`¿Eliminar la opción "${variant.name}"?`)) {
+        try {
+          await getJson(`/api/products/${variant.id}`, {
+            method: 'DELETE',
+            headers: { 'x-tenant-id': activeTenantId },
+          });
+          showToast(`Opción "${variant.name}" eliminada.`);
+          await Promise.all([loadCatalog(), loadInventory()]);
+          if (structuredProduct) await loadProductStructure(structuredProduct.id);
+        } catch (err) {
+          showToast(err.message);
+        }
+      }
+    });
+
+    values.append(price, stock, delBtn);
     card.append(copy, values);
     elements.productVariantList.append(card);
   });
