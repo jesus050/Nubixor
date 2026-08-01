@@ -13887,15 +13887,17 @@ async function openProductStructureDialog(product) {
   const optionValueInput = elements.productVariantForm.querySelector('[name="optionValue"]');
   const skuInput = elements.productVariantForm.querySelector('[name="sku"]');
   if (skuInput) {
-    skuInput.placeholder = `${product.sku}-COLOR`;
+    skuInput.removeAttribute('required');
+    skuInput.required = false;
+    skuInput.placeholder = `${product.sku}-COLOR (Opcional)`;
+    const label = skuInput.closest('label')?.querySelector('span');
+    if (label) label.innerHTML = 'SKU propio (Opcional)';
   }
   if (optionValueInput && skuInput) {
     optionValueInput.oninput = () => {
       const val = optionValueInput.value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-');
-      if (val) {
-        skuInput.value = `${product.sku}-${val}`;
-      } else {
-        skuInput.value = '';
+      if (val && !skuInput.value) {
+        skuInput.placeholder = `${product.sku}-${val}`;
       }
     };
   }
@@ -13922,7 +13924,18 @@ function closeProductStructureDialog() {
 async function submitProductVariant(event) {
   event.preventDefault();
   if (!structuredProduct) return;
+  const skuInput = elements.productVariantForm.querySelector('[name="sku"]');
+  if (skuInput) {
+    skuInput.removeAttribute('required');
+    skuInput.required = false;
+  }
   const data = new FormData(elements.productVariantForm);
+  let submittedSku = data.get('sku') ? String(data.get('sku')).trim() : '';
+  if (!submittedSku && data.get('optionValue')) {
+    const val = String(data.get('optionValue')).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-');
+    submittedSku = `${structuredProduct.sku}-${val}`;
+  }
+
   elements.productVariantError.hidden = true;
   elements.saveProductVariant.disabled = true;
   try {
@@ -13935,7 +13948,7 @@ async function submitProductVariant(event) {
       body: JSON.stringify({
         optionName: data.get('optionName'),
         optionValue: data.get('optionValue'),
-        sku: data.get('sku'),
+        sku: submittedSku,
         barcode: data.get('barcode') || null,
         cost: data.get('cost') || null,
         salePrice: data.get('salePrice') || null,
