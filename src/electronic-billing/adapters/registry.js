@@ -1,10 +1,10 @@
 import { AppError } from '../../shared/errors.js';
-import { FactusAdapter } from './factus-adapter.js';
+import { ResilientFactusAdapter } from './resilient-factus-adapter.js';
 import { SandboxAdapter } from './sandbox-adapter.js';
 
 const factories = new Map([
   ['SANDBOX', (account) => new SandboxAdapter(account)],
-  ['FACTUS', (account) => new FactusAdapter(account)],
+  ['FACTUS', (account) => new ResilientFactusAdapter(account)],
 ]);
 
 export function registerBillingAdapter(providerCode, factory) {
