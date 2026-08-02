@@ -18171,3 +18171,49 @@ main,
   border-color: #6366f1 !important;
   color: #4f46e5 !important;
 }
+
+/* --- CLEAN FINANCIAL INPUTS & KPI CARDS REFINEMENT --- */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.table-status.active {
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #047857 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  border-radius: 99px !important;
+  padding: 3px 10px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.table-status.pending {
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  border-radius: 99px !important;
+  padding: 3px 10px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.nav-chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.nav-group-toggle[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+  color: #6366f1;
+}

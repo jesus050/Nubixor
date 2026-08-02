@@ -3669,20 +3669,28 @@ function renderProducts() {
     if (hasVariants) {
       for (const variant of variants) {
         const vRow = document.createElement('tr');
-        vRow.style.cssText = 'background: rgba(248, 250, 252, 0.7); font-size: 13px;';
+        vRow.className = 'variant-child-row';
+        vRow.style.cssText = 'background: rgba(248, 250, 252, 0.75); font-size: 13px; border-top: 1px dashed #e2e8f0;';
         
         const vNameCell = document.createElement('td');
-        vNameCell.style.paddingLeft = '36px';
+        vNameCell.style.paddingLeft = '28px';
         const vWrap = document.createElement('div');
         vWrap.className = 'company-name';
+        vWrap.style.display = 'flex';
+        vWrap.style.alignItems = 'center';
+        
+        const treeConnector = document.createElement('span');
+        treeConnector.style.cssText = 'color:#94a3b8; font-weight:700; font-family:monospace; font-size:14px; margin-right:8px; user-select:none;';
+        treeConnector.textContent = '└─';
+
         const vBadge = document.createElement('span');
-        vBadge.style.cssText = 'font-weight:700; color:#334155; background:#ffffff; border: 1px solid #e2e8f0; padding:2px 9px; border-radius:12px; font-size:11px; margin-right:8px; display:inline-flex; align-items:center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);';
+        vBadge.style.cssText = 'font-weight:700; color:#334155; background:#ffffff; border: 1px solid #e2e8f0; padding:3px 10px; border-radius:12px; font-size:11px; margin-right:8px; display:inline-flex; align-items:center; box-shadow: 0 1px 3px rgba(0,0,0,0.04);';
         const colorName = variant.variant_attributes?.Color || variant.color || variant.name;
         vBadge.innerHTML = `${getColorSwatchHtml(colorName)} <span>${colorName}</span>`;
         
         const vName = document.createElement('strong');
         vName.textContent = variant.name;
-        vWrap.append(vBadge, vName);
+        vWrap.append(treeConnector, vBadge, vName);
 
         if (hasAnyPermission('catalog.manage')) {
           const vDeleteBtn = document.createElement('button');
