@@ -17713,3 +17713,25 @@ main,
 .primary-button:active {
   transform: translateY(0) scale(0.98);
 }
+
+.nav-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
+  opacity: 0.85;
+  transition: transform 0.2s ease, opacity 0.2s ease, stroke 0.2s ease;
+  flex-shrink: 0;
+}
+
+.nav-item:hover .nav-icon,
+.nav-item.active .nav-icon {
+  opacity: 1;
+  transform: scale(1.12);
+  stroke: var(--color-cyan, #4fd4e9);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
