@@ -449,10 +449,20 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
   const result = await withTransaction(async (client) => {
     const note = await client.query(
       `SELECT note.*, account.id billing_account_id,
-              account.connection_status
+              account.connection_status, account.provider_code,
+              document.provider_reference original_provider_reference,
+              sale.total original_total,
+              resolution.provider_numbering_range_id
        FROM electronic_adjustment_notes note
        JOIN electronic_billing_accounts account
          ON account.company_id = note.company_id AND account.active = TRUE
+       JOIN electronic_documents document
+         ON document.id = note.original_document_id
+        AND document.company_id = note.company_id
+       JOIN sales sale ON sale.id = document.sale_id AND sale.company_id = note.company_id
+       LEFT JOIN billing_resolutions resolution
+         ON resolution.id = document.billing_resolution_id
+        AND resolution.company_id = document.company_id
        WHERE note.id = $1 AND note.company_id = $2
          AND note.status IN ('PENDING','REJECTED')
        ORDER BY account.updated_at DESC
@@ -474,6 +484,63 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
       [noteId],
     );
     const record = note.rows[0];
+    let providerPayload = {
+      schema: 'nubixor-electronic-adjustment-note-v1',
+      noteId,
+      noteType: record.note_type,
+      originalDocumentId: record.original_document_id,
+      reasonCode: record.reason_code,
+      reason: record.reason,
+      subtotal: record.subtotal,
+      taxTotal: record.tax_total,
+      total: record.total,
+    };
+    if (record.provider_code === 'FACTUS') {
+      if (!record.original_provider_reference) {
+        throw new AppError(
+          'La factura original aún no tiene número Factus; espera su aceptación antes de emitir la nota.',
+          409,
+          'FACTUS_ORIGINAL_REFERENCE_REQUIRED',
+        );
+      }
+      if (Number(record.total) !== Number(record.original_total)) {
+        throw new AppError(
+          'Las notas parciales requieren seleccionar productos y cantidades. La nota completa puede transmitirse ahora.',
+          409,
+          'FACTUS_PARTIAL_NOTE_ITEMS_REQUIRED',
+        );
+      }
+      const sourcePayload = await client.query(
+        `SELECT payload_snapshot
+         FROM electronic_document_transmissions
+         WHERE electronic_document_id = $1 AND company_id = $2
+           AND status IN ('SUBMITTED','ACCEPTED')
+         ORDER BY attempt_number DESC
+         LIMIT 1`,
+        [record.original_document_id, req.context.tenantId],
+      );
+      const invoicePayload = sourcePayload.rows[0]?.payload_snapshot;
+      if (!invoicePayload?.items?.length || !invoicePayload?.payment_details?.length) {
+        throw new AppError(
+          'No encontramos la evidencia fiscal de la factura original para construir la nota.',
+          409,
+          'FACTUS_ORIGINAL_PAYLOAD_REQUIRED',
+        );
+      }
+      providerPayload = {
+        reference_code: `NUBIXOR-NOTE-${noteId}`,
+        correction_concept_code: record.reason_code,
+        bill_number: record.original_provider_reference,
+        ...(record.provider_numbering_range_id
+          ? { numbering_range_id: Number(record.provider_numbering_range_id) }
+          : {}),
+        observation: record.reason.slice(0, 250),
+        payment_details: invoicePayload.payment_details,
+        customer: invoicePayload.customer,
+        items: invoicePayload.items,
+        note_type: record.note_type === 'CREDIT_NOTE' ? 'CREDIT' : 'DEBIT',
+      };
+    }
     const transmission = await client.query(
       `INSERT INTO electronic_note_transmissions(
          company_id, adjustment_note_id, billing_account_id,
@@ -487,17 +554,7 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
         record.billing_account_id,
         attempts.rows[0].next_attempt,
         `${noteId}:${attempts.rows[0].next_attempt}:${randomUUID()}`,
-        {
-          schema: 'megasuite-electronic-adjustment-note-v1',
-          noteId,
-          noteType: record.note_type,
-          originalDocumentId: record.original_document_id,
-          reasonCode: record.reason_code,
-          reason: record.reason,
-          subtotal: record.subtotal,
-          taxTotal: record.tax_total,
-          total: record.total,
-        },
+        providerPayload,
         req.context.userId,
       ],
     );

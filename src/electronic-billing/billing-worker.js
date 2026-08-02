@@ -200,6 +200,104 @@ async function failTransmission(record, error) {
   return { retryable, retryAfter };
 }
 
+async function claimQueuedNoteTransmission() {
+  return withTransaction(async (client) => {
+    const transmission = await client.query(
+      `SELECT transmission.*, note.note_type, account.provider_code, account.environment,
+              account.base_url, account.encrypted_credentials, account.provider_config
+       FROM electronic_note_transmissions transmission
+       JOIN electronic_adjustment_notes note
+         ON note.id = transmission.adjustment_note_id AND note.company_id = transmission.company_id
+       JOIN electronic_billing_accounts account
+         ON account.id = transmission.billing_account_id AND account.company_id = transmission.company_id
+       WHERE transmission.status = 'QUEUED'
+       ORDER BY transmission.queued_at ASC
+       LIMIT 1
+       FOR UPDATE OF transmission SKIP LOCKED`,
+    );
+    if (!transmission.rowCount) return null;
+    const record = transmission.rows[0];
+    await client.query(
+      `UPDATE electronic_note_transmissions
+       SET status='SENDING', started_at=now(), completed_at=NULL,
+           error_code=NULL, error_message=NULL
+       WHERE id=$1`,
+      [record.id],
+    );
+    return record;
+  });
+}
+
+async function completeNoteTransmission(record, providerResult) {
+  const finalStatus = providerResult.status === 'ACCEPTED' ? 'ACCEPTED' : 'SUBMITTED';
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE electronic_note_transmissions
+       SET status=$2, completed_at=now(), response_summary=$3,
+           error_code=NULL, error_message=NULL, next_attempt_at=NULL
+       WHERE id=$1`,
+      [record.id, finalStatus, providerResult.response || null],
+    );
+    await client.query(
+      `UPDATE electronic_adjustment_notes
+       SET status=$2, provider_reference=$3, cude=$4, qr_url=$5,
+           submitted_at=COALESCE(submitted_at, now()),
+           accepted_at=CASE WHEN $2='ACCEPTED' THEN now() ELSE accepted_at END,
+           failure_reason=NULL, updated_at=now()
+       WHERE id=$1 AND company_id=$6`,
+      [record.adjustment_note_id, finalStatus, providerResult.providerReference,
+        providerResult.cude || null, providerResult.qrUrl || null, record.company_id],
+    );
+    await writeAudit(client, {
+      tenantId: record.company_id, userId: record.created_by,
+      action: finalStatus === 'ACCEPTED'
+        ? 'electronic_billing.worker_note_accepted'
+        : 'electronic_billing.worker_note_submitted',
+      entityType: 'electronic_note_transmission', entityId: record.id,
+      after: { noteId: record.adjustment_note_id, status: finalStatus, providerReference: providerResult.providerReference },
+      reason: 'Procesamiento automático de nota electrónica',
+    });
+  });
+  return finalStatus;
+}
+
+async function failNoteTransmission(record, error) {
+  const retryable = isRetryableBillingError(error);
+  const retryAfter = retryDelaySeconds(error, record.attempt_number);
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE electronic_note_transmissions
+       SET status=$2, completed_at=now(), error_code=$3, error_message=$4,
+           next_attempt_at=CASE WHEN $2='RETRYABLE' THEN now() + ($5::integer * interval '1 second') ELSE NULL END
+       WHERE id=$1`,
+      [record.id, retryable ? 'RETRYABLE' : 'REJECTED', error?.code || 'NOTE_TRANSMISSION_FAILED', error?.message || 'No fue posible transmitir la nota.', retryAfter],
+    );
+    await client.query(
+      `UPDATE electronic_adjustment_notes
+       SET status=$2, failure_reason=$3,
+           retry_count=retry_count + CASE WHEN $2='PENDING' THEN 1 ELSE 0 END,
+           next_attempt_at=CASE WHEN $2='PENDING' THEN now() + ($4::integer * interval '1 second') ELSE NULL END,
+           updated_at=now()
+       WHERE id=$1 AND company_id=$5`,
+      [record.adjustment_note_id, retryable ? 'PENDING' : 'REJECTED', error?.message || 'No fue posible transmitir la nota.', retryAfter, record.company_id],
+    );
+  });
+  return { retryable, retryAfter };
+}
+
+export async function processOneQueuedNoteTransmission() {
+  const record = await claimQueuedNoteTransmission();
+  if (!record) return null;
+  try {
+    const result = await createBillingAdapter(record).submitAdjustmentNote(record.payload_snapshot);
+    return { id: record.id, status: await completeNoteTransmission(record, result) };
+  } catch (error) {
+    const failed = await failNoteTransmission(record, error);
+    logger.error('billing.worker_note_failed', { noteTransmissionId: record.id, companyId: record.company_id, errorCode: error?.code, retryable: failed.retryable });
+    return { id: record.id, status: failed.retryable ? 'RETRYABLE' : 'REJECTED' };
+  }
+}
+
 export async function processOneQueuedBillingTransmission() {
   const record = await claimQueuedTransmission();
   if (!record) return null;
@@ -263,12 +361,14 @@ export async function runBillingWorkerCycle({ maxJobs = 3 } = {}) {
     if (!result) break;
     processed.push(result);
   }
+  const note = await processOneQueuedNoteTransmission();
   const reconciled = await reconcileSubmittedBillingDocuments();
-  if (released.documents || released.notes || recovered || processed.length || reconciled) {
+  if (released.documents || released.notes || recovered || processed.length || note || reconciled) {
     logger.info('billing.worker_cycle', {
       released,
       recovered,
       processed: processed.length,
+      notesProcessed: note ? 1 : 0,
       reconciled,
     });
   }

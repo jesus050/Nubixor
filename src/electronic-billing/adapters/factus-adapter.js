@@ -351,4 +351,26 @@ export class FactusAdapter extends ProviderAdapter {
       response,
     };
   }
+
+  async getAdjustmentNoteStatus(noteType, number) {
+    const normalizedType = String(noteType || '').toUpperCase();
+    const resource = normalizedType === 'DEBIT_NOTE' || normalizedType === 'DEBIT'
+      ? 'debit-notes'
+      : normalizedType === 'CREDIT_NOTE' || normalizedType === 'CREDIT'
+        ? 'credit-notes'
+        : null;
+    if (!resource) {
+      throw new AppError('El tipo de nota Factus no es válido.', 422, 'FACTUS_NOTE_TYPE_INVALID');
+    }
+    const response = await this.request(`/v2/${resource}/${encodeURIComponent(number)}`);
+    const result = factusDocumentResult(response, number);
+    return {
+      status: result.document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
+      providerReference: result.providerReference,
+      cude: result.cude,
+      qrUrl: result.qrUrl,
+      publicUrl: result.publicUrl,
+      response,
+    };
+  }
 }
