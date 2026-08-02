@@ -3423,6 +3423,48 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
+function getColorSwatchHtml(colorNameStr) {
+  const normalized = (colorNameStr || '').toString().trim().toLowerCase();
+  const colorMap = {
+    'rojo': '#ef4444',
+    'red': '#ef4444',
+    'verde': '#10b981',
+    'green': '#10b981',
+    'azul': '#3b82f6',
+    'blue': '#3b82f6',
+    'negro': '#1e293b',
+    'black': '#1e293b',
+    'blanco': '#f8fafc',
+    'white': '#f8fafc',
+    'amarillo': '#f59e0b',
+    'yellow': '#f59e0b',
+    'rosado': '#ec4899',
+    'pink': '#ec4899',
+    'morado': '#8b5cf6',
+    'purple': '#8b5cf6',
+    'naranja': '#f97316',
+    'orange': '#f97316',
+    'gris': '#64748b',
+    'gray': '#64748b',
+    'grey': '#64748b',
+    'cafe': '#78350f',
+    'brown': '#78350f',
+  };
+
+  let hexColor = '#6366f1';
+  for (const [key, hex] of Object.entries(colorMap)) {
+    if (normalized.includes(key)) {
+      hexColor = hex;
+      break;
+    }
+  }
+
+  const isWhite = hexColor === '#f8fafc';
+  const borderCss = isWhite ? 'border: 1px solid #cbd5e1;' : 'border: 1px solid rgba(0,0,0,0.12);';
+
+  return `<span style="display:inline-block; width:11px; height:11px; border-radius:50%; background:${hexColor}; ${borderCss} margin-right:5px; box-shadow: 0 0 0 1px rgba(255,255,255,0.9); flex-shrink:0;"></span>`;
+}
+
 function renderProducts() {
   const query = normalizeSearch(elements.productSearch.value.trim());
   const filtered = products.filter((product) => {
@@ -3527,8 +3569,13 @@ function renderProducts() {
         kind.textContent = 'Combo';
       } else {
         const optionCount = 1 + variants.length;
-        const colorNames = [product, ...variants].map(v => v.variant_attributes?.Color || v.color || v.name).slice(0, 3).join(', ');
-        kind.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>${optionCount} Opciones (${colorNames}${optionCount > 3 ? '...' : ''})`;
+        const allVariantItems = [product, ...variants];
+        const swatchesHtml = allVariantItems.slice(0, 4).map(v => {
+          const cName = v.variant_attributes?.Color || v.color || v.name;
+          return getColorSwatchHtml(cName);
+        }).join('');
+        const colorNames = allVariantItems.map(v => v.variant_attributes?.Color || v.color || v.name).slice(0, 3).join(', ');
+        kind.innerHTML = `<span style="display:inline-flex; align-items:center; margin-right:4px;">${swatchesHtml}</span>${optionCount} Colores (${colorNames}${optionCount > 3 ? '...' : ''})`;
       }
       nameCopy.append(kind);
     }
@@ -3551,7 +3598,7 @@ function renderProducts() {
       const labelText = product.product_kind === 'COMBO'
         ? 'Configurar combo'
         : (hasVariants || product.product_kind === 'VARIANT_PARENT')
-          ? 'Administrar opciones'
+          ? 'Administrar colores'
           : 'Colores o combo';
       organizeButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg> ${labelText}`;
       organizeButton.addEventListener(
@@ -3629,9 +3676,9 @@ function renderProducts() {
         const vWrap = document.createElement('div');
         vWrap.className = 'company-name';
         const vBadge = document.createElement('span');
-        vBadge.style.cssText = 'font-weight:700; color:#6366f1; background:#e0e7ff; padding:2px 8px; border-radius:12px; font-size:11px; margin-right:8px; display:inline-flex; align-items:center;';
+        vBadge.style.cssText = 'font-weight:700; color:#334155; background:#ffffff; border: 1px solid #e2e8f0; padding:2px 9px; border-radius:12px; font-size:11px; margin-right:8px; display:inline-flex; align-items:center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);';
         const colorName = variant.variant_attributes?.Color || variant.color || variant.name;
-        vBadge.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>${colorName}`;
+        vBadge.innerHTML = `${getColorSwatchHtml(colorName)} <span>${colorName}</span>`;
         
         const vName = document.createElement('strong');
         vName.textContent = variant.name;
