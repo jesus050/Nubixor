@@ -1130,6 +1130,7 @@ const elements = {
   inviteUserButton: document.querySelector('#inviteUserButton'),
   editUserButton: document.querySelector('#editUserButton'),
   resetUserAccessButton: document.querySelector('#resetUserAccessButton'),
+  revokeUserSessionsButton: document.querySelector('#revokeUserSessionsButton'),
   roleGrid: document.querySelector('#roleGrid'),
   roleDataState: document.querySelector('#roleDataState'),
   newRoleButton: document.querySelector('#newRoleButton'),
@@ -7928,6 +7929,7 @@ function renderUserDetail(user) {
   elements.userDetailLastLogin.textContent =
     user.last_login_at ? formatShortDate(user.last_login_at) : 'Sin ingreso';
   elements.resetUserAccessButton.hidden = user.status === 'SUSPENDED';
+  elements.revokeUserSessionsButton.hidden = user.status !== 'ACTIVE';
   elements.userDetailPermissionCount.textContent =
     `${permissions.length} ${permissions.length === 1 ? 'acceso' : 'accesos'}`;
   elements.userDetailPermissions.replaceChildren();
@@ -8150,6 +8152,31 @@ async function generateUserAccessLink() {
     showToast(error.message);
   } finally {
     elements.resetUserAccessButton.disabled = false;
+  }
+}
+
+async function revokeUserSessions() {
+  if (!selectedTeamUser) return;
+  const approved = window.confirm(
+    `Se cerrarán todas las sesiones de ${selectedTeamUser.full_name}. Tendrá que volver a iniciar sesión en sus equipos. ¿Continuar?`,
+  );
+  if (!approved) return;
+  elements.revokeUserSessionsButton.disabled = true;
+  try {
+    const result = await getJson(`/api/users/${selectedTeamUser.id}/revoke-sessions`, {
+      method: 'POST',
+      headers: {
+        ...accessRequestHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason: 'Cierre preventivo desde Equipo y accesos' }),
+    });
+    showToast(`${result.revokedSessions} ${result.revokedSessions === 1 ? 'sesión cerrada' : 'sesiones cerradas'}.`);
+    await loadUsers();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.revokeUserSessionsButton.disabled = false;
   }
 }
 
@@ -15684,6 +15711,7 @@ elements.reloadUsersButton.addEventListener('click', () => {
 elements.inviteUserButton.addEventListener('click', openInviteUserDialog);
 elements.editUserButton.addEventListener('click', openEditUserDialog);
 elements.resetUserAccessButton.addEventListener('click', generateUserAccessLink);
+elements.revokeUserSessionsButton.addEventListener('click', revokeUserSessions);
 elements.closeUserDialog.addEventListener('click', closeUserDialog);
 elements.cancelUserButton.addEventListener('click', closeUserDialog);
 elements.userForm.addEventListener('submit', submitUser);

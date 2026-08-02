@@ -143,6 +143,17 @@ async function protectLastOwner(client, tenantId, membership, nextRoleCode, next
   }
 }
 
+function requireOwnerForOwnerAccess(req, currentRoleCode, nextRoleCode) {
+  const affectsOwner = currentRoleCode === 'OWNER' || nextRoleCode === 'OWNER';
+  if (affectsOwner && req.context.user?.role_code !== 'OWNER') {
+    throw new AppError(
+      'Solo un propietario puede crear, modificar, suspender o reasignar el acceso de otro propietario.',
+      403,
+      'OWNER_ACCESS_PROTECTED',
+    );
+  }
+}
+
 router.get('/permissions', (_req, res) => {
   res.json(permissionCatalog);
 });
@@ -230,6 +241,7 @@ router.post('/invite', asyncHandler(async (req, res) => {
       roleId,
       branchId,
     );
+    requireOwnerForOwnerAccess(req, null, role.code);
     let user = await client.query(
       'SELECT * FROM users WHERE lower(email) = $1 FOR UPDATE',
       [email],
@@ -372,6 +384,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
       roleId,
       branchId,
     );
+    requireOwnerForOwnerAccess(req, membership.rows[0].role_code, role.code);
     await protectLastOwner(
       client,
       req.context.tenantId,
@@ -420,6 +433,50 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     return result.rows[0];
   });
   res.json(updated);
+}));
+
+router.post('/:id/revoke-sessions', asyncHandler(async (req, res) => {
+  const userId = uuidOrNull(req.params.id, 'El usuario');
+  const result = await withTransaction(async (client) => {
+    const membership = await client.query(
+      `SELECT tu.status, r.code role_code, u.email, u.full_name
+       FROM tenant_users tu
+       JOIN users u ON u.id = tu.user_id
+       JOIN roles r ON r.id = tu.role_id AND r.tenant_id = tu.tenant_id
+       WHERE tu.tenant_id = $1 AND tu.user_id = $2
+       FOR UPDATE`,
+      [req.context.tenantId, userId],
+    );
+    if (!membership.rowCount) {
+      throw new AppError(
+        'El usuario no pertenece a la empresa activa.',
+        404,
+        'USER_NOT_FOUND',
+      );
+    }
+    requireOwnerForOwnerAccess(req, membership.rows[0].role_code, null);
+    const revoked = await client.query(
+      `UPDATE auth_sessions
+       SET revoked_at = now()
+       WHERE user_id = $1 AND revoked_at IS NULL
+       RETURNING id`,
+      [userId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'user.sessions_revoked',
+      entityType: 'tenant_user',
+      entityId: userId,
+      after: {
+        email: membership.rows[0].email,
+        revokedSessions: revoked.rowCount,
+      },
+      reason: normalizedText(req.body.reason, 300) || 'Cierre preventivo de sesiones',
+    });
+    return { revokedSessions: revoked.rowCount };
+  });
+  res.json(result);
 }));
 
 router.post('/roles', asyncHandler(async (req, res) => {

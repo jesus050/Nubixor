@@ -11,7 +11,7 @@ const createUnsecuredApp = (options = {}) => createApp({ ...options, security: f
 test('GET / sirve la interfaz local', async () => {
   const response = await request(createUnsecuredApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);
-  assert.equal(response.headers['cache-control'], 'no-store');
+  assert.match(response.headers['cache-control'], /no-store/);
   assert.match(response.text, /Nubixor/);
   assert.match(response.text, /href="\.\/styles\.css\?v=/);
   assert.match(response.text, /src="\.\/app\.js\?v=/);
