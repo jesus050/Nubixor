@@ -18226,3 +18226,33 @@ input[type="number"] {
   transform: rotate(180deg);
   color: #6366f1;
 }
+
+/* --- BULLETPROOF DIALOG SCROLL SYSTEM --- */
+dialog,
+dialog[open],
+.company-dialog,
+.app-dialog,
+.product-structure-dialog,
+.product-dialog {
+  box-sizing: border-box !important;
+  max-height: min(85vh, calc(100vh - 40px)) !important;
+  max-height: min(85dvh, calc(100dvh - 40px)) !important;
+  height: auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  margin: auto !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+dialog .company-form,
+dialog[open] .company-form,
+.company-dialog .company-form,
+.app-dialog .company-form,
+.product-structure-dialog .company-form {
+  max-height: none !important;
+  overflow: visible !important;
+}
