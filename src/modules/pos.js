@@ -626,12 +626,18 @@ router.get('/catalog', asyncHandler(async (req, res) => {
   }
   const result = await query(
     `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
-            p.product_kind,
+            p.product_kind, p.parent_product_id, p.variant_attributes,
+            parent.sku parent_sku, parent.name parent_name,
+            COALESCE(NULLIF(p.metadata->>'invoiceCode', ''), parent.sku, p.sku) invoice_code,
             c.id category_id, c.name category_name,
             tc.name tax_name, tc.rate tax_rate,
             COALESCE(ib.on_hand, 0) on_hand,
             pi.public_url image_url, pi.alt_text image_alt
      FROM products p
+     LEFT JOIN products parent
+       ON parent.id = p.parent_product_id
+      AND parent.tenant_id = p.tenant_id
+      AND parent.deleted_at IS NULL
      LEFT JOIN categories c ON c.id = p.category_id AND c.tenant_id = p.tenant_id
      LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
      LEFT JOIN inventory_balances ib
@@ -677,7 +683,9 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
   }
   const result = await query(
     `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
-            p.product_kind,
+            p.product_kind, p.parent_product_id, p.variant_attributes,
+            parent.sku parent_sku, parent.name parent_name,
+            COALESCE(NULLIF(p.metadata->>'invoiceCode', ''), parent.sku, p.sku) invoice_code,
             p.seller_company_id, seller.trade_name seller_company_name,
             warehouse.id warehouse_id, warehouse.name warehouse_name,
             warehouse.warehouse_type,
@@ -753,6 +761,10 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
       AND p.deleted_at IS NULL
       AND p.active = TRUE
       AND p.tax_review_status = 'REVIEWED'
+     LEFT JOIN products parent
+       ON parent.id = p.parent_product_id
+      AND parent.tenant_id = p.tenant_id
+      AND parent.deleted_at IS NULL
      LEFT JOIN categories c ON c.id = p.category_id AND c.tenant_id = p.tenant_id
      LEFT JOIN tax_categories tc
        ON tc.id = p.sales_tax_category_id AND tc.tenant_id = p.seller_company_id

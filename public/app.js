@@ -4895,53 +4895,68 @@ function updateCashSettlement(totals = calculateCartTotals(), { rebuild = false 
   }
 }
 
+function getPosVariantLabel(product) {
+  const attributes = Object.entries(product.variant_attributes || {})
+    .filter(([, value]) => String(value || '').trim())
+    .map(([attribute, value]) => `${attribute}: ${value}`);
+  if (attributes.length) return attributes.join(' · ');
+  if (product.color || product.variant_name) return product.color || product.variant_name;
+  const match = String(product.name || '').match(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i);
+  return match ? match[1].trim() : 'Presentación estándar';
+}
+
+function buildPosCatalogGroups(products) {
+  const families = new Map();
+  for (const item of products) {
+    // Las variantes comparten una tarjeta de venta por producto padre. La empresa
+    // forma parte de la llave para no combinar catálogos de compañías distintas.
+    const rootId = item.parent_product_id || item.id;
+    const key = `${item.seller_company_id || 'local'}:${rootId}`;
+    if (!families.has(key)) {
+      families.set(key, {
+        rootId,
+        variants: [],
+        hasVariantFamily: false,
+        parentName: item.parent_name || null,
+        parentSku: item.parent_sku || item.invoice_code || null,
+      });
+    }
+    const family = families.get(key);
+    family.variants.push({ ...item, colorLabel: getPosVariantLabel(item) });
+    family.hasVariantFamily ||= Boolean(item.parent_product_id);
+    family.parentName ||= item.parent_name || null;
+    family.parentSku ||= item.parent_sku || item.invoice_code || null;
+  }
+
+  return [...families.values()].map((family) => {
+    const parentItem = family.variants.find((item) => item.id === family.rootId);
+    const mainItem = parentItem || family.variants[0];
+    return {
+      ...mainItem,
+      name: family.parentName || mainItem.name,
+      sku: family.parentSku || mainItem.invoice_code || mainItem.sku,
+      invoice_code: family.parentSku || mainItem.invoice_code || mainItem.sku,
+      isGrouped: family.hasVariantFamily,
+      totalStock: family.variants.reduce((sum, item) => sum + Number(item.on_hand || 0), 0),
+      variants: family.variants,
+    };
+  });
+}
+
 function renderPosCatalog() {
   const search = normalizeSearch(elements.posProductSearch.value.trim());
   const filtered = posCatalog.filter((product) => {
     const searchable = normalizeSearch(
       `${product.name} ${product.sku} ${product.barcode || ''} ${product.category_name || ''} ` +
-      `${product.seller_company_name || ''} ${product.color || ''}`,
+      `${product.seller_company_name || ''} ${product.color || ''} ${product.parent_name || ''} ` +
+      `${product.parent_sku || ''} ${product.invoice_code || ''} ${Object.values(product.variant_attributes || {}).join(' ')}`,
     );
     const matchesCategory =
       activePosCategory === 'ALL' || product.category_id === activePosCategory;
     return matchesCategory && (!search || searchable.includes(search));
   });
 
-  const skuGroups = new Map();
-  for (const item of filtered) {
-    const baseSku = (item.sku || '').trim().toUpperCase();
-    if (!skuGroups.has(baseSku)) {
-      skuGroups.set(baseSku, []);
-    }
-    skuGroups.get(baseSku).push(item);
-  }
-
-  const groupedProducts = [];
-  for (const [baseSku, items] of skuGroups.entries()) {
-    if (items.length === 1) {
-      groupedProducts.push({ ...items[0], isGrouped: false, variants: items });
-    } else {
-      const mainItem = items[0];
-      const totalStock = items.reduce((sum, i) => sum + Number(i.on_hand || 0), 0);
-      const variants = items.map((item) => {
-        let colorName = item.color || item.variant_name;
-        if (!colorName) {
-          const match = item.name.match(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i);
-          colorName = match ? match[1].trim() : item.name;
-        }
-        return {
-          ...item,
-          colorLabel: colorName,
-        };
-      });
-      groupedProducts.push({
-        ...mainItem,
-        isGrouped: true,
-        totalStock,
-        variants,
-      });
-    }
-  }
+  const groupedProducts = buildPosCatalogGroups(filtered);
 
   elements.posProductGrid.replaceChildren();
   elements.posCatalogState.hidden = groupedProducts.length > 0;
@@ -4984,9 +4999,7 @@ function renderPosCatalog() {
     ].filter(Boolean).join(' · ');
 
     const name = document.createElement('strong');
-    name.textContent = group.isGrouped
-      ? group.name.replace(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i, '').trim()
-      : group.name;
+    name.textContent = group.name;
 
     if (group.product_kind === 'COMBO') {
       const comboBadge = document.createElement('em');
@@ -5084,8 +5097,7 @@ function openPosVariantSelectorModal(group) {
 
   if (!dialog || !list) return;
 
-  const baseName = group.name.replace(/[-–(]\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]+)\s*\)?$/i, '').trim();
-  title.textContent = baseName;
+  title.textContent = group.name;
   sub.textContent = `Selecciona el color o presentación para agregar a la venta:`;
 
   list.replaceChildren();
@@ -15818,14 +15830,30 @@ elements.posProductSearch.addEventListener('keydown', (event) => {
   const exactProduct = posCatalog.find((product) =>
     normalizeSearch(product.sku) === query ||
     normalizeSearch(product.barcode || '') === query);
-  if (!exactProduct) {
-    showToast('No encontramos un SKU o código de barras exacto.');
+  if (exactProduct) {
+    addProductToCart(exactProduct);
+    elements.posProductSearch.value = '';
+    renderPosCatalog();
+    showToast(`${exactProduct.name} agregado a la venta.`);
     return;
   }
-  addProductToCart(exactProduct);
-  elements.posProductSearch.value = '';
-  renderPosCatalog();
-  showToast(`${exactProduct.name} agregado a la venta.`);
+  const matchingFamilies = buildPosCatalogGroups(posCatalog).filter((group) =>
+    normalizeSearch(group.sku) === query || normalizeSearch(group.invoice_code || '') === query);
+  if (matchingFamilies.length === 1) {
+    const [family] = matchingFamilies;
+    if (family.isGrouped && family.variants.length > 1) {
+      openPosVariantSelectorModal(family);
+      return;
+    }
+    addProductToCart(family.variants[0]);
+    elements.posProductSearch.value = '';
+    renderPosCatalog();
+    showToast(`${family.name} agregado a la venta.`);
+    return;
+  }
+  showToast(matchingFamilies.length > 1
+    ? 'Hay productos de más de una empresa con ese código. Selecciona la tarjeta correspondiente.'
+    : 'No encontramos un SKU o código de barras exacto.');
 });
 elements.clearCartButton.addEventListener('click', clearCart);
 elements.posCustomerSelect.addEventListener('change', async () => {
