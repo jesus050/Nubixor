@@ -8,6 +8,8 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { encryptBillingCredentials } from '../electronic-billing/credentials.js';
 import { createBillingAdapter } from '../electronic-billing/adapters/registry.js';
+import { runBillingWorkerCycle } from '../electronic-billing/billing-worker.js';
+import { logger } from '../shared/logger.js';
 import {
   decodeProviderArtifact,
   insertStagedArtifact,
@@ -1735,6 +1737,15 @@ router.post('/contingencies/:contingencyId/close', asyncHandler(async (req, res)
       reason: notes,
     });
     return contingency.rows[0];
+  });
+  setImmediate(() => {
+    runBillingWorkerCycle({ maxJobs: 10 }).catch((error) => {
+      logger.error('billing.contingency_resume_failed', {
+        contingencyId,
+        tenantId: req.context.tenantId,
+        errorCode: error?.code,
+      });
+    });
   });
   res.json(result);
 }));
