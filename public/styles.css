@@ -17999,3 +17999,80 @@ main,
 .data-table tbody tr:hover {
   background-color: rgba(99, 102, 241, 0.04) !important;
 }
+
+/* --- COMPLETE BUTTON DESIGN SYSTEM REFINEMENT --- */
+.primary-button {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 99px !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, filter 0.22s ease !important;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45) !important;
+  transform: translateY(-2px) scale(1.01) !important;
+  filter: brightness(1.08) !important;
+}
+
+.primary-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+.secondary-button,
+.ghost-button {
+  background: rgba(241, 245, 249, 0.9) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  border-radius: 99px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.secondary-button:hover:not(:disabled),
+.ghost-button:hover:not(:disabled) {
+  background: #ffffff !important;
+  border-color: #6366f1 !important;
+  color: #4f46e5 !important;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+.secondary-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+.danger-button,
+.btn-delete,
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 99px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.danger-button:hover:not(:disabled),
+.btn-delete:hover:not(:disabled),
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.42) !important;
+  transform: translateY(-2px) !important;
+}
+
+.icon-button {
+  border-radius: 50% !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, color 0.2s ease !important;
+}
+
+.icon-button:hover {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: #4f46e5 !important;
+  transform: rotate(90deg) scale(1.1) !important;
+}
