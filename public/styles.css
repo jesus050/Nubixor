@@ -18076,3 +18076,98 @@ main,
   color: #4f46e5 !important;
   transform: rotate(90deg) scale(1.1) !important;
 }
+
+/* --- ULTRACLEAN TABLE ACTION BUTTONS --- */
+.product-row-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-top: 8px !important;
+}
+
+.photo-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 11px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.photo-action:hover {
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
+  transform: translateY(-1px) !important;
+}
+
+.product-structure-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 11px !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  border-radius: 8px !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: #4f46e5 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.product-structure-action:hover {
+  background: rgba(99, 102, 241, 0.16) !important;
+  border-color: #6366f1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.photo-action.danger-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 11px !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  border-radius: 8px !important;
+  background: rgba(239, 68, 68, 0.06) !important;
+  color: #dc2626 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-left: 0 !important;
+  transition: all 0.18s ease !important;
+}
+
+.photo-action.danger-action:hover {
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: #ef4444 !important;
+  transform: translateY(-1px) !important;
+}
+
+.tax-action {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-top: 6px !important;
+  padding: 4px 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.tax-action:hover {
+  border-color: #6366f1 !important;
+  color: #4f46e5 !important;
+}
