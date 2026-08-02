@@ -17795,8 +17795,17 @@ main,
   border-radius: 22px !important;
   border: 1px solid rgba(79, 210, 233, 0.35) !important;
   box-shadow: 0 30px 90px rgba(7, 13, 66, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
-  overflow: hidden !important;
+  max-height: calc(100vh - 48px) !important;
+  max-height: calc(100dvh - 48px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
   animation: dialogFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.company-dialog .company-form,
+.app-dialog .company-form {
+  overflow: visible !important;
 }
 
 @keyframes dialogFadeIn {
