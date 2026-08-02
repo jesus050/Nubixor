@@ -3528,7 +3528,7 @@ function renderProducts() {
       } else {
         const optionCount = 1 + variants.length;
         const colorNames = [product, ...variants].map(v => v.variant_attributes?.Color || v.color || v.name).slice(0, 3).join(', ');
-        kind.textContent = `🎨 ${optionCount} Opciones (${colorNames}${optionCount > 3 ? '...' : ''})`;
+        kind.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:4px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>${optionCount} Opciones (${colorNames}${optionCount > 3 ? '...' : ''})`;
       }
       nameCopy.append(kind);
     }
@@ -3629,9 +3629,9 @@ function renderProducts() {
         const vWrap = document.createElement('div');
         vWrap.className = 'company-name';
         const vBadge = document.createElement('span');
-        vBadge.style.cssText = 'font-weight:700; color:#6366f1; background:#e0e7ff; padding:2px 8px; border-radius:12px; font-size:11px; margin-right:8px;';
+        vBadge.style.cssText = 'font-weight:700; color:#6366f1; background:#e0e7ff; padding:2px 8px; border-radius:12px; font-size:11px; margin-right:8px; display:inline-flex; align-items:center;';
         const colorName = variant.variant_attributes?.Color || variant.color || variant.name;
-        vBadge.textContent = `🎨 ${colorName}`;
+        vBadge.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg>${colorName}`;
         
         const vName = document.createElement('strong');
         vName.textContent = variant.name;
@@ -5015,7 +5015,7 @@ function renderPosCatalog() {
     if (group.isGrouped && group.variants.length > 1) {
       const variantBadge = document.createElement('div');
       variantBadge.style.cssText = 'margin-top:6px; font-size:12px; font-weight:700; color:#6366f1; background:#e0e7ff; padding:4px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:4px; width:fit-content;';
-      variantBadge.textContent = `🎨 ${group.variants.length} colores disponibles`;
+      variantBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg> ${group.variants.length} colores disponibles`;
       info.append(variantBadge);
     }
 
@@ -5047,8 +5047,8 @@ function renderPosCatalog() {
         : `${stock} · ${warehouseTypeLabels[targetProduct.warehouse_type] || 'Disponible'}`;
       
       if (hasMultipleVariants) {
-        addButton.textContent = '🎨 Elegir color';
-        addButton.style.cssText = 'background: linear-gradient(135deg, #6366f1, #8b5cf6); color:#fff; border:none;';
+        addButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.71 1.7-1.63 0-.44-.18-.85-.47-1.16-.29-.3-.47-.72-.47-1.21 0-.92.74-1.67 1.67-1.67H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/></svg> Elegir color`;
+        addButton.style.cssText = 'background: linear-gradient(135deg, #6366f1, #8b5cf6); color:#fff; border:none; display:inline-flex; align-items:center; justify-content:center;';
       } else {
         const currentQuantity = saleCart.get(targetProduct.id)?.quantity || 0;
         addButton.textContent = stock <= 0 ? 'Sin existencias' : '+ Agregar';
