@@ -17897,3 +17897,71 @@ main,
   transform: scale(1.04) !important;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
 }
+
+/* --- LUXURY AUTHENTICATION GATE DESIGN --- */
+.auth-gate {
+  background: #090d28 !important;
+}
+
+.auth-form-panel {
+  background: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.15), transparent 30rem),
+              linear-gradient(170deg, #0b1137 0%, #070a21 100%) !important;
+}
+
+.auth-form-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  backdrop-filter: blur(20px) !important;
+  padding: 42px 40px !important;
+  border-radius: 24px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+  animation: authCardFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes authCardFade {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.auth-form-card h2 {
+  color: #ffffff !important;
+}
+
+.auth-form-copy {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.auth-form-card .form-field span {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.auth-form-card .form-field input {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+}
+
+.auth-form-card .form-field input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.auth-remember {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.auth-link-button {
+  color: #818cf8 !important;
+}
+
+.auth-link-button:hover {
+  color: #a5b4fc !important;
+}
