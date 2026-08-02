@@ -85,6 +85,11 @@ const elements = {
   billingResolutionNext: document.querySelector('#billingResolutionNext'),
   billingResolutionRemaining: document.querySelector('#billingResolutionRemaining'),
   newBillingResolutionButton: document.querySelector('#newBillingResolutionButton'),
+  billingDiagnosticsStrip: document.querySelector('#billingDiagnosticsStrip'),
+  billingDiagnosticsLabel: document.querySelector('#billingDiagnosticsLabel'),
+  billingDiagnosticsSummary: document.querySelector('#billingDiagnosticsSummary'),
+  billingDiagnosticsDetail: document.querySelector('#billingDiagnosticsDetail'),
+  refreshBillingDiagnosticsButton: document.querySelector('#refreshBillingDiagnosticsButton'),
   billingPendingCount: document.querySelector('#billingPendingCount'),
   billingAcceptedCount: document.querySelector('#billingAcceptedCount'),
   billingRejectedCount: document.querySelector('#billingRejectedCount'),
@@ -10341,6 +10346,14 @@ function renderElectronicBilling(overview = {}) {
   elements.billingResolutionRemaining.textContent =
     String(resolution?.remaining_numbers || 0);
 
+  const diagnostics = overview.diagnostics;
+  elements.billingDiagnosticsStrip.hidden = !diagnostics;
+  if (diagnostics) {
+    elements.billingDiagnosticsLabel.textContent = diagnostics.label || 'DIAGNÓSTICO OPERATIVO';
+    elements.billingDiagnosticsSummary.textContent = diagnostics.summary || 'Sin novedades operativas.';
+    elements.billingDiagnosticsDetail.textContent = diagnostics.detail || 'La información se actualiza con este tablero.';
+  }
+
   const counts = overview.counts || {};
   elements.billingPendingCount.textContent = String(counts.pending || 0);
   elements.billingAcceptedCount.textContent = String(counts.accepted || 0);
@@ -16111,6 +16124,19 @@ elements.configureBillingConnectionButton.addEventListener(
   openBillingConnectionDialog,
 );
 elements.testBillingConnectionButton.addEventListener('click', testBillingConnection);
+elements.refreshBillingDiagnosticsButton.addEventListener('click', async () => {
+  elements.refreshBillingDiagnosticsButton.disabled = true;
+  elements.refreshBillingDiagnosticsButton.textContent = 'Actualizando…';
+  try {
+    await loadElectronicBilling();
+    showToast('Diagnóstico de Factus actualizado.');
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    elements.refreshBillingDiagnosticsButton.disabled = false;
+    elements.refreshBillingDiagnosticsButton.textContent = 'Actualizar diagnóstico';
+  }
+});
 elements.billingContingencyButton.addEventListener('click', startBillingContingency);
 elements.closeBillingContingencyButton.addEventListener(
   'click',

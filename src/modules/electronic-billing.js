@@ -416,7 +416,7 @@ async function activeFactusAccount(tenantId) {
 }
 
 router.get('/overview', asyncHandler(async (req, res) => {
-  const [profile, account, resolutions, documents, counts, contingency] = await Promise.all([
+  const [profile, account, resolutions, documents, counts, contingency, diagnosticCounts] = await Promise.all([
     query(
       `SELECT company_id, taxpayer_type, electronic_invoicing_required,
               default_document_type, vat_responsibility, tax_regime
@@ -491,6 +491,64 @@ router.get('/overview', asyncHandler(async (req, res) => {
        LIMIT 1`,
       [req.context.tenantId],
     ),
+    query(
+      `SELECT
+        (
+          SELECT COUNT(*)::integer
+          FROM (
+            SELECT DISTINCT ON (electronic_document_id) status
+            FROM electronic_document_transmissions
+            WHERE company_id = $1
+            ORDER BY electronic_document_id, attempt_number DESC
+          ) latest_document_attempt
+          WHERE status IN ('QUEUED', 'RETRYABLE', 'SENDING')
+        ) AS document_queue,
+        (
+          SELECT COUNT(*)::integer
+          FROM (
+            SELECT DISTINCT ON (adjustment_note_id) status
+            FROM electronic_note_transmissions
+            WHERE company_id = $1
+            ORDER BY adjustment_note_id, attempt_number DESC
+          ) latest_note_attempt
+          WHERE status IN ('QUEUED', 'RETRYABLE', 'SENDING')
+        ) AS note_queue,
+        (
+          SELECT COUNT(*)::integer
+          FROM (
+            SELECT DISTINCT ON (electronic_document_id) status
+            FROM electronic_document_transmissions
+            WHERE company_id = $1
+            ORDER BY electronic_document_id, attempt_number DESC
+          ) latest_document_attempt
+          WHERE status IN ('REJECTED', 'FAILED')
+        ) AS document_failures,
+        (
+          SELECT COUNT(*)::integer
+          FROM (
+            SELECT DISTINCT ON (adjustment_note_id) status
+            FROM electronic_note_transmissions
+            WHERE company_id = $1
+            ORDER BY adjustment_note_id, attempt_number DESC
+          ) latest_note_attempt
+          WHERE status IN ('REJECTED', 'FAILED')
+        ) AS note_failures,
+        (
+          SELECT COUNT(*)::integer
+          FROM electronic_documents
+          WHERE company_id = $1
+            AND status = 'ACCEPTED'
+            AND (pdf_document_id IS NULL OR xml_document_id IS NULL)
+        ) AS document_artifacts_pending,
+        (
+          SELECT COUNT(*)::integer
+          FROM electronic_adjustment_notes
+          WHERE company_id = $1
+            AND status = 'ACCEPTED'
+            AND (pdf_document_id IS NULL OR xml_document_id IS NULL)
+        ) AS note_artifacts_pending`,
+      [req.context.tenantId],
+    ),
   ]);
   const fiscalProfile = profile.rows[0] || null;
   const activeAccount = account.rows[0] || null;
@@ -499,6 +557,54 @@ router.get('/overview', asyncHandler(async (req, res) => {
     new Date(`${resolution.valid_from}T00:00:00Z`) <= new Date() &&
     new Date(`${resolution.valid_until}T23:59:59Z`) >= new Date() &&
     Number(resolution.remaining_numbers) > 0) || null;
+  const diagnostic = diagnosticCounts.rows[0] || {};
+  const queued = Number(diagnostic.document_queue || 0) + Number(diagnostic.note_queue || 0);
+  const failures = Number(diagnostic.document_failures || 0) + Number(diagnostic.note_failures || 0);
+  const artifactsPending = Number(diagnostic.document_artifacts_pending || 0) +
+    Number(diagnostic.note_artifacts_pending || 0);
+  const electronicRequired = Boolean(fiscalProfile?.electronic_invoicing_required);
+  const resolutionReady = Boolean(
+    activeResolution &&
+    (
+      activeAccount?.provider_code !== 'FACTUS' ||
+      (activeResolution.provider_numbering_range_id && activeResolution.provider_document_code)
+    )
+  );
+  const diagnosticMessages = [];
+  let diagnosticLevel = 'READY';
+  if (!electronicRequired) {
+    diagnosticLevel = 'INTERNAL';
+    diagnosticMessages.push('Esta empresa usa comprobantes internos; no enviará documentos a DIAN.');
+  } else if (!activeAccount) {
+    diagnosticLevel = 'ACTION_REQUIRED';
+    diagnosticMessages.push('Configura una cuenta tecnológica antes de emitir facturas electrónicas.');
+  } else {
+    if (activeAccount.connection_status !== 'READY') {
+      diagnosticLevel = 'ACTION_REQUIRED';
+      diagnosticMessages.push(activeAccount.last_error
+        ? `La conexión requiere atención: ${activeAccount.last_error}`
+        : 'Prueba la conexión del proveedor antes de facturar.');
+    }
+    if (!resolutionReady) {
+      diagnosticLevel = 'ACTION_REQUIRED';
+      diagnosticMessages.push('Falta un rango vigente asociado al software de la empresa.');
+    }
+  }
+  if (failures > 0) {
+    diagnosticLevel = 'ACTION_REQUIRED';
+    diagnosticMessages.push(`${failures} envío(s) rechazado(s) o fallido(s): revisa la cola y reintenta cuando corrijas la causa.`);
+  }
+  if (queued > 0) {
+    if (diagnosticLevel === 'READY') diagnosticLevel = 'FOLLOW_UP';
+    diagnosticMessages.push(`${queued} documento(s) están en cola o procesándose automáticamente.`);
+  }
+  if (artifactsPending > 0) {
+    if (diagnosticLevel === 'READY') diagnosticLevel = 'FOLLOW_UP';
+    diagnosticMessages.push(`${artifactsPending} documento(s) aceptado(s) aún esperan el archivo PDF o XML.`);
+  }
+  if (!diagnosticMessages.length) {
+    diagnosticMessages.push('Conexión, numeración, cola y expediente fiscal están listos para operar.');
+  }
   res.json({
     fiscalProfile,
     account: activeAccount,
@@ -506,6 +612,20 @@ router.get('/overview', asyncHandler(async (req, res) => {
     documents: documents.rows,
     counts: counts.rows[0],
     contingency: contingency.rows[0] || null,
+    diagnostics: {
+      label: diagnosticLevel === 'READY' ? 'DIAGNÓSTICO FACTUS · LISTO' :
+        diagnosticLevel === 'INTERNAL' ? 'DOCUMENTACIÓN INTERNA' : 'ATENCIÓN OPERATIVA',
+      summary: diagnosticLevel === 'READY'
+        ? 'Facturación electrónica preparada para operar.'
+        : diagnosticLevel === 'INTERNAL'
+          ? 'Esta empresa no requiere emisión electrónica.'
+          : 'Hay acciones recomendadas antes de continuar.',
+      detail: diagnosticMessages.join(' '),
+      level: diagnosticLevel,
+      queue: { documents: Number(diagnostic.document_queue || 0), notes: Number(diagnostic.note_queue || 0) },
+      failures,
+      artifactsPending,
+    },
     readiness: {
       electronicMode: Boolean(fiscalProfile?.electronic_invoicing_required),
       providerConfigured: Boolean(activeAccount),
@@ -513,16 +633,7 @@ router.get('/overview', asyncHandler(async (req, res) => {
         activeAccount?.credentials_configured || activeAccount?.provider_code === 'SANDBOX',
       ),
       connectionReady: activeAccount?.connection_status === 'READY',
-      resolutionReady: Boolean(
-        activeResolution &&
-        (
-          activeAccount?.provider_code !== 'FACTUS' ||
-          (
-            activeResolution.provider_numbering_range_id &&
-            activeResolution.provider_document_code
-          )
-        )
-      ),
+      resolutionReady,
     },
   });
 }));
