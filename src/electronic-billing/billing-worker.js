@@ -2,6 +2,12 @@ import { query, withTransaction } from '../db.js';
 import { writeAudit } from '../audit.js';
 import { createBillingAdapter } from './adapters/registry.js';
 import { logger } from '../shared/logger.js';
+import {
+  decodeProviderArtifact,
+  insertStagedArtifact,
+  removeStagedArtifacts,
+  stageSecureArtifact,
+} from '../secure-storage.js';
 
 const RETRYABLE_HTTP_STATUSES = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRY_SECONDS = 3_600;
@@ -258,7 +264,93 @@ async function completeNoteTransmission(record, providerResult) {
       reason: 'Procesamiento automático de nota electrónica',
     });
   });
+  if (
+    finalStatus === 'ACCEPTED' &&
+    record.provider_code === 'FACTUS' &&
+    providerResult.providerReference
+  ) {
+    archiveFactusNoteArtifactsInBackground({
+      adapter: createBillingAdapter(record),
+      companyId: record.company_id,
+      noteId: record.adjustment_note_id,
+      noteType: record.note_type,
+      providerReference: providerResult.providerReference,
+      userId: record.created_by,
+    });
+  }
   return finalStatus;
+}
+
+async function persistFactusNoteArtifacts({
+  adapter, companyId, noteId, noteType, providerReference, userId,
+}) {
+  const downloaded = await adapter.downloadAdjustmentNoteArtifacts(noteType, providerReference);
+  const artifacts = [
+    decodeProviderArtifact(downloaded.pdf, {
+      contentField: 'pdf_base_64_encoded',
+      fallbackName: `${providerReference}.pdf`, contentType: 'application/pdf',
+    }),
+    decodeProviderArtifact(downloaded.xml, {
+      contentField: 'xml_base_64_encoded',
+      fallbackName: `${providerReference}.xml`, contentType: 'application/xml',
+    }),
+  ];
+  const staged = [];
+  try {
+    for (const artifact of artifacts) {
+      staged.push(await stageSecureArtifact({ tenantId: companyId, ...artifact }));
+    }
+    return await withTransaction(async (client) => {
+      const saved = [];
+      for (const artifact of staged) {
+        saved.push(await insertStagedArtifact(client, {
+          artifact, tenantId: companyId, userId,
+          description: `Expediente fiscal Factus ${providerReference}`,
+        }));
+      }
+      await client.query(
+        `UPDATE electronic_adjustment_notes
+         SET pdf_document_id=$3::uuid, xml_document_id=$4::uuid,
+             pdf_url='/api/assets/documents/' || $3::text,
+             xml_url='/api/assets/documents/' || $4::text,
+             artifacts_synced_at=now(), updated_at=now()
+         WHERE id=$1 AND company_id=$2`,
+        [noteId, companyId, saved[0].id, saved[1].id],
+      );
+      await writeAudit(client, {
+        tenantId: companyId, userId,
+        action: 'electronic_billing.note_artifacts_archived',
+        entityType: 'electronic_adjustment_note', entityId: noteId,
+        after: { providerReference, pdfDocumentId: saved[0].id, xmlDocumentId: saved[1].id },
+        reason: 'PDF y XML de nota Factus almacenados de forma privada',
+      });
+      return saved;
+    });
+  } catch (error) {
+    await removeStagedArtifacts(staged);
+    throw error;
+  }
+}
+
+function archiveFactusNoteArtifactsInBackground(context) {
+  setImmediate(() => {
+    persistFactusNoteArtifacts(context).catch(async (error) => {
+      logger.error('billing.note_artifacts_pending', {
+        noteId: context.noteId, companyId: context.companyId, errorCode: error?.code,
+      });
+      try {
+        await withTransaction((client) => writeAudit(client, {
+          tenantId: context.companyId, userId: context.userId,
+          action: 'electronic_billing.note_artifacts_pending',
+          entityType: 'electronic_adjustment_note', entityId: context.noteId,
+          after: { providerReference: context.providerReference, errorCode: error?.code || 'FISCAL_ARTIFACT_SYNC_FAILED' },
+          reason: error?.message || 'No fue posible archivar los documentos fiscales de la nota.',
+        }));
+      } catch (auditError) {
+        logger.error('billing.note_artifacts_audit_failed', { noteId: context.noteId, errorCode: auditError?.code });
+      }
+    });
+  });
 }
 
 async function failNoteTransmission(record, error) {
