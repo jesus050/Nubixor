@@ -17789,3 +17789,72 @@ main,
   color: #b45309;
   border: 1px solid rgba(245, 158, 11, 0.25);
 }
+
+.company-dialog,
+.app-dialog {
+  border-radius: 22px !important;
+  border: 1px solid rgba(79, 210, 233, 0.35) !important;
+  box-shadow: 0 30px 90px rgba(7, 13, 66, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  overflow: hidden !important;
+  animation: dialogFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.company-dialog::backdrop,
+.app-dialog::backdrop {
+  background: rgba(7, 13, 66, 0.68) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.product-kind-badge {
+  font-size: 11px !important;
+  padding: 4px 12px !important;
+  border-radius: 99px !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  color: #4f46e5 !important;
+  font-weight: 700 !important;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+  outline: none !important;
+}
+
+.secondary-button {
+  transition: all 0.2s ease !important;
+}
+
+.secondary-button:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: translateY(-1px) !important;
+}
