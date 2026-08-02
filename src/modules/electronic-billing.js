@@ -415,6 +415,23 @@ async function activeFactusAccount(tenantId) {
   return account.rows[0];
 }
 
+async function assertNoOpenBillingContingency(client, tenantId) {
+  const contingency = await client.query(
+    `SELECT id
+     FROM electronic_billing_contingencies
+     WHERE company_id = $1 AND status = 'OPEN'
+     LIMIT 1`,
+    [tenantId],
+  );
+  if (contingency.rowCount) {
+    throw new AppError(
+      'Hay una contingencia abierta. El documento quedará en cola hasta registrar su cierre.',
+      409,
+      'ELECTRONIC_BILLING_CONTINGENCY_OPEN',
+    );
+  }
+}
+
 router.get('/overview', asyncHandler(async (req, res) => {
   const [profile, account, resolutions, documents, counts, contingency, diagnosticCounts] = await Promise.all([
     query(
@@ -1265,6 +1282,7 @@ router.post('/documents/:documentId/process-sandbox', asyncHandler(async (req, r
     throw new AppError('El documento no es válido.', 422, 'INVALID_ELECTRONIC_DOCUMENT_ID');
   }
   const result = await withTransaction(async (client) => {
+    await assertNoOpenBillingContingency(client, req.context.tenantId);
     const transmission = await client.query(
       `SELECT transmission.*, account.provider_code, account.environment,
               document.document_type, document.prefix, document.document_number,
@@ -1378,6 +1396,7 @@ router.post('/documents/:documentId/process', asyncHandler(async (req, res) => {
     throw new AppError('El documento no es válido.', 422, 'INVALID_ELECTRONIC_DOCUMENT_ID');
   }
   const claimed = await withTransaction(async (client) => {
+    await assertNoOpenBillingContingency(client, req.context.tenantId);
     const transmission = await client.query(
       `SELECT transmission.*, account.company_id account_company_id,
               account.provider_code, account.environment, account.base_url,
@@ -1723,6 +1742,14 @@ router.post('/contingencies/:contingencyId/close', asyncHandler(async (req, res)
 export async function autoProcessElectronicDocument({ tenantId, userId, documentId }) {
   if (!UUID_PATTERN.test(documentId || '')) return null;
   try {
+    const contingency = await query(
+      `SELECT id
+       FROM electronic_billing_contingencies
+       WHERE company_id = $1 AND status = 'OPEN'
+       LIMIT 1`,
+      [tenantId],
+    );
+    const contingencyOpen = contingency.rowCount > 0;
     const account = await query(
       `SELECT id, provider_code, environment, connection_status
        FROM electronic_billing_accounts
@@ -1804,6 +1831,19 @@ export async function autoProcessElectronicDocument({ tenantId, userId, document
         ],
       );
     });
+
+    // La venta conserva su documento y su payload en cola; la transmisión
+    // externa se pausa hasta que el responsable cierre la contingencia.
+    if (contingencyOpen) {
+      const pending = await query(
+        `SELECT id, status, provider_reference, cufe, qr_url,
+                pdf_document_id, xml_document_id, failure_reason
+         FROM electronic_documents
+         WHERE id = $1 AND company_id = $2`,
+        [documentId, tenantId],
+      );
+      return pending.rows[0] || null;
+    }
 
     if (acc.provider_code === 'SANDBOX') {
       const claimed = await withTransaction(async (client) => {

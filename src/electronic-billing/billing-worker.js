@@ -53,8 +53,9 @@ export async function releaseDueBillingRetries() {
 export async function recoverExpiredBillingLeases() {
   // Una transmisión nunca puede quedarse bloqueada indefinidamente si el
   // proceso se reinicia. Conservamos el mismo intento e idempotency_key.
-  const result = await query(
-    `UPDATE electronic_document_transmissions
+  const [documents, notes] = await Promise.all([
+    query(
+      `UPDATE electronic_document_transmissions
      SET status = 'RETRYABLE',
          completed_at = now(),
          error_code = 'BILLING_WORKER_LEASE_EXPIRED',
@@ -63,8 +64,20 @@ export async function recoverExpiredBillingLeases() {
      WHERE status = 'SENDING'
        AND started_at < now() - interval '10 minutes'
      RETURNING id`,
-  );
-  return result.rowCount;
+    ),
+    query(
+      `UPDATE electronic_note_transmissions
+       SET status = 'RETRYABLE',
+           completed_at = now(),
+           error_code = 'BILLING_WORKER_LEASE_EXPIRED',
+           error_message = 'La transmisión de la nota se recuperó después de superar el tiempo de espera.',
+           next_attempt_at = now()
+       WHERE status = 'SENDING'
+         AND started_at < now() - interval '10 minutes'
+       RETURNING id`,
+    ),
+  ]);
+  return { documents: documents.rowCount, notes: notes.rowCount };
 }
 
 async function claimQueuedTransmission() {
@@ -78,6 +91,12 @@ async function claimQueuedTransmission() {
          ON account.id = transmission.billing_account_id
         AND account.company_id = transmission.company_id
        WHERE transmission.status = 'QUEUED'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM electronic_billing_contingencies contingency
+           WHERE contingency.company_id = transmission.company_id
+             AND contingency.status = 'OPEN'
+         )
        ORDER BY transmission.queued_at ASC
        LIMIT 1
        FOR UPDATE OF transmission SKIP LOCKED`,
@@ -217,6 +236,12 @@ async function claimQueuedNoteTransmission() {
        JOIN electronic_billing_accounts account
          ON account.id = transmission.billing_account_id AND account.company_id = transmission.company_id
        WHERE transmission.status = 'QUEUED'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM electronic_billing_contingencies contingency
+           WHERE contingency.company_id = transmission.company_id
+             AND contingency.status = 'OPEN'
+         )
        ORDER BY transmission.queued_at ASC
        LIMIT 1
        FOR UPDATE OF transmission SKIP LOCKED`,
@@ -421,6 +446,12 @@ export async function reconcileSubmittedBillingDocuments({ limit = 5 } = {}) {
       AND account.company_id = transmission.company_id
      WHERE transmission.status = 'SUBMITTED'
        AND transmission.provider_reference IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1
+         FROM electronic_billing_contingencies contingency
+         WHERE contingency.company_id = transmission.company_id
+           AND contingency.status = 'OPEN'
+       )
      ORDER BY transmission.completed_at ASC NULLS FIRST
      LIMIT $1`,
     [Math.max(1, Math.min(20, Number(limit) || 5))],
@@ -455,7 +486,7 @@ export async function runBillingWorkerCycle({ maxJobs = 3 } = {}) {
   }
   const note = await processOneQueuedNoteTransmission();
   const reconciled = await reconcileSubmittedBillingDocuments();
-  if (released.documents || released.notes || recovered || processed.length || note || reconciled) {
+  if (released.documents || released.notes || recovered.documents || recovered.notes || processed.length || note || reconciled) {
     logger.info('billing.worker_cycle', {
       released,
       recovered,
