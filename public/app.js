@@ -121,6 +121,7 @@ const elements = {
   billingNoteDialog: document.querySelector('#billingNoteDialog'),
   billingNoteForm: document.querySelector('#billingNoteForm'),
   billingNoteDocumentId: document.querySelector('#billingNoteDocumentId'),
+  billingNoteItems: document.querySelector('#billingNoteItems'),
   billingNoteFormError: document.querySelector('#billingNoteFormError'),
   closeBillingNoteDialog: document.querySelector('#closeBillingNoteDialog'),
   cancelBillingNoteButton: document.querySelector('#cancelBillingNoteButton'),
@@ -10926,7 +10927,43 @@ function openBillingNoteDialog() {
     option.textContent = `${invoice.prefix || ''}${invoice.document_number || invoice.sequence_number} · ${formatCurrency(invoice.total)}`;
     elements.billingNoteDocumentId.append(option);
   });
+  loadBillingNoteItems(elements.billingNoteDocumentId.value);
   elements.billingNoteDialog.showModal();
+}
+
+function refreshBillingNoteTotal() {
+  const lines = [...elements.billingNoteItems.querySelectorAll('[data-note-sale-item]')];
+  const total = lines.reduce((sum, line) => {
+    const checked = line.querySelector('input[type="checkbox"]')?.checked;
+    const quantity = Number(line.querySelector('input[type="number"]')?.value || 0);
+    const unitTotal = Number(line.dataset.unitTotal || 0);
+    return checked ? sum + (quantity * unitTotal) : sum;
+  }, 0);
+  elements.billingNoteForm.elements.total.value = total ? String(Math.round(total * 100) / 100) : '';
+}
+
+async function loadBillingNoteItems(documentId) {
+  elements.billingNoteItems.textContent = 'Cargando productos facturados…';
+  try {
+    const items = await getJson(`/api/billing-workflow/documents/${documentId}/adjustment-items`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    elements.billingNoteItems.replaceChildren();
+    const title = window.document.createElement('span');
+    title.textContent = 'Productos y cantidades a ajustar *';
+    elements.billingNoteItems.append(title);
+    items.forEach((item) => {
+      const row = window.document.createElement('label');
+      row.dataset.noteSaleItem = item.sale_item_id;
+      row.dataset.unitTotal = String(Number(item.line_total) / Number(item.quantity));
+      row.innerHTML = `<input type="checkbox" checked> <b>${escapeHtml(item.name_snapshot)}</b> · ${escapeHtml(item.sku_snapshot)} <input type="number" min="0.0001" max="${item.quantity}" step="0.0001" value="${item.quantity}">`;
+      row.querySelectorAll('input').forEach((input) => input.addEventListener('input', refreshBillingNoteTotal));
+      elements.billingNoteItems.append(row);
+    });
+    refreshBillingNoteTotal();
+  } catch (error) {
+    elements.billingNoteItems.textContent = error.message;
+  }
 }
 
 function closeBillingNoteDialog() {
@@ -10950,7 +10987,12 @@ async function submitBillingNote(event) {
         noteType: formData.get('noteType'),
         reasonCode: formData.get('reasonCode'),
         reason: formData.get('reason'),
-        total: Number(formData.get('total')),
+        items: [...elements.billingNoteItems.querySelectorAll('[data-note-sale-item]')]
+          .filter((line) => line.querySelector('input[type="checkbox"]')?.checked)
+          .map((line) => ({
+            saleItemId: line.dataset.noteSaleItem,
+            quantity: Number(line.querySelector('input[type="number"]')?.value),
+          })),
       }),
     });
     closeBillingNoteDialog();
@@ -16128,6 +16170,9 @@ elements.newBillingNoteButton.addEventListener('click', openBillingNoteDialog);
 elements.closeBillingNoteDialog.addEventListener('click', closeBillingNoteDialog);
 elements.cancelBillingNoteButton.addEventListener('click', closeBillingNoteDialog);
 elements.billingNoteForm.addEventListener('submit', submitBillingNote);
+elements.billingNoteDocumentId.addEventListener('change', () => {
+  loadBillingNoteItems(elements.billingNoteDocumentId.value);
+});
 elements.billingNoteDialog.addEventListener('click', (event) => {
   if (event.target === elements.billingNoteDialog) closeBillingNoteDialog();
 });

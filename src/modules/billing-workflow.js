@@ -363,24 +363,48 @@ router.post('/orders/:orderId/ready-to-invoice', asyncHandler(async (req, res) =
   res.json(result);
 }));
 
+router.get('/documents/:documentId/adjustment-items', asyncHandler(async (req, res) => {
+  const { documentId } = req.params;
+  if (!isUuid(documentId)) {
+    throw new AppError('La factura no es válida.', 422, 'INVALID_BILLING_DOCUMENT_ID');
+  }
+  const result = await query(
+    `SELECT item.id sale_item_id, item.product_id, item.sku_snapshot,
+            item.name_snapshot, item.quantity, item.unit_price, item.tax_rate,
+            item.tax_amount, item.line_total
+     FROM electronic_documents document
+     JOIN sales sale ON sale.id=document.sale_id AND sale.company_id=document.company_id
+     JOIN sale_items item ON item.sale_id=sale.id AND item.seller_company_id=sale.company_id
+     WHERE document.id=$1 AND document.company_id=$2 AND document.status='ACCEPTED'
+     ORDER BY item.id`,
+    [documentId, req.context.tenantId],
+  );
+  if (!result.rowCount) {
+    throw new AppError('No encontramos líneas ajustables de una factura aceptada.', 404, 'ADJUSTMENT_SOURCE_NOT_FOUND');
+  }
+  res.json(result.rows);
+}));
+
 router.post('/notes', asyncHandler(async (req, res) => {
   const originalDocumentId = req.body.originalDocumentId;
   const noteType = text(req.body.noteType, 20).toUpperCase();
   const reasonCode = text(req.body.reasonCode, 20);
   const reason = text(req.body.reason, 1000);
-  const total = Number(req.body.total);
+  const selectedItems = Array.isArray(req.body.items) ? req.body.items : [];
   if (!isUuid(originalDocumentId) ||
       !['CREDIT_NOTE', 'DEBIT_NOTE'].includes(noteType) ||
-      !reasonCode || !reason || !Number.isFinite(total) || total <= 0) {
+      !reasonCode || !reason || !selectedItems.length || selectedItems.length > 100 ||
+      selectedItems.some((item) => !isUuid(item?.saleItemId) ||
+        !Number.isFinite(Number(item?.quantity)) || Number(item.quantity) <= 0)) {
     throw new AppError(
-      'Selecciona factura, tipo, causal, motivo y valor positivo.',
+      'Selecciona factura, al menos un producto, tipo, causal y motivo.',
       422,
       'INVALID_ADJUSTMENT_NOTE',
     );
   }
   const result = await withTransaction(async (client) => {
     const original = await client.query(
-      `SELECT document.id, document.status, sale.total, sale.tax_total
+      `SELECT document.id, document.status, sale.id sale_id, sale.total, sale.tax_total
        FROM electronic_documents document
        JOIN sales sale
          ON sale.id = document.sale_id
@@ -396,16 +420,37 @@ router.post('/notes', asyncHandler(async (req, res) => {
         'ACCEPTED_DOCUMENT_REQUIRED',
       );
     }
-    if (noteType === 'CREDIT_NOTE' &&
-        total > Number(original.rows[0].total)) {
-      throw new AppError(
-        'La nota crédito no puede superar el valor del documento original.',
-        422,
-        'CREDIT_NOTE_EXCEEDS_DOCUMENT',
-      );
+    const consolidated = new Map();
+    selectedItems.forEach((item) => consolidated.set(
+      item.saleItemId,
+      (consolidated.get(item.saleItemId) || 0) + Number(item.quantity),
+    ));
+    const sourceItems = await client.query(
+      `SELECT id, product_id, sku_snapshot, name_snapshot, quantity, unit_price,
+              tax_rate, tax_amount, line_total
+       FROM sale_items
+       WHERE sale_id=$1 AND seller_company_id=$2 AND id=ANY($3::uuid[])
+       FOR SHARE`,
+      [original.rows[0].sale_id, req.context.tenantId, [...consolidated.keys()]],
+    );
+    if (sourceItems.rowCount !== consolidated.size) {
+      throw new AppError('Uno de los productos no pertenece a la factura original.', 422, 'INVALID_ADJUSTMENT_ITEM');
     }
-    const ratio = total / Number(original.rows[0].total);
-    const taxTotal = Math.round(Number(original.rows[0].tax_total) * ratio * 100) / 100;
+    const noteItems = sourceItems.rows.map((item) => {
+      const quantity = consolidated.get(item.id);
+      if (quantity > Number(item.quantity)) {
+        throw new AppError(`La cantidad de ${item.name_snapshot} supera lo facturado.`, 422, 'ADJUSTMENT_QUANTITY_EXCEEDED');
+      }
+      const ratio = quantity / Number(item.quantity);
+      return {
+        ...item,
+        quantity,
+        taxAmount: Math.round(Number(item.tax_amount) * ratio * 100) / 100,
+        lineTotal: Math.round(Number(item.line_total) * ratio * 100) / 100,
+      };
+    });
+    const total = Math.round(noteItems.reduce((sum, item) => sum + item.lineTotal, 0) * 100) / 100;
+    const taxTotal = Math.round(noteItems.reduce((sum, item) => sum + item.taxAmount, 0) * 100) / 100;
     const note = await client.query(
       `INSERT INTO electronic_adjustment_notes(
          company_id, original_document_id, note_type, reason_code, reason,
@@ -436,6 +481,18 @@ router.post('/notes', asyncHandler(async (req, res) => {
       after: note.rows[0],
       reason,
     });
+    for (const item of noteItems) {
+      await client.query(
+        `INSERT INTO electronic_adjustment_note_items(
+           company_id, adjustment_note_id, original_sale_item_id, product_id,
+           sku_snapshot, name_snapshot, quantity, unit_price, tax_rate,
+           tax_amount, line_total
+         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [req.context.tenantId, note.rows[0].id, item.id, item.product_id,
+          item.sku_snapshot, item.name_snapshot, item.quantity, item.unit_price,
+          item.tax_rate, item.taxAmount, item.lineTotal],
+      );
+    }
     return note.rows[0];
   });
   res.status(201).json(result);
@@ -503,13 +560,6 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
           'FACTUS_ORIGINAL_REFERENCE_REQUIRED',
         );
       }
-      if (Number(record.total) !== Number(record.original_total)) {
-        throw new AppError(
-          'Las notas parciales requieren seleccionar productos y cantidades. La nota completa puede transmitirse ahora.',
-          409,
-          'FACTUS_PARTIAL_NOTE_ITEMS_REQUIRED',
-        );
-      }
       const sourcePayload = await client.query(
         `SELECT payload_snapshot
          FROM electronic_document_transmissions
@@ -527,6 +577,51 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
           'FACTUS_ORIGINAL_PAYLOAD_REQUIRED',
         );
       }
+      const [sourceItems, noteItems] = await Promise.all([
+        client.query(
+          `SELECT id FROM sale_items
+           WHERE sale_id=(SELECT sale_id FROM electronic_documents WHERE id=$1 AND company_id=$2)
+             AND seller_company_id=$2
+           ORDER BY id`,
+          [record.original_document_id, req.context.tenantId],
+        ),
+        client.query(
+          `SELECT original_sale_item_id, quantity
+           FROM electronic_adjustment_note_items
+           WHERE adjustment_note_id=$1 AND company_id=$2
+           ORDER BY original_sale_item_id`,
+          [noteId, req.context.tenantId],
+        ),
+      ]);
+      if (!noteItems.rowCount || sourceItems.rowCount !== invoicePayload.items.length) {
+        throw new AppError(
+          'Faltan las líneas auditables de la nota o la evidencia de la factura original.',
+          409,
+          'FACTUS_NOTE_ITEM_EVIDENCE_REQUIRED',
+        );
+      }
+      const selectedQuantities = new Map(noteItems.rows.map((item) => [
+        item.original_sale_item_id,
+        Number(item.quantity),
+      ]));
+      const providerItems = invoicePayload.items.flatMap((item, index) => {
+        const quantity = selectedQuantities.get(sourceItems.rows[index].id);
+        return quantity
+          ? [{ ...item, quantity: String(Math.round(quantity * 100) / 100) }]
+          : [];
+      });
+      if (!providerItems.length) {
+        throw new AppError('Selecciona al menos una línea para transmitir la nota.', 409, 'FACTUS_NOTE_ITEMS_REQUIRED');
+      }
+      const ratio = Number(record.total) / Number(record.original_total);
+      let paymentRemainder = Number(record.total);
+      const paymentDetails = invoicePayload.payment_details.map((detail, index, all) => {
+        const amount = index === all.length - 1
+          ? paymentRemainder
+          : Math.round(Number(detail.amount) * ratio * 100) / 100;
+        paymentRemainder = Math.round((paymentRemainder - amount) * 100) / 100;
+        return { ...detail, amount: amount.toFixed(2) };
+      });
       providerPayload = {
         reference_code: `NUBIXOR-NOTE-${noteId}`,
         correction_concept_code: record.reason_code,
@@ -535,9 +630,9 @@ router.post('/notes/:noteId/queue', asyncHandler(async (req, res) => {
           ? { numbering_range_id: Number(record.provider_numbering_range_id) }
           : {}),
         observation: record.reason.slice(0, 250),
-        payment_details: invoicePayload.payment_details,
+        payment_details: paymentDetails,
         customer: invoicePayload.customer,
-        items: invoicePayload.items,
+        items: providerItems,
         note_type: record.note_type === 'CREDIT_NOTE' ? 'CREDIT' : 'DEBIT',
       };
     }
