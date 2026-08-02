@@ -17965,3 +17965,37 @@ main,
 .auth-link-button:hover {
   color: #a5b4fc !important;
 }
+
+/* --- EXECUTIVE DATA TABLE STYLING --- */
+.data-table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.data-table th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding: 14px 16px !important;
+}
+
+.data-table td {
+  padding: 12px 16px !important;
+  font-variant-numeric: tabular-nums !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.18s ease, transform 0.18s ease !important;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(99, 102, 241, 0.04) !important;
+}
