@@ -18256,3 +18256,33 @@ dialog[open] .company-form,
   max-height: none !important;
   overflow: visible !important;
 }
+
+/* --- CLEAN HEADER ACTIONS & UNBREAKABLE BUTTONS --- */
+.heading-actions,
+.catalog-actions {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.heading-actions button,
+.catalog-actions button,
+.secondary-button,
+.primary-button {
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.secondary-button svg,
+.primary-button svg {
+  flex-shrink: 0 !important;
+}
