@@ -15033,12 +15033,87 @@ function syncReceiptOfficialPdf({ electronic, billing, receipt }) {
 }
 
 function printReceiptTicket() {
-  document.querySelector('#nubixor-receipt-paper-size')?.remove();
+  // Safari puede mostrar un diálogo <dialog> vacío al imprimir. Generamos una
+  // copia temporal fuera del diálogo para que el controlador térmico reciba
+  // siempre contenido ordinario y no dependa de la capa modal del navegador.
+  document.querySelector('#nubixor-receipt-print-root')?.remove();
+  document.querySelector('#nubixor-receipt-print-style')?.remove();
+  const source = elements.receiptDialog.querySelector('.company-form');
+  if (!source) {
+    showToast('No fue posible preparar el ticket para impresión.');
+    return;
+  }
+  const printRoot = document.createElement('section');
+  printRoot.id = 'nubixor-receipt-print-root';
+  printRoot.setAttribute('aria-hidden', 'true');
+  printRoot.append(source.cloneNode(true));
+  printRoot.querySelectorAll(
+    '.dialog-actions, .icon-button, .receipt-print-hint, [id="openReturnDialogButton"]',
+  ).forEach((node) => node.remove());
+  document.body.append(printRoot);
+
   const paperSize = document.createElement('style');
-  paperSize.id = 'nubixor-receipt-paper-size';
-  paperSize.textContent = '@page { size: 80mm auto; margin: 0; }';
+  paperSize.id = 'nubixor-receipt-print-style';
+  paperSize.textContent = `
+    @page { size: 80mm auto; margin: 0; }
+    @media print {
+      body > * { display: none !important; }
+      body > #nubixor-receipt-print-root {
+        display: block !important;
+        width: 80mm !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #111827 !important;
+      }
+      #nubixor-receipt-print-root .company-form {
+        display: block !important;
+        width: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 4mm !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+      }
+      #nubixor-receipt-print-root .receipt-brand-logo {
+        display: block !important;
+        width: 43mm !important;
+        max-width: none !important;
+        margin: 0 auto 5mm !important;
+      }
+      #nubixor-receipt-print-root .receipt-check {
+        width: 10mm !important;
+        height: 10mm !important;
+        margin: 2mm auto !important;
+        font-size: 15px !important;
+      }
+      #nubixor-receipt-print-root .receipt-message {
+        margin-bottom: 3mm !important;
+        font-size: 9px !important;
+      }
+      #nubixor-receipt-print-root .receipt-qr-block {
+        margin-top: 3mm !important;
+        padding: 3mm !important;
+      }
+      #nubixor-receipt-print-root .receipt-qr-image img {
+        width: 38mm !important;
+        height: 38mm !important;
+        border-radius: 0 !important;
+        image-rendering: crisp-edges;
+      }
+    }
+  `;
   document.head.append(paperSize);
-  window.addEventListener('afterprint', () => paperSize.remove(), { once: true });
+  const cleanup = () => {
+    printRoot.remove();
+    paperSize.remove();
+  };
+  window.addEventListener('afterprint', cleanup, { once: true });
+  // Obliga al navegador a calcular la copia antes de abrir el diálogo nativo.
+  void printRoot.offsetHeight;
   window.print();
 }
 
