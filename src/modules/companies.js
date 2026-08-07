@@ -42,6 +42,35 @@ function hasValidLogoSignature(contentType, buffer) {
   return false;
 }
 
+router.patch('/:id', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id) || req.params.id !== req.context.tenantId) {
+    throw new AppError('Solo puedes editar la empresa activa.', 403, 'COMPANY_SCOPE_INVALID');
+  }
+  const legalName = typeof req.body?.legalName === 'string' ? req.body.legalName.trim() : null;
+  const tradeName = typeof req.body?.tradeName === 'string' ? req.body.tradeName.trim() || null : undefined;
+  const taxId = typeof req.body?.taxId === 'string' ? req.body.taxId.trim() || null : undefined;
+
+  if (!legalName) throw new AppError('legalName es obligatorio.', 422, 'LEGAL_NAME_REQUIRED');
+  if (legalName.length > 160) throw new AppError('El nombre legal no puede superar 160 caracteres.', 422, 'LEGAL_NAME_TOO_LONG');
+
+  const sets = ['legal_name = $2', 'updated_at = now()'];
+  const values = [req.params.id, legalName];
+  if (tradeName !== undefined) { sets.push(`trade_name = $${values.length + 1}`); values.push(tradeName); }
+  if (taxId !== undefined) { sets.push(`tax_id = $${values.length + 1}`); values.push(taxId); }
+
+  const result = await query(
+    `UPDATE tenants SET ${sets.join(', ')} WHERE id = $1 RETURNING id, legal_name, trade_name, tax_id, updated_at`,
+    values,
+  );
+  if (!result.rowCount) throw new AppError('Empresa no encontrada.', 404, 'COMPANY_NOT_FOUND');
+  await writeAudit(null, {
+    tenantId: req.params.id, userId: req.context.userId,
+    action: 'company.identity_updated', entityType: 'company', entityId: req.params.id,
+    after: result.rows[0], reason: 'Actualización de identidad comercial básica',
+  }).catch(() => {});
+  res.json(result.rows[0]);
+}));
+
 router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT t.id, t.legal_name, t.trade_name, t.tax_id, t.status, t.created_at,
