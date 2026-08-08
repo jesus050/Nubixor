@@ -853,6 +853,7 @@ const elements = {
   receiptNumber: document.querySelector('#receiptNumber'),
   receiptDocumentType: document.querySelector('#receiptDocumentType'),
   receiptDocumentStatus: document.querySelector('#receiptDocumentStatus'),
+  receiptSplitActions: document.querySelector('#receiptSplitActions'),
   receiptLines: document.querySelector('#receiptLines'),
   receiptSubtotal: document.querySelector('#receiptSubtotal'),
   receiptTax: document.querySelector('#receiptTax'),
@@ -14917,7 +14918,7 @@ function showReceipt(receipt) {
     ? `Logo de ${receiptCompany.trade_name || receiptCompany.legal_name}`
     : 'Nubixor';
   elements.receiptNumber.textContent = receipt.grouped
-    ? `${receipt.documentCount} comprobantes`
+    ? `${receipt.documentCount} ${receipt.documentCount === 1 ? 'comprobante' : 'comprobantes'}`
     : receipt.receiptNumber;
   const electronic = (receipt.sale_document_type || receipt.document_type) ===
     'ELECTRONIC_INVOICE';
@@ -14942,6 +14943,28 @@ function showReceipt(receipt) {
         ? electronicReceiptAcceptedStatus()
         : billing?.failure_reason || 'Pendiente de transmisión a la DIAN')
       : 'Registrado localmente; no se envía a la DIAN');
+  elements.receiptSplitActions.replaceChildren();
+  elements.receiptSplitActions.hidden = !receipt.grouped;
+  if (receipt.grouped) {
+    for (const groupedReceipt of groupedReceipts) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary-button';
+      const isElectronic = groupedReceipt.document_type === 'ELECTRONIC_INVOICE';
+      button.textContent = isElectronic
+        ? `Ver factura ${groupedReceipt.receiptNumber}`
+        : `Ver comprobante ${groupedReceipt.receiptNumber}`;
+      button.addEventListener('click', () => {
+        showReceipt({
+          ...groupedReceipt,
+          grouped: false,
+          company_id: groupedReceipt.companyId,
+          seller_company_id: groupedReceipt.companyId,
+        });
+      });
+      elements.receiptSplitActions.append(button);
+    }
+  }
   elements.receiptLines.replaceChildren();
   const receiptLines = receipt.grouped
     ? groupedReceipts.flatMap((group) =>
