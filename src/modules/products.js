@@ -56,7 +56,7 @@ router.get('/lookup', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT p.id, p.sku, p.barcode, p.name, p.sale_price,
             CASE WHEN $3::boolean THEN NULL ELSE p.cost END cost,
-            p.tax_review_status, p.product_kind,
+            p.tax_review_status, p.product_kind, p.billing_policy,
             c.name category_name, b.name brand_name,
             tc.name tax_name, tc.rate tax_rate, tc.treatment tax_treatment,
             pi.public_url image_url,
@@ -134,7 +134,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,
-            p.sales_tax_category_id,p.active,p.product_kind,p.parent_product_id,
+            p.sales_tax_category_id,p.active,p.product_kind,p.parent_product_id, p.billing_policy,
             p.variant_attributes,p.metadata,
             COALESCE(NULLIF(p.metadata ->> 'invoiceCode', ''), p.sku) invoice_code,
             c.name category_name, b.name brand_name,
@@ -168,10 +168,12 @@ router.post('/', asyncHandler(async (req, res) => {
     salesTaxCategoryId = null,
     cost = 0,
     salePrice = 0,
+    billingPolicy = 'ELECTRONIC_INVOICE',
   } = req.body;
   const normalizedSku = typeof sku === 'string' ? sku.trim().toUpperCase() : '';
   const normalizedName = typeof name === 'string' ? name.trim() : '';
   const normalizedBarcode = typeof barcode === 'string' ? barcode.trim() || null : null;
+  const normalizedBillingPolicy = typeof billingPolicy === 'string' && ['ELECTRONIC_INVOICE', 'EQUIVALENT_DOCUMENT_POS', 'INTERNAL_RECEIPT'].includes(billingPolicy) ? billingPolicy : 'ELECTRONIC_INVOICE';
   const normalizedCost = Number(cost);
   const normalizedSalePrice = Number(salePrice);
   const referenceIds = [categoryId, brandId, salesTaxCategoryId].filter(Boolean);
@@ -218,9 +220,9 @@ router.post('/', asyncHandler(async (req, res) => {
          `INSERT INTO products(
            tenant_id, sku, name, barcode, category_id, brand_id,
            sales_tax_category_id, cost, sale_price, tax_review_status,
-           electronic_unit_measure_code, electronic_standard_code, active
+           electronic_unit_measure_code, electronic_standard_code, active, billing_policy
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'94','999',TRUE)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'94','999',TRUE,$11)
          RETURNING *`,
         [
           req.context.tenantId,
@@ -233,6 +235,7 @@ router.post('/', asyncHandler(async (req, res) => {
           normalizedCost,
           normalizedSalePrice,
           salesTaxCategoryId ? 'REVIEWED' : 'PENDING',
+          normalizedBillingPolicy,
         ],
       );
       await writeAudit(client, {

@@ -2728,6 +2728,9 @@
                     </label>
                     <small id="posTransferAccountHelp">El reporte conservará el banco, la empresa receptora y la referencia.</small>
                   </div>
+                  <p class="form-warning" id="posSplitWarning" role="alert" hidden style="color: var(--amber-700); background: var(--amber-50); padding: 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 1rem;">
+                    <strong>Atención:</strong> Esta compra generará múltiples documentos según las políticas de facturación de cada producto.
+                  </p>
                   <p class="form-error" id="posSaleError" role="alert" hidden></p>
                   <button class="primary-button cart-submit" id="completeSaleButton" type="button" disabled>
                     Selecciona productos <span aria-hidden="true">→</span>
@@ -5905,6 +5908,14 @@
             <span>Impuesto de venta</span>
             <select id="productTaxId" name="salesTaxCategoryId">
               <option value="">Pendiente de revisión</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>Política de Venta</span>
+            <select name="billingPolicy">
+              <option value="ELECTRONIC_INVOICE">Factura Electrónica</option>
+              <option value="EQUIVALENT_DOCUMENT_POS">Documento Equivalente POS</option>
+              <option value="INTERNAL_RECEIPT">Remisión Interno (No Fiscal)</option>
             </select>
           </label>
           <label class="form-field">

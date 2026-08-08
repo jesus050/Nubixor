@@ -1264,7 +1264,8 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
               warehouse.warehouse_type,
               warehouse.branch_id warehouse_branch_id,
               p.tax_category_id, tc.rate tax_rate,
-              profile.default_document_type
+              profile.default_document_type,
+              p.billing_policy
        FROM products p
        JOIN tenants seller ON seller.id = p.seller_company_id
        JOIN cash_register_companies crc
@@ -1370,9 +1371,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         taxAmount,
         pricing: appliedPrice,
       };
-      const group = groups.get(product.seller_company_id) || [];
+      const groupKey = `${product.seller_company_id}::${product.billing_policy}`;
+      const group = groups.get(groupKey) || [];
       group.push(line);
-      groups.set(product.seller_company_id, group);
+      groups.set(groupKey, group);
       grandTotal += lineTotal;
       grandTax += taxAmount;
     }
@@ -1424,15 +1426,26 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         tender.maskedAccount = account.masked_account;
       }
     }
-    const saleGroups = [...groups].map(([companyId, lines]) => ({
-      companyId,
+    const saleGroups = [...groups].map(([groupKey, lines]) => ({
+      companyId: groupKey, // using groupKey as the ID for tender allocation
       total: money(lines.reduce((sum, line) => sum + line.lineTotal, 0)),
     }));
     const tenderAllocations = allocateTendersBySale(tenders, saleGroups);
     const checkoutPaymentMethod = tenders.length === 1 ? tenders[0].method : 'MIXED';
 
+    // Insert Parent Sale Group
+    const saleGroupResult = await client.query(
+      `INSERT INTO sale_groups(tenant_id, cash_session_id, total, created_by)
+       VALUES($1, $2, $3, $4) RETURNING id`,
+      [req.context.tenantId, cashSessionId, grandTotal, req.context.userId]
+    );
+    const saleGroupId = saleGroupResult.rows[0].id;
+
     const receipts = [];
-    for (const [companyId, lines] of groups) {
+    let isFirstReceipt = true;
+    for (const [groupKey, lines] of groups) {
+      const companyId = groupKey.split('::')[0];
+      const billingPolicy = groupKey.split('::')[1];
       const groupTotal = Math.round(
         lines.reduce((sum, line) => sum + line.lineTotal, 0) * 100,
       ) / 100;
@@ -1453,7 +1466,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         .reduce((sum, tender) => sum + tender.changeAmount, 0));
       const firstLine = lines[0];
       let resolution = null;
-      if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
+      if (billingPolicy === 'ELECTRONIC_INVOICE') {
         const resolutionResult = await client.query(
           `SELECT id, prefix
            FROM billing_resolutions
@@ -1472,9 +1485,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
            tenant_id, company_id, seller_company_id, cash_session_id,
            warehouse_id, payment_method, subtotal, tax_total, total,
            cash_received, cash_change, created_by, sale_terms,
-           document_type, billing_resolution_id,customer_id
+           document_type, billing_resolution_id,customer_id,
+           sale_group_id, applied_billing_policy
          )
-         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13)
+         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13,$14,$15)
          RETURNING id, sequence_number, status, payment_method, subtotal,
                    tax_total, total, cash_received, cash_change,
                    document_type, created_at`,
@@ -1489,9 +1503,11 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           groupCashTendered || null,
           groupCashChange,
           req.context.userId,
-          firstLine.default_document_type,
+          billingPolicy === 'INTERNAL_RECEIPT' ? 'INTERNAL_RECEIPT' : firstLine.default_document_type,
           resolution?.id || null,
           companyId === req.context.tenantId ? customerId : null,
+          saleGroupId,
+          billingPolicy
         ],
       );
       const sale = saleResult.rows[0];
@@ -1519,7 +1535,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         );
       }
       let billingDocument = null;
-      if (firstLine.default_document_type === 'ELECTRONIC_INVOICE') {
+      if (billingPolicy === 'ELECTRONIC_INVOICE') {
         let documentNumber = null;
         if (resolution) {
           const numberResult = await client.query(
@@ -1597,22 +1613,29 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         .filter((tender) => tender.method === 'TRANSFER');
       if (groupTransferTenders.length) {
         const transferTender = groupTransferTenders[0];
-        await client.query(
-          `INSERT INTO sale_payment_records(
-             sale_id, seller_company_id, receiving_company_id, payment_method,
-             amount, reference, reconciliation_status, recorded_by
-           )
-           VALUES($1,$2,$3,'TRANSFER',$4,$5,'CONFIRMED',$6)`,
-          [
-            sale.id,
-            companyId,
-            transferTender.receivingCompanyId,
-            money(groupTransferTenders.reduce((sum, tender) => sum + tender.amount, 0)),
-            transferTender.reference,
-            req.context.userId,
-          ],
-        );
+        
+        // ONLY insert bank reconciliation records for the first/largest receipt
+        // to avoid duplicating transactions in bank recon
+        if (isFirstReceipt) {
+          await client.query(
+            `INSERT INTO sale_payment_records(
+               sale_id, seller_company_id, receiving_company_id, payment_method,
+               amount, reference, reconciliation_status, recorded_by
+             )
+             VALUES($1,$2,$3,'TRANSFER',$4,$5,'CONFIRMED',$6)`,
+            [
+              sale.id,
+              companyId,
+              transferTender.receivingCompanyId,
+              // Summing ALL transfers for this method from all groups for bank recon
+              tenders.filter(t => t.method === 'TRANSFER').reduce((s, t) => s + t.amount, 0),
+              transferTender.reference,
+              req.context.userId,
+            ],
+          );
+        }
       }
+      isFirstReceipt = false;
       await postSaleAccounting(client, {
         tenantId: companyId,
         saleId: sale.id,

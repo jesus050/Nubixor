@@ -5341,6 +5341,13 @@ function renderCart() {
   }
 
   const totals = calculateCartTotals();
+  const billingPolicies = new Set(
+    [...saleCart.values()].map(({ product }) =>
+      product.billing_policy || 'ELECTRONIC_INVOICE'),
+  );
+  if (document.getElementById("posSplitWarning")) {
+    document.getElementById("posSplitWarning").hidden = billingPolicies.size <= 1;
+  }
   elements.cartItemCount.textContent =
     `${totals.itemCount} ${totals.itemCount === 1 ? 'artículo' : 'artículos'}`;
   elements.cartSubtotal.textContent = formatCurrency(totals.subtotal);
@@ -14440,6 +14447,7 @@ async function submitProduct(event) {
         salesTaxCategoryId: formData.get('salesTaxCategoryId') || null,
         cost: formData.get('cost'),
         salePrice: formData.get('salePrice'),
+        billingPolicy: formData.get('billingPolicy') || 'ELECTRONIC_INVOICE',
       }),
     });
     let imageUploaded = false;
@@ -15284,13 +15292,17 @@ async function completeSale() {
       [...saleCart.values()].map(({ product }) =>
         product.seller_company_id || product.tenant_id || activeTenantId),
     );
-    // El cobro agrupado se reserva para pagos mixtos o productos de otra empresa.
-    // Una venta normal de la empresa activa conserva su comprobante individual,
-    // su QR y su representación fiscal desde el primer momento.
+    const billingPolicies = new Set(
+      [...saleCart.values()].map(({ product }) =>
+        product.billing_policy || 'ELECTRONIC_INVOICE'),
+    );
+    // El cobro agrupado se reserva para pagos mixtos, productos de otra empresa,
+    // o productos con diferentes políticas de facturación.
     const sharedCheckout = posSaleTerms === 'IMMEDIATE' && (
       posMixedPayment ||
       sellerCompanies.size > 1 ||
-      !sellerCompanies.has(activeTenantId)
+      !sellerCompanies.has(activeTenantId) ||
+      billingPolicies.size > 1
     );
     const firstCartItem = saleCart.values().next().value;
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
