@@ -48,7 +48,7 @@ export function notFound(req, res) {
 export function errorHandler(error, req, res, _next) {
   const status = Number.isInteger(error.status) ? error.status : 500;
   const isServerError = status >= 500;
-  const expose = true;
+  const expose = error.expose === true || !isServerError;
 
   logger.error('http.error', {
     requestId: req.context?.requestId,
