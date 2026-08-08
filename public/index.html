@@ -5911,11 +5911,11 @@
             </select>
           </label>
           <label class="form-field">
-            <span>Política de Venta</span>
-            <select name="billingPolicy">
-              <option value="ELECTRONIC_INVOICE">Factura Electrónica</option>
-              <option value="EQUIVALENT_DOCUMENT_POS">Documento Equivalente POS</option>
-              <option value="INTERNAL_RECEIPT">Remisión Interno (No Fiscal)</option>
+            <span>Documento base de venta</span>
+            <select name="billingPolicy" id="productBillingPolicy">
+              <option value="ELECTRONIC_INVOICE">Factura electrónica</option>
+              <option value="EQUIVALENT_DOCUMENT_POS">Documento equivalente POS</option>
+              <option value="INTERNAL_RECEIPT">Comprobante interno</option>
             </select>
           </label>
           <label class="form-field">
@@ -5927,6 +5927,15 @@
             <input name="salePrice" type="number" min="0" step="0.01" value="0">
           </label>
         </div>
+
+        <label class="product-einvoice-toggle" for="productExcludeFromEinvoice">
+          <input id="productExcludeFromEinvoice" name="excludeFromEinvoice" type="checkbox">
+          <span class="product-einvoice-toggle__control" aria-hidden="true"></span>
+          <span>
+            <strong>Separar de factura electrónica</strong>
+            <small>Se cobra en un comprobante interno independiente y no se envía al proveedor electrónico.</small>
+          </span>
+        </label>
 
         <label class="image-field">
           <span class="image-field-symbol" aria-hidden="true">＋</span>

@@ -57,6 +57,7 @@ router.get('/lookup', asyncHandler(async (req, res) => {
     `SELECT p.id, p.sku, p.barcode, p.name, p.sale_price,
             CASE WHEN $3::boolean THEN NULL ELSE p.cost END cost,
             p.tax_review_status, p.product_kind, p.billing_policy,
+            p.exclude_from_einvoice,
             c.name category_name, b.name brand_name,
             tc.name tax_name, tc.rate tax_rate, tc.treatment tax_treatment,
             pi.public_url image_url,
@@ -135,6 +136,7 @@ router.get('/', asyncHandler(async (req, res) => {
     `SELECT p.id, p.tenant_id, p.sku, p.barcode, p.name, p.cost, p.sale_price,
             p.tax_review_status, p.created_at, p.category_id, p.brand_id,
             p.sales_tax_category_id,p.active,p.product_kind,p.parent_product_id, p.billing_policy,
+            p.exclude_from_einvoice,
             p.variant_attributes,p.metadata,
             COALESCE(NULLIF(p.metadata ->> 'invoiceCode', ''), p.sku) invoice_code,
             c.name category_name, b.name brand_name,
@@ -169,11 +171,18 @@ router.post('/', asyncHandler(async (req, res) => {
     cost = 0,
     salePrice = 0,
     billingPolicy = 'ELECTRONIC_INVOICE',
+    excludeFromEinvoice = false,
   } = req.body;
   const normalizedSku = typeof sku === 'string' ? sku.trim().toUpperCase() : '';
   const normalizedName = typeof name === 'string' ? name.trim() : '';
   const normalizedBarcode = typeof barcode === 'string' ? barcode.trim() || null : null;
-  const normalizedBillingPolicy = typeof billingPolicy === 'string' && ['ELECTRONIC_INVOICE', 'EQUIVALENT_DOCUMENT_POS', 'INTERNAL_RECEIPT'].includes(billingPolicy) ? billingPolicy : 'ELECTRONIC_INVOICE';
+  const requestedExclusion = excludeFromEinvoice === true;
+  const normalizedBillingPolicy = requestedExclusion
+    ? 'INTERNAL_RECEIPT'
+    : (typeof billingPolicy === 'string' && ['ELECTRONIC_INVOICE', 'EQUIVALENT_DOCUMENT_POS', 'INTERNAL_RECEIPT'].includes(billingPolicy)
+      ? billingPolicy
+      : 'ELECTRONIC_INVOICE');
+  const normalizedExclusion = requestedExclusion || normalizedBillingPolicy === 'INTERNAL_RECEIPT';
   const normalizedCost = Number(cost);
   const normalizedSalePrice = Number(salePrice);
   const referenceIds = [categoryId, brandId, salesTaxCategoryId].filter(Boolean);
@@ -220,9 +229,10 @@ router.post('/', asyncHandler(async (req, res) => {
          `INSERT INTO products(
            tenant_id, sku, name, barcode, category_id, brand_id,
            sales_tax_category_id, cost, sale_price, tax_review_status,
-           electronic_unit_measure_code, electronic_standard_code, active, billing_policy
+           electronic_unit_measure_code, electronic_standard_code, active, billing_policy,
+           exclude_from_einvoice
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'94','999',TRUE,$11)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'94','999',TRUE,$11,$12)
          RETURNING *`,
         [
           req.context.tenantId,
@@ -236,6 +246,7 @@ router.post('/', asyncHandler(async (req, res) => {
           normalizedSalePrice,
           salesTaxCategoryId ? 'REVIEWED' : 'PENDING',
           normalizedBillingPolicy,
+          normalizedExclusion,
         ],
       );
       await writeAudit(client, {
@@ -256,6 +267,62 @@ router.post('/', asyncHandler(async (req, res) => {
     throw error;
   }
 }));
+
+router.patch(
+  '/:id/einvoice-exclusion',
+  requirePermission('catalog.manage'),
+  asyncHandler(async (req, res) => {
+    if (!UUID_PATTERN.test(req.params.id) || typeof req.body.excludeFromEinvoice !== 'boolean') {
+      throw new AppError(
+        'Indica un producto válido y si debe separarse de la factura electrónica.',
+        422,
+        'INVALID_EINVOICE_EXCLUSION',
+      );
+    }
+    const excludeFromEinvoice = req.body.excludeFromEinvoice;
+    const reason = typeof req.body.reason === 'string'
+      ? req.body.reason.trim().slice(0, 240)
+      : '';
+    const updated = await withTransaction(async (client) => {
+      const current = await client.query(
+        `SELECT * FROM products
+         WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [req.params.id, req.context.tenantId],
+      );
+      if (!current.rowCount) {
+        throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+      }
+      const product = current.rows[0];
+      const billingPolicy = excludeFromEinvoice
+        ? 'INTERNAL_RECEIPT'
+        : (product.billing_policy === 'INTERNAL_RECEIPT'
+          ? 'ELECTRONIC_INVOICE'
+          : product.billing_policy);
+      const result = await client.query(
+        `UPDATE products
+         SET exclude_from_einvoice = $1, billing_policy = $2, updated_at = now()
+         WHERE id = $3 AND tenant_id = $4
+         RETURNING *`,
+        [excludeFromEinvoice, billingPolicy, req.params.id, req.context.tenantId],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'product.einvoice_exclusion_changed',
+        entityType: 'product',
+        entityId: req.params.id,
+        before: current.rows[0],
+        after: result.rows[0],
+        reason: reason || (excludeFromEinvoice
+          ? 'Producto separado de factura electrónica para comprobante interno.'
+          : 'Producto reincorporado a factura electrónica.'),
+      });
+      return result.rows[0];
+    });
+    res.json(updated);
+  }),
+);
 
 router.post('/:id/images', asyncHandler(async (req, res) => {
   const { dataUrl, altText = null } = req.body;

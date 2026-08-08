@@ -231,43 +231,43 @@ function normalizeSaleTenders(body, saleTotal) {
   return tenders;
 }
 
-function allocateTendersBySale(tenders, saleGroups) {
-  const remaining = tenders.map((tender, index) => ({
-    ...tender,
-    sourceIndex: index,
-    remaining: tender.amount,
-    change: tender.method === 'CASH'
-      ? money(tender.tenderedAmount - tender.amount)
-      : 0,
-  }));
-  const allocations = new Map();
-  for (const group of saleGroups) {
-    let groupRemaining = group.total;
-    const lines = [];
-    for (const tender of remaining) {
-      if (groupRemaining < 0.01 || tender.remaining < 0.01) continue;
-      const amount = money(Math.min(groupRemaining, tender.remaining));
-      lines.push({ ...tender, amount, tenderedAmount: amount, changeAmount: 0 });
-      tender.remaining = money(tender.remaining - amount);
-      groupRemaining = money(groupRemaining - amount);
-    }
-    if (groupRemaining >= 0.01) {
-      throw new AppError(
-        'No fue posible distribuir los pagos entre los comprobantes.',
-        422,
-        'SALE_TENDER_ALLOCATION_FAILED',
-      );
-    }
-    allocations.set(group.companyId, lines);
+export function allocateTendersBySale(tenders, saleGroups) {
+  const total = money(saleGroups.reduce((sum, group) => sum + group.total, 0));
+  if (total <= 0) {
+    throw new AppError('No fue posible distribuir un pago sin total de venta.', 422, 'SALE_TENDER_ALLOCATION_FAILED');
   }
-  for (const tender of remaining.filter((item) => item.method === 'CASH')) {
+  const allocations = new Map();
+  for (const group of saleGroups) allocations.set(group.id, []);
+
+  for (const [sourceIndex, tender] of tenders.entries()) {
+    let allocated = 0;
+    saleGroups.forEach((group, groupIndex) => {
+      const isLastGroup = groupIndex === saleGroups.length - 1;
+      const amount = isLastGroup
+        ? money(tender.amount - allocated)
+        : money(tender.amount * group.total / total);
+      allocated = money(allocated + amount);
+      if (amount <= 0) return;
+      allocations.get(group.id).push({
+        ...tender,
+        sourceIndex,
+        amount,
+        tenderedAmount: amount,
+        changeAmount: 0,
+      });
+    });
+  }
+
+  for (const [sourceIndex, tender] of tenders.entries()) {
+    if (tender.method !== 'CASH') continue;
+    const change = money(tender.tenderedAmount - tender.amount);
     const allocatedLines = [...allocations.values()]
       .flat()
-      .filter((line) => line.sourceIndex === tender.sourceIndex);
+      .filter((line) => line.sourceIndex === sourceIndex);
     const last = allocatedLines.at(-1);
     if (last) {
-      last.changeAmount = tender.change;
-      last.tenderedAmount = money(last.amount + tender.change);
+      last.changeAmount = change;
+      last.tenderedAmount = money(last.amount + change);
     }
   }
   return allocations;
@@ -1265,7 +1265,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
               warehouse.branch_id warehouse_branch_id,
               p.tax_category_id, tc.rate tax_rate,
               profile.default_document_type,
-              p.billing_policy
+              p.billing_policy, p.exclude_from_einvoice
        FROM products p
        JOIN tenants seller ON seller.id = p.seller_company_id
        JOIN cash_register_companies crc
@@ -1413,7 +1413,8 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         if (
           !account ||
           account.tenant_id !== tender.receivingCompanyId ||
-          !groups.has(tender.receivingCompanyId)
+          ![...groups.keys()].some((groupKey) =>
+            groupKey.startsWith(`${tender.receivingCompanyId}::`))
         ) {
           throw new AppError(
             'La cuenta bancaria debe pertenecer a una empresa incluida en la venta.',
@@ -1427,7 +1428,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       }
     }
     const saleGroups = [...groups].map(([groupKey, lines]) => ({
-      companyId: groupKey, // using groupKey as the ID for tender allocation
+      id: groupKey,
       total: money(lines.reduce((sum, line) => sum + line.lineTotal, 0)),
     }));
     const tenderAllocations = allocateTendersBySale(tenders, saleGroups);
@@ -1453,7 +1454,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         lines.reduce((sum, line) => sum + line.taxAmount, 0) * 100,
       ) / 100;
       const groupSubtotal = Math.round((groupTotal - groupTax) * 100) / 100;
-      const groupTenders = tenderAllocations.get(companyId) || [];
+      const groupTenders = tenderAllocations.get(groupKey) || [];
       const groupPaymentMethods = new Set(groupTenders.map((tender) => tender.method));
       const groupPaymentMethod = groupPaymentMethods.size === 1
         ? groupTenders[0].method
@@ -1503,7 +1504,11 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           groupCashTendered || null,
           groupCashChange,
           req.context.userId,
-          billingPolicy === 'INTERNAL_RECEIPT' ? 'INTERNAL_RECEIPT' : firstLine.default_document_type,
+          billingPolicy === 'ELECTRONIC_INVOICE'
+            ? 'ELECTRONIC_INVOICE'
+            : billingPolicy === 'EQUIVALENT_DOCUMENT_POS'
+              ? 'EQUIVALENT_DOCUMENT'
+              : 'INTERNAL_RECEIPT',
           resolution?.id || null,
           companyId === req.context.tenantId ? customerId : null,
           saleGroupId,

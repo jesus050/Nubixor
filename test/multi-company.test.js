@@ -6,6 +6,7 @@ import {
   groupLinesBySellerCompany,
   sumCurrency,
 } from '../src/shared/multi-company.js';
+import { allocateTendersBySale } from '../src/modules/pos.js';
 
 const COMPANY_A = '10000000-0000-0000-0000-000000000001';
 const COMPANY_B = '10000000-0000-0000-0000-000000000002';
@@ -60,4 +61,22 @@ test('rechaza alteraciones de empresa, bodega o impuesto enviadas por el POS', (
 
 test('suma asignaciones monetarias sin residuos binarios', () => {
   assert.equal(sumCurrency([33.33, 33.33, 33.34]), 100);
+});
+
+test('prorratea un pago mixto entre factura y comprobante interno sin duplicar el vuelto', () => {
+  const allocations = allocateTendersBySale([
+    { method: 'CASH', amount: 20, tenderedAmount: 30 },
+    { method: 'CARD', amount: 80 },
+  ], [
+    { id: 'invoice', total: 60 },
+    { id: 'internal', total: 40 },
+  ]);
+
+  const invoice = allocations.get('invoice');
+  const internal = allocations.get('internal');
+  assert.deepEqual(invoice.map((line) => line.amount), [12, 48]);
+  assert.deepEqual(internal.map((line) => line.amount), [8, 32]);
+  assert.equal(sumCurrency([...invoice, ...internal].map((line) => line.amount)), 100);
+  assert.equal(sumCurrency([...invoice, ...internal].map((line) => line.changeAmount)), 10);
+  assert.equal(internal[0].tenderedAmount, 18);
 });

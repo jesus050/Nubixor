@@ -608,6 +608,8 @@ const elements = {
   productCategoryId: document.querySelector('#productCategoryId'),
   productBrandId: document.querySelector('#productBrandId'),
   productTaxId: document.querySelector('#productTaxId'),
+  productBillingPolicy: document.querySelector('#productBillingPolicy'),
+  productExcludeFromEinvoice: document.querySelector('#productExcludeFromEinvoice'),
   newProductImage: document.querySelector('#newProductImage'),
   closeProductDialog: document.querySelector('#closeProductDialog'),
   cancelProductButton: document.querySelector('#cancelProductButton'),
@@ -3614,6 +3616,44 @@ function renderProducts() {
       );
       productActions.append(organizeButton);
 
+      const einvoiceButton = document.createElement('button');
+      einvoiceButton.className = 'photo-action';
+      einvoiceButton.type = 'button';
+      const excludedFromEinvoice = Boolean(product.exclude_from_einvoice);
+      einvoiceButton.textContent = excludedFromEinvoice
+        ? 'Comprobante interno'
+        : 'Factura electrónica';
+      einvoiceButton.title = excludedFromEinvoice
+        ? 'Volver a incluir este producto en factura electrónica'
+        : 'Separar este producto de la factura electrónica';
+      einvoiceButton.classList.toggle('is-active', excludedFromEinvoice);
+      einvoiceButton.addEventListener('click', async () => {
+        const nextExclusion = !excludedFromEinvoice;
+        const confirmation = nextExclusion
+          ? `¿Separar “${product.name}” de factura electrónica? En Caja se emitirá como comprobante interno cuando se mezcle con artículos facturables.`
+          : `¿Incluir “${product.name}” nuevamente en factura electrónica?`;
+        if (!confirm(confirmation)) return;
+        einvoiceButton.disabled = true;
+        try {
+          await getJson(`/api/products/${product.id}/einvoice-exclusion`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': activeTenantId,
+            },
+            body: JSON.stringify({ excludeFromEinvoice: nextExclusion }),
+          });
+          await loadCatalog();
+          showToast(nextExclusion
+            ? 'Producto separado de la factura electrónica.'
+            : 'Producto habilitado para factura electrónica.');
+        } catch (error) {
+          showToast(error.message);
+          einvoiceButton.disabled = false;
+        }
+      });
+      productActions.append(einvoiceButton);
+
       const deleteButton = document.createElement('button');
       deleteButton.className = 'photo-action danger-action';
       deleteButton.type = 'button';
@@ -5346,7 +5386,9 @@ function renderCart() {
       product.billing_policy || 'ELECTRONIC_INVOICE'),
   );
   if (document.getElementById("posSplitWarning")) {
-    document.getElementById("posSplitWarning").hidden = billingPolicies.size <= 1;
+    document.getElementById("posSplitWarning").hidden =
+      billingPolicies.size <= 1 && ![...billingPolicies]
+        .some((policy) => policy !== 'ELECTRONIC_INVOICE');
   }
   elements.cartItemCount.textContent =
     `${totals.itemCount} ${totals.itemCount === 1 ? 'artículo' : 'artículos'}`;
@@ -13834,10 +13876,18 @@ function openProductDialog() {
     return;
   }
   elements.productForm.reset();
+  elements.productExcludeFromEinvoice.checked = false;
+  elements.productBillingPolicy.disabled = false;
   syncProductOptions();
   elements.productFormError.hidden = true;
   elements.productDialog.showModal();
   document.querySelector('#productName').focus();
+}
+
+function syncProductEinvoiceExclusion() {
+  const excluded = elements.productExcludeFromEinvoice.checked;
+  elements.productBillingPolicy.disabled = excluded;
+  if (excluded) elements.productBillingPolicy.value = 'INTERNAL_RECEIPT';
 }
 
 function closeProductDialog() {
@@ -14448,6 +14498,7 @@ async function submitProduct(event) {
         cost: formData.get('cost'),
         salePrice: formData.get('salePrice'),
         billingPolicy: formData.get('billingPolicy') || 'ELECTRONIC_INVOICE',
+        excludeFromEinvoice: formData.get('excludeFromEinvoice') === 'on',
       }),
     });
     let imageUploaded = false;
@@ -15296,13 +15347,16 @@ async function completeSale() {
       [...saleCart.values()].map(({ product }) =>
         product.billing_policy || 'ELECTRONIC_INVOICE'),
     );
+    const requiresPolicyAwareCheckout = [...billingPolicies]
+      .some((policy) => policy !== 'ELECTRONIC_INVOICE');
     // El cobro agrupado se reserva para pagos mixtos, productos de otra empresa,
     // o productos con diferentes políticas de facturación.
     const sharedCheckout = posSaleTerms === 'IMMEDIATE' && (
       posMixedPayment ||
       sellerCompanies.size > 1 ||
       !sellerCompanies.has(activeTenantId) ||
-      billingPolicies.size > 1
+      billingPolicies.size > 1 ||
+      requiresPolicyAwareCheckout
     );
     const firstCartItem = saleCart.values().next().value;
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
@@ -15969,6 +16023,7 @@ elements.pricingProductId.addEventListener('change', () => {
 elements.closeProductDialog.addEventListener('click', closeProductDialog);
 elements.cancelProductButton.addEventListener('click', closeProductDialog);
 elements.productForm.addEventListener('submit', submitProduct);
+elements.productExcludeFromEinvoice.addEventListener('change', syncProductEinvoiceExclusion);
 elements.productDialog.addEventListener('click', (event) => {
   if (event.target === elements.productDialog) closeProductDialog();
 });
