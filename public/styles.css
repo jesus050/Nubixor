@@ -18286,3 +18286,197 @@ dialog[open] .company-form,
 .primary-button svg {
   flex-shrink: 0 !important;
 }
+
+/* --- GLOBAL ENTERPRISE UNIFORMITY & ALIGNMENT SYSTEM --- */
+
+/* 1. Cabeceras Principales de Sección */
+.section-heading,
+.module-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-bottom: 24px !important;
+  padding-bottom: 16px !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.section-heading h2,
+.module-heading h2 {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+  margin: 4px 0 0 0 !important;
+}
+
+.section-heading .eyebrow,
+.module-heading .eyebrow {
+  color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+  padding: 3px 10px !important;
+  border-radius: 99px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  border: 1px solid rgba(99, 102, 241, 0.18) !important;
+}
+
+/* 2. Tarjetas KPI y Context Strips de Resumen */
+.context-strip,
+.kpi-row,
+.metric-strip {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: 16px !important;
+  margin-bottom: 24px !important;
+}
+
+.kpi-card,
+.metric-card,
+.stat-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 16px 20px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.kpi-card:hover,
+.metric-card:hover,
+.stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* 3. Pestañas de Navegación Secundaria (Tabs) */
+.view-tabs,
+.section-tabs,
+.tab-bar,
+.sub-nav {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: #f1f5f9 !important;
+  padding: 4px !important;
+  border-radius: 99px !important;
+  gap: 4px !important;
+  margin-bottom: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.view-tabs button,
+.section-tabs button,
+.tab-bar button,
+.sub-nav button,
+.tab-button {
+  border: none !important;
+  background: transparent !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 18px !important;
+  border-radius: 99px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+}
+
+.view-tabs button.active,
+.section-tabs button.active,
+.tab-bar button.active,
+.sub-nav button.active,
+.tab-button.active {
+  background: #ffffff !important;
+  color: #4f46e5 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 4. Tablas y Filas Alineadas */
+.table-wrapper,
+.data-table-container {
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03) !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.data-table,
+table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.data-table th,
+table th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  padding: 14px 18px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+}
+
+.data-table td,
+table td {
+  padding: 14px 18px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.data-table tr:last-child td,
+table tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* 5. Buscadores y Filtros Uniformes */
+.toolbar,
+.filter-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 20px !important;
+  flex-wrap: wrap !important;
+}
+
+.search-input,
+.filter-select,
+.toolbar input,
+.toolbar select {
+  height: 42px !important;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.search-input:focus,
+.filter-select:focus,
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+  outline: none !important;
+}

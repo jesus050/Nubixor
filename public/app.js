@@ -14454,7 +14454,31 @@ function validateImageFile(file) {
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.addEventListener('load', () => resolve(reader.result));
+    reader.addEventListener('load', () => {
+      const img = new Image();
+      img.onload = () => {
+        // Enforce 1:1 aspect ratio by cropping the center
+        const size = Math.min(img.width, img.height);
+        const x = (img.width - size) / 2;
+        const y = (img.height - size) / 2;
+        
+        const canvas = document.createElement('canvas');
+        // Max size for optimization 800x800
+        const finalSize = Math.min(size, 800);
+        canvas.width = finalSize;
+        canvas.height = finalSize;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, finalSize, finalSize);
+        ctx.drawImage(img, x, y, size, size, 0, 0, finalSize, finalSize);
+        
+        // Use webp for better compression, fallback to jpeg
+        resolve(canvas.toDataURL('image/webp', 0.85));
+      };
+      img.onerror = () => reject(new Error('Formato de imagen inválido o corrupto.'));
+      img.src = reader.result;
+    });
     reader.addEventListener('error', () => reject(new Error('No fue posible leer la imagen.')));
     reader.readAsDataURL(file);
   });
