@@ -268,7 +268,8 @@ router.post(
         `INSERT INTO products(
            tenant_id,sku,barcode,name,category_id,brand_id,
            sales_tax_category_id,cost,sale_price,tax_review_status,active,
-           product_kind,parent_product_id,variant_attributes,metadata
+           product_kind,parent_product_id,variant_attributes,metadata,
+           billing_policy,exclude_from_einvoice
          )
          VALUES(
            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,
@@ -276,7 +277,8 @@ router.post(
              jsonb_build_object(
                'source','PRODUCT_VARIANT',
                'invoiceCode',$13::text
-             )
+             ),
+           $14,$15
          )
          RETURNING *`,
         [
@@ -299,6 +301,8 @@ router.post(
           parent.id,
           JSON.stringify({ [optionName]: optionValue }),
           parent.sku,
+          parent.billing_policy,
+          parent.exclude_from_einvoice,
         ],
       );
       const variant = result.rows[0];
