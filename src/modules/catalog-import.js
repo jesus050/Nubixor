@@ -28,6 +28,11 @@ const TEMPLATE_HEADERS = [
   'existencia',
   'stock_minimo',
   'stock_maximo',
+  'precio_docena',
+  'cantidad_mayor',
+  'precio_mayor',
+  'cantidad_gran_mayor',
+  'precio_gran_mayor',
 ];
 const HEADER_ALIASES = new Map([
   ['name', 'nombre'],
@@ -44,6 +49,11 @@ const HEADER_ALIASES = new Map([
   ['initial_stock', 'existencia'],
   ['minimum_stock', 'stock_minimo'],
   ['maximum_stock', 'stock_maximo'],
+  ['dozen_price', 'precio_docena'],
+  ['wholesale_price', 'precio_mayor'],
+  ['wholesale_min_quantity', 'cantidad_mayor'],
+  ['distributor_price', 'precio_gran_mayor'],
+  ['distributor_min_quantity', 'cantidad_gran_mayor'],
 ]);
 
 router.use(requireTenant);
@@ -191,6 +201,11 @@ function normalizeRow(row) {
   const stock = parseDecimal(row.existencia, { nullable: true });
   const minimumStock = parseDecimal(row.stock_minimo);
   const maximumStock = parseDecimal(row.stock_maximo, { nullable: true });
+  const dozenPrice = parseDecimal(row.precio_docena, { nullable: true });
+  const wholesaleQuantity = parseDecimal(row.cantidad_mayor, { nullable: true });
+  const wholesalePrice = parseDecimal(row.precio_mayor, { nullable: true });
+  const distributorQuantity = parseDecimal(row.cantidad_gran_mayor, { nullable: true });
+  const distributorPrice = parseDecimal(row.precio_gran_mayor, { nullable: true });
   if (!sku) errors.push('SKU obligatorio o mayor a 60 caracteres.');
   if (!name || name.length > 200) errors.push('Nombre obligatorio o mayor a 200 caracteres.');
   if (barcode?.length > 80) errors.push('Código de barras mayor a 80 caracteres.');
@@ -209,6 +224,14 @@ function normalizeRow(row) {
   if (stock.error) errors.push(`Existencia ${stock.error}.`);
   if (minimumStock.error) errors.push(`Stock mínimo ${minimumStock.error}.`);
   if (maximumStock.error) errors.push(`Stock máximo ${maximumStock.error}.`);
+  if (dozenPrice.error) errors.push(`Precio docena ${dozenPrice.error}.`);
+  if (wholesaleQuantity.error) errors.push(`Cantidad mayor ${wholesaleQuantity.error}.`);
+  if (wholesalePrice.error) errors.push(`Precio mayor ${wholesalePrice.error}.`);
+  if (distributorQuantity.error) errors.push(`Cantidad gran mayor ${distributorQuantity.error}.`);
+  if (distributorPrice.error) errors.push(`Precio gran mayor ${distributorPrice.error}.`);
+  if (dozenPrice.value !== null && dozenPrice.value <= 0) errors.push('El precio docena debe ser mayor que cero.');
+  if (wholesalePrice.value !== null && (!wholesaleQuantity.value || wholesaleQuantity.value <= 0)) errors.push('El precio mayor necesita una cantidad mínima válida.');
+  if (distributorPrice.value !== null && (!distributorQuantity.value || distributorQuantity.value <= 0)) errors.push('El precio gran mayor necesita una cantidad mínima válida.');
   if (maximumStock.value !== null && maximumStock.value <= minimumStock.value) {
     errors.push('El stock máximo debe ser mayor que el mínimo.');
   }
@@ -228,6 +251,11 @@ function normalizeRow(row) {
     stock: stock.value,
     minimumStock: minimumStock.value,
     maximumStock: maximumStock.value,
+    dozenPrice: dozenPrice.value,
+    wholesaleQuantity: wholesaleQuantity.value,
+    wholesalePrice: wholesalePrice.value,
+    distributorQuantity: distributorQuantity.value,
+    distributorPrice: distributorPrice.value,
     errors,
     warnings: [],
   };
@@ -369,6 +397,11 @@ router.get('/template.csv', asyncHandler(async (req, res) => {
     '20',
     '5',
     '50',
+    '180000',
+    '12',
+    '14500',
+    '50',
+    '13000',
   ];
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="plantilla-productos-nubixor.csv"');
@@ -475,6 +508,33 @@ router.post('/commit', asyncHandler(async (req, res) => {
           row.maximumStock,
         ],
       );
+      const priceTiers = [
+        row.dozenPrice === null ? null : { code: 'WHOLESALE', minQuantity: 12, unitPrice: row.dozenPrice },
+        row.wholesalePrice === null ? null : { code: 'WHOLESALE', minQuantity: row.wholesaleQuantity, unitPrice: row.wholesalePrice },
+        row.distributorPrice === null ? null : { code: 'DISTRIBUTOR', minQuantity: row.distributorQuantity, unitPrice: row.distributorPrice },
+      ].filter(Boolean);
+      for (const tier of priceTiers) {
+        const priceList = await client.query(
+          `SELECT id FROM sales_price_lists
+           WHERE tenant_id = $1 AND code = $2 AND active = TRUE`,
+          [req.context.tenantId, tier.code],
+        );
+        if (!priceList.rowCount) {
+          throw new AppError(
+            `La lista de precios ${tier.code} no está configurada en la empresa.`,
+            422,
+            'CATALOG_IMPORT_PRICE_LIST_REQUIRED',
+          );
+        }
+        await client.query(
+          `INSERT INTO sales_product_prices(
+             tenant_id, price_list_id, product_id, min_quantity, unit_price, active
+           ) VALUES($1,$2,$3,$4,$5,TRUE)
+           ON CONFLICT(tenant_id, price_list_id, product_id, min_quantity)
+           DO UPDATE SET unit_price = EXCLUDED.unit_price, active = TRUE, updated_at = now()`,
+          [req.context.tenantId, priceList.rows[0].id, product.rows[0].id, tier.minQuantity, tier.unitPrice],
+        );
+      }
       if (row.stock !== null) {
         const current = await client.query(
           `SELECT on_hand, reserved FROM inventory_balances

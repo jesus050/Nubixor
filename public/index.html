@@ -6221,7 +6221,7 @@
             <span>01</span>
             <div>
               <strong>Descarga la plantilla</strong>
-              <small>Incluye los códigos reales de bodega e impuesto de esta empresa.</small>
+              <small>Incluye bodega, impuesto, costo, precio unitario, docena, mayor y gran mayor.</small>
             </div>
             <button class="secondary-button compact" id="downloadCatalogTemplate"
               type="button">Descargar CSV</button>
@@ -6281,9 +6281,10 @@
         <p class="form-error" id="catalogImportError" role="alert" hidden></p>
         <div class="catalog-import-safety">
           <span aria-hidden="true">✓</span>
-          <p><strong>Operación atómica y auditable.</strong> Si una fila falla, no se
+            <p><strong>Operación atómica y auditable.</strong> Si una fila falla, no se
             crea ni se actualiza ningún producto. Repetir el mismo archivo conserva
-            el saldo objetivo y evita duplicar existencias.</p>
+            el saldo objetivo y evita duplicar existencias. Los precios por volumen se
+            guardan en las listas Mayorista y Distribuidor.</p>
         </div>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelCatalogImport"
