@@ -61,6 +61,33 @@ function factusDocumentResult(response, fallbackReference = null) {
   };
 }
 
+function requiredText(value, name) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new AppError(
+      `El campo Factus "${name}" es obligatorio.`,
+      422,
+      'FACTUS_REQUEST_INVALID',
+    );
+  }
+  return value.trim();
+}
+
+function requiredObject(value, name) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AppError(
+      `El cuerpo Factus "${name}" debe ser un objeto.`,
+      422,
+      'FACTUS_REQUEST_INVALID',
+    );
+  }
+  return value;
+}
+
+// El evento 034 (aceptación tácita) es generado por RADIAN: no se puede emitir
+// manualmente. Los demás códigos se validan también por Factus según el estado
+// previo de la factura recibida.
+const MANUAL_RECEPTION_EVENTS = new Set(['030', '031', '032', '033']);
+
 export class FactusAdapter extends ProviderAdapter {
   constructor(account, { fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
     super(account);
@@ -274,6 +301,63 @@ export class FactusAdapter extends ProviderAdapter {
       publicUrl: result.publicUrl,
       response,
     };
+  }
+
+  /**
+   * Crea y valida un documento soporte de compra. Los catálogos tributarios,
+   * el rango y la referencia deben venir de la empresa conectada; este
+   * adaptador no aplica valores predeterminados de ejemplos de Factus.
+   */
+  async submitSupportDocument(payload) {
+    const providerPayload = requiredObject(payload, 'documento soporte');
+    const referenceCode = requiredText(providerPayload.reference_code, 'reference_code');
+    const response = await this.request('/v2/support-documents/validate', {
+      method: 'POST',
+      body: providerPayload,
+    });
+    const result = factusDocumentResult(response, referenceCode);
+    return {
+      status: result.document.is_validated === true ? 'ACCEPTED' : 'SUBMITTED',
+      providerReference: result.providerReference,
+      cufe: result.cufe,
+      cude: result.cude,
+      qrUrl: result.qrUrl,
+      publicUrl: result.publicUrl,
+      response,
+    };
+  }
+
+  /** Carga una factura de proveedor ya emitida usando su CUFE/track_id real. */
+  async uploadReceivedInvoice(trackId) {
+    const normalizedTrackId = requiredText(trackId, 'track_id');
+    return this.request('/v2/receptions/upload', {
+      method: 'POST',
+      body: { track_id: normalizedTrackId },
+    });
+  }
+
+  /**
+   * Emite un evento RADIAN permitido manualmente para una factura recibida.
+   * La secuencia legal (030 → 032 → 031/033) la verifica el proveedor antes
+   * de aceptarlo; Nubixor no intenta inventar ni adelantar estados.
+   */
+  async emitReceptionEvent(billId, eventType, payload) {
+    const normalizedBillId = requiredText(billId, 'bill_id');
+    const normalizedEventType = requiredText(eventType, 'event_type');
+    if (!MANUAL_RECEPTION_EVENTS.has(normalizedEventType)) {
+      throw new AppError(
+        'El evento RADIAN solicitado no puede emitirse manualmente.',
+        422,
+        'FACTUS_RECEPTION_EVENT_INVALID',
+      );
+    }
+    return this.request(
+      `/v2/receptions/bills/${encodeURIComponent(normalizedBillId)}/radian/events/${normalizedEventType}`,
+      {
+        method: 'PATCH',
+        body: requiredObject(payload, 'evento RADIAN'),
+      },
+    );
   }
 
   async getDocumentStatus(number) {

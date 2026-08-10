@@ -153,6 +153,72 @@ test('Factus crea la factura con reference_code idempotente y conserva CUFE', as
   );
 });
 
+test('Factus valida documento soporte sin inventar rangos ni catálogos tributarios', async () => {
+  const payload = {
+    reference_code: 'purchase-support-document-idempotency-key',
+    numbering_range_id: 987,
+    provider: { identification: 'configured-provider-id' },
+    payment_details: [{ payment_method_code: 'configured-payment-method' }],
+    items: [{ code_reference: 'configured-product-code', quantity: 1 }],
+  };
+  let request;
+  const adapter = new FactusAdapter(account(), {
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/oauth/token')) {
+        return jsonResponse(200, { expires_in: 600, access_token: 'token', refresh_token: 'refresh' });
+      }
+      request = { url, options };
+      return jsonResponse(201, {
+        data: {
+          number: 'ACCOUNT-SUPPORT-NUMBER',
+          reference_code: payload.reference_code,
+          is_validated: true,
+          cude: 'provider-cude',
+          links: { qr: 'https://provider.example/qr/provider-cude' },
+        },
+      });
+    },
+  });
+
+  const result = await adapter.submitSupportDocument(payload);
+  assert.equal(request.url, 'https://api-sandbox.factus.com.co/v2/support-documents/validate');
+  assert.equal(request.options.method, 'POST');
+  assert.deepEqual(JSON.parse(request.options.body), payload);
+  assert.equal(result.status, 'ACCEPTED');
+  assert.equal(result.providerReference, 'ACCOUNT-SUPPORT-NUMBER');
+  assert.equal(result.cude, 'provider-cude');
+});
+
+test('Factus carga recepción y solo permite eventos RADIAN manuales', async () => {
+  const requests = [];
+  const adapter = new FactusAdapter(account(), {
+    fetchImpl: async (url, options) => {
+      if (url.endsWith('/oauth/token')) {
+        return jsonResponse(200, { expires_in: 600, access_token: 'token', refresh_token: 'refresh' });
+      }
+      requests.push({ url, options });
+      return jsonResponse(200, { data: { id: 'provider-bill-id' } });
+    },
+  });
+
+  await adapter.uploadReceivedInvoice('supplier-issued-cufe');
+  await adapter.emitReceptionEvent('provider-bill-id/with space', '030', {
+    person: { identification: 'configured-user' },
+  });
+
+  assert.equal(requests[0].url, 'https://api-sandbox.factus.com.co/v2/receptions/upload');
+  assert.deepEqual(JSON.parse(requests[0].options.body), { track_id: 'supplier-issued-cufe' });
+  assert.equal(
+    requests[1].url,
+    'https://api-sandbox.factus.com.co/v2/receptions/bills/provider-bill-id%2Fwith%20space/radian/events/030',
+  );
+  assert.equal(requests[1].options.method, 'PATCH');
+  await assert.rejects(
+    () => adapter.emitReceptionEvent('provider-bill-id', '034', {}),
+    (error) => error.code === 'FACTUS_RECEPTION_EVENT_INVALID',
+  );
+});
+
 test('Factus conserva códigos HTTP y Retry-After del proveedor', async () => {
   const adapter = new FactusAdapter(account(), {
     fetchImpl: async (url) => url.endsWith('/oauth/token')
