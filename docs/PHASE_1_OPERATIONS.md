@@ -19,6 +19,27 @@ clientes.
    `reference_code` no genera un segundo documento.
 6. Solo después de la revisión del contador, cambia esa empresa a producción.
 
+### Prueba reproducible en Factus TEST
+
+Nubixor incluye una prueba controlada que no tiene credenciales, rangos,
+productos ni identificadores fijos. Debe usarse exclusivamente sobre un turno,
+bodega y producto de prueba de la empresa TEST. La confirmación explícita evita
+que se ejecute por accidente, pues crea una factura real dentro de Factus TEST:
+
+```sh
+FACTUS_TEST_COMPANY_ID='UUID_EMPRESA_TEST' \
+FACTUS_TEST_USER_ID='UUID_USUARIO_AUTORIZADO' \
+FACTUS_TEST_CASH_SESSION_ID='UUID_TURNO_ABIERTO' \
+FACTUS_TEST_WAREHOUSE_ID='UUID_BODEGA_DE_PRUEBA' \
+FACTUS_TEST_PRODUCT_ID='UUID_PRODUCTO_DE_PRUEBA' \
+CONFIRM_FACTUS_TEST=YES \
+npm run factus:test:e2e
+```
+
+La salida es evidencia sanitizada: ambiente, cantidad de rangos que devolvió la
+cuenta, documento interno, número Factus, estado, CUFE parcialmente oculto,
+QR, PDF, XML y reintento del mismo documento. No imprime secretos ni tokens.
+
 ## Controles automáticos
 
 - El worker revisa documentos pendientes y reintentos; la sincronización de
