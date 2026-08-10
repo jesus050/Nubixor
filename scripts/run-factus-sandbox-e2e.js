@@ -45,6 +45,41 @@ function maskedCufe(cufe) {
   return value.length <= 12 ? '[PRESENT]' : `${value.slice(0, 6)}…${value.slice(-6)}`;
 }
 
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitForFiscalCompletion(documentId, { timeoutMs = 90000, intervalMs = 1500 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  let latest = null;
+  while (Date.now() < deadline) {
+    const result = await query(
+      `SELECT document.id, document.status, document.provider_reference, document.cufe,
+              document.qr_url, document.pdf_document_id, document.xml_document_id,
+              document.failure_reason,
+              COUNT(transmission.id)::integer transmission_count,
+              COUNT(*) FILTER (WHERE transmission.status = 'ACCEPTED')::integer accepted_attempts
+       FROM electronic_documents document
+       LEFT JOIN electronic_document_transmissions transmission
+         ON transmission.electronic_document_id = document.id
+       WHERE document.id = $1
+       GROUP BY document.id`,
+      [documentId],
+    );
+    latest = result.rows[0] || null;
+    if (latest?.status === 'ACCEPTED' && latest.provider_reference && latest.cufe &&
+        latest.qr_url && latest.pdf_document_id && latest.xml_document_id) {
+      return latest;
+    }
+    if (latest?.status === 'REJECTED') {
+      throw new Error(`Factus TEST rechazó la factura de prueba: ${latest.failure_reason || 'sin detalle'}.`);
+    }
+    await wait(intervalMs);
+  }
+  throw new Error(
+    `Factus TEST no completó la factura dentro de ${Math.round(timeoutMs / 1000)} segundos` +
+    `${latest?.failure_reason ? `: ${latest.failure_reason}` : '.'}`,
+  );
+}
+
 async function main() {
   requiredEnvironment();
   const companyId = process.env.FACTUS_TEST_COMPANY_ID.trim();
@@ -128,25 +163,20 @@ async function main() {
       throw new Error('La venta de prueba no generó un documento electrónico para Factus.');
     }
 
-    await api(`/api/electronic-billing/documents/${documentId}/queue`, {
-      method: 'POST', body: JSON.stringify({}),
-    });
-    const processed = await api(`/api/electronic-billing/documents/${documentId}/process`, {
-      method: 'POST', body: JSON.stringify({}),
-    });
-    // Repetir el proceso del mismo documento verifica que se conserva la misma
-    // referencia interna en lugar de crear otra factura en Factus.
-    await api(`/api/electronic-billing/documents/${documentId}/process`, {
-      method: 'POST', body: JSON.stringify({}),
-    });
-    const finalOverview = await api('/api/electronic-billing/overview');
-    const document = finalOverview.documents?.find((item) => item.id === documentId);
-    if (!document || document.status !== 'ACCEPTED') {
-      throw new Error('Factus TEST no confirmó la aceptación de la factura de prueba.');
-    }
-    if (!document.provider_reference || !document.cufe || !document.qr_url ||
-        !document.pdf_document_id || !document.xml_document_id) {
-      throw new Error('La factura fue aceptada, pero faltan número, CUFE, QR, PDF o XML archivado.');
+    // El POS pone la factura en cola y dispara el worker automático. No se llama
+    // manualmente a /queue ni a /process: hacerlo podría competir con el worker
+    // y dar una falsa alerta de 409 aunque Factus ya haya aceptado el documento.
+    const document = await waitForFiscalCompletion(documentId);
+    const [firstOverview, secondOverview] = await Promise.all([
+      api('/api/electronic-billing/overview'),
+      api('/api/electronic-billing/overview'),
+    ]);
+    const firstRead = firstOverview.documents?.find((item) => item.id === documentId);
+    const secondRead = secondOverview.documents?.find((item) => item.id === documentId);
+    if (firstRead?.provider_reference !== document.provider_reference ||
+        secondRead?.provider_reference !== document.provider_reference ||
+        Number(document.transmission_count) !== 1 || Number(document.accepted_attempts) !== 1) {
+      throw new Error('La comprobación de idempotencia detectó más de una transmisión o referencias inconsistentes.');
     }
 
     console.log(JSON.stringify({
@@ -160,8 +190,9 @@ async function main() {
       officialQrPresent: Boolean(document.qr_url),
       pdfArchived: Boolean(document.pdf_document_id),
       xmlArchived: Boolean(document.xml_document_id),
-      idempotencyRetest: 'same internal electronic document processed twice',
-      artifactsArchived: processed.artifactsArchived === true,
+      idempotencyRetest: 'same internal document read twice with one Factus reference and one transmission',
+      automaticWorker: 'accepted and archived without manual process request',
+      idempotencyReads: 'two repeated status reads kept one transmission and one Factus reference',
     }, null, 2));
   } finally {
     if (temporarySessionId) {

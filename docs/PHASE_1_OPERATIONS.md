@@ -36,9 +36,12 @@ CONFIRM_FACTUS_TEST=YES \
 npm run factus:test:e2e
 ```
 
+El POS pone el documento en cola y el worker automático lo transmite; el script
+espera la aceptación y la descarga de artefactos sin reenviarlo manualmente.
 La salida es evidencia sanitizada: ambiente, cantidad de rangos que devolvió la
 cuenta, documento interno, número Factus, estado, CUFE parcialmente oculto,
-QR, PDF, XML y reintento del mismo documento. No imprime secretos ni tokens.
+QR, PDF, XML y dos lecturas repetidas que verifican una sola transmisión y una
+sola referencia Factus. No imprime secretos ni tokens.
 
 ## Controles automáticos
 
