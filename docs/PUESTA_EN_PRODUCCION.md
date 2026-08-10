@@ -34,6 +34,7 @@ confirmación explícita porque reemplaza el contenido de la base destino.
 
 ```sh
 BACKUP_RESTORE_DATABASE_URL=postgresql://usuario:clave@servidor/base_prueba \
+BACKUP_RESTORE_STORAGE_DIR=/ruta/aislada/nubixor-restore-storage \
 BACKUP_ENCRYPTION_KEY=... \
 npm run backup:restore -- /ruta/copia.msbackup --confirm=RESTORE_MEGASUITE
 ```

@@ -69,11 +69,13 @@ modifica ni la base de datos ni el almacenamiento.
 
 ## Restauración de ensayo
 
-Nunca restaures sobre producción. En una base aislada configura
-`BACKUP_RESTORE_DATABASE_URL` y usa la confirmación explícita:
+Nunca restaures sobre producción. En una base y un directorio de archivos
+aislados configura `BACKUP_RESTORE_DATABASE_URL` y
+`BACKUP_RESTORE_STORAGE_DIR`, y usa la confirmación explícita:
 
 ```sh
 BACKUP_RESTORE_DATABASE_URL='postgresql://usuario:clave@host:5432/nubixor_restore' \
+BACKUP_RESTORE_STORAGE_DIR='/ruta/aislada/nubixor-restore-storage' \
   npm run backup:restore -- /ruta/a/copia.msbackup --confirm=RESTORE_MEGASUITE
 ```
 

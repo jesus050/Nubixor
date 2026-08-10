@@ -91,10 +91,22 @@ async function restore() {
   const backupFile = process.argv[2] ? path.resolve(process.argv[2]) : null;
   const confirmed = process.argv.includes('--confirm=RESTORE_MEGASUITE');
   const targetDatabase = process.env.BACKUP_RESTORE_DATABASE_URL;
-  if (!backupFile || !confirmed || !targetDatabase) {
+  const configuredRestoreStorage = process.env.BACKUP_RESTORE_STORAGE_DIR?.trim();
+  if (!backupFile || !confirmed || !targetDatabase || !configuredRestoreStorage) {
     throw new Error(
-      'Uso: BACKUP_RESTORE_DATABASE_URL=... node scripts/restore-backup.js archivo.msbackup --confirm=RESTORE_MEGASUITE',
+      'Uso: BACKUP_RESTORE_DATABASE_URL=... BACKUP_RESTORE_STORAGE_DIR=/ruta/aislada node scripts/restore-backup.js archivo.msbackup --confirm=RESTORE_MEGASUITE',
     );
+  }
+  if (!path.isAbsolute(configuredRestoreStorage)) {
+    throw new Error('BACKUP_RESTORE_STORAGE_DIR debe ser una ruta absoluta y aislada.');
+  }
+  const productionStorage = path.resolve(config.storageDir);
+  const restoreStorage = path.resolve(configuredRestoreStorage);
+  const sharesProductionStorage = productionStorage === restoreStorage ||
+    productionStorage.startsWith(`${restoreStorage}${path.sep}`) ||
+    restoreStorage.startsWith(`${productionStorage}${path.sep}`);
+  if (sharesProductionStorage) {
+    throw new Error('La restauración debe usar almacenamiento aislado; nunca el directorio activo.');
   }
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'megasuite-restore-'));
   const bundle = path.join(temporary, 'bundle.tar.gz');
@@ -119,15 +131,14 @@ async function restore() {
       ...database.args,
       path.join(temporary, 'database.dump'),
     ], database.environment);
-    const storageDir = path.resolve(config.storageDir);
     try {
-      await stat(storageDir);
-      await rename(storageDir, `${storageDir}.before-restore-${Date.now()}`);
+      await stat(restoreStorage);
+      await rename(restoreStorage, `${restoreStorage}.before-restore-${Date.now()}`);
     } catch {
       // No existía almacenamiento previo.
     }
-    await run('mkdir', ['-p', storageDir]);
-    await run('tar', ['-xzf', path.join(temporary, 'storage.tar.gz'), '-C', storageDir]);
+    await run('mkdir', ['-p', restoreStorage]);
+    await run('tar', ['-xzf', path.join(temporary, 'storage.tar.gz'), '-C', restoreStorage]);
     process.stdout.write(
       `Restauración verificada. Copia creada: ${manifest.createdAt}\n`,
     );
