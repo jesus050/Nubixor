@@ -706,6 +706,11 @@ const elements = {
   purchaseElectronicEventList: document.querySelector('#purchaseElectronicEventList'),
   uploadPurchaseElectronicButton: document.querySelector('#uploadPurchaseElectronicButton'),
   emitPurchaseRadianEventButton: document.querySelector('#emitPurchaseRadianEventButton'),
+  purchaseSupportDocumentBlock: document.querySelector('#purchaseSupportDocumentBlock'),
+  purchaseSupportDocumentStatus: document.querySelector('#purchaseSupportDocumentStatus'),
+  purchaseSupportDocumentCopy: document.querySelector('#purchaseSupportDocumentCopy'),
+  purchaseSupportDocumentRequirements: document.querySelector('#purchaseSupportDocumentRequirements'),
+  checkPurchaseSupportDocumentButton: document.querySelector('#checkPurchaseSupportDocumentButton'),
   receivePurchaseButton: document.querySelector('#receivePurchaseButton'),
   newSupplierButton: document.querySelector('#newSupplierButton'),
   supplierPanelCreateButton: document.querySelector('#supplierPanelCreateButton'),
@@ -6487,6 +6492,7 @@ function renderPurchaseOrders() {
 
 function renderPurchaseDetail(purchase) {
   selectedPurchase = purchase;
+  elements.purchaseSupportDocumentBlock.hidden = !purchase.support_document_required;
   elements.purchaseDetailEmpty.hidden = true;
   elements.purchaseDetailContent.hidden = false;
   elements.purchaseDetailNumber.textContent = purchase.order_number;
@@ -6634,12 +6640,52 @@ function renderPurchaseDetail(purchase) {
   renderPurchaseOrders();
 }
 
+function renderPurchaseSupportDocumentReadiness(readiness) {
+  const applies = Boolean(readiness?.applicable);
+  elements.purchaseSupportDocumentBlock.hidden = !applies;
+  if (!applies) return;
+  elements.purchaseSupportDocumentStatus.textContent = readiness.ready ? 'Lista para preparar' : 'Configuración pendiente';
+  elements.purchaseSupportDocumentStatus.className = readiness.ready
+    ? 'purchase-status received' : 'purchase-status ordered';
+  elements.purchaseSupportDocumentCopy.textContent = readiness.message;
+  elements.purchaseSupportDocumentRequirements.replaceChildren();
+  for (const requirement of readiness.requirements || []) {
+    const item = document.createElement('article');
+    const symbol = document.createElement('span');
+    symbol.textContent = requirement.ready ? '✓' : '!';
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = requirement.label;
+    const detail = document.createElement('small');
+    detail.textContent = requirement.detail;
+    copy.append(title, detail);
+    item.append(symbol, copy);
+    elements.purchaseSupportDocumentRequirements.append(item);
+  }
+}
+
+async function loadPurchaseSupportDocumentReadiness(purchaseId) {
+  try {
+    const readiness = await getJson(`/api/purchases/${purchaseId}/support-document/readiness`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    if (selectedPurchase?.id === purchaseId) renderPurchaseSupportDocumentReadiness(readiness);
+  } catch (error) {
+    if (selectedPurchase?.id !== purchaseId) return;
+    elements.purchaseSupportDocumentBlock.hidden = !selectedPurchase.support_document_required;
+    elements.purchaseSupportDocumentStatus.textContent = 'No se pudo revisar';
+    elements.purchaseSupportDocumentStatus.className = 'purchase-status ordered';
+    elements.purchaseSupportDocumentCopy.textContent = error.message;
+  }
+}
+
 async function loadPurchaseDetail(purchaseId) {
   try {
     const detail = await getJson(`/api/purchases/${purchaseId}`, {
       headers: { 'x-tenant-id': activeTenantId },
     });
     renderPurchaseDetail(detail);
+    await loadPurchaseSupportDocumentReadiness(purchaseId);
   } catch (error) {
     showToast(error.message);
   }
@@ -15998,6 +16044,9 @@ elements.purchaseDialog.addEventListener('click', (event) => {
 elements.receivePurchaseButton.addEventListener('click', openReceiptPurchaseDialog);
 elements.uploadPurchaseElectronicButton.addEventListener('click', openPurchaseElectronicDialog);
 elements.emitPurchaseRadianEventButton.addEventListener('click', openPurchaseRadianDialog);
+elements.checkPurchaseSupportDocumentButton.addEventListener('click', () => {
+  if (selectedPurchase) loadPurchaseSupportDocumentReadiness(selectedPurchase.id);
+});
 elements.closePurchaseElectronicDialog.addEventListener('click', closePurchaseElectronicDialog);
 elements.cancelPurchaseElectronicButton.addEventListener('click', closePurchaseElectronicDialog);
 elements.purchaseElectronicForm.addEventListener('submit', submitPurchaseElectronicReception);

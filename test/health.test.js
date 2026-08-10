@@ -96,6 +96,8 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="compras"/);
   assert.match(response.text, /Órdenes y recepciones/);
   assert.match(response.text, /Confirmar entrada a inventario/);
+  assert.match(response.text, /Preparación tributaria/);
+  assert.match(response.text, /Esta validación no emite ni consume numeración de Factus/);
   assert.match(response.text, /data-view="cuentas-pagar"/);
   assert.match(response.text, /Facturas y cuentas por pagar/);
   assert.match(response.text, /Registrar pago/);
@@ -662,6 +664,11 @@ test('compras valida proveedores, órdenes y recepciones antes de consultar Post
     .send({})
     .expect(422);
   assert.match(receipt.body.error, /UUID válidos/i);
+  const supportReadiness = await request(application)
+    .get('/api/purchases/invalid/support-document/readiness')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .expect(422);
+  assert.match(supportReadiness.body.error, /orden debe tener un UUID/i);
   const electronicReception = await request(application)
     .post(`/api/purchases/${DEMO_TENANT_ID}/electronic-reception`)
     .set('x-tenant-id', DEMO_TENANT_ID)

@@ -232,11 +232,148 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json(result.rows);
 }));
 
+router.get('/:id/support-document/readiness', asyncHandler(async (req, res) => {
+  if (!isUuid(req.params.id)) {
+    throw new AppError('La orden debe tener un UUID válido.', 422, 'INVALID_PURCHASE_ID');
+  }
+
+  const purchaseResult = await query(
+    `SELECT p.id, p.order_number, p.support_document_required,
+            s.name supplier_name, s.document_type supplier_document_type,
+            s.tax_id supplier_tax_id, s.email supplier_email,
+            s.address supplier_address, s.obligated_to_invoice
+     FROM purchases p
+     JOIN suppliers s ON s.id = p.supplier_id AND s.tenant_id = p.tenant_id
+     WHERE p.id = $1 AND p.tenant_id = $2`,
+    [req.params.id, req.context.tenantId],
+  );
+  if (!purchaseResult.rowCount) {
+    throw new AppError('No encontramos la orden en la empresa activa.', 404, 'PURCHASE_NOT_FOUND');
+  }
+  const purchase = purchaseResult.rows[0];
+  if (!purchase.support_document_required) {
+    return res.json({
+      applicable: false,
+      ready: false,
+      status: 'NOT_REQUIRED',
+      requirements: [],
+      message: 'Esta compra no requiere documento soporte según el perfil actual del proveedor.',
+    });
+  }
+
+  const accountResult = await query(
+    `SELECT id, environment, connection_status
+     FROM electronic_billing_accounts
+     WHERE company_id = $1 AND provider_code = 'FACTUS' AND active = TRUE
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [req.context.tenantId],
+  );
+  const account = accountResult.rows[0] || null;
+  const [itemsResult, mappingsResult, rangesResult] = await Promise.all([
+    query(
+      `SELECT pi.id, p.name, p.sku, p.electronic_unit_measure_code,
+              p.electronic_standard_code
+       FROM purchase_items pi
+       JOIN products p ON p.id = pi.product_id AND p.tenant_id = pi.tenant_id
+       WHERE pi.purchase_id = $1 AND pi.tenant_id = $2`,
+      [req.params.id, req.context.tenantId],
+    ),
+    account
+      ? query(
+        `SELECT catalog_type, internal_code, provider_value
+         FROM electronic_billing_reference_mappings
+         WHERE company_id = $1 AND provider_code = 'FACTUS' AND environment = $2`,
+        [req.context.tenantId, account.environment],
+      )
+      : Promise.resolve({ rows: [] }),
+    account
+      ? query(
+        `SELECT provider_numbering_range_id
+         FROM billing_resolutions
+         WHERE company_id = $1 AND active = TRUE
+           AND provider_numbering_range_id IS NOT NULL
+         ORDER BY provider_synced_at DESC NULLS LAST
+         LIMIT 1`,
+        [req.context.tenantId],
+      )
+      : Promise.resolve({ rows: [] }),
+  ]);
+
+  const hasMapping = (catalogType, internalCode) => mappingsResult.rows.some((mapping) =>
+    mapping.catalog_type === catalogType && mapping.internal_code === internalCode && mapping.provider_value,
+  );
+  const incompleteItems = itemsResult.rows.filter((item) =>
+    !item.sku || !item.electronic_unit_measure_code || !item.electronic_standard_code,
+  );
+  const requirements = [
+    {
+      key: 'factus_connection',
+      label: 'Conexión Factus lista',
+      ready: account?.connection_status === 'READY',
+      detail: account
+        ? account.connection_status === 'READY'
+          ? `Cuenta Factus ${account.environment} verificada.`
+          : 'La cuenta Factus debe quedar en estado READY antes de emitir.'
+        : 'Conecta una cuenta Factus para esta empresa.',
+    },
+    {
+      key: 'supplier_identity',
+      label: 'Perfil básico del proveedor',
+      ready: Boolean(
+        purchase.supplier_name && purchase.supplier_document_type && purchase.supplier_tax_id &&
+        purchase.supplier_address,
+      ),
+      detail: 'Nombre, tipo y número de documento, y dirección del proveedor.',
+    },
+    {
+      key: 'supplier_policy',
+      label: 'Proveedor no obligado a facturar',
+      ready: purchase.obligated_to_invoice === false,
+      detail: purchase.obligated_to_invoice === false
+        ? 'La compra está marcada correctamente para documento soporte.'
+        : 'Revisa el perfil tributario del proveedor antes de continuar.',
+    },
+    {
+      key: 'reference_mappings',
+      label: 'Equivalencias Factus de documento soporte',
+      ready: hasMapping('DOCUMENT_TYPE', 'SUPPORT_DOCUMENT') &&
+        hasMapping('OPERATION_TYPE', 'SUPPORT_DOCUMENT') &&
+        hasMapping('IDENTIFICATION_DOCUMENT', purchase.supplier_document_type),
+      detail: 'Configura desde la cuenta real los catálogos de documento, operación e identificación.',
+    },
+    {
+      key: 'numbering_range',
+      label: 'Rango asociado en Factus',
+      ready: Boolean(rangesResult.rowCount),
+      detail: 'Sincroniza y asocia el rango habilitado para la empresa; Nubixor no inventa rangos ni resoluciones.',
+    },
+    {
+      key: 'products',
+      label: 'Productos preparados para documento electrónico',
+      ready: itemsResult.rowCount > 0 && incompleteItems.length === 0,
+      detail: incompleteItems.length
+        ? `${incompleteItems.length} producto(s) requieren SKU, unidad y código estándar electrónico.`
+        : 'Cada línea tiene SKU, unidad de medida y código estándar configurados.',
+    },
+  ];
+  const ready = requirements.every((requirement) => requirement.ready);
+  res.json({
+    applicable: true,
+    ready,
+    status: ready ? 'READY_TO_PREPARE' : 'CONFIGURATION_REQUIRED',
+    requirements,
+    message: ready
+      ? 'La información mínima está lista para preparar el documento soporte. La emisión seguirá requiriendo una acción autorizada.'
+      : 'Completa los puntos pendientes antes de preparar o emitir un documento soporte.',
+  });
+}));
+
 router.get('/:id', asyncHandler(async (req, res) => {
   if (!isUuid(req.params.id)) {
     throw new AppError('La orden debe tener un UUID válido.', 422, 'INVALID_PURCHASE_ID');
   }
-  const [purchase, items, receipts, electronicReception] = await Promise.all([
+  const [purchase, electronicReception, items, receipts] = await Promise.all([
     query(
       `SELECT p.*, s.name supplier_name, s.tax_id supplier_tax_id,
               s.email supplier_email, s.payment_terms_days,
