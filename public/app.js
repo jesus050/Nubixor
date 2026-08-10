@@ -6492,7 +6492,8 @@ function renderPurchaseDetail(purchase) {
   elements.purchaseDetailNumber.textContent = purchase.order_number;
   elements.purchaseDetailSupplier.textContent = purchase.supplier_name;
   elements.purchaseDetailBranch.textContent =
-    `${purchase.branch_name} · ${purchase.branch_code}`;
+    `${purchase.branch_name} · ${purchase.branch_code}${purchase.support_document_required
+      ? ' · Documento soporte requerido' : ''}`;
   const status = purchaseStatusMeta(purchase.status);
   elements.purchaseDetailStatus.textContent = status.label;
   elements.purchaseDetailStatus.className = `purchase-status ${status.className}`;

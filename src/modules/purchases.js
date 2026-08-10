@@ -505,10 +505,14 @@ router.post('/', asyncHandler(async (req, res) => {
   const created = await withTransaction(async (client) => {
     const references = await client.query(
       `SELECT
-         EXISTS(
-           SELECT 1 FROM suppliers
-           WHERE id = $2 AND tenant_id = $1 AND active = TRUE
-         ) supplier_ok,
+         (
+           SELECT json_build_object(
+             'active', active,
+             'obligated_to_invoice', obligated_to_invoice
+           )
+           FROM suppliers
+           WHERE id = $2 AND tenant_id = $1
+         ) supplier,
          EXISTS(
            SELECT 1 FROM branches
            WHERE id = $3 AND tenant_id = $1 AND active = TRUE
@@ -527,7 +531,7 @@ router.post('/', asyncHandler(async (req, res) => {
       ],
     );
     const reference = references.rows[0];
-    if (!reference.supplier_ok || !reference.branch_ok ||
+    if (!reference.supplier?.active || !reference.branch_ok ||
         reference.product_count !== normalizedItems.length) {
       throw new AppError(
         'Una referencia no pertenece a la empresa activa.',
@@ -558,7 +562,8 @@ router.post('/', asyncHandler(async (req, res) => {
         normalizedDocumentNumber,
         Boolean(electronicInvoice),
         Boolean(supportDocumentRequired) ||
-          normalizedDocumentType === 'SUPPORT_DOCUMENT',
+          normalizedDocumentType === 'SUPPORT_DOCUMENT' ||
+          reference.supplier.obligated_to_invoice === false,
         normalizedNotes,
         normalizedIssueDate,
         expectedDate || null,
