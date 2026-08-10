@@ -283,6 +283,8 @@ const elements = {
   reloadLogisticsButton: document.querySelector('#reloadLogisticsButton'),
   logisticsModuleStatus: document.querySelector('#logisticsModuleStatus'),
   logisticsModuleToggle: document.querySelector('#logisticsModuleToggle'),
+  payrollModuleStatus: document.querySelector('#payrollModuleStatus'),
+  payrollModuleToggle: document.querySelector('#payrollModuleToggle'),
   moduleSettingMessage: document.querySelector('#moduleSettingMessage'),
   logisticsWorkflowAlertBadge: document.querySelector('#logisticsWorkflowAlertBadge'),
   logisticsCountingCount: document.querySelector('#logisticsCountingCount'),
@@ -1469,7 +1471,7 @@ let quickLookupSequence = 0;
 let activeTenantId = readTenantPreference();
 let taxProfileCompany = null;
 let identityCompany = null;
-let tenantModules = { LOGISTICS: true };
+let tenantModules = { LOGISTICS: true, PAYROLL: false };
 let logisticsOverview = {
   summary: {},
   batches: [],
@@ -1543,8 +1545,10 @@ function accountInitials(name) {
 
 function renderTenantModules() {
   const logisticsEnabled = isTenantModuleEnabled('LOGISTICS');
+  const payrollEnabled = isTenantModuleEnabled('PAYROLL');
   const canManageModules = hasAnyPermission('users.manage');
   const logisticsCard = document.querySelector('[data-module-setting="LOGISTICS"]');
+  const payrollCard = document.querySelector('[data-module-setting="PAYROLL"]');
 
   elements.logisticsModuleToggle.checked = logisticsEnabled;
   elements.logisticsModuleToggle.disabled = !canManageModules;
@@ -1555,6 +1559,11 @@ function renderTenantModules() {
     ? '<i aria-hidden="true"></i> Módulo activo'
     : '<i aria-hidden="true"></i> Módulo desactivado';
   logisticsCard?.classList.toggle('module-disabled', !logisticsEnabled);
+  elements.payrollModuleToggle.checked = payrollEnabled;
+  elements.payrollModuleToggle.disabled = !canManageModules;
+  elements.payrollModuleStatus.textContent = payrollEnabled
+    ? 'Activo para esta empresa' : 'Desactivado';
+  payrollCard?.classList.toggle('module-disabled', !payrollEnabled);
 }
 
 async function loadTenantModules() {
@@ -2419,6 +2428,32 @@ async function toggleTenantModule(event) {
     elements.moduleSettingMessage.hidden = false;
   } finally {
     elements.logisticsModuleToggle.disabled = !hasAnyPermission('users.manage');
+  }
+}
+
+async function togglePayrollModule(event) {
+  const desiredState = event.currentTarget.checked;
+  const previousState = isTenantModuleEnabled('PAYROLL');
+  elements.payrollModuleToggle.disabled = true;
+  elements.moduleSettingMessage.hidden = true;
+  try {
+    const module = await getJson('/api/module-settings/PAYROLL', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({ enabled: desiredState }),
+    });
+    tenantModules.PAYROLL = Boolean(module.enabled);
+    renderTenantModules();
+    showToast(module.enabled
+      ? 'Nómina activada. Configura empleados y contratos antes de liquidar.'
+      : 'Nómina desactivada. Los datos permanecen guardados.');
+  } catch (error) {
+    tenantModules.PAYROLL = previousState;
+    renderTenantModules();
+    elements.moduleSettingMessage.textContent = error.message;
+    elements.moduleSettingMessage.hidden = false;
+  } finally {
+    elements.payrollModuleToggle.disabled = !hasAnyPermission('users.manage');
   }
 }
 
@@ -15872,6 +15907,7 @@ elements.reloadLogisticsButton.addEventListener('click', () => {
     .catch((error) => showToast(error.message));
 });
 elements.logisticsModuleToggle.addEventListener('change', toggleTenantModule);
+elements.payrollModuleToggle.addEventListener('change', togglePayrollModule);
 elements.logisticsBatchSearch.addEventListener('input', renderLogisticsBatches);
 elements.logisticsBatchStatusFilter.addEventListener('change', renderLogisticsBatches);
 elements.newLogisticsBatchButton.addEventListener('click', openLogisticsBatchDialog);

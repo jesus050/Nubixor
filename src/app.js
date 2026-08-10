@@ -39,6 +39,7 @@ import electronicBillingRouter from './modules/electronic-billing.js';
 import billingWorkflowRouter from './modules/billing-workflow.js';
 import secureAssetsRouter from './modules/secure-assets.js';
 import secureFilesRouter from './modules/secure-files.js';
+import payrollRouter from './modules/payroll.js';
 import { requireTenantModule } from './module-gates.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -128,6 +129,9 @@ export function createApp({
   const requireLogistics = moduleGates
     ? requireTenantModule('LOGISTICS')
     : (_req, _res, next) => next();
+  const requirePayroll = moduleGates
+    ? requireTenantModule('PAYROLL')
+    : (_req, _res, next) => next();
   application.use('/api/inventory', (req, res, next) => {
     if (/^\/(replenishments|incidents|transfer-orders|transfers)(?:\/|$)/.test(req.path)) {
       return requireLogistics(req, res, next);
@@ -142,6 +146,7 @@ export function createApp({
   application.use('/api/receivables', receivablesRouter);
   application.use('/api/payables', payablesRouter);
   application.use('/api/expenses', expensesRouter);
+  application.use('/api/payroll', requirePayroll, payrollRouter);
   application.use('/api/third-parties', thirdPartiesRouter);
   application.use('/api/users', usersRouter);
   application.use('/api/dashboard', dashboardRouter);

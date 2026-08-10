@@ -19,8 +19,9 @@ export function requireTenantModule(moduleCode) {
         [tenantId, moduleCode],
       );
       if (!result.rows[0]?.enabled) {
+        const moduleName = moduleCode === 'PAYROLL' ? 'Nómina' : 'Logística';
         throw new AppError(
-          'El módulo de Logística está desactivado para esta empresa.',
+          `El módulo de ${moduleName} está desactivado para esta empresa.`,
           403,
           'TENANT_MODULE_DISABLED',
         );

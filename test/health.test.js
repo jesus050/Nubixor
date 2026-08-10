@@ -722,6 +722,31 @@ test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQ
   assert.equal(missingBankAccount.body.code, 'BANK_ACCOUNT_REQUIRED');
 });
 
+test('nómina valida empleados, periodos y novedades antes de consultar PostgreSQL', async () => {
+  const application = createUnsecuredApp();
+  await request(application)
+    .get('/api/payroll/summary')
+    .expect(400);
+  const employee = await request(application)
+    .post('/api/payroll/employees')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ firstName: 'Ana' })
+    .expect(422);
+  assert.match(employee.body.error, /campos obligatorios/i);
+  const period = await request(application)
+    .post('/api/payroll/periods')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ startDate: '2026-08-31', endDate: '2026-08-01', paymentDate: '2026-08-31', frequency: 'MONTHLY' })
+    .expect(422);
+  assert.equal(period.body.code, 'INVALID_PAYROLL_PERIOD');
+  const novelty = await request(application)
+    .post('/api/payroll/periods/invalid/novelties')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.equal(novelty.body.code, 'INVALID_PAYROLL_REFERENCE');
+});
+
 test('usuarios exige identidad antes de consultar membresías y permisos', async () => {
   const application = createUnsecuredApp();
   const response = await request(application)

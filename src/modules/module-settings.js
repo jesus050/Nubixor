@@ -12,6 +12,11 @@ const AVAILABLE_MODULES = new Map([
     name: 'Logística',
     description: 'Recepción, ubicación, exhibición, reposición, lotes, series y reservas.',
   }],
+  ['PAYROLL', {
+    code: 'PAYROLL',
+    name: 'Nómina',
+    description: 'Empleados, contratos, periodos y novedades. La emisión electrónica requiere configuración adicional.',
+  }],
 ]);
 
 router.use(requireTenant);

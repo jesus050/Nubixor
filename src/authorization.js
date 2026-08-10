@@ -31,6 +31,9 @@ const ALL_PERMISSIONS = [
   'billing.manage',
   'accounting.manage',
   'documents.manage',
+  'payroll.view',
+  'payroll.manage',
+  'payroll.approve',
 ];
 
 const BASE_ROLES = [
@@ -363,6 +366,11 @@ export function authorizeApiRequest(req, res, next) {
     permissions = read
       ? ['expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay']
       : ['expenses.manage', 'expenses.approve', 'expenses.pay'];
+  }
+  else if (path.startsWith('/api/payroll')) {
+    permissions = read
+      ? ['payroll.view', 'payroll.manage', 'payroll.approve']
+      : ['payroll.manage', 'payroll.approve'];
   }
   else if (path.startsWith('/api/third-parties')) {
     permissions = read
