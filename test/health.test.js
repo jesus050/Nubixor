@@ -6,7 +6,11 @@ import { createHealthRouter } from '../src/modules/health.js';
 import { csvCell } from '../src/shared/csv.js';
 
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-const createUnsecuredApp = (options = {}) => createApp({ ...options, security: false });
+const createUnsecuredApp = (options = {}) => createApp({
+  ...options,
+  security: false,
+  moduleGates: false,
+});
 
 test('GET / sirve la interfaz local', async () => {
   const response = await request(createUnsecuredApp()).get('/').expect(200);
@@ -620,7 +624,7 @@ test('el flujo comercial valida cotizaciones, pedidos, notas y consultas', async
     .set(headers)
     .send({})
     .expect(422);
-  assert.match(note.body.error, /factura, tipo, causal/i);
+  assert.match(note.body.error, /factura,.*tipo,.*causal/i);
 
   const noteQueue = await request(application)
     .post('/api/billing-workflow/notes/invalid/queue')

@@ -9,7 +9,65 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  verify:
+    name: Verify migrations, tests and dependencies
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: megasuite
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d megasuite"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/megasuite
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/megasuite
+      DATABASE_SSL: "false"
+      REDIS_URL: redis://localhost:6379/0
+      PUBLIC_BASE_URL: http://localhost:4100
+      CORS_ORIGINS: http://localhost:4100
+      BACKUP_ENABLED: "false"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Apply every migration to a clean PostgreSQL database
+        run: npm run migrate
+
+      - name: Run syntax checks and full test suite
+        run: npm run check
+
+      - name: Fail on high-severity production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+
   build-and-push-image:
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read

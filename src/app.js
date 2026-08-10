@@ -68,7 +68,11 @@ function corsOptions() {
   };
 }
 
-export function createApp({ health = healthRouter, security = true } = {}) {
+export function createApp({
+  health = healthRouter,
+  security = true,
+  moduleGates = true,
+} = {}) {
   const application = express();
   if (config.trustProxy) application.set('trust proxy', 1);
 
@@ -118,7 +122,12 @@ export function createApp({ health = healthRouter, security = true } = {}) {
   application.use('/api/pricing', pricingRouter);
   application.use('/api/taxes', taxesRouter);
   application.use('/api/module-settings', moduleSettingsRouter);
-  const requireLogistics = requireTenantModule('LOGISTICS');
+  // Las pruebas unitarias de validación no necesitan una consulta a PostgreSQL
+  // previa. En producción y en la aplicación normal los módulos permanecen
+  // protegidos por su compuerta de empresa.
+  const requireLogistics = moduleGates
+    ? requireTenantModule('LOGISTICS')
+    : (_req, _res, next) => next();
   application.use('/api/inventory', (req, res, next) => {
     if (/^\/(replenishments|incidents|transfer-orders|transfers)(?:\/|$)/.test(req.path)) {
       return requireLogistics(req, res, next);
