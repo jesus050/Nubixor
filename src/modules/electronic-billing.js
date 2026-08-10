@@ -1775,10 +1775,14 @@ export async function autoProcessElectronicDocument({ tenantId, userId, document
 
     await withTransaction(async (client) => {
       const docRes = await client.query(
-        `SELECT id, status, prefix, document_number, sale_id, document_type, billing_resolution_id, customer_id
-         FROM electronic_documents
-         WHERE id = $1 AND company_id = $2
-         FOR UPDATE`,
+        `SELECT document.id, document.status, document.prefix, document.document_number,
+                document.sale_id, document.document_type, document.billing_resolution_id,
+                sale.customer_id
+         FROM electronic_documents document
+         JOIN sales sale
+           ON sale.id = document.sale_id AND sale.company_id = document.company_id
+         WHERE document.id = $1 AND document.company_id = $2
+         FOR UPDATE OF document`,
         [documentId, tenantId],
       );
       if (!docRes.rowCount || docRes.rows[0].status === 'ACCEPTED') return;
