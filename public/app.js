@@ -700,6 +700,12 @@ const elements = {
   purchaseItemList: document.querySelector('#purchaseItemList'),
   purchaseReceiptCount: document.querySelector('#purchaseReceiptCount'),
   purchaseReceiptList: document.querySelector('#purchaseReceiptList'),
+  purchaseElectronicStatus: document.querySelector('#purchaseElectronicStatus'),
+  purchaseElectronicCopy: document.querySelector('#purchaseElectronicCopy'),
+  purchaseElectronicMeta: document.querySelector('#purchaseElectronicMeta'),
+  purchaseElectronicEventList: document.querySelector('#purchaseElectronicEventList'),
+  uploadPurchaseElectronicButton: document.querySelector('#uploadPurchaseElectronicButton'),
+  emitPurchaseRadianEventButton: document.querySelector('#emitPurchaseRadianEventButton'),
   receivePurchaseButton: document.querySelector('#receivePurchaseButton'),
   newSupplierButton: document.querySelector('#newSupplierButton'),
   supplierPanelCreateButton: document.querySelector('#supplierPanelCreateButton'),
@@ -727,6 +733,21 @@ const elements = {
   cancelPurchaseButton: document.querySelector('#cancelPurchaseButton'),
   savePurchaseButton: document.querySelector('#savePurchaseButton'),
   receiptPurchaseDialog: document.querySelector('#receiptPurchaseDialog'),
+  purchaseElectronicDialog: document.querySelector('#purchaseElectronicDialog'),
+  purchaseElectronicForm: document.querySelector('#purchaseElectronicForm'),
+  purchaseElectronicTrackId: document.querySelector('#purchaseElectronicTrackId'),
+  purchaseElectronicFormError: document.querySelector('#purchaseElectronicFormError'),
+  closePurchaseElectronicDialog: document.querySelector('#closePurchaseElectronicDialog'),
+  cancelPurchaseElectronicButton: document.querySelector('#cancelPurchaseElectronicButton'),
+  savePurchaseElectronicButton: document.querySelector('#savePurchaseElectronicButton'),
+  purchaseRadianDialog: document.querySelector('#purchaseRadianDialog'),
+  purchaseRadianForm: document.querySelector('#purchaseRadianForm'),
+  purchaseRadianEventType: document.querySelector('#purchaseRadianEventType'),
+  purchaseRadianPayload: document.querySelector('#purchaseRadianPayload'),
+  purchaseRadianFormError: document.querySelector('#purchaseRadianFormError'),
+  closePurchaseRadianDialog: document.querySelector('#closePurchaseRadianDialog'),
+  cancelPurchaseRadianButton: document.querySelector('#cancelPurchaseRadianButton'),
+  savePurchaseRadianButton: document.querySelector('#savePurchaseRadianButton'),
   receiptPurchaseForm: document.querySelector('#receiptPurchaseForm'),
   receiptPurchaseFormError: document.querySelector('#receiptPurchaseFormError'),
   receiptPurchaseNumber: document.querySelector('#receiptPurchaseNumber'),
@@ -6565,6 +6586,50 @@ function renderPurchaseDetail(purchase) {
     item.append(symbol, copy, value);
     elements.purchaseReceiptList.append(item);
   }
+
+  const electronic = purchase.electronic_reception;
+  const hasElectronic = Boolean(electronic);
+  elements.purchaseElectronicStatus.textContent = hasElectronic
+    ? electronic.status === 'EVENT_SENT' ? 'Evento emitido'
+      : electronic.status === 'FAILED' || electronic.status === 'EVENT_REJECTED' ? 'Requiere revisión'
+        : 'Cargada en Factus'
+    : 'Sin cargar';
+  elements.purchaseElectronicStatus.className = hasElectronic
+    ? 'purchase-status received' : 'purchase-status ordered';
+  elements.purchaseElectronicCopy.textContent = electronic?.last_error
+    ? `Último resultado: ${electronic.last_error}`
+    : hasElectronic
+    ? `CUFE / track ID: ${electronic.track_id}`
+    : 'Carga el CUFE de la factura recibida cuando la conexión Factus de esta empresa esté lista.';
+  elements.purchaseElectronicMeta.textContent = hasElectronic
+    ? `${electronic.provider_code} · ${electronic.provider_bill_id || 'Identificador pendiente de Factus'}`
+    : 'No se ha enviado ninguna recepción al proveedor.';
+  elements.uploadPurchaseElectronicButton.textContent = hasElectronic
+    ? 'Actualizar factura recibida' : 'Cargar factura recibida';
+  elements.emitPurchaseRadianEventButton.hidden = !electronic?.provider_bill_id;
+  elements.purchaseElectronicEventList.replaceChildren();
+  if (!electronic?.events?.length) {
+    const empty = document.createElement('p');
+    empty.className = 'purchase-receipt-empty';
+    empty.textContent = hasElectronic
+      ? 'Aún no se han emitido eventos RADIAN.'
+      : 'Los eventos aparecerán después de cargar la factura.';
+    elements.purchaseElectronicEventList.append(empty);
+  } else {
+    for (const event of electronic.events) {
+      const item = document.createElement('article');
+      const symbol = document.createElement('span');
+      symbol.textContent = '✓';
+      const copy = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = `RADIAN ${event.event_type}`;
+      const meta = document.createElement('small');
+      meta.textContent = `${event.status} · ${formatShortDate(event.emitted_at)}`;
+      copy.append(title, meta);
+      item.append(symbol, copy);
+      elements.purchaseElectronicEventList.append(item);
+    }
+  }
   renderPurchaseOrders();
 }
 
@@ -6618,6 +6683,91 @@ async function loadPurchases() {
   } catch (error) {
     showPurchasesError(error.message);
     throw error;
+  }
+}
+
+function openPurchaseElectronicDialog() {
+  if (!selectedPurchase) return;
+  elements.purchaseElectronicForm.reset();
+  elements.purchaseElectronicTrackId.value = selectedPurchase.electronic_reception?.track_id || '';
+  elements.purchaseElectronicFormError.hidden = true;
+  elements.purchaseElectronicDialog.showModal();
+  elements.purchaseElectronicTrackId.focus();
+}
+
+function closePurchaseElectronicDialog() {
+  elements.purchaseElectronicDialog.close();
+}
+
+async function submitPurchaseElectronicReception(event) {
+  event.preventDefault();
+  if (!selectedPurchase) return;
+  elements.purchaseElectronicFormError.hidden = true;
+  elements.savePurchaseElectronicButton.disabled = true;
+  elements.savePurchaseElectronicButton.textContent = 'Cargando…';
+  try {
+    await getJson(`/api/purchases/${selectedPurchase.id}/electronic-reception`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({ trackId: elements.purchaseElectronicTrackId.value.trim() }),
+    });
+    closePurchaseElectronicDialog();
+    await loadPurchaseDetail(selectedPurchase.id);
+    showToast('Factura del proveedor cargada en Factus.');
+  } catch (error) {
+    elements.purchaseElectronicFormError.textContent = error.message;
+    elements.purchaseElectronicFormError.hidden = false;
+  } finally {
+    elements.savePurchaseElectronicButton.disabled = false;
+    elements.savePurchaseElectronicButton.textContent = 'Cargar en Factus';
+  }
+}
+
+function openPurchaseRadianDialog() {
+  if (!selectedPurchase?.electronic_reception?.provider_bill_id) return;
+  elements.purchaseRadianForm.reset();
+  elements.purchaseRadianFormError.hidden = true;
+  elements.purchaseRadianDialog.showModal();
+  elements.purchaseRadianEventType.focus();
+}
+
+function closePurchaseRadianDialog() {
+  elements.purchaseRadianDialog.close();
+}
+
+async function submitPurchaseRadianEvent(event) {
+  event.preventDefault();
+  const reception = selectedPurchase?.electronic_reception;
+  if (!reception) return;
+  let eventPayload;
+  try {
+    eventPayload = JSON.parse(elements.purchaseRadianPayload.value);
+  } catch {
+    elements.purchaseRadianFormError.textContent = 'Los datos del evento deben ser JSON válido.';
+    elements.purchaseRadianFormError.hidden = false;
+    return;
+  }
+  elements.purchaseRadianFormError.hidden = true;
+  elements.savePurchaseRadianButton.disabled = true;
+  elements.savePurchaseRadianButton.textContent = 'Enviando…';
+  try {
+    await getJson(`/api/purchases/electronic-receptions/${reception.id}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({
+        eventType: elements.purchaseRadianEventType.value,
+        eventPayload,
+      }),
+    });
+    closePurchaseRadianDialog();
+    await loadPurchaseDetail(selectedPurchase.id);
+    showToast('Evento RADIAN emitido y auditado.');
+  } catch (error) {
+    elements.purchaseRadianFormError.textContent = error.message;
+    elements.purchaseRadianFormError.hidden = false;
+  } finally {
+    elements.savePurchaseRadianButton.disabled = false;
+    elements.savePurchaseRadianButton.textContent = 'Emitir evento';
   }
 }
 
@@ -15845,6 +15995,20 @@ elements.purchaseDialog.addEventListener('click', (event) => {
   if (event.target === elements.purchaseDialog) closePurchaseDialog();
 });
 elements.receivePurchaseButton.addEventListener('click', openReceiptPurchaseDialog);
+elements.uploadPurchaseElectronicButton.addEventListener('click', openPurchaseElectronicDialog);
+elements.emitPurchaseRadianEventButton.addEventListener('click', openPurchaseRadianDialog);
+elements.closePurchaseElectronicDialog.addEventListener('click', closePurchaseElectronicDialog);
+elements.cancelPurchaseElectronicButton.addEventListener('click', closePurchaseElectronicDialog);
+elements.purchaseElectronicForm.addEventListener('submit', submitPurchaseElectronicReception);
+elements.purchaseElectronicDialog.addEventListener('click', (event) => {
+  if (event.target === elements.purchaseElectronicDialog) closePurchaseElectronicDialog();
+});
+elements.closePurchaseRadianDialog.addEventListener('click', closePurchaseRadianDialog);
+elements.cancelPurchaseRadianButton.addEventListener('click', closePurchaseRadianDialog);
+elements.purchaseRadianForm.addEventListener('submit', submitPurchaseRadianEvent);
+elements.purchaseRadianDialog.addEventListener('click', (event) => {
+  if (event.target === elements.purchaseRadianDialog) closePurchaseRadianDialog();
+});
 elements.closeReceiptPurchaseDialog.addEventListener('click', closeReceiptPurchaseDialog);
 elements.cancelReceiptPurchaseButton.addEventListener('click', closeReceiptPurchaseDialog);
 elements.receiptPurchaseForm.addEventListener('submit', submitPurchaseReceipt);

@@ -5,10 +5,12 @@ import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
 import { postPurchaseReceiptAccounting } from '../accounting.js';
+import { createBillingAdapter } from '../electronic-billing/adapters/registry.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DOCUMENT_TYPES = new Set(['PURCHASE_ORDER', 'INVOICE', 'SUPPORT_DOCUMENT']);
+const RADIAN_EVENTS = new Set(['030', '031', '032', '033']);
 
 router.use(requireTenant);
 
@@ -69,6 +71,40 @@ function normalizeOrderItems(items) {
     }
     return { productId: item.productId, quantity, unitCost, taxRate };
   });
+}
+
+async function activeFactusAccount(tenantId) {
+  const result = await query(
+    `SELECT id, company_id, provider_code, environment, base_url,
+            encrypted_credentials, provider_config, connection_status
+     FROM electronic_billing_accounts
+     WHERE company_id = $1 AND provider_code = 'FACTUS' AND active = TRUE
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [tenantId],
+  );
+  if (!result.rowCount || result.rows[0].connection_status !== 'READY') {
+    throw new AppError(
+      'Conecta y prueba Factus para esta empresa antes de recibir una factura electrónica.',
+      409,
+      'FACTUS_CONNECTION_REQUIRED',
+    );
+  }
+  return result.rows[0];
+}
+
+async function purchaseForTenant(purchaseId, tenantId) {
+  if (!isUuid(purchaseId)) {
+    throw new AppError('La orden debe tener un UUID válido.', 422, 'INVALID_PURCHASE_ID');
+  }
+  const result = await query(
+    `SELECT id, order_number FROM purchases WHERE id = $1 AND tenant_id = $2`,
+    [purchaseId, tenantId],
+  );
+  if (!result.rowCount) {
+    throw new AppError('No encontramos la orden en la empresa activa.', 404, 'PURCHASE_NOT_FOUND');
+  }
+  return result.rows[0];
 }
 
 router.get('/summary', asyncHandler(async (req, res) => {
@@ -200,7 +236,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   if (!isUuid(req.params.id)) {
     throw new AppError('La orden debe tener un UUID válido.', 422, 'INVALID_PURCHASE_ID');
   }
-  const [purchase, items, receipts] = await Promise.all([
+  const [purchase, items, receipts, electronicReception] = await Promise.all([
     query(
       `SELECT p.*, s.name supplier_name, s.tax_id supplier_tax_id,
               s.email supplier_email, s.payment_terms_days,
@@ -209,6 +245,26 @@ router.get('/:id', asyncHandler(async (req, res) => {
        JOIN suppliers s ON s.id = p.supplier_id AND s.tenant_id = p.tenant_id
        JOIN branches b ON b.id = p.branch_id AND b.tenant_id = p.tenant_id
        WHERE p.id = $1 AND p.tenant_id = $2`,
+      [req.params.id, req.context.tenantId],
+    ),
+    query(
+      `SELECT er.id, er.track_id, er.provider_bill_id, er.provider_code,
+              er.status, er.last_error, er.uploaded_at, er.updated_at,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id', event.id, 'event_type', event.event_type,
+                    'status', event.status, 'error_message', event.error_message,
+                    'emitted_at', event.emitted_at
+                  ) ORDER BY event.emitted_at DESC
+                ) FILTER (WHERE event.id IS NOT NULL),
+                '[]'::json
+              ) events
+       FROM purchase_electronic_receptions er
+       LEFT JOIN purchase_electronic_reception_events event
+         ON event.reception_id = er.id AND event.tenant_id = er.tenant_id
+       WHERE er.purchase_id = $1 AND er.tenant_id = $2
+       GROUP BY er.id`,
       [req.params.id, req.context.tenantId],
     ),
     query(
@@ -253,7 +309,149 @@ router.get('/:id', asyncHandler(async (req, res) => {
     ...purchase.rows[0],
     items: items.rows,
     receipts: receipts.rows,
+    electronic_reception: electronicReception.rows[0] || null,
   });
+}));
+
+router.post('/:id/electronic-reception', asyncHandler(async (req, res) => {
+  const trackId = normalizedText(req.body.trackId, 512);
+  if (!trackId) {
+    throw new AppError('Indica el CUFE o track ID de la factura del proveedor.', 422, 'TRACK_ID_REQUIRED');
+  }
+  const purchase = await purchaseForTenant(req.params.id, req.context.tenantId);
+  const account = await activeFactusAccount(req.context.tenantId);
+  // La llamada sólo ocurre tras la acción explícita de un usuario autorizado.
+  let providerResponse;
+  try {
+    providerResponse = await createBillingAdapter(account).uploadReceivedInvoice(trackId);
+  } catch (error) {
+    await withTransaction(async (client) => {
+      const failed = await client.query(
+        `INSERT INTO purchase_electronic_receptions(
+           tenant_id, purchase_id, billing_account_id, provider_code, track_id,
+           status, provider_payload, last_error
+         ) VALUES($1,$2,$3,$4,$5,'FAILED','{}'::jsonb,$6)
+         ON CONFLICT(tenant_id, purchase_id)
+         DO UPDATE SET track_id = EXCLUDED.track_id, status = 'FAILED',
+                       last_error = EXCLUDED.last_error, updated_at = now()
+         RETURNING id, track_id, status, last_error`,
+        [req.context.tenantId, purchase.id, account.id, account.provider_code, trackId, error.message],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId, userId: req.context.userId,
+        action: 'purchases.electronic_invoice_reception_failed', entityType: 'purchase', entityId: purchase.id,
+        after: failed.rows[0], reason: 'Factus rechazó la carga de factura de proveedor',
+      });
+    });
+    throw error;
+  }
+  const providerBillId = providerResponse?.data?.id || providerResponse?.data?.bill_id || null;
+  const saved = await withTransaction(async (client) => {
+    const result = await client.query(
+      `INSERT INTO purchase_electronic_receptions(
+         tenant_id, purchase_id, billing_account_id, provider_code, track_id,
+         provider_bill_id, status, provider_payload, last_error
+       ) VALUES($1,$2,$3,$4,$5,$6,'UPLOADED',$7,NULL)
+       ON CONFLICT(tenant_id, purchase_id)
+       DO UPDATE SET billing_account_id = EXCLUDED.billing_account_id,
+                     provider_code = EXCLUDED.provider_code,
+                     track_id = EXCLUDED.track_id,
+                     provider_bill_id = EXCLUDED.provider_bill_id,
+                     status = 'UPLOADED', provider_payload = EXCLUDED.provider_payload,
+                     last_error = NULL, uploaded_at = now(), updated_at = now()
+       RETURNING id, track_id, provider_bill_id, provider_code, status, uploaded_at`,
+      [req.context.tenantId, purchase.id, account.id, account.provider_code, trackId, providerBillId, JSON.stringify(providerResponse)],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'purchases.electronic_invoice_received', entityType: 'purchase', entityId: purchase.id,
+      after: result.rows[0], reason: 'Factura electrónica de proveedor cargada en Factus',
+    });
+    return result.rows[0];
+  });
+  res.status(201).json(saved);
+}));
+
+router.post('/electronic-receptions/:id/events', asyncHandler(async (req, res) => {
+  if (!isUuid(req.params.id)) {
+    throw new AppError('La recepción electrónica debe tener un UUID válido.', 422, 'INVALID_ELECTRONIC_RECEPTION_ID');
+  }
+  const eventType = normalizedText(req.body.eventType, 3);
+  if (!RADIAN_EVENTS.has(eventType)) {
+    throw new AppError('Selecciona un evento RADIAN permitido.', 422, 'INVALID_RADIAN_EVENT');
+  }
+  if (!req.body.eventPayload || typeof req.body.eventPayload !== 'object' || Array.isArray(req.body.eventPayload)) {
+    throw new AppError('Completa la información requerida para el evento RADIAN.', 422, 'RADIAN_EVENT_PAYLOAD_REQUIRED');
+  }
+  const reception = await query(
+    `SELECT er.id, er.purchase_id, er.provider_bill_id, er.billing_account_id,
+            account.id account_id, account.provider_code, account.environment,
+            account.base_url, account.encrypted_credentials, account.provider_config,
+            account.connection_status
+     FROM purchase_electronic_receptions er
+     JOIN electronic_billing_accounts account ON account.id = er.billing_account_id
+     WHERE er.id = $1 AND er.tenant_id = $2`,
+    [req.params.id, req.context.tenantId],
+  );
+  if (!reception.rowCount || !reception.rows[0].provider_bill_id) {
+    throw new AppError('La factura aún no tiene el identificador de recepción del proveedor.', 409, 'RADIAN_BILL_NOT_READY');
+  }
+  const current = reception.rows[0];
+  if (current.connection_status !== 'READY') {
+    throw new AppError('La conexión Factus de esta empresa no está lista.', 409, 'FACTUS_CONNECTION_REQUIRED');
+  }
+  let providerResponse;
+  try {
+    providerResponse = await createBillingAdapter({
+      ...current, id: current.account_id, company_id: req.context.tenantId,
+    }).emitReceptionEvent(current.provider_bill_id, eventType, req.body.eventPayload);
+  } catch (error) {
+    await withTransaction(async (client) => {
+      await client.query(
+        `INSERT INTO purchase_electronic_reception_events(
+           tenant_id, reception_id, event_type, request_payload, provider_response,
+           status, error_message, emitted_by
+         ) VALUES($1,$2,$3,$4,'{}'::jsonb,'REJECTED',$5,$6)`,
+        [req.context.tenantId, current.id, eventType, JSON.stringify(req.body.eventPayload), error.message, req.context.userId],
+      );
+      await client.query(
+        `UPDATE purchase_electronic_receptions
+         SET status = 'EVENT_REJECTED', last_error = $3, updated_at = now()
+         WHERE id = $1 AND tenant_id = $2`,
+        [current.id, req.context.tenantId, error.message],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId, userId: req.context.userId,
+        action: 'purchases.radian_event_rejected', entityType: 'purchase_electronic_reception', entityId: current.id,
+        after: { eventType, error: error.code || 'FACTUS_ERROR' },
+        reason: 'Factus rechazó un evento RADIAN',
+      });
+    });
+    throw error;
+  }
+  const saved = await withTransaction(async (client) => {
+    const event = await client.query(
+      `INSERT INTO purchase_electronic_reception_events(
+         tenant_id, reception_id, event_type, request_payload, provider_response,
+         status, emitted_by
+       ) VALUES($1,$2,$3,$4,$5,'SENT',$6) RETURNING *`,
+      [req.context.tenantId, current.id, eventType, JSON.stringify(req.body.eventPayload), JSON.stringify(providerResponse), req.context.userId],
+    );
+    await client.query(
+      `UPDATE purchase_electronic_receptions
+       SET status = 'EVENT_SENT', last_error = NULL, updated_at = now()
+       WHERE id = $1 AND tenant_id = $2`,
+      [current.id, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'purchases.radian_event_emitted', entityType: 'purchase_electronic_reception', entityId: current.id,
+      after: { eventType, providerBillId: current.provider_bill_id },
+      reason: 'Evento RADIAN emitido mediante Factus',
+    });
+    return event.rows[0];
+  });
+  res.status(201).json(saved);
 }));
 
 router.post('/', asyncHandler(async (req, res) => {

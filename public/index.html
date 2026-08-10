@@ -2169,6 +2169,27 @@
                       </div>
                       <div class="purchase-receipt-list" id="purchaseReceiptList"></div>
                     </div>
+                    <div class="purchase-receipt-block purchase-electronic-block">
+                      <div class="purchase-panel-heading">
+                        <div><p class="eyebrow">Recepción electrónica</p><h3>Factura del proveedor</h3></div>
+                        <span id="purchaseElectronicStatus">Sin cargar</span>
+                      </div>
+                      <p class="purchase-electronic-copy" id="purchaseElectronicCopy">
+                        Carga el CUFE de la factura recibida cuando la conexión Factus de esta empresa esté lista.
+                      </p>
+                      <div class="purchase-detail-actions">
+                        <small id="purchaseElectronicMeta">No se ha enviado ninguna recepción al proveedor.</small>
+                        <div class="inline-actions">
+                          <button class="secondary-button compact" id="uploadPurchaseElectronicButton" type="button">
+                            Cargar factura recibida
+                          </button>
+                          <button class="primary-button compact" id="emitPurchaseRadianEventButton" type="button" hidden>
+                            Emitir evento RADIAN
+                          </button>
+                        </div>
+                      </div>
+                      <div class="purchase-receipt-list" id="purchaseElectronicEventList"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4881,6 +4902,60 @@
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelPurchaseButton" type="button">Volver sin emitir</button>
           <button class="primary-button compact" id="savePurchaseButton" type="submit">Emitir orden de compra</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog purchase-dialog" id="purchaseElectronicDialog" aria-labelledby="purchaseElectronicDialogTitle">
+      <form class="company-form" id="purchaseElectronicForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Recepción de documentos</p>
+            <h2 id="purchaseElectronicDialogTitle">Cargar factura del proveedor</h2>
+            <p>Ingresa el CUFE o track ID real. Se cargará únicamente en la conexión Factus de la empresa activa.</p>
+          </div>
+          <button class="dialog-close" id="closePurchaseElectronicDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <label class="form-field full-width">
+          <span>CUFE / track ID de la factura *</span>
+          <input id="purchaseElectronicTrackId" name="trackId" maxlength="512" autocomplete="off" required>
+        </label>
+        <p class="form-error" id="purchaseElectronicFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPurchaseElectronicButton" type="button">Cancelar</button>
+          <button class="primary-button" id="savePurchaseElectronicButton" type="submit">Cargar en Factus</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog purchase-dialog" id="purchaseRadianDialog" aria-labelledby="purchaseRadianDialogTitle">
+      <form class="company-form" id="purchaseRadianForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">RADIAN</p>
+            <h2 id="purchaseRadianDialogTitle">Emitir evento de recepción</h2>
+            <p>Los datos deben corresponder a la persona autorizada por esta empresa. Factus valida la secuencia legal del evento.</p>
+          </div>
+          <button class="dialog-close" id="closePurchaseRadianDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <label class="form-field">
+          <span>Evento *</span>
+          <select id="purchaseRadianEventType" name="eventType" required>
+            <option value="030">030 · Acuse de recibo</option>
+            <option value="032">032 · Recibo del bien o servicio</option>
+            <option value="031">031 · Reclamo</option>
+            <option value="033">033 · Aceptación expresa</option>
+          </select>
+        </label>
+        <label class="form-field full-width">
+          <span>Datos del evento en formato JSON *</span>
+          <textarea id="purchaseRadianPayload" name="eventPayload" rows="7" required placeholder='{"person": {"identification": "…"}}'></textarea>
+          <small>Usa los datos configurados y validados para la empresa; no copies valores de ejemplo.</small>
+        </label>
+        <p class="form-error" id="purchaseRadianFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPurchaseRadianButton" type="button">Cancelar</button>
+          <button class="primary-button" id="savePurchaseRadianButton" type="submit">Emitir evento</button>
         </div>
       </form>
     </dialog>

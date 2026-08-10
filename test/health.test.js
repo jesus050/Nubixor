@@ -662,6 +662,18 @@ test('compras valida proveedores, órdenes y recepciones antes de consultar Post
     .send({})
     .expect(422);
   assert.match(receipt.body.error, /UUID válidos/i);
+  const electronicReception = await request(application)
+    .post(`/api/purchases/${DEMO_TENANT_ID}/electronic-reception`)
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({})
+    .expect(422);
+  assert.match(electronicReception.body.error, /CUFE o track ID/i);
+  const radianEvent = await request(application)
+    .post(`/api/purchases/electronic-receptions/${DEMO_TENANT_ID}/events`)
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({ eventType: '034', eventPayload: {} })
+    .expect(422);
+  assert.match(radianEvent.body.error, /evento RADIAN permitido/i);
 });
 
 test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQL', async () => {
