@@ -248,6 +248,17 @@
             </div>
           </div>
 
+          <div class="nav-group" data-nav-group="nomina" data-tenant-module="PAYROLL">
+            <button class="nav-group-toggle" type="button" aria-expanded="false">
+              <span>Nómina</span><svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" href="#nomina" data-view-link="nomina" data-tenant-module-link="PAYROLL">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg> Gestión de nómina
+              </a>
+            </div>
+          </div>
+
           <div class="nav-group" data-nav-group="analisis">
             <button class="nav-group-toggle" type="button" aria-expanded="false">
               <span>Análisis</span><svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2497,6 +2508,45 @@
             </div>
           </section>
 
+          <section class="section purchases-section app-view" id="nomina" data-view="nomina" aria-labelledby="payrollTitle" hidden>
+            <div class="section-heading module-heading">
+              <div>
+                <p class="eyebrow">Gestión laboral y preparación electrónica</p>
+                <h2 id="payrollTitle">Nómina</h2>
+                <p class="module-heading-copy">Organiza colaboradores, contratos, períodos y novedades antes de liquidar. La emisión electrónica se habilita después de validar la operación con tu contador.</p>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="newPayrollPeriodButton" type="button">Crear período</button>
+                <button class="purchase-order-button" id="newPayrollEmployeeButton" type="button"><span aria-hidden="true">＋</span><span><small>Equipo laboral</small>Nuevo colaborador</span></button>
+              </div>
+            </div>
+
+            <div class="purchase-kpi-grid" aria-label="Resumen de nómina">
+              <article class="purchase-kpi featured"><span>Colaboradores activos</span><strong id="payrollActiveEmployees">0</strong><small>Registrados en la empresa</small></article>
+              <article class="purchase-kpi"><span>Contratos activos</span><strong id="payrollActiveContracts">0</strong><small>Vigentes hoy</small></article>
+              <article class="purchase-kpi cyan"><span>Períodos abiertos</span><strong id="payrollOpenPeriods">0</strong><small>En preparación o revisión</small></article>
+              <article class="purchase-kpi"><span>Novedades pendientes</span><strong id="payrollPendingNovelties">0</strong><small>Por revisar antes de aprobar</small></article>
+            </div>
+
+            <div class="purchase-workspace">
+              <aside class="purchase-list-panel">
+                <div class="purchase-panel-heading"><div><p class="eyebrow">Equipo</p><h3>Colaboradores</h3></div><button class="sync-link" id="reloadPayrollButton" type="button">Actualizar</button></div>
+                <div class="purchase-order-list" id="payrollEmployeeList"></div>
+                <div class="data-state compact-state" id="payrollEmployeeState"><span class="data-state-symbol" aria-hidden="true">N</span><strong>Consultando colaboradores</strong><p>El directorio aparecerá aquí.</p></div>
+              </aside>
+              <div class="purchase-detail-panel">
+                <div class="purchase-detail-empty" id="payrollPeriodEmpty"><span aria-hidden="true">↙</span><strong>Selecciona o crea un período</strong><p>En cada período registras horas extra, incapacidades, deducciones y otras novedades.</p></div>
+                <div id="payrollPeriodContent" hidden>
+                  <div class="purchase-detail-heading"><div><p class="eyebrow" id="payrollPeriodNumber">Período</p><h3 id="payrollPeriodDates">—</h3><span id="payrollPeriodMeta">—</span></div><span class="purchase-status" id="payrollPeriodStatus">Borrador</span></div>
+                  <div class="expense-detail-facts"><div><span>Devengo reportado</span><strong id="payrollPeriodEarnings">$0</strong></div><div><span>Deducciones</span><strong id="payrollPeriodDeductions">$0</strong></div><div><span>Pago programado</span><strong id="payrollPeriodPaymentDate">—</strong></div><div><span>Novedades</span><strong id="payrollPeriodNoveltyCount">0</strong></div></div>
+                  <div class="expense-actions"><button class="secondary-button" id="newPayrollNoveltyButton" type="button">Registrar novedad</button><button class="primary-button compact" id="approvePayrollPeriodButton" type="button">Aprobar revisión</button></div>
+                  <div class="ar-payments-heading"><div><p class="eyebrow">Movimientos del período</p><h3>Novedades registradas</h3></div><span id="payrollNoveltyCount">0 novedades</span></div>
+                  <div class="expense-payment-list" id="payrollNoveltyList"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section class="section pos-section app-view" id="caja" data-view="caja" aria-labelledby="posTitle" hidden>
             <div class="section-heading module-heading">
               <div>
@@ -4512,6 +4562,76 @@
             Enviar para aprobación
           </button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="payrollEmployeeDialog" aria-labelledby="payrollEmployeeDialogTitle">
+      <form class="company-form" id="payrollEmployeeForm">
+        <div class="dialog-heading"><div><p class="eyebrow">Directorio laboral</p><h2 id="payrollEmployeeDialogTitle">Nuevo colaborador</h2></div><button class="icon-button" id="closePayrollEmployeeDialog" type="button" aria-label="Cerrar">×</button></div>
+        <p class="dialog-copy">Registra la identidad y la sucursal asignada. El contrato se registra en el siguiente paso.</p>
+        <div class="form-grid">
+          <label class="form-field"><span>Tipo de documento <b>*</b></span><select name="documentType" required><option value="CC">Cédula</option><option value="CE">Cédula de extranjería</option><option value="PASSPORT">Pasaporte</option><option value="PPT">PPT</option><option value="OTHER">Otro</option></select></label>
+          <label class="form-field"><span>Número <b>*</b></span><input name="documentNumber" maxlength="40" required></label>
+          <label class="form-field"><span>Primer nombre <b>*</b></span><input name="firstName" maxlength="80" required></label>
+          <label class="form-field"><span>Segundo nombre</span><input name="middleName" maxlength="80"></label>
+          <label class="form-field"><span>Primer apellido <b>*</b></span><input name="lastName" maxlength="80" required></label>
+          <label class="form-field"><span>Segundo apellido</span><input name="secondLastName" maxlength="80"></label>
+          <label class="form-field"><span>Sucursal</span><select id="payrollEmployeeBranchId" name="branchId"><option value="">Sin asignar todavía</option></select></label>
+          <label class="form-field"><span>Correo</span><input name="email" type="email" maxlength="160"></label>
+          <label class="form-field"><span>Teléfono</span><input name="phone" maxlength="40"></label>
+          <label class="form-field"><span>Dirección</span><input name="address" maxlength="240"></label>
+        </div>
+        <p class="form-error" id="payrollEmployeeFormError" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="secondary-button" id="cancelPayrollEmployeeButton" type="button">Volver</button><button class="primary-button compact" id="savePayrollEmployeeButton" type="submit">Guardar colaborador</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="payrollContractDialog" aria-labelledby="payrollContractDialogTitle">
+      <form class="company-form" id="payrollContractForm">
+        <div class="dialog-heading"><div><p class="eyebrow">Vinculación laboral</p><h2 id="payrollContractDialogTitle">Registrar contrato</h2></div><button class="icon-button" id="closePayrollContractDialog" type="button" aria-label="Cerrar">×</button></div>
+        <p class="dialog-copy" id="payrollContractEmployeeName">Selecciona un colaborador para continuar.</p>
+        <div class="form-grid">
+          <label class="form-field"><span>Tipo de contrato <b>*</b></span><select name="contractType" required><option value="INDEFINITE">Indefinido</option><option value="FIXED_TERM">Término fijo</option><option value="WORK_OR_LABOR">Obra o labor</option><option value="APPRENTICESHIP">Aprendizaje</option><option value="OTHER">Otro</option></select></label>
+          <label class="form-field"><span>Frecuencia de pago <b>*</b></span><select name="paymentFrequency" required><option value="MONTHLY">Mensual</option><option value="BIWEEKLY">Quincenal</option></select></label>
+          <label class="form-field"><span>Inicio <b>*</b></span><input name="startDate" type="date" required></label>
+          <label class="form-field"><span>Finalización</span><input name="endDate" type="date"></label>
+          <label class="form-field full"><span>Salario base <b>*</b></span><input name="baseSalary" type="number" min="0" step="0.01" required placeholder="0"></label>
+        </div>
+        <p class="form-error" id="payrollContractFormError" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="secondary-button" id="cancelPayrollContractButton" type="button">Volver</button><button class="primary-button compact" id="savePayrollContractButton" type="submit">Activar contrato</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="payrollPeriodDialog" aria-labelledby="payrollPeriodDialogTitle">
+      <form class="company-form" id="payrollPeriodForm">
+        <div class="dialog-heading"><div><p class="eyebrow">Ciclo de liquidación</p><h2 id="payrollPeriodDialogTitle">Crear período</h2></div><button class="icon-button" id="closePayrollPeriodDialog" type="button" aria-label="Cerrar">×</button></div>
+        <div class="form-grid">
+          <label class="form-field"><span>Frecuencia <b>*</b></span><select name="frequency" required><option value="MONTHLY">Mensual</option><option value="BIWEEKLY">Quincenal</option></select></label>
+          <label class="form-field"><span>Fecha de pago <b>*</b></span><input name="paymentDate" type="date" required></label>
+          <label class="form-field"><span>Desde <b>*</b></span><input name="startDate" type="date" required></label>
+          <label class="form-field"><span>Hasta <b>*</b></span><input name="endDate" type="date" required></label>
+          <label class="form-field full"><span>Notas internas</span><textarea name="notes" maxlength="500" rows="3" placeholder="Ejemplo: Nómina primera quincena"></textarea></label>
+        </div>
+        <p class="form-error" id="payrollPeriodFormError" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="secondary-button" id="cancelPayrollPeriodButton" type="button">Volver</button><button class="primary-button compact" id="savePayrollPeriodButton" type="submit">Crear período</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="company-dialog" id="payrollNoveltyDialog" aria-labelledby="payrollNoveltyDialogTitle">
+      <form class="company-form" id="payrollNoveltyForm">
+        <div class="dialog-heading"><div><p class="eyebrow">Novedad laboral</p><h2 id="payrollNoveltyDialogTitle">Registrar novedad</h2></div><button class="icon-button" id="closePayrollNoveltyDialog" type="button" aria-label="Cerrar">×</button></div>
+        <p class="dialog-copy" id="payrollNoveltyPeriodName">La novedad quedará vinculada al período seleccionado.</p>
+        <div class="form-grid">
+          <label class="form-field full"><span>Colaborador <b>*</b></span><select id="payrollNoveltyEmployeeId" name="employeeId" required></select></label>
+          <label class="form-field"><span>Tipo <b>*</b></span><select name="noveltyType" required><option value="EARNING">Devengo</option><option value="DEDUCTION">Deducción</option><option value="ABSENCE">Ausencia</option><option value="OVERTIME">Horas extra</option><option value="LEAVE">Licencia o incapacidad</option><option value="OTHER">Otro</option></select></label>
+          <label class="form-field"><span>Código del concepto <b>*</b></span><input name="conceptCode" maxlength="40" required placeholder="Ej. HOR_EXT"></label>
+          <label class="form-field"><span>Cantidad</span><input name="quantity" type="number" min="0" step="0.01" placeholder="Opcional"></label>
+          <label class="form-field"><span>Valor <b>*</b></span><input name="amount" type="number" min="0" step="0.01" required placeholder="0"></label>
+          <label class="form-field full"><span>Fecha efectiva</span><input id="payrollNoveltyEffectiveDate" name="effectiveDate" type="date"></label>
+        </div>
+        <label class="form-field"><span>Descripción <b>*</b></span><textarea name="description" maxlength="240" rows="3" required placeholder="Describe el hecho y el soporte interno"></textarea></label>
+        <p class="form-error" id="payrollNoveltyFormError" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="secondary-button" id="cancelPayrollNoveltyButton" type="button">Volver</button><button class="primary-button compact" id="savePayrollNoveltyButton" type="submit">Registrar novedad</button></div>
       </form>
     </dialog>
 

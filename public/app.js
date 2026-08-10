@@ -1103,6 +1103,58 @@ const elements = {
   closeExpenseDialog: document.querySelector('#closeExpenseDialog'),
   cancelExpenseButton: document.querySelector('#cancelExpenseButton'),
   saveExpenseButton: document.querySelector('#saveExpenseButton'),
+  payrollActiveEmployees: document.querySelector('#payrollActiveEmployees'),
+  payrollActiveContracts: document.querySelector('#payrollActiveContracts'),
+  payrollOpenPeriods: document.querySelector('#payrollOpenPeriods'),
+  payrollPendingNovelties: document.querySelector('#payrollPendingNovelties'),
+  reloadPayrollButton: document.querySelector('#reloadPayrollButton'),
+  newPayrollEmployeeButton: document.querySelector('#newPayrollEmployeeButton'),
+  newPayrollPeriodButton: document.querySelector('#newPayrollPeriodButton'),
+  payrollEmployeeList: document.querySelector('#payrollEmployeeList'),
+  payrollEmployeeState: document.querySelector('#payrollEmployeeState'),
+  payrollPeriodEmpty: document.querySelector('#payrollPeriodEmpty'),
+  payrollPeriodContent: document.querySelector('#payrollPeriodContent'),
+  payrollPeriodNumber: document.querySelector('#payrollPeriodNumber'),
+  payrollPeriodDates: document.querySelector('#payrollPeriodDates'),
+  payrollPeriodMeta: document.querySelector('#payrollPeriodMeta'),
+  payrollPeriodStatus: document.querySelector('#payrollPeriodStatus'),
+  payrollPeriodEarnings: document.querySelector('#payrollPeriodEarnings'),
+  payrollPeriodDeductions: document.querySelector('#payrollPeriodDeductions'),
+  payrollPeriodPaymentDate: document.querySelector('#payrollPeriodPaymentDate'),
+  payrollPeriodNoveltyCount: document.querySelector('#payrollPeriodNoveltyCount'),
+  payrollNoveltyCount: document.querySelector('#payrollNoveltyCount'),
+  payrollNoveltyList: document.querySelector('#payrollNoveltyList'),
+  newPayrollNoveltyButton: document.querySelector('#newPayrollNoveltyButton'),
+  approvePayrollPeriodButton: document.querySelector('#approvePayrollPeriodButton'),
+  payrollEmployeeDialog: document.querySelector('#payrollEmployeeDialog'),
+  payrollEmployeeForm: document.querySelector('#payrollEmployeeForm'),
+  payrollEmployeeBranchId: document.querySelector('#payrollEmployeeBranchId'),
+  payrollEmployeeFormError: document.querySelector('#payrollEmployeeFormError'),
+  closePayrollEmployeeDialog: document.querySelector('#closePayrollEmployeeDialog'),
+  cancelPayrollEmployeeButton: document.querySelector('#cancelPayrollEmployeeButton'),
+  savePayrollEmployeeButton: document.querySelector('#savePayrollEmployeeButton'),
+  payrollContractDialog: document.querySelector('#payrollContractDialog'),
+  payrollContractForm: document.querySelector('#payrollContractForm'),
+  payrollContractEmployeeName: document.querySelector('#payrollContractEmployeeName'),
+  payrollContractFormError: document.querySelector('#payrollContractFormError'),
+  closePayrollContractDialog: document.querySelector('#closePayrollContractDialog'),
+  cancelPayrollContractButton: document.querySelector('#cancelPayrollContractButton'),
+  savePayrollContractButton: document.querySelector('#savePayrollContractButton'),
+  payrollPeriodDialog: document.querySelector('#payrollPeriodDialog'),
+  payrollPeriodForm: document.querySelector('#payrollPeriodForm'),
+  payrollPeriodFormError: document.querySelector('#payrollPeriodFormError'),
+  closePayrollPeriodDialog: document.querySelector('#closePayrollPeriodDialog'),
+  cancelPayrollPeriodButton: document.querySelector('#cancelPayrollPeriodButton'),
+  savePayrollPeriodButton: document.querySelector('#savePayrollPeriodButton'),
+  payrollNoveltyDialog: document.querySelector('#payrollNoveltyDialog'),
+  payrollNoveltyForm: document.querySelector('#payrollNoveltyForm'),
+  payrollNoveltyEmployeeId: document.querySelector('#payrollNoveltyEmployeeId'),
+  payrollNoveltyEffectiveDate: document.querySelector('#payrollNoveltyEffectiveDate'),
+  payrollNoveltyPeriodName: document.querySelector('#payrollNoveltyPeriodName'),
+  payrollNoveltyFormError: document.querySelector('#payrollNoveltyFormError'),
+  closePayrollNoveltyDialog: document.querySelector('#closePayrollNoveltyDialog'),
+  cancelPayrollNoveltyButton: document.querySelector('#cancelPayrollNoveltyButton'),
+  savePayrollNoveltyButton: document.querySelector('#savePayrollNoveltyButton'),
   expenseDecisionDialog: document.querySelector('#expenseDecisionDialog'),
   expenseDecisionForm: document.querySelector('#expenseDecisionForm'),
   expenseDecisionKicker: document.querySelector('#expenseDecisionKicker'),
@@ -1479,6 +1531,11 @@ let logisticsOverview = {
 };
 let selectedLogisticsBatch = null;
 let logisticsLabelBatchId = null;
+let payrollEmployees = [];
+let payrollPeriods = [];
+let selectedPayrollEmployee = null;
+let selectedPayrollPeriod = null;
+let payrollNovelties = [];
 
 function isTenantModuleEnabled(moduleCode) {
   return tenantModules[moduleCode] !== false;
@@ -2474,6 +2531,7 @@ function applyAccessVisibility() {
     compras: ['purchases.manage'],
     'cuentas-pagar': ['payables.manage'],
     gastos: ['expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay'],
+    nomina: ['payroll.view', 'payroll.manage', 'payroll.approve'],
     caja: ['sales.operate'],
     cartera: ['receivables.manage'],
     facturacion: ['billing.manage'],
@@ -2518,6 +2576,8 @@ function applyAccessVisibility() {
   elements.newExpenseButton.hidden = !hasAnyPermission('expenses.manage');
   elements.newCostCenterButton.hidden = !hasAnyPermission('expenses.manage');
   elements.newExpenseCategoryButton.hidden = !hasAnyPermission('expenses.manage');
+  elements.newPayrollEmployeeButton.hidden = !hasAnyPermission('payroll.manage');
+  elements.newPayrollPeriodButton.hidden = !hasAnyPermission('payroll.manage');
   elements.newThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
   elements.editThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
   elements.inviteUserButton.hidden = !hasAnyPermission('users.manage');
@@ -11870,6 +11930,8 @@ async function refreshTenantData() {
       ? loadAdvancedInventory() : Promise.resolve({}),
     isTenantModuleEnabled('LOGISTICS') && hasAnyPermission('logistics.view')
       ? loadLogisticsOverview() : Promise.resolve({}),
+    isTenantModuleEnabled('PAYROLL') && hasAnyPermission('payroll.view', 'payroll.manage', 'payroll.approve')
+      ? loadPayroll() : Promise.resolve([]),
     hasAnyPermission('dashboard.view') ? loadOnboardingStatus() : Promise.resolve(null),
   ]);
   syncInventoryWarehouseFilter();
@@ -13495,6 +13557,214 @@ function updateSidebarGroupVisibility() {
   });
 }
 
+function payrollEmployeeName(employee) {
+  return [employee.first_name, employee.middle_name, employee.last_name, employee.second_last_name]
+    .filter(Boolean).join(' ');
+}
+
+function payrollStatusLabel(status) {
+  return ({ DRAFT: 'Borrador', REVIEW: 'En revisión', APPROVED: 'Aprobado', VOID: 'Anulado' })[status] || status || '—';
+}
+
+function setPayrollSummary(summary = {}) {
+  elements.payrollActiveEmployees.textContent = String(summary.active_employees || 0);
+  elements.payrollActiveContracts.textContent = String(summary.active_contracts || 0);
+  elements.payrollOpenPeriods.textContent = String(summary.open_periods || 0);
+  elements.payrollPendingNovelties.textContent = String(summary.pending_novelties || 0);
+}
+
+function renderPayrollEmployees() {
+  elements.payrollEmployeeList.replaceChildren();
+  elements.payrollEmployeeState.hidden = payrollEmployees.length > 0;
+  if (!payrollEmployees.length) return;
+  for (const employee of payrollEmployees) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'purchase-order-row';
+    row.classList.toggle('active', selectedPayrollEmployee?.id === employee.id);
+    row.innerHTML = `<div><strong>${escapeHtml(payrollEmployeeName(employee))}</strong><small>${escapeHtml(employee.document_type)} · ${escapeHtml(employee.document_number)}${employee.branch_name ? ` · ${escapeHtml(employee.branch_name)}` : ''}</small></div><span>${employee.active_contract_id ? 'Contrato activo' : 'Sin contrato'}</span>`;
+    row.addEventListener('click', () => {
+      selectedPayrollEmployee = employee;
+      renderPayrollEmployees();
+      if (!employee.active_contract_id && hasAnyPermission('payroll.manage')) openPayrollContractDialog();
+    });
+    elements.payrollEmployeeList.append(row);
+  }
+}
+
+function renderPayrollNovelties() {
+  elements.payrollNoveltyList.replaceChildren();
+  elements.payrollNoveltyCount.textContent = `${payrollNovelties.length} ${payrollNovelties.length === 1 ? 'novedad' : 'novedades'}`;
+  if (!payrollNovelties.length) {
+    const empty = document.createElement('p');
+    empty.className = 'ar-no-payments';
+    empty.textContent = 'Todavía no hay novedades en este período.';
+    elements.payrollNoveltyList.append(empty);
+    return;
+  }
+  for (const novelty of payrollNovelties) {
+    const row = document.createElement('div');
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = `${novelty.concept_code} · ${payrollEmployeeName(novelty)}`;
+    const detail = document.createElement('small');
+    detail.textContent = `${novelty.novelty_type.replace('_', ' ').toLocaleLowerCase('es')} · ${novelty.description}`;
+    copy.append(title, detail);
+    const amount = document.createElement('strong');
+    amount.textContent = formatCurrency(novelty.amount || 0);
+    row.append(copy, amount);
+    elements.payrollNoveltyList.append(row);
+  }
+}
+
+async function selectPayrollPeriod(period) {
+  selectedPayrollPeriod = period;
+  elements.payrollPeriodEmpty.hidden = true;
+  elements.payrollPeriodContent.hidden = false;
+  elements.payrollPeriodNumber.textContent = `Período ${period.period_number || ''}`.trim();
+  elements.payrollPeriodDates.textContent = `${formatShortDate(period.start_date)} — ${formatShortDate(period.end_date)}`;
+  elements.payrollPeriodMeta.textContent = `${period.frequency === 'BIWEEKLY' ? 'Quincenal' : 'Mensual'} · Pago ${formatShortDate(period.payment_date)}`;
+  elements.payrollPeriodStatus.textContent = payrollStatusLabel(period.status);
+  elements.payrollPeriodEarnings.textContent = formatCurrency(period.earnings || 0);
+  elements.payrollPeriodDeductions.textContent = formatCurrency(period.deductions || 0);
+  elements.payrollPeriodPaymentDate.textContent = formatShortDate(period.payment_date);
+  elements.payrollPeriodNoveltyCount.textContent = String(period.novelty_count || 0);
+  const editable = ['DRAFT', 'REVIEW'].includes(period.status);
+  elements.newPayrollNoveltyButton.hidden = !editable || !hasAnyPermission('payroll.manage');
+  elements.approvePayrollPeriodButton.hidden = !editable || !hasAnyPermission('payroll.approve');
+  try {
+    payrollNovelties = await getJson(`/api/payroll/periods/${period.id}/novelties`, { headers: { 'x-tenant-id': activeTenantId } });
+    renderPayrollNovelties();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function renderPayrollPeriods() {
+  if (!payrollPeriods.length) {
+    selectedPayrollPeriod = null;
+    elements.payrollPeriodContent.hidden = true;
+    elements.payrollPeriodEmpty.hidden = false;
+    return;
+  }
+  const current = payrollPeriods.find((period) => period.id === selectedPayrollPeriod?.id) || payrollPeriods[0];
+  selectPayrollPeriod(current);
+}
+
+async function loadPayroll() {
+  if (!activeTenantId || !isTenantModuleEnabled('PAYROLL')) return [];
+  try {
+    const [summary, employees, periods] = await Promise.all([
+      getJson('/api/payroll/summary', { headers: { 'x-tenant-id': activeTenantId } }),
+      getJson('/api/payroll/employees', { headers: { 'x-tenant-id': activeTenantId } }),
+      getJson('/api/payroll/periods', { headers: { 'x-tenant-id': activeTenantId } }),
+    ]);
+    payrollEmployees = employees;
+    payrollPeriods = periods;
+    setPayrollSummary(summary);
+    renderPayrollEmployees();
+    renderPayrollPeriods();
+    return periods;
+  } catch (error) {
+    elements.payrollEmployeeState.querySelector('strong').textContent = 'No pudimos cargar Nómina';
+    elements.payrollEmployeeState.querySelector('p').textContent = error.message;
+    elements.payrollEmployeeState.hidden = false;
+    throw error;
+  }
+}
+
+function closePayrollDialog(dialog) { dialog.close(); }
+
+function openPayrollEmployeeDialog() {
+  elements.payrollEmployeeForm.reset();
+  elements.payrollEmployeeFormError.hidden = true;
+  fillInventorySelect(elements.payrollEmployeeBranchId, 'Sin asignar todavía', branches.filter((branch) => branch.active), (branch) => branch.name);
+  elements.payrollEmployeeDialog.showModal();
+}
+
+function openPayrollContractDialog() {
+  if (!selectedPayrollEmployee) { showToast('Selecciona primero un colaborador.'); return; }
+  elements.payrollContractForm.reset();
+  elements.payrollContractFormError.hidden = true;
+  elements.payrollContractEmployeeName.textContent = `Contrato para ${payrollEmployeeName(selectedPayrollEmployee)}.`;
+  elements.payrollContractDialog.showModal();
+}
+
+function openPayrollPeriodDialog() {
+  elements.payrollPeriodForm.reset();
+  elements.payrollPeriodFormError.hidden = true;
+  elements.payrollPeriodDialog.showModal();
+}
+
+function openPayrollNoveltyDialog() {
+  if (!selectedPayrollPeriod) { showToast('Crea o selecciona un período primero.'); return; }
+  elements.payrollNoveltyForm.reset();
+  elements.payrollNoveltyFormError.hidden = true;
+  const eligible = payrollEmployees.filter((employee) => employee.active && employee.active_contract_id);
+  fillInventorySelect(elements.payrollNoveltyEmployeeId, 'Selecciona un colaborador', eligible, (employee) => `${payrollEmployeeName(employee)} · ${employee.document_number}`);
+  elements.payrollNoveltyEffectiveDate.min = String(selectedPayrollPeriod.start_date).slice(0, 10);
+  elements.payrollNoveltyEffectiveDate.max = String(selectedPayrollPeriod.end_date).slice(0, 10);
+  elements.payrollNoveltyPeriodName.textContent = `Período: ${formatShortDate(selectedPayrollPeriod.start_date)} — ${formatShortDate(selectedPayrollPeriod.end_date)}.`;
+  elements.payrollNoveltyDialog.showModal();
+}
+
+function formPayload(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+async function submitPayrollEmployee(event) {
+  event.preventDefault();
+  elements.savePayrollEmployeeButton.disabled = true;
+  try {
+    const employee = await getJson('/api/payroll/employees', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId }, body: JSON.stringify(formPayload(elements.payrollEmployeeForm)) });
+    elements.payrollEmployeeDialog.close();
+    await loadPayroll();
+    selectedPayrollEmployee = payrollEmployees.find((item) => item.id === employee.id) || employee;
+    renderPayrollEmployees();
+    showToast('Colaborador registrado. Ahora puedes crear su contrato.');
+    openPayrollContractDialog();
+  } catch (error) { elements.payrollEmployeeFormError.textContent = error.message; elements.payrollEmployeeFormError.hidden = false; }
+  finally { elements.savePayrollEmployeeButton.disabled = false; }
+}
+
+async function submitPayrollContract(event) {
+  event.preventDefault();
+  elements.savePayrollContractButton.disabled = true;
+  try {
+    await getJson(`/api/payroll/employees/${selectedPayrollEmployee.id}/contracts`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId }, body: JSON.stringify(formPayload(elements.payrollContractForm)) });
+    elements.payrollContractDialog.close(); await loadPayroll(); showToast('Contrato activo y listo para el siguiente período.');
+  } catch (error) { elements.payrollContractFormError.textContent = error.message; elements.payrollContractFormError.hidden = false; }
+  finally { elements.savePayrollContractButton.disabled = false; }
+}
+
+async function submitPayrollPeriod(event) {
+  event.preventDefault(); elements.savePayrollPeriodButton.disabled = true;
+  try {
+    const period = await getJson('/api/payroll/periods', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId }, body: JSON.stringify(formPayload(elements.payrollPeriodForm)) });
+    elements.payrollPeriodDialog.close(); await loadPayroll(); await selectPayrollPeriod(payrollPeriods.find((item) => item.id === period.id) || period); showToast('Período creado. Registra las novedades antes de aprobarlo.');
+  } catch (error) { elements.payrollPeriodFormError.textContent = error.message; elements.payrollPeriodFormError.hidden = false; }
+  finally { elements.savePayrollPeriodButton.disabled = false; }
+}
+
+async function submitPayrollNovelty(event) {
+  event.preventDefault(); elements.savePayrollNoveltyButton.disabled = true;
+  try {
+    await getJson(`/api/payroll/periods/${selectedPayrollPeriod.id}/novelties`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId }, body: JSON.stringify(formPayload(elements.payrollNoveltyForm)) });
+    elements.payrollNoveltyDialog.close(); await loadPayroll(); showToast('Novedad registrada en el período.');
+  } catch (error) { elements.payrollNoveltyFormError.textContent = error.message; elements.payrollNoveltyFormError.hidden = false; }
+  finally { elements.savePayrollNoveltyButton.disabled = false; }
+}
+
+async function approvePayrollPeriod() {
+  if (!selectedPayrollPeriod || !window.confirm('¿Aprobar este período para revisión? Después no admitirá nuevas novedades.')) return;
+  elements.approvePayrollPeriodButton.disabled = true;
+  try {
+    await getJson(`/api/payroll/periods/${selectedPayrollPeriod.id}/approve`, { method: 'POST', headers: { 'x-tenant-id': activeTenantId } });
+    await loadPayroll(); showToast('Período aprobado y bloqueado para novedades.');
+  } catch (error) { showToast(error.message); }
+  finally { elements.approvePayrollPeriodButton.disabled = false; }
+}
+
 const availableViews = new Set([
   'inicio',
   'empresas',
@@ -13507,6 +13777,7 @@ const availableViews = new Set([
   'compras',
   'cuentas-pagar',
   'gastos',
+  'nomina',
   'usuarios',
   'caja',
   'cartera',
@@ -13535,6 +13806,7 @@ const viewTitles = {
   compras: 'Compras',
   'cuentas-pagar': 'Cuentas por pagar',
   gastos: 'Gastos',
+  nomina: 'Nómina',
   usuarios: 'Usuarios y accesos',
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
@@ -16250,6 +16522,27 @@ elements.cancelExpenseCategory.addEventListener('click', closeExpenseCategoryDia
 elements.expenseCategoryDialog.addEventListener('click', (event) => {
   if (event.target === elements.expenseCategoryDialog) closeExpenseCategoryDialog();
 });
+elements.reloadPayrollButton.addEventListener('click', () => {
+  loadPayroll().then(() => showToast('Nómina actualizada.')).catch(() => showToast('No fue posible actualizar Nómina.'));
+});
+elements.newPayrollEmployeeButton.addEventListener('click', openPayrollEmployeeDialog);
+elements.newPayrollPeriodButton.addEventListener('click', openPayrollPeriodDialog);
+elements.newPayrollNoveltyButton.addEventListener('click', openPayrollNoveltyDialog);
+elements.approvePayrollPeriodButton.addEventListener('click', approvePayrollPeriod);
+elements.payrollEmployeeForm.addEventListener('submit', submitPayrollEmployee);
+elements.payrollContractForm.addEventListener('submit', submitPayrollContract);
+elements.payrollPeriodForm.addEventListener('submit', submitPayrollPeriod);
+elements.payrollNoveltyForm.addEventListener('submit', submitPayrollNovelty);
+[
+  [elements.payrollEmployeeDialog, elements.closePayrollEmployeeDialog, elements.cancelPayrollEmployeeButton],
+  [elements.payrollContractDialog, elements.closePayrollContractDialog, elements.cancelPayrollContractButton],
+  [elements.payrollPeriodDialog, elements.closePayrollPeriodDialog, elements.cancelPayrollPeriodButton],
+  [elements.payrollNoveltyDialog, elements.closePayrollNoveltyDialog, elements.cancelPayrollNoveltyButton],
+].forEach(([dialog, closeButton, cancelButton]) => {
+  closeButton.addEventListener('click', () => closePayrollDialog(dialog));
+  cancelButton.addEventListener('click', () => closePayrollDialog(dialog));
+  dialog.addEventListener('click', (event) => { if (event.target === dialog) closePayrollDialog(dialog); });
+});
 elements.showTeamPanelButton.addEventListener('click', () => showUserPanel('team'));
 elements.showRolesPanelButton.addEventListener('click', () => showUserPanel('roles'));
 elements.userSearch.addEventListener('input', renderUserList);
@@ -16954,6 +17247,7 @@ async function triggerRealtimeDataRefresh({ force = false } = {}) {
       compras: () => loadPurchases(),
       'cuentas-pagar': () => loadPayables(),
       gastos: () => loadExpenses(),
+      nomina: () => loadPayroll(),
       usuarios: () => loadUsers(),
       caja: async () => {
         await loadPos();
