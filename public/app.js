@@ -1107,6 +1107,11 @@ const elements = {
   payrollActiveContracts: document.querySelector('#payrollActiveContracts'),
   payrollOpenPeriods: document.querySelector('#payrollOpenPeriods'),
   payrollPendingNovelties: document.querySelector('#payrollPendingNovelties'),
+  payrollFactusTitle: document.querySelector('#payrollFactusTitle'),
+  payrollFactusMessage: document.querySelector('#payrollFactusMessage'),
+  payrollFactusStatus: document.querySelector('#payrollFactusStatus'),
+  configurePayrollFactusButton: document.querySelector('#configurePayrollFactusButton'),
+  testPayrollFactusButton: document.querySelector('#testPayrollFactusButton'),
   reloadPayrollButton: document.querySelector('#reloadPayrollButton'),
   newPayrollEmployeeButton: document.querySelector('#newPayrollEmployeeButton'),
   newPayrollPeriodButton: document.querySelector('#newPayrollPeriodButton'),
@@ -10703,6 +10708,7 @@ function setMetric(valueElement, detailElement, result, label) {
 
 function renderElectronicBilling(overview = {}) {
   electronicBillingOverview = overview;
+  if (elements.payrollFactusStatus) renderPayrollFactusStatus();
   const account = overview.account;
   const readiness = overview.readiness || {};
   const resolution = (overview.resolutions || []).find((item) =>
@@ -13573,6 +13579,20 @@ function setPayrollSummary(summary = {}) {
   elements.payrollPendingNovelties.textContent = String(summary.pending_novelties || 0);
 }
 
+function renderPayrollFactusStatus() {
+  const account = electronicBillingOverview?.account;
+  const isFactus = account?.provider_code === 'FACTUS';
+  const status = account?.connection_status || 'DRAFT';
+  elements.payrollFactusStatus.textContent = isFactus ? status : 'SIN CONFIGURAR';
+  elements.payrollFactusTitle.textContent = isFactus
+    ? `Factus Nómina · ${account.environment === 'PRODUCTION' ? 'Producción' : 'Sandbox'}`
+    : 'Factus para nómina';
+  elements.payrollFactusMessage.textContent = isFactus
+    ? (account.last_error || 'La nómina utilizará las credenciales Factus de esta empresa.')
+    : 'Configura Factus desde aquí; las credenciales quedan separadas por empresa y se comparten con facturación.';
+  elements.testPayrollFactusButton.disabled = !isFactus;
+}
+
 function renderPayrollEmployees() {
   elements.payrollEmployeeList.replaceChildren();
   elements.payrollEmployeeState.hidden = payrollEmployees.length > 0;
@@ -13654,6 +13674,7 @@ function renderPayrollPeriods() {
 async function loadPayroll() {
   if (!activeTenantId || !isTenantModuleEnabled('PAYROLL')) return [];
   try {
+    renderPayrollFactusStatus();
     const [summary, employees, periods] = await Promise.all([
       getJson('/api/payroll/summary', { headers: { 'x-tenant-id': activeTenantId } }),
       getJson('/api/payroll/employees', { headers: { 'x-tenant-id': activeTenantId } }),
@@ -16529,6 +16550,8 @@ elements.newPayrollEmployeeButton.addEventListener('click', openPayrollEmployeeD
 elements.newPayrollPeriodButton.addEventListener('click', openPayrollPeriodDialog);
 elements.newPayrollNoveltyButton.addEventListener('click', openPayrollNoveltyDialog);
 elements.approvePayrollPeriodButton.addEventListener('click', approvePayrollPeriod);
+elements.configurePayrollFactusButton.addEventListener('click', openBillingConnectionDialog);
+elements.testPayrollFactusButton.addEventListener('click', () => testBillingConnection());
 elements.payrollEmployeeForm.addEventListener('submit', submitPayrollEmployee);
 elements.payrollContractForm.addEventListener('submit', submitPayrollContract);
 elements.payrollPeriodForm.addEventListener('submit', submitPayrollPeriod);
