@@ -438,6 +438,16 @@ test('cartera valida clientes, facturas y abonos antes de consultar PostgreSQL',
     .send({})
     .expect(422);
   assert.match(payment.body.error, /UUID válido/i);
+  const missingBankAccount = await request(application)
+    .post('/api/receivables/invoices/00000000-0000-0000-0000-000000000001/payments')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      amount: 1000,
+      paymentDate: '2026-08-10',
+      paymentMethod: 'BANK_TRANSFER',
+    })
+    .expect(422);
+  assert.equal(missingBankAccount.body.code, 'BANK_ACCOUNT_REQUIRED');
 });
 
 test('conteos físicos validan jornada, producto y cierre antes de consultar PostgreSQL', async () => {
@@ -700,6 +710,16 @@ test('cuentas por pagar valida obligaciones y pagos antes de consultar PostgreSQ
     .send({})
     .expect(422);
   assert.match(payment.body.error, /UUID válido/i);
+  const missingBankAccount = await request(application)
+    .post('/api/payables/invoices/00000000-0000-0000-0000-000000000001/payments')
+    .set('x-tenant-id', DEMO_TENANT_ID)
+    .send({
+      amount: 1000,
+      paymentDate: '2026-08-10',
+      paymentMethod: 'BANK_TRANSFER',
+    })
+    .expect(422);
+  assert.equal(missingBankAccount.body.code, 'BANK_ACCOUNT_REQUIRED');
 });
 
 test('usuarios exige identidad antes de consultar membresías y permisos', async () => {

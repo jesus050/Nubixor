@@ -608,9 +608,13 @@ export async function postReceivablePaymentAccounting(
   { tenantId, payment, userId },
 ) {
   const invoice = await client.query(
-    `SELECT customer_id, invoice_number
-     FROM ar_invoices WHERE id = $1 AND tenant_id = $2`,
-    [payment.invoice_id, tenantId],
+    `SELECT invoice.customer_id, invoice.invoice_number,
+            bank.accounting_account_id bank_accounting_account_id
+     FROM ar_invoices invoice
+     LEFT JOIN bank_accounts bank
+       ON bank.id = $3 AND bank.tenant_id = invoice.tenant_id
+     WHERE invoice.id = $1 AND invoice.tenant_id = $2`,
+    [payment.invoice_id, tenantId, payment.bank_account_id || null],
   );
   const customer = invoice.rows[0];
   return postJournalEntry(client, {
@@ -621,11 +625,9 @@ export async function postReceivablePaymentAccounting(
     description: `Recaudo de ${customer.invoice_number}`,
     createdBy: userId,
     lines: [
-      {
-        purpose: paymentPurpose(payment.payment_method),
-        debit: payment.amount,
-        credit: 0,
-      },
+      customer.bank_accounting_account_id
+        ? { accountId: customer.bank_accounting_account_id, debit: payment.amount, credit: 0 }
+        : { purpose: paymentPurpose(payment.payment_method), debit: payment.amount, credit: 0 },
       {
         purpose: 'RECEIVABLES',
         debit: 0,
@@ -716,9 +718,13 @@ export async function postPayablePaymentAccounting(
   { tenantId, payment, userId },
 ) {
   const invoice = await client.query(
-    `SELECT supplier_id, payable_number
-     FROM ap_invoices WHERE id = $1 AND tenant_id = $2`,
-    [payment.invoice_id, tenantId],
+    `SELECT invoice.supplier_id, invoice.payable_number,
+            bank.accounting_account_id bank_accounting_account_id
+     FROM ap_invoices invoice
+     LEFT JOIN bank_accounts bank
+       ON bank.id = $3 AND bank.tenant_id = invoice.tenant_id
+     WHERE invoice.id = $1 AND invoice.tenant_id = $2`,
+    [payment.invoice_id, tenantId, payment.bank_account_id || null],
   );
   const supplier = invoice.rows[0];
   return postJournalEntry(client, {
@@ -736,11 +742,9 @@ export async function postPayablePaymentAccounting(
         thirdPartyType: 'SUPPLIER',
         thirdPartyId: supplier.supplier_id,
       },
-      {
-        purpose: paymentPurpose(payment.payment_method),
-        debit: 0,
-        credit: payment.amount,
-      },
+      supplier.bank_accounting_account_id
+        ? { accountId: supplier.bank_accounting_account_id, debit: 0, credit: payment.amount }
+        : { purpose: paymentPurpose(payment.payment_method), debit: 0, credit: payment.amount },
     ],
   });
 }

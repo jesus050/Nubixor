@@ -979,6 +979,9 @@ const elements = {
   paymentBalance: document.querySelector('#paymentBalance'),
   paymentAmount: document.querySelector('#paymentAmount'),
   paymentDate: document.querySelector('#paymentDate'),
+  receivablePaymentMethod: document.querySelector('#receivablePaymentMethod'),
+  receivablePaymentBankField: document.querySelector('#receivablePaymentBankField'),
+  receivablePaymentBankAccountId: document.querySelector('#receivablePaymentBankAccountId'),
   closePaymentDialog: document.querySelector('#closePaymentDialog'),
   cancelPaymentButton: document.querySelector('#cancelPaymentButton'),
   savePaymentButton: document.querySelector('#savePaymentButton'),
@@ -1034,6 +1037,9 @@ const elements = {
   payablePaymentBalance: document.querySelector('#payablePaymentBalance'),
   payablePaymentAmount: document.querySelector('#payablePaymentAmount'),
   payablePaymentDate: document.querySelector('#payablePaymentDate'),
+  payablePaymentMethod: document.querySelector('#payablePaymentMethod'),
+  payablePaymentBankField: document.querySelector('#payablePaymentBankField'),
+  payablePaymentBankAccountId: document.querySelector('#payablePaymentBankAccountId'),
   closePayablePaymentDialog: document.querySelector('#closePayablePaymentDialog'),
   cancelPayablePaymentButton: document.querySelector('#cancelPayablePaymentButton'),
   savePayablePaymentButton: document.querySelector('#savePayablePaymentButton'),
@@ -1372,6 +1378,7 @@ let posMixedPayment = false;
 let selectedReceiptForReturn = null;
 let receivableCustomers = [];
 let receivableInvoices = [];
+let receivableBankAccounts = [];
 let selectedReceivable = null;
 let physicalCounts = [];
 let selectedPhysicalCount = null;
@@ -1395,6 +1402,7 @@ let purchases = [];
 let selectedPurchase = null;
 let payableInvoices = [];
 let payableSources = { suppliers: [], purchases: [] };
+let payableBankAccounts = [];
 let selectedPayable = null;
 let businessExpenses = [];
 let expenseSetup = {
@@ -5772,8 +5780,11 @@ function renderInvoiceDetail(invoice) {
       const date = document.createElement('strong');
       date.textContent = formatShortDate(payment.payment_date);
       const reference = document.createElement('small');
-      reference.textContent =
-        payment.reference || payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+      const paymentMethod = payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+      const bankAccount = payment.bank_name
+        ? ` · ${payment.bank_name}${payment.masked_account ? ` (${payment.masked_account})` : ''}`
+        : '';
+      reference.textContent = payment.reference || `${paymentMethod}${bankAccount}`;
       info.append(date, reference);
       const amount = document.createElement('strong');
       amount.textContent = formatCurrency(payment.amount);
@@ -5802,7 +5813,7 @@ async function loadReceivables() {
     return [];
   }
   try {
-    const [summary, customersResult, invoicesResult] = await Promise.all([
+    const [summary, customersResult, invoicesResult, bankAccounts] = await Promise.all([
       getJson('/api/receivables/summary', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
@@ -5812,9 +5823,13 @@ async function loadReceivables() {
       getJson('/api/receivables/invoices', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
+      getJson('/api/receivables/bank-accounts', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
     ]);
     receivableCustomers = customersResult;
     receivableInvoices = invoicesResult;
+    receivableBankAccounts = bankAccounts;
     setReceivableSummary(summary);
     renderInvoiceList();
     if (selectedReceivable) {
@@ -6003,6 +6018,38 @@ async function submitInvoice(event) {
   }
 }
 
+function setPaymentBankOptions(select, accounts) {
+  select.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = accounts.length
+    ? 'Selecciona la cuenta bancaria'
+    : 'No hay cuentas bancarias activas';
+  select.append(placeholder);
+  accounts.forEach((account) => {
+    const option = document.createElement('option');
+    option.value = account.id;
+    option.textContent = `${account.bank_name} · ${account.account_name} · ${account.masked_account}`;
+    select.append(option);
+  });
+}
+
+function syncReceivablePaymentBankField() {
+  const required = ['BANK_TRANSFER', 'CARD'].includes(elements.receivablePaymentMethod.value);
+  elements.receivablePaymentBankField.hidden = !required;
+  elements.receivablePaymentBankAccountId.required = required;
+  elements.receivablePaymentBankAccountId.disabled = !required;
+  if (!required) elements.receivablePaymentBankAccountId.value = '';
+}
+
+function syncPayablePaymentBankField() {
+  const required = ['BANK_TRANSFER', 'CARD', 'CHECK'].includes(elements.payablePaymentMethod.value);
+  elements.payablePaymentBankField.hidden = !required;
+  elements.payablePaymentBankAccountId.required = required;
+  elements.payablePaymentBankAccountId.disabled = !required;
+  if (!required) elements.payablePaymentBankAccountId.value = '';
+}
+
 function openPaymentDialog() {
   if (!selectedReceivable || selectedReceivable.status === 'PAID') return;
   elements.paymentForm.reset();
@@ -6013,6 +6060,8 @@ function openPaymentDialog() {
   elements.paymentAmount.max = String(selectedReceivable.balance);
   elements.paymentAmount.value = String(selectedReceivable.balance);
   elements.paymentDate.value = isoDate();
+  setPaymentBankOptions(elements.receivablePaymentBankAccountId, receivableBankAccounts);
+  syncReceivablePaymentBankField();
   elements.paymentDialog.showModal();
   elements.paymentAmount.focus();
   elements.paymentAmount.select();
@@ -7226,9 +7275,11 @@ function renderPayableDetail(invoice) {
     const date = document.createElement('strong');
     date.textContent = formatShortDate(payment.payment_date);
     const reference = document.createElement('small');
-    reference.textContent =
-      payment.reference ||
-      payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+    const paymentMethod = payment.payment_method.replaceAll('_', ' ').toLocaleLowerCase('es');
+    const bankAccount = payment.bank_name
+      ? ` · ${payment.bank_name}${payment.masked_account ? ` (${payment.masked_account})` : ''}`
+      : '';
+    reference.textContent = payment.reference || `${paymentMethod}${bankAccount}`;
     info.append(date, reference);
     const amount = document.createElement('strong');
     amount.textContent = formatCurrency(payment.amount);
@@ -7256,7 +7307,7 @@ async function loadPayables() {
     return [];
   }
   try {
-    const [summary, sources, invoices] = await Promise.all([
+    const [summary, sources, invoices, bankAccounts] = await Promise.all([
       getJson('/api/payables/summary', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
@@ -7266,9 +7317,13 @@ async function loadPayables() {
       getJson('/api/payables/invoices', {
         headers: { 'x-tenant-id': activeTenantId },
       }),
+      getJson('/api/payables/bank-accounts', {
+        headers: { 'x-tenant-id': activeTenantId },
+      }),
     ]);
     payableSources = sources;
     payableInvoices = invoices;
+    payableBankAccounts = bankAccounts;
     setPayableSummary(summary);
     renderPayableList();
     elements.newPayableButton.disabled = !sources.suppliers.length;
@@ -7404,6 +7459,8 @@ function openPayablePaymentDialog() {
   elements.payablePaymentAmount.max = String(selectedPayable.balance);
   elements.payablePaymentAmount.value = String(selectedPayable.balance);
   elements.payablePaymentDate.value = isoDate();
+  setPaymentBankOptions(elements.payablePaymentBankAccountId, payableBankAccounts);
+  syncPayablePaymentBankField();
   elements.payablePaymentDialog.showModal();
   elements.payablePaymentAmount.focus();
   elements.payablePaymentAmount.select();
@@ -16085,6 +16142,7 @@ elements.payableDialog.addEventListener('click', (event) => {
 elements.newPayablePaymentButton.addEventListener('click', openPayablePaymentDialog);
 elements.closePayablePaymentDialog.addEventListener('click', closePayablePaymentDialog);
 elements.cancelPayablePaymentButton.addEventListener('click', closePayablePaymentDialog);
+elements.payablePaymentMethod.addEventListener('change', syncPayablePaymentBankField);
 elements.payablePaymentForm.addEventListener('submit', submitPayablePayment);
 elements.payablePaymentDialog.addEventListener('click', (event) => {
   if (event.target === elements.payablePaymentDialog) closePayablePaymentDialog();
@@ -16730,6 +16788,7 @@ elements.addInvoiceItemButton.addEventListener('click', addInvoiceItemRow);
 elements.newPaymentButton.addEventListener('click', openPaymentDialog);
 elements.closePaymentDialog.addEventListener('click', closePaymentDialog);
 elements.cancelPaymentButton.addEventListener('click', closePaymentDialog);
+elements.receivablePaymentMethod.addEventListener('change', syncReceivablePaymentBankField);
 elements.paymentForm.addEventListener('submit', submitPayment);
 elements.paymentDialog.addEventListener('click', (event) => {
   if (event.target === elements.paymentDialog) closePaymentDialog();

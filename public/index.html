@@ -4365,13 +4365,17 @@
           </label>
           <label class="form-field">
             <span>Medio de pago</span>
-            <select name="paymentMethod">
+            <select id="payablePaymentMethod" name="paymentMethod">
               <option value="BANK_TRANSFER">Transferencia bancaria</option>
               <option value="CASH">Efectivo</option>
               <option value="CARD">Tarjeta</option>
               <option value="CHECK">Cheque</option>
               <option value="OTHER">Otro</option>
             </select>
+          </label>
+          <label class="form-field" id="payablePaymentBankField">
+            <span>Cuenta bancaria <b>*</b></span>
+            <select id="payablePaymentBankAccountId" name="bankAccountId"></select>
           </label>
           <label class="form-field">
             <span>Referencia</span>
@@ -5453,12 +5457,16 @@
           </label>
           <label class="form-field">
             <span>Medio de pago</span>
-            <select name="paymentMethod">
+            <select id="receivablePaymentMethod" name="paymentMethod">
               <option value="BANK_TRANSFER">Transferencia bancaria</option>
               <option value="CASH">Efectivo</option>
               <option value="CARD">Tarjeta</option>
               <option value="OTHER">Otro</option>
             </select>
+          </label>
+          <label class="form-field" id="receivablePaymentBankField">
+            <span>Cuenta bancaria <b>*</b></span>
+            <select id="receivablePaymentBankAccountId" name="bankAccountId"></select>
           </label>
           <label class="form-field">
             <span>Referencia</span>

@@ -14,6 +14,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DOCUMENT_TYPES = new Set(['NIT', 'CC', 'CE', 'PASSPORT', 'OTHER']);
 const PAYMENT_METHODS = new Set(['CASH', 'BANK_TRANSFER', 'CARD', 'OTHER']);
+const BANK_PAYMENT_METHODS = new Set(['BANK_TRANSFER', 'CARD']);
 
 router.use(requireTenant);
 
@@ -61,6 +62,17 @@ router.get('/summary', asyncHandler(async (req, res) => {
     [req.context.tenantId],
   );
   res.json(result.rows[0]);
+}));
+
+router.get('/bank-accounts', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT id, bank_name, account_name, masked_account, currency
+     FROM bank_accounts
+     WHERE tenant_id = $1 AND active = TRUE
+     ORDER BY bank_name, account_name`,
+    [req.context.tenantId],
+  );
+  res.json(result.rows);
 }));
 
 router.get('/customers', asyncHandler(async (req, res) => {
@@ -182,7 +194,7 @@ router.get('/invoices/:id', asyncHandler(async (req, res) => {
       [req.params.id, req.context.tenantId],
     ),
     query(
-      `SELECT id, description, quantity, unit_price, tax_rate, subtotal,
+       `SELECT id, description, quantity, unit_price, tax_rate, subtotal,
               tax_amount, line_total
        FROM ar_invoice_items
        WHERE invoice_id = $1 AND tenant_id = $2
@@ -190,10 +202,15 @@ router.get('/invoices/:id', asyncHandler(async (req, res) => {
       [req.params.id, req.context.tenantId],
     ),
     query(
-      `SELECT id, payment_date, amount, payment_method, reference, notes, created_at
-       FROM ar_payments
-       WHERE invoice_id = $1 AND tenant_id = $2
-       ORDER BY payment_date DESC, created_at DESC`,
+      `SELECT payment.id, payment.payment_date, payment.amount, payment.payment_method,
+              payment.reference, payment.notes, payment.created_at,
+              payment.bank_account_id, bank.bank_name, bank.account_name,
+              bank.masked_account
+       FROM ar_payments payment
+       LEFT JOIN bank_accounts bank
+         ON bank.id = payment.bank_account_id AND bank.tenant_id = payment.tenant_id
+       WHERE payment.invoice_id = $1 AND payment.tenant_id = $2
+       ORDER BY payment.payment_date DESC, payment.created_at DESC`,
       [req.params.id, req.context.tenantId],
     ),
   ]);
@@ -352,6 +369,7 @@ router.post('/invoices/:id/payments', asyncHandler(async (req, res) => {
   const amount = Number(req.body.amount);
   const paymentDate = req.body.paymentDate;
   const paymentMethod = text(req.body.paymentMethod, 30)?.toUpperCase();
+  const bankAccountId = req.body.bankAccountId || null;
   if (!Number.isFinite(amount) || amount <= 0) {
     return res.status(422).json({ error: 'El valor del abono debe ser mayor que cero.' });
   }
@@ -360,6 +378,20 @@ router.post('/invoices/:id/payments', asyncHandler(async (req, res) => {
   }
   if (!PAYMENT_METHODS.has(paymentMethod)) {
     return res.status(422).json({ error: 'El medio de pago no es válido.' });
+  }
+  if (BANK_PAYMENT_METHODS.has(paymentMethod) && !UUID_PATTERN.test(bankAccountId || '')) {
+    throw new AppError(
+      'Selecciona la cuenta bancaria que recibió el recaudo.',
+      422,
+      'BANK_ACCOUNT_REQUIRED',
+    );
+  }
+  if (!BANK_PAYMENT_METHODS.has(paymentMethod) && bankAccountId) {
+    throw new AppError(
+      'La cuenta bancaria solo aplica para transferencia o tarjeta.',
+      422,
+      'BANK_ACCOUNT_NOT_APPLICABLE',
+    );
   }
 
   const payment = await withTransaction(async (client) => {
@@ -391,14 +423,25 @@ router.post('/invoices/:id/payments', asyncHandler(async (req, res) => {
         'PAYMENT_EXCEEDS_BALANCE',
       );
     }
+    if (BANK_PAYMENT_METHODS.has(paymentMethod)) {
+      const bank = await client.query(
+        `SELECT id FROM bank_accounts
+         WHERE id = $1 AND tenant_id = $2 AND active = TRUE
+         FOR SHARE`,
+        [bankAccountId, req.context.tenantId],
+      );
+      if (!bank.rowCount) {
+        throw new AppError('La cuenta bancaria no existe o no pertenece a esta empresa.', 422, 'BANK_ACCOUNT_INVALID');
+      }
+    }
     const paymentResult = await client.query(
       `INSERT INTO ar_payments(
          tenant_id, invoice_id, payment_date, amount, payment_method,
-         reference, notes, created_by
+         reference, notes, bank_account_id, created_by
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
        RETURNING id, invoice_id, payment_date, amount, payment_method,
-                 reference, notes, created_at`,
+                 reference, notes, bank_account_id, created_at`,
       [
         req.context.tenantId,
         invoice.id,
@@ -407,6 +450,7 @@ router.post('/invoices/:id/payments', asyncHandler(async (req, res) => {
         paymentMethod,
         text(req.body.reference, 100),
         text(req.body.notes, 300),
+        BANK_PAYMENT_METHODS.has(paymentMethod) ? bankAccountId : null,
         req.context.userId,
       ],
     );
