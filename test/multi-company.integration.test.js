@@ -1329,7 +1329,7 @@ test(
            AND entry.source_type = 'SALE'
            AND entry.source_id = $2
          GROUP BY entry.id`,
-        [companyId, sale.body.id],
+        [companyId, cashierDisplaySale.body.receipts[0].id],
       );
       assert.equal(accounting.rowCount, 1);
       assert.equal(accounting.rows[0].status, 'POSTED');
