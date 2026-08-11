@@ -12203,12 +12203,69 @@ async function exportActiveReport() {
   }
 }
 
+const auditLabelOverrides = {
+  // Acciones: conservamos los códigos en la API, pero mostramos una descripción
+  // clara para el equipo que revisa la bitácora.
+  'accounting.entry_posted': 'Comprobante contable registrado',
+  'accounting.entry_reversed': 'Comprobante contable reversado',
+  'accounting.period_permanently_locked': 'Período bloqueado definitivamente',
+  'audit_control_run.sealed': 'Control de auditoría sellado',
+  'billing.adjustment_note_queued': 'Nota de ajuste puesta en cola',
+  'billing.order_ready_to_invoice': 'Pedido listo para facturar',
+  'billing.quote_converted_to_order': 'Cotización convertida en pedido',
+  'catalog.bulk_imported': 'Carga masiva de catálogo',
+  'electronic_billing.document_queued': 'Documento electrónico puesto en cola',
+  'electronic_billing.connection_tested': 'Conexión de facturación probada',
+  'electronic_billing.resolutions_auto_synced': 'Resoluciones sincronizadas automáticamente',
+  'expense.payment_created': 'Pago de gasto registrado',
+  'inventory.adjustment_created': 'Ajuste de inventario registrado',
+  'inventory.transfer_dispatched': 'Transferencia de inventario despachada',
+  'inventory.transfer_received': 'Transferencia de inventario recibida',
+  'inventory_count.completed': 'Conteo físico completado',
+  'inventory_count.created': 'Conteo físico creado',
+  'payable.invoice_created': 'Cuenta por pagar creada',
+  'payroll.employee_created': 'Colaborador creado',
+  'payroll.period_approved': 'Período de nómina aprobado',
+  'product.combo.assembled': 'Combo armado',
+  'product.combo.configured': 'Combo configurado',
+  'product.variant.created': 'Variante de producto creada',
+  'receivable.invoice_created': 'Cuenta por cobrar creada',
+  'receivable.payment_recorded': 'Abono registrado',
+  'sale.completed': 'Venta completada',
+  'cash.session_opened': 'Turno de caja abierto',
+  'cash.session_closed': 'Turno de caja cerrado',
+  'user.sessions_revoked': 'Sesiones de usuario revocadas',
+};
+
+const auditWordMap = {
+  account: 'cuenta', accounts: 'cuentas', action: 'acción', actions: 'acciones',
+  active: 'activo', approved: 'aprobado', archived: 'archivado', assigned: 'asignado',
+  before: 'antes', branch: 'sucursal', company: 'empresa', completed: 'completado',
+  closed: 'cerrado', fail: 'fallido', failed: 'fallido', hash: 'huella',
+  configuration: 'configuración', created: 'creado', date: 'fecha', deleted: 'eliminado',
+  description: 'descripción', document: 'documento', email: 'correo', entity: 'módulo',
+  event: 'evento', eventHash: 'huella del evento', failed: 'fallido', id: 'identificador',
+  invoice: 'factura', inventory: 'inventario', item: 'ítem', last: 'último', metadata: 'metadatos', movement: 'movimiento',
+  name: 'nombre', note: 'nota', number: 'número', old: 'anterior', order: 'pedido',
+  payment: 'pago', pending: 'pendiente', period: 'período', product: 'producto',
+  pass: 'correcto', reason: 'motivo', received: 'recibido', reference: 'referencia', resolution: 'resolución',
+  role: 'rol', sale: 'venta', session: 'turno', status: 'estado', stock: 'existencias',
+  tax: 'impuesto', tenant: 'empresa', time: 'hora', total: 'total', transfer: 'transferencia',
+  updated: 'actualizado', user: 'usuario', valuation: 'valoración', value: 'valor', warning: 'advertencia', warehouse: 'bodega',
+};
+
 function auditHumanLabel(value) {
   if (!value) return 'Sin identificar';
-  const words = String(value)
+  const raw = String(value);
+  if (auditLabelOverrides[raw]) return auditLabelOverrides[raw];
+  const words = raw
     .replaceAll('.', ' ')
     .replaceAll('_', ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => auditWordMap[word] || auditWordMap[word.toLowerCase()] || word)
+    .join(' ')
     .toLocaleLowerCase('es');
   return words.charAt(0).toLocaleUpperCase('es') + words.slice(1);
 }
