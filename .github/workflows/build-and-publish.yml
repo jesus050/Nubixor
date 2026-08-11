@@ -9,7 +9,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Docker/OCI repositories must be lowercase. Keep this explicit because the
+  # GitHub repository is named "Nubixor" with an uppercase letter.
+  IMAGE_NAME: jesus050/nubixor
 
 jobs:
   verify:
