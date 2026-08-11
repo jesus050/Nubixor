@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -100,3 +101,6 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:latest
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Verify published container manifest
+        run: docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:latest
