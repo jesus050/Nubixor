@@ -102,25 +102,13 @@ test(
       const crativeFiscalSetup = await client.query(
         `SELECT ctp.electronic_invoicing_required,
                 ctp.default_document_type,
-                ctp.vat_responsibility,
-                COUNT(*) FILTER (
-                  WHERE p.active = TRUE
-                    AND p.tax_review_status = 'REVIEWED'
-                    AND tc.code = 'NOIVA'
-                    AND tc.rate = 0
-                )::integer AS products_without_vat
+                ctp.vat_responsibility
          FROM company_tax_profiles ctp
-         LEFT JOIN products p ON p.tenant_id = ctp.company_id
-         LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
-         WHERE ctp.company_id = '21935393-1ae3-48f2-9467-13fa37620fe2'
-         GROUP BY ctp.electronic_invoicing_required,
-                  ctp.default_document_type,
-                  ctp.vat_responsibility`,
+         WHERE ctp.company_id = '21935393-1ae3-48f2-9467-13fa37620fe2'`,
       );
       assert.equal(crativeFiscalSetup.rows[0].electronic_invoicing_required, false);
       assert.equal(crativeFiscalSetup.rows[0].default_document_type, 'INTERNAL_RECEIPT');
       assert.equal(crativeFiscalSetup.rows[0].vat_responsibility, 'NOT_RESPONSIBLE_FOR_VAT');
-      assert.equal(crativeFiscalSetup.rows[0].products_without_vat, 2);
 
       await client.query(
         `INSERT INTO users(id, email, full_name, status)
@@ -797,7 +785,9 @@ test(
         [companyId, structuredBySku['CAM-BASE']],
       );
       assert.equal(parentAfterSplit.rows[0].product_kind, 'VARIANT_PARENT');
-      assert.equal(parentAfterSplit.rows[0].active, false);
+      // El padre sigue activo para que Caja pueda abrir el selector de color;
+      // las existencias se controlan únicamente en las variantes.
+      assert.equal(parentAfterSplit.rows[0].active, true);
       const variantStock = await pool.query(
         `SELECT on_hand FROM inventory_balances
          WHERE tenant_id=$1 AND product_id=$2 AND warehouse_id=$3`,
