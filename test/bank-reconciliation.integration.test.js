@@ -8,6 +8,21 @@ import pg from 'pg';
 // modificar una base real por accidente.
 const connectionString = process.env.TEST_DATABASE_URL || null;
 
+async function expectDatabaseFailure(client, savepoint, work, predicate, message) {
+  await client.query(`SAVEPOINT ${savepoint}`);
+  try {
+    await work();
+    assert.fail(message);
+  } catch (error) {
+    assert.ok(predicate(error), message);
+  } finally {
+    // PostgreSQL deja la transacción en estado abortado tras una restricción.
+    // El savepoint permite verificar la regla y continuar cubriendo los demás
+    // controles de integridad dentro de la misma prueba aislada.
+    await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+  }
+}
+
 test(
   'bancos: aísla empresas y sella movimientos y conciliaciones completadas',
   { skip: !connectionString },
@@ -77,7 +92,9 @@ test(
         [ids.transaction, ids.companyA, ids.bankA, ids.user],
       );
 
-      await assert.rejects(
+      await expectDatabaseFailure(
+        client,
+        'cross_tenant_bank_account',
         () => client.query(
           `INSERT INTO bank_statement_transactions(
              tenant_id, bank_account_id, transaction_date, reference,
@@ -95,7 +112,9 @@ test(
          WHERE id=$1 AND tenant_id=$2`,
         [ids.transaction, ids.companyA, ids.user],
       );
-      await assert.rejects(
+      await expectDatabaseFailure(
+        client,
+        'matched_bank_transaction_immutable',
         () => client.query(
           `UPDATE bank_statement_transactions
            SET description='Intento de modificar evidencia'
@@ -117,7 +136,9 @@ test(
          )`,
         [ids.reconciliation, ids.companyA, ids.bankA, ids.user],
       );
-      await assert.rejects(
+      await expectDatabaseFailure(
+        client,
+        'completed_reconciliation_immutable',
         () => client.query(
           `UPDATE bank_reconciliation_runs
            SET notes='Intento de modificar evidencia'
