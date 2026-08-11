@@ -1192,20 +1192,37 @@ test(
         })
         .expect(403);
 
+      const cashierDisplayPayload = {
+        cashSessionId: cashSession.rows[0].id,
+        stockSource: 'DISPLAY',
+        paymentMethod: 'CARD',
+        saleTerms: 'IMMEDIATE',
+        items: [{
+          productId: product.rows[0].id,
+          warehouseId: response.body.setup.displayWarehouse.id,
+          quantity: 1,
+        }],
+      };
+      const missingResolution = await request(cashierApplication)
+        .post('/api/pos/sales/grouped')
+        .set('x-tenant-id', companyId)
+        .send(cashierDisplayPayload)
+        .expect(409);
+      assert.equal(missingResolution.body.code, 'BILLING_RESOLUTION_REQUIRED');
+
+      // El flujo operativo siguiente usa comprobante interno, por lo que no
+      // depende de una resolución DIAN para continuar validando Caja.
+      await pool.query(
+        `UPDATE company_tax_profiles
+         SET electronic_invoicing_required = FALSE,
+             default_document_type = 'INTERNAL_RECEIPT'
+         WHERE company_id = $1`,
+        [companyId],
+      );
       const cashierDisplaySale = await request(cashierApplication)
         .post('/api/pos/sales/grouped')
         .set('x-tenant-id', companyId)
-        .send({
-          cashSessionId: cashSession.rows[0].id,
-          stockSource: 'DISPLAY',
-          paymentMethod: 'CARD',
-          saleTerms: 'IMMEDIATE',
-          items: [{
-            productId: product.rows[0].id,
-            warehouseId: response.body.setup.displayWarehouse.id,
-            quantity: 1,
-          }],
-        })
+        .send(cashierDisplayPayload)
         .expect(201);
       assert.equal(cashierDisplaySale.body.receipts.length, 1);
       assert.equal(cashierDisplaySale.body.receipts[0].companyId, companyId);
