@@ -1269,7 +1269,11 @@ test(
         .expect(201);
       assert.equal(saleReturn.body.return_status, 'FULL');
       assert.equal(Number(saleReturn.body.total), 2000);
-      assert.ok(saleReturn.body.electronic_adjustment_note_id);
+      assert.equal(
+        saleReturn.body.electronic_adjustment_note_id,
+        null,
+        'Los comprobantes internos se devuelven sin generar nota electrónica.',
+      );
 
       const restoredDisplayStock = await pool.query(
         `SELECT on_hand
