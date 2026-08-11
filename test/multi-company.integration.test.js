@@ -1409,6 +1409,7 @@ test(
         await pool.query('DELETE FROM sale_items WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM inventory_movements WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM sales WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM sale_groups WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM cash_sessions WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM logistics_intake_comments WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM logistics_intake_items WHERE tenant_id = $1', [companyId]);

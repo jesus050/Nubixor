@@ -14,6 +14,7 @@ END
 WHERE applied_billing_policy IS NULL;
 
 ALTER TABLE sales
+  ALTER COLUMN applied_billing_policy SET DEFAULT 'INTERNAL_RECEIPT',
   ALTER COLUMN applied_billing_policy SET NOT NULL,
   ADD CONSTRAINT sales_applied_billing_policy_check
     CHECK (applied_billing_policy IN (
