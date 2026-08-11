@@ -222,6 +222,86 @@ const reportDefinitions = {
           OR COALESCE(p.order_number, '') ILIKE '%' || $5 || '%'
           OR ai.status ILIKE '%' || $5 || '%')`,
   },
+  cash_closures: {
+    name: 'Cierres detallados de caja',
+    filename: 'cierres-caja',
+    columns: [
+      ['opened_at', 'Apertura', 'dateTime'], ['closed_at', 'Cierre', 'dateTime'],
+      ['register_name', 'Caja', 'text'], ['branch_name', 'Sucursal', 'text'],
+      ['opened_by_name', 'Abrió', 'text'], ['closed_by_name', 'Cerró', 'text'],
+      ['status', 'Estado', 'status'], ['sale_count', 'Ventas', 'number'],
+      ['sales_total', 'Ventas total', 'currency'],
+      ['manual_income', 'Ingresos manuales', 'currency'],
+      ['manual_expenses', 'Gastos y retiros', 'currency'],
+      ['expected_cash', 'Efectivo esperado', 'currency'],
+      ['closing_amount', 'Efectivo contado', 'currency'],
+      ['difference', 'Diferencia', 'currency'],
+    ],
+    orderBy: 'opened_at DESC',
+    sql: `
+      SELECT cs.id, cs.opened_at, cs.closed_at, cr.name register_name,
+             b.name branch_name,
+             COALESCE(opener.full_name, opener.email, '—') opened_by_name,
+             COALESCE(closer.full_name, closer.email, '—') closed_by_name,
+             cs.status, COALESCE(sales.sale_count, 0)::integer sale_count,
+             COALESCE(sales.sales_total, 0) sales_total,
+             COALESCE(movements.manual_income, 0) manual_income,
+             COALESCE(movements.manual_expenses, 0) manual_expenses,
+             cs.expected_cash, cs.closing_amount, cs.difference
+      FROM cash_sessions cs
+      JOIN cash_registers cr ON cr.id = cs.cash_register_id AND cr.tenant_id = cs.tenant_id
+      JOIN branches b ON b.id = cr.branch_id AND b.tenant_id = cs.tenant_id
+      LEFT JOIN users opener ON opener.id = cs.opened_by
+      LEFT JOIN users closer ON closer.id = cs.closed_by
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::integer sale_count, COALESCE(SUM(total), 0) sales_total
+        FROM sales
+        WHERE tenant_id = cs.tenant_id AND cash_session_id = cs.id AND status = 'COMPLETED'
+      ) sales ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(SUM(amount) FILTER (WHERE movement_type = 'INCOME'), 0) manual_income,
+               COALESCE(SUM(amount) FILTER (WHERE movement_type IN ('EXPENSE', 'WITHDRAWAL')), 0) manual_expenses
+        FROM cash_movements
+        WHERE tenant_id = cs.tenant_id AND cash_session_id = cs.id
+      ) movements ON TRUE
+      WHERE cs.tenant_id = $1
+        AND ($2::uuid IS NULL OR b.id = $2)
+        AND ($3::date IS NULL OR cs.opened_at >= $3::date)
+        AND ($4::date IS NULL OR cs.opened_at < $4::date + INTERVAL '1 day')
+        AND ($5::text IS NULL OR cr.name ILIKE '%' || $5 || '%' OR b.name ILIKE '%' || $5 || '%' OR cs.status ILIKE '%' || $5 || '%')`,
+  },
+  rotation: {
+    name: 'Rotación de mercancía',
+    filename: 'rotacion-mercancia',
+    columns: [
+      ['sku', 'SKU', 'text'], ['product_name', 'Producto', 'text'],
+      ['branch_name', 'Sucursal', 'text'], ['warehouse_name', 'Bodega', 'text'],
+      ['units_sold', 'Unidades vendidas', 'number'], ['current_stock', 'Existencia actual', 'number'],
+      ['rotation_times', 'Rotación (veces)', 'number'], ['revenue', 'Ventas generadas', 'currency'],
+    ],
+    orderBy: 'rotation_times DESC NULLS LAST, units_sold DESC, product_name',
+    sql: `
+      WITH sold AS (
+        SELECT si.product_id, s.warehouse_id, SUM(si.quantity) units_sold, SUM(si.line_total) revenue
+        FROM sales s
+        JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
+        WHERE s.tenant_id = $1 AND s.status = 'COMPLETED'
+          AND ($3::date IS NULL OR s.created_at >= $3::date)
+          AND ($4::date IS NULL OR s.created_at < $4::date + INTERVAL '1 day')
+        GROUP BY si.product_id, s.warehouse_id
+      )
+      SELECT p.sku, p.name product_name, b.name branch_name, w.name warehouse_name,
+             sold.units_sold, COALESCE(ib.on_hand - ib.reserved, 0) current_stock,
+             ROUND((sold.units_sold / NULLIF(ib.on_hand - ib.reserved, 0))::numeric, 2) rotation_times,
+             sold.revenue
+      FROM sold
+      JOIN products p ON p.id = sold.product_id AND p.tenant_id = $1 AND p.deleted_at IS NULL
+      JOIN warehouses w ON w.id = sold.warehouse_id AND w.tenant_id = $1
+      JOIN branches b ON b.id = w.branch_id AND b.tenant_id = $1
+      LEFT JOIN inventory_balances ib ON ib.product_id = sold.product_id AND ib.warehouse_id = sold.warehouse_id AND ib.tenant_id = $1
+      WHERE ($2::uuid IS NULL OR b.id = $2)
+        AND ($5::text IS NULL OR p.sku ILIKE '%' || $5 || '%' OR p.name ILIKE '%' || $5 || '%')`,
+  },
 };
 
 function cleanText(value, maxLength) {
