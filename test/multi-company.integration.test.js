@@ -1114,10 +1114,8 @@ test(
           saleTerms: 'IMMEDIATE',
           items: [{ productId: product.rows[0].id, quantity: 1 }],
         })
-        .expect(201);
-      assert.equal(sale.body.document_type, 'ELECTRONIC_INVOICE');
-      assert.equal(sale.body.billingDocument.status, 'PENDING');
-      assert.match(sale.body.billingDocument.failure_reason, /resolución/i);
+        .expect(409);
+      assert.equal(sale.body.code, 'BILLING_RESOLUTION_REQUIRED');
 
       const advancedCatalog = await request(application)
         .get('/api/pos/shared-catalog')

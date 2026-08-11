@@ -1480,6 +1480,13 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           [companyId, firstLine.warehouse_branch_id],
         );
         resolution = resolutionResult.rows[0] || null;
+        if (!resolution) {
+          throw new AppError(
+            'La empresa vendedora no tiene una resolución de facturación electrónica vigente para esta sucursal. Configúrala antes de confirmar la venta.',
+            409,
+            'BILLING_RESOLUTION_REQUIRED',
+          );
+        }
       }
       const saleResult = await client.query(
         `INSERT INTO sales(
@@ -2031,6 +2038,13 @@ router.post('/sales', asyncHandler(async (req, res) => {
         [req.context.tenantId, session.rows[0].branch_id],
       );
       billingResolution = resolution.rows[0] || null;
+      if (!billingResolution) {
+        throw new AppError(
+          'La empresa no tiene una resolución de facturación electrónica vigente para esta sucursal. Configúrala antes de confirmar la venta.',
+          409,
+          'BILLING_RESOLUTION_REQUIRED',
+        );
+      }
     }
     let customer = null;
     if (customerId) {
