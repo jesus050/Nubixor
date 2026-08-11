@@ -1150,6 +1150,7 @@ test(
       });
       cashierApplication.use('/api/pos', returnsRouter);
       cashierApplication.use('/api/pos', posRouter);
+      cashierApplication.use(errorHandler);
 
       const cashierDisplayCatalog = await request(cashierApplication)
         .get('/api/pos/shared-catalog')
