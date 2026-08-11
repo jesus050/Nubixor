@@ -1220,6 +1220,12 @@ test(
          WHERE company_id = $1`,
         [companyId],
       );
+      await pool.query(
+        `UPDATE products
+         SET billing_policy = 'INTERNAL_RECEIPT'
+         WHERE tenant_id = $1 AND id = $2`,
+        [companyId, product.rows[0].id],
+      );
       const cashierDisplaySale = await request(cashierApplication)
         .post('/api/pos/sales/grouped')
         .set('x-tenant-id', companyId)
