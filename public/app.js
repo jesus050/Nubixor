@@ -17926,6 +17926,45 @@ function initNetworkStatusMonitor() {
 
 initNetworkStatusMonitor();
 
+function labelResponsiveTables(root = document) {
+  const tables = root.querySelectorAll?.('table') || [];
+  tables.forEach((table) => {
+    const headers = [...table.querySelectorAll('thead th')]
+      .map((header) => header.textContent.trim().replace(/\s+/g, ' '))
+      .filter(Boolean);
+    if (!headers.length) return;
+    table.dataset.mobileCards = 'true';
+    table.querySelectorAll('tbody tr').forEach((row) => {
+      [...row.children].forEach((cell, index) => {
+        if (cell.tagName !== 'TD' || cell.hasAttribute('data-label')) return;
+        cell.setAttribute('data-label', headers[index] || '');
+      });
+    });
+  });
+}
+
+function initResponsiveTableLabels() {
+  const scheduleLabeling = (() => {
+    let pending = false;
+    return () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        labelResponsiveTables(document);
+      });
+    };
+  })();
+
+  labelResponsiveTables(document);
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.addedNodes.length)) scheduleLabeling();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+initResponsiveTableLabels();
+
 let realtimeRefreshInFlight = false;
 
 function shouldPauseRealtimeRefresh(view) {
