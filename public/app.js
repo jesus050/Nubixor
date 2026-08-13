@@ -4381,7 +4381,7 @@ function commercialExpenseStatusLabel(status) {
   return {
     COMMITTED: 'Comprometido',
     SPENT: 'Gastado',
-    CANCELLED: 'Cancelado',
+    VOID: 'Anulado',
   }[status] || status || 'Pendiente';
 }
 

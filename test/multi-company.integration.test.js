@@ -1464,6 +1464,19 @@ test(
         await pool.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_opportunity_actions WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_marketing_expenses WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_campaign_categories WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_campaign_products WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_campaigns WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_marketing_budgets WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_plan_initiatives WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_plans WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_rotation_snapshots WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_product_seasons WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_product_profiles WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_seasons WHERE tenant_id = $1', [companyId]);
+        await pool.query('DELETE FROM commercial_rotation_settings WHERE tenant_id = $1', [companyId]);
         await pool.query('DELETE FROM tenants WHERE id = $1', [companyId]);
       }
       await pool.query('DELETE FROM users WHERE id = $1', [ownerId]);
