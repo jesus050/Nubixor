@@ -41,6 +41,7 @@ import secureAssetsRouter from './modules/secure-assets.js';
 import secureFilesRouter from './modules/secure-files.js';
 import payrollRouter from './modules/payroll.js';
 import commercialPlanningRouter from './modules/commercial-planning.js';
+import mediaRouter from './modules/media.js';
 import { requireTenantModule } from './module-gates.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -113,6 +114,7 @@ export function createApp({
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
   }
   application.use('/api/assets', secureAssetsRouter);
+  application.use('/api/media', mediaRouter);
   application.use('/api/companies', companiesRouter);
   application.use('/api/branches', branchesRouter);
   application.use('/api/warehouses', warehousesRouter);
