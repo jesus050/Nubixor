@@ -6351,7 +6351,7 @@
           <span class="image-field-symbol" aria-hidden="true">＋</span>
           <span>
             <strong>Imagen principal</strong>
-            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+            <small>JPG, PNG o WEBP · máximo 15 MB</small>
           </span>
           <input id="newProductImage" name="productImage" type="file" accept="image/jpeg,image/png,image/webp">
         </label>
@@ -6667,10 +6667,15 @@
           <img id="productImagePreview" alt="Vista previa de la fotografía seleccionada" hidden>
           <span id="productImagePlaceholder">
             <b>Seleccionar fotografía</b>
-            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+            <small>JPG, PNG o WEBP · máximo 15 MB</small>
           </span>
           <input id="productImageFile" name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
         </label>
+
+        <div class="image-capture-actions">
+          <button class="secondary-button compact" id="captureProductImageButton" type="button">Usar cámara</button>
+          <small>En teléfono abre la cámara trasera; en computador puedes seleccionar un archivo.</small>
+        </div>
 
         <label class="form-field">
           <span>Descripción accesible</span>

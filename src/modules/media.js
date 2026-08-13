@@ -144,7 +144,7 @@ function mediaResponse(row) {
     sha256: row.sha256,
     metadata: row.metadata,
     createdAt: row.created_at,
-    url: `/api/media/assets/${row.id}/content`,
+    url: `/api/media/assets/${row.id}/content?tenantId=${encodeURIComponent(row.company_id)}`,
   };
 }
 

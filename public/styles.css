@@ -2537,6 +2537,30 @@ input:focus-visible {
   opacity: 0;
 }
 
+.image-capture-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -6px 0 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(79, 210, 233, 0.25);
+  border-radius: 14px;
+  background: rgba(79, 210, 233, 0.05);
+}
+
+.image-capture-actions small {
+  color: var(--color-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .image-capture-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .pos-section {
   padding-top: 110px;
 }

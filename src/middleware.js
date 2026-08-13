@@ -6,8 +6,14 @@ export function requestContext(req, _res, next) {
   const requestId = suppliedRequestId && suppliedRequestId.length <= 128
     ? suppliedRequestId
     : randomUUID();
+  // Las etiquetas <img> del navegador no pueden adjuntar x-tenant-id. Solo
+  // para contenido privado de medios permitimos el tenant como query string;
+  // sigue siendo validado por sesión, permisos y company_id en el endpoint.
+  const mediaContentTenant = req.path.match(/^\/api\/media\/assets\/[0-9a-f-]+\/content$/i)
+    ? req.query?.tenantId
+    : null;
   req.context = {
-    tenantId: req.header('x-tenant-id') || null,
+    tenantId: req.header('x-tenant-id') || mediaContentTenant || null,
     userId: null,
     authenticated: false,
     requestId,

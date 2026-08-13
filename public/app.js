@@ -695,6 +695,7 @@ const elements = {
   productImagePlaceholder: document.querySelector('#productImagePlaceholder'),
   productImageAlt: document.querySelector('#productImageAlt'),
   imageProductName: document.querySelector('#imageProductName'),
+  captureProductImageButton: document.querySelector('#captureProductImageButton'),
   closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
   cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
   saveProductImageButton: document.querySelector('#saveProductImageButton'),
@@ -15695,8 +15696,8 @@ function validateImageFile(file) {
   if (!file || !allowedTypes.includes(file.type)) {
     throw new Error('Selecciona una imagen JPG, PNG o WEBP.');
   }
-  if (file.size > 2 * 1024 * 1024) {
-    throw new Error('La imagen debe pesar máximo 2 MB.');
+  if (file.size > 15 * 1024 * 1024) {
+    throw new Error('La imagen debe pesar máximo 15 MB.');
   }
 }
 
@@ -15736,13 +15737,32 @@ function fileToDataUrl(file) {
 async function uploadProductImage(productId, file, altText) {
   validateImageFile(file);
   const dataUrl = await fileToDataUrl(file);
-  return getJson(`/api/products/${productId}/images`, {
+  const asset = await getJson('/api/media/assets', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-tenant-id': activeTenantId,
     },
-    body: JSON.stringify({ dataUrl, altText }),
+    body: JSON.stringify({
+      dataUrl,
+      fileName: file.name || 'producto.webp',
+      description: altText || null,
+    }),
+  });
+  return getJson('/api/media/links', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      mediaId: asset.id,
+      entityType: 'PRODUCT',
+      entityId: productId,
+      purpose: 'PRIMARY_IMAGE',
+      isPrimary: true,
+      note: altText || null,
+    }),
   });
 }
 
@@ -15849,6 +15869,13 @@ function previewProductImage() {
     elements.productImageFormError.textContent = error.message;
     elements.productImageFormError.hidden = false;
   }
+}
+
+function captureProductImage() {
+  // `capture` is intentionally used as a progressive enhancement: mobile
+  // browsers open the rear camera while desktops retain the normal file picker.
+  elements.productImageFile.setAttribute('capture', 'environment');
+  elements.productImageFile.click();
 }
 
 async function submitProductImage(event) {
@@ -17417,6 +17444,7 @@ elements.productComboAssemblyForm.addEventListener(
   submitProductComboAssembly,
 );
 elements.productImageFile.addEventListener('change', previewProductImage);
+elements.captureProductImageButton.addEventListener('click', captureProductImage);
 elements.closeProductImageDialog.addEventListener('click', closeProductImageDialog);
 elements.cancelProductImageButton.addEventListener('click', closeProductImageDialog);
 elements.productImageForm.addEventListener('submit', submitProductImage);

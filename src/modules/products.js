@@ -70,10 +70,22 @@ router.get('/lookup', asyncHandler(async (req, res) => {
      LEFT JOIN tax_categories tc
        ON tc.id = p.sales_tax_category_id AND tc.tenant_id = p.tenant_id
      LEFT JOIN LATERAL (
-       SELECT public_url
-       FROM product_images
-       WHERE tenant_id = p.tenant_id AND product_id = p.id
-       ORDER BY is_primary DESC, created_at
+       SELECT image_url public_url
+       FROM (
+         SELECT '/api/media/assets/' || media.id::text || '/content?tenantId=' || p.tenant_id::text image_url,
+                0 priority, link.created_at
+         FROM media_links link
+         JOIN media_assets media
+           ON media.id = link.media_id AND media.company_id = link.company_id
+         WHERE link.company_id = p.tenant_id AND link.entity_type = 'PRODUCT'
+           AND link.entity_id = p.id AND link.purpose = 'PRIMARY_IMAGE'
+           AND media.deleted_at IS NULL
+         UNION ALL
+         SELECT legacy.public_url, 1 priority, legacy.created_at
+         FROM product_images legacy
+         WHERE legacy.tenant_id = p.tenant_id AND legacy.product_id = p.id
+       ) image_source
+       ORDER BY priority, created_at DESC
        LIMIT 1
      ) pi ON TRUE
      LEFT JOIN LATERAL (
@@ -147,10 +159,23 @@ router.get('/', asyncHandler(async (req, res) => {
      LEFT JOIN brands b ON b.id = p.brand_id AND b.tenant_id = p.tenant_id
      LEFT JOIN tax_categories tc ON tc.id = p.sales_tax_category_id
      LEFT JOIN LATERAL (
-       SELECT public_url, alt_text
-       FROM product_images
-       WHERE tenant_id = p.tenant_id AND product_id = p.id
-       ORDER BY is_primary DESC, created_at
+       SELECT image_url public_url, image_alt alt_text
+       FROM (
+         SELECT '/api/media/assets/' || media.id::text || '/content?tenantId=' || p.tenant_id::text image_url,
+                COALESCE(NULLIF(media.metadata ->> 'description', ''), p.name) image_alt,
+                0 priority, link.created_at
+         FROM media_links link
+         JOIN media_assets media
+           ON media.id = link.media_id AND media.company_id = link.company_id
+         WHERE link.company_id = p.tenant_id AND link.entity_type = 'PRODUCT'
+           AND link.entity_id = p.id AND link.purpose = 'PRIMARY_IMAGE'
+           AND media.deleted_at IS NULL
+         UNION ALL
+         SELECT legacy.public_url, legacy.alt_text, 1 priority, legacy.created_at
+         FROM product_images legacy
+         WHERE legacy.tenant_id = p.tenant_id AND legacy.product_id = p.id
+       ) image_source
+       ORDER BY priority, created_at DESC
        LIMIT 1
      ) pi ON TRUE
      WHERE p.tenant_id = $1 AND p.deleted_at IS NULL
