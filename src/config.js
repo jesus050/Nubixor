@@ -49,7 +49,8 @@ function readOptionalUrl(name, value, protocols) {
 }
 
 function readCorsOrigins(value) {
-  const origins = (value || '*').split(',').map((origin) => origin.trim()).filter(Boolean);
+  const fallbackOrigins = 'http://localhost:4100,http://127.0.0.1:4100,http://localhost:5173,http://127.0.0.1:5173';
+  const origins = (value || fallbackOrigins).split(',').map((origin) => origin.trim()).filter(Boolean);
   if (origins.includes('*') && origins.length > 1) {
     throw new Error('CORS_ORIGINS no puede combinar "*" con orígenes específicos.');
   }

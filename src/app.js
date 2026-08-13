@@ -40,6 +40,7 @@ import billingWorkflowRouter from './modules/billing-workflow.js';
 import secureAssetsRouter from './modules/secure-assets.js';
 import secureFilesRouter from './modules/secure-files.js';
 import payrollRouter from './modules/payroll.js';
+import commercialPlanningRouter from './modules/commercial-planning.js';
 import { requireTenantModule } from './module-gates.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -155,6 +156,7 @@ export function createApp({
   application.use('/api/reports', reportsRouter);
   application.use('/api/electronic-billing', electronicBillingRouter);
   application.use('/api/billing-workflow', billingWorkflowRouter);
+  application.use('/api/commercial-planning', commercialPlanningRouter);
   application.use('/api/secure-files', secureFilesRouter);
 
   application.use(notFound);
