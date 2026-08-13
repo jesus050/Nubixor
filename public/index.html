@@ -2685,6 +2685,9 @@
                     <input id="posProductSearch" type="search" placeholder="Buscar nombre, SKU o código">
                     <kbd>/</kbd>
                   </label>
+                  <button class="secondary-button compact pos-scan-button" id="openPosScannerButton" type="button">
+                    Escanear código
+                  </button>
                   <label>
                     <span>Origen del inventario</span>
                     <select id="posWarehouseSelect">
@@ -6753,6 +6756,27 @@
         </div>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelPosVariantSelectorButton" type="button">Cancelar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="company-dialog pos-scanner-dialog" id="posScannerDialog" aria-labelledby="posScannerTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Caja · lectura rápida</p>
+            <h2 id="posScannerTitle">Escanear código</h2>
+          </div>
+          <button class="icon-button" id="closePosScannerDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="posScannerState">Apunta al código de barras o QR del producto.</p>
+        <div class="pos-scanner-frame">
+          <video id="posScannerVideo" playsinline muted aria-label="Vista de cámara para escanear"></video>
+          <span class="pos-scanner-guide" aria-hidden="true"></span>
+        </div>
+        <p class="scanner-support-copy">Si tu navegador no permite lectura desde cámara, escribe el SKU o código en el buscador de Caja.</p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPosScannerButton" type="button">Cerrar cámara</button>
         </div>
       </div>
     </dialog>

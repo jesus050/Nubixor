@@ -2599,6 +2599,14 @@ input:focus-visible {
   padding-top: 110px;
 }
 
+.pos-scan-button { white-space: nowrap; }
+.pos-scanner-dialog { width: min(520px, calc(100vw - 28px)); border-radius: 22px; }
+.pos-scanner-frame { position: relative; overflow: hidden; border-radius: 18px; background: #071226; aspect-ratio: 4 / 3; }
+.pos-scanner-frame video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.pos-scanner-guide { position: absolute; inset: 20% 10%; border: 2px solid var(--color-cyan); border-radius: 14px; box-shadow: 0 0 0 999px rgba(2, 8, 23, .26); pointer-events: none; }
+.scanner-support-copy { margin: 12px 0 0; color: var(--color-muted); font-size: 11px; line-height: 1.5; }
+@media (max-width: 640px) { .pos-scan-button { width: 100%; } .pos-scanner-frame { aspect-ratio: 3 / 4; } }
+
 .pos-state {
   display: inline-flex;
   padding: 8px 12px;

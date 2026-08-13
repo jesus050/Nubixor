@@ -888,6 +888,12 @@ const elements = {
   openSalesHistoryButton: document.querySelector('#openSalesHistoryButton'),
   posSaleHistoryCount: document.querySelector('#posSaleHistoryCount'),
   posProductSearch: document.querySelector('#posProductSearch'),
+  openPosScannerButton: document.querySelector('#openPosScannerButton'),
+  posScannerDialog: document.querySelector('#posScannerDialog'),
+  closePosScannerDialog: document.querySelector('#closePosScannerDialog'),
+  cancelPosScannerButton: document.querySelector('#cancelPosScannerButton'),
+  posScannerVideo: document.querySelector('#posScannerVideo'),
+  posScannerState: document.querySelector('#posScannerState'),
   posCategoryStrip: document.querySelector('#posCategoryStrip'),
   posProductGrid: document.querySelector('#posProductGrid'),
   posCatalogState: document.querySelector('#posCatalogState'),
@@ -1588,6 +1594,10 @@ let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
 let imageProductEntityType = 'PRODUCT';
+let posScannerStream = null;
+let posScannerFrame = null;
+let posScannerLastValue = null;
+let posScannerLastAt = 0;
 let taxProduct = null;
 let structuredProduct = null;
 let productStructure = null;
@@ -6269,6 +6279,109 @@ async function loadPosCatalog() {
     setPosCatalogState('No pudimos cargar las existencias', error.message, true);
     renderCart();
     throw error;
+  }
+}
+
+function stopPosScanner() {
+  if (posScannerFrame) cancelAnimationFrame(posScannerFrame);
+  posScannerFrame = null;
+  if (posScannerStream) {
+    posScannerStream.getTracks().forEach((track) => track.stop());
+  }
+  posScannerStream = null;
+  if (elements.posScannerVideo) elements.posScannerVideo.srcObject = null;
+}
+
+function closePosScanner() {
+  stopPosScanner();
+  if (elements.posScannerDialog?.open) elements.posScannerDialog.close();
+}
+
+function findScannedProduct(value) {
+  const normalized = normalizeSearch(value);
+  const exact = posCatalog.filter((product) =>
+    normalizeSearch(product.barcode || '') === normalized ||
+    normalizeSearch(product.sku || '') === normalized,
+  );
+  if (exact.length === 1) return { product: exact[0] };
+  const families = buildPosCatalogGroups(posCatalog).filter((group) =>
+    normalizeSearch(group.sku || '') === normalized ||
+    normalizeSearch(group.invoice_code || '') === normalized,
+  );
+  if (families.length === 1) return { family: families[0] };
+  return null;
+}
+
+async function scanPosFrame(detector) {
+  if (!posScannerStream || !elements.posScannerDialog?.open) return;
+  try {
+    const detections = await detector.detect(elements.posScannerVideo);
+    const value = detections.find((item) => item.rawValue)?.rawValue?.trim();
+    if (value) {
+      const now = Date.now();
+      if (value !== posScannerLastValue || now - posScannerLastAt > 1800) {
+        posScannerLastValue = value;
+        posScannerLastAt = now;
+        const match = findScannedProduct(value);
+        if (match?.product) {
+          addProductToCart(match.product);
+          elements.posScannerState.textContent = `${match.product.name} agregado a la venta.`;
+          if (navigator.vibrate) navigator.vibrate(80);
+          setTimeout(closePosScanner, 500);
+          return;
+        }
+        if (match?.family) {
+          elements.posScannerState.textContent = 'Código encontrado. Elige el color o presentación.';
+          closePosScanner();
+          if (match.family.isGrouped && match.family.variants.length > 1) {
+            openPosVariantSelectorModal(match.family);
+          } else {
+            addProductToCart(match.family.variants[0]);
+          }
+          return;
+        }
+        elements.posScannerState.textContent = `No encontramos el código ${value}. Intenta con el buscador.`;
+        if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+      }
+    }
+  } catch (error) {
+    elements.posScannerState.textContent = 'No pudimos leer este código. Alinea la cámara e intenta de nuevo.';
+  }
+  posScannerFrame = requestAnimationFrame(() => scanPosFrame(detector));
+}
+
+async function openPosScanner() {
+  if (!posSummary.openSession || !elements.posWarehouseSelect.value) {
+    showToast('Abre un turno y selecciona una bodega antes de escanear.');
+    return;
+  }
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+    showToast('Este navegador no permite escanear desde cámara. Usa el buscador de SKU o código.');
+    elements.posProductSearch.focus();
+    return;
+  }
+  stopPosScanner();
+  elements.posScannerState.textContent = 'Solicitando acceso a la cámara…';
+  elements.posScannerDialog.showModal();
+  try {
+    posScannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    elements.posScannerVideo.srcObject = posScannerStream;
+    await elements.posScannerVideo.play();
+    const detector = new BarcodeDetector({
+      formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'],
+    });
+    posScannerLastValue = null;
+    posScannerLastAt = 0;
+    elements.posScannerState.textContent = 'Apunta al código de barras o QR del producto.';
+    scanPosFrame(detector);
+  } catch (error) {
+    closePosScanner();
+    showToast(error?.name === 'NotAllowedError'
+      ? 'Permiso de cámara denegado. Puedes usar el buscador manual.'
+      : 'No pudimos abrir la cámara. Usa el buscador manual.');
   }
 }
 
@@ -17606,6 +17719,12 @@ elements.posWarehouseSelect.addEventListener('change', async () => {
   await loadPosCatalog().catch(() => {});
 });
 elements.posProductSearch.addEventListener('input', renderPosCatalog);
+elements.openPosScannerButton.addEventListener('click', openPosScanner);
+elements.closePosScannerDialog.addEventListener('click', closePosScanner);
+elements.cancelPosScannerButton.addEventListener('click', closePosScanner);
+elements.posScannerDialog.addEventListener('click', (event) => {
+  if (event.target === elements.posScannerDialog) closePosScanner();
+});
 elements.posProductSearch.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter') return;
   event.preventDefault();
