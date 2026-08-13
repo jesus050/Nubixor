@@ -383,6 +383,18 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/reports')) permissions = ['reports.view'];
   else if (path.startsWith('/api/electronic-billing')) permissions = ['billing.manage'];
   else if (path.startsWith('/api/billing-workflow')) permissions = ['billing.manage'];
+  else if (path.startsWith('/api/commercial-planning')) {
+    permissions = read
+      ? [
+        'commercial_planning.view',
+        'commercial_planning.manage',
+        'commercial_planning.marketing',
+        'commercial_planning.supervise',
+        'reports.view',
+        'sales.operate',
+      ]
+      : ['commercial_planning.manage', 'commercial_planning.marketing'];
+  }
   else if (path.startsWith('/api/secure-files')) {
     permissions = read
       ? ['documents.manage', 'audit.view', 'accounting.manage']

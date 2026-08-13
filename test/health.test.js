@@ -68,6 +68,11 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /data-view="facturacion"/);
   assert.match(response.text, /Cotizaciones y pedidos/);
   assert.match(response.text, /CUFE, CUDE y QR solo se muestran/);
+  assert.match(response.text, /data-view="planificacion-comercial"/);
+  assert.match(response.text, /Planificación Comercial/);
+  assert.match(response.text, /Metas, campañas y responsables/);
+  assert.match(response.text, /Productos por impulsar/);
+  assert.match(response.text, /Nueva iniciativa/);
   assert.match(response.text, /data-view="inventario"/);
   assert.match(response.text, /data-view="logistica"/);
   assert.match(response.text, /data-tenant-module-link="LOGISTICS"/);

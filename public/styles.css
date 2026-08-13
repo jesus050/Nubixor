@@ -7690,7 +7690,8 @@ footer {
 .product-structure-choice > button {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  gap: 2px 12px;
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
   padding: 16px;
   text-align: left;
   border: 1px solid var(--color-line);
@@ -7714,26 +7715,32 @@ footer {
   box-shadow: 0 12px 30px rgba(25, 37, 132, 0.1);
 }
 
-.product-structure-choice > button > span {
+.product-structure-choice > button > span,
+.product-structure-choice > button > svg {
   grid-row: 1 / span 2;
   display: grid;
   width: 44px;
   height: 44px;
+  min-width: 44px;
   place-items: center;
   border-radius: 13px;
   background: linear-gradient(140deg, rgba(79, 210, 233, 0.18), rgba(181, 65, 250, 0.15));
+  padding: 11px;
   font-size: 20px;
 }
 
 .product-structure-choice strong {
   align-self: end;
   font-size: 13px;
+  line-height: 1.25;
+  min-width: 0;
 }
 
 .product-structure-choice small {
   color: var(--color-muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.4;
+  min-width: 0;
 }
 
 .product-structure-panel {
@@ -7838,6 +7845,17 @@ footer {
   border: 1px solid var(--color-line);
   border-radius: 17px;
   background: rgba(247, 248, 255, 0.74);
+}
+
+.product-variant-form .form-grid {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.product-variant-form .form-guidance {
+  margin: 12px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .product-variant-form .dialog-actions {
@@ -8206,6 +8224,10 @@ footer {
 
 @media (max-width: 560px) {
   .product-structure-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .product-variant-form .form-grid {
     grid-template-columns: 1fr;
   }
 
@@ -17170,6 +17192,397 @@ main,
 }
 
 /* Terceros: una identidad comercial para clientes y proveedores. */
+
+.commercial-planning-section {
+  display: grid;
+  gap: 24px;
+}
+
+.commercial-planning-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.commercial-planning-kpis article,
+.commercial-plan-panel {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.commercial-planning-kpis article {
+  display: grid;
+  gap: 8px;
+  min-height: 104px;
+  padding: 18px;
+}
+
+.commercial-planning-kpis span,
+.commercial-plan-facts dt,
+.commercial-plan-row small,
+.commercial-initiative-row small {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.commercial-planning-kpis strong {
+  color: var(--color-ink-soft);
+  font-size: 1.35rem;
+}
+
+.commercial-planning-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 18px;
+}
+
+.commercial-marketing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 18px;
+}
+
+.commercial-plan-panel {
+  padding: 20px;
+}
+
+.commercial-plan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.commercial-plan-heading h3 {
+  margin: 4px 0 0;
+  color: var(--color-ink-soft);
+  font-size: 1.08rem;
+}
+
+.commercial-plan-heading > span,
+.commercial-plan-row > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-blue-light);
+  color: var(--color-blue);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.commercial-plan-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+.commercial-plan-facts div {
+  padding: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.commercial-plan-facts dd {
+  margin: 5px 0 0;
+  color: var(--color-ink-soft);
+  font-weight: 800;
+}
+
+.commercial-budget-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.commercial-budget-facts div:nth-child(4) {
+  background: linear-gradient(135deg, rgba(79, 210, 233, 0.16), rgba(181, 65, 250, 0.12));
+  border-color: rgba(79, 210, 233, 0.42);
+}
+
+.commercial-mini-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.commercial-mini-facts div {
+  padding: 11px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.commercial-mini-facts dt {
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.commercial-mini-facts dd {
+  margin: 4px 0 0;
+  color: var(--color-ink-soft);
+  font-weight: 900;
+}
+
+.commercial-plan-notes {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.commercial-plan-list,
+.commercial-initiative-list {
+  display: grid;
+  gap: 10px;
+}
+
+.commercial-compact-list {
+  display: grid;
+  gap: 9px;
+}
+
+.commercial-compact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+    #fff;
+}
+
+.commercial-compact-row div,
+.commercial-compact-row span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.commercial-compact-row strong {
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-compact-row small {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-compact-row b {
+  color: var(--color-ink-soft);
+  font-size: 0.84rem;
+  text-align: right;
+}
+
+.commercial-compact-row em {
+  justify-self: end;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(181, 65, 250, 0.1);
+  color: #7c3aed;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.commercial-plan-row,
+.commercial-initiative-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.commercial-plan-row div,
+.commercial-initiative-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.commercial-plan-row strong,
+.commercial-initiative-row strong {
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-plan-row b {
+  color: var(--color-green);
+  font-size: 0.92rem;
+}
+
+.commercial-initiative-panel {
+  margin-bottom: 28px;
+}
+
+.commercial-opportunity-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.commercial-opportunity-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.commercial-opportunity-filters label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.commercial-opportunity-filters select {
+  min-height: 38px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-ink-soft);
+}
+
+.commercial-opportunity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.commercial-opportunity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-left: 4px solid var(--color-rose);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.commercial-opportunity-row.medium {
+  border-left-color: var(--color-amber);
+}
+
+.commercial-opportunity-row.high {
+  border-left-color: var(--color-green);
+}
+
+.commercial-opportunity-row > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.commercial-opportunity-row strong {
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-opportunity-row p {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.commercial-opportunity-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.commercial-opportunity-metrics span {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.commercial-opportunity-metrics b {
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+}
+
+.commercial-opportunity-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.commercial-initiative-row {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 180px);
+  border-left: 4px solid var(--color-cyan);
+}
+
+.commercial-initiative-row.high {
+  border-left-color: var(--color-amber);
+}
+
+.commercial-initiative-row.critical {
+  border-left-color: var(--color-rose);
+}
+
+.commercial-initiative-row.low {
+  border-left-color: var(--color-green);
+}
+
+.commercial-status-select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-ink-soft);
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .commercial-planning-kpis,
+  .commercial-planning-grid,
+  .commercial-marketing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .commercial-plan-row,
+  .commercial-initiative-row,
+  .commercial-opportunity-row,
+  .commercial-opportunity-filters {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .commercial-opportunity-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commercial-budget-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .third-parties-section {
   display: grid;
   gap: 18px;

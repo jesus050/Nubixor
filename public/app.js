@@ -570,6 +570,59 @@ const elements = {
   promotionError: document.querySelector('#promotionError'),
   productPriceList: document.querySelector('#productPriceList'),
   promotionList: document.querySelector('#promotionList'),
+  commercialTargetRevenue: document.querySelector('#commercialTargetRevenue'),
+  commercialActualRevenue: document.querySelector('#commercialActualRevenue'),
+  commercialProgress: document.querySelector('#commercialProgress'),
+  commercialOpenInitiatives: document.querySelector('#commercialOpenInitiatives'),
+  commercialActualMargin: document.querySelector('#commercialActualMargin'),
+  commercialOpenPlans: document.querySelector('#commercialOpenPlans'),
+  commercialCurrentPlanName: document.querySelector('#commercialCurrentPlanName'),
+  commercialCurrentPlanStatus: document.querySelector('#commercialCurrentPlanStatus'),
+  commercialCurrentPlanPeriod: document.querySelector('#commercialCurrentPlanPeriod'),
+  commercialCurrentPlanOwner: document.querySelector('#commercialCurrentPlanOwner'),
+  commercialCurrentPlanNotes: document.querySelector('#commercialCurrentPlanNotes'),
+  commercialPlanCount: document.querySelector('#commercialPlanCount'),
+  commercialPlanList: document.querySelector('#commercialPlanList'),
+  commercialInitiativeCount: document.querySelector('#commercialInitiativeCount'),
+  commercialInitiativeList: document.querySelector('#commercialInitiativeList'),
+  commercialPlanningState: document.querySelector('#commercialPlanningState'),
+  commercialOpportunityCount: document.querySelector('#commercialOpportunityCount'),
+  commercialOpportunityRotation: document.querySelector('#commercialOpportunityRotation'),
+  commercialOpportunityPriority: document.querySelector('#commercialOpportunityPriority'),
+  commercialOpportunityCampaign: document.querySelector('#commercialOpportunityCampaign'),
+  commercialOpportunityList: document.querySelector('#commercialOpportunityList'),
+  commercialOpportunityState: document.querySelector('#commercialOpportunityState'),
+  commercialBudgetCount: document.querySelector('#commercialBudgetCount'),
+  commercialBudgetTotal: document.querySelector('#commercialBudgetTotal'),
+  commercialBudgetCommitted: document.querySelector('#commercialBudgetCommitted'),
+  commercialBudgetSpent: document.querySelector('#commercialBudgetSpent'),
+  commercialBudgetAvailable: document.querySelector('#commercialBudgetAvailable'),
+  commercialBudgetList: document.querySelector('#commercialBudgetList'),
+  commercialCampaignCount: document.querySelector('#commercialCampaignCount'),
+  commercialCampaignList: document.querySelector('#commercialCampaignList'),
+  commercialExpenseCount: document.querySelector('#commercialExpenseCount'),
+  commercialExpenseSpent: document.querySelector('#commercialExpenseSpent'),
+  commercialExpenseCommitted: document.querySelector('#commercialExpenseCommitted'),
+  commercialExpenseList: document.querySelector('#commercialExpenseList'),
+  reloadCommercialPlanningButton: document.querySelector('#reloadCommercialPlanningButton'),
+  newCommercialPlanButton: document.querySelector('#newCommercialPlanButton'),
+  newCommercialInitiativeButton: document.querySelector('#newCommercialInitiativeButton'),
+  commercialPlanDialog: document.querySelector('#commercialPlanDialog'),
+  commercialPlanForm: document.querySelector('#commercialPlanForm'),
+  commercialPlanBranchId: document.querySelector('#commercialPlanBranchId'),
+  commercialPlanOwnerId: document.querySelector('#commercialPlanOwnerId'),
+  commercialPlanFormError: document.querySelector('#commercialPlanFormError'),
+  closeCommercialPlanDialog: document.querySelector('#closeCommercialPlanDialog'),
+  cancelCommercialPlanButton: document.querySelector('#cancelCommercialPlanButton'),
+  saveCommercialPlanButton: document.querySelector('#saveCommercialPlanButton'),
+  commercialInitiativeDialog: document.querySelector('#commercialInitiativeDialog'),
+  commercialInitiativeForm: document.querySelector('#commercialInitiativeForm'),
+  commercialInitiativePlanId: document.querySelector('#commercialInitiativePlanId'),
+  commercialInitiativeResponsibleId: document.querySelector('#commercialInitiativeResponsibleId'),
+  commercialInitiativeFormError: document.querySelector('#commercialInitiativeFormError'),
+  closeCommercialInitiativeDialog: document.querySelector('#closeCommercialInitiativeDialog'),
+  cancelCommercialInitiativeButton: document.querySelector('#cancelCommercialInitiativeButton'),
+  saveCommercialInitiativeButton: document.querySelector('#saveCommercialInitiativeButton'),
   categoryList: document.querySelector('#categoryList'),
   brandList: document.querySelector('#brandList'),
   taxList: document.querySelector('#taxList'),
@@ -1425,6 +1478,19 @@ let comboCatalog = [];
 let pricingOverview = {
   lists: [], prices: [], promotions: [], products: [], customers: [],
 };
+let commercialPlanningOverview = {
+  current_plan: null,
+  plans: [],
+  initiatives: [],
+  actual_revenue: 0,
+  actual_margin: 0,
+  open_plans: 0,
+};
+let commercialPlanningPeople = [];
+let commercialOpportunities = [];
+let commercialBudgets = [];
+let commercialCampaigns = [];
+let commercialExpenses = [];
 let posSummary = { registers: [], openSession: null };
 let executiveSummary = {};
 let posCatalog = [];
@@ -4264,6 +4330,539 @@ async function loadCommercialCatalog() {
   ]);
   renderComboCatalog();
   renderPricingOverview();
+}
+
+function commercialStatusLabel(status) {
+  return {
+    DRAFT: 'Borrador',
+    ACTIVE: 'Activo',
+    REVIEW: 'En revisión',
+    CLOSED: 'Cerrado',
+    CANCELLED: 'Cancelado',
+    TODO: 'Pendiente',
+    IN_PROGRESS: 'En curso',
+    BLOCKED: 'Bloqueada',
+    DONE: 'Completada',
+  }[status] || status || 'Pendiente';
+}
+
+function commercialChannelLabel(channel) {
+  return {
+    STORE: 'Tienda',
+    WHOLESALE: 'Mayorista',
+    DIGITAL: 'Digital',
+    FIELD: 'Campo',
+    OTHER: 'Otro',
+  }[channel] || channel || 'Canal';
+}
+
+function commercialRotationLabel(rotation) {
+  return {
+    HIGH: 'Alta rotación',
+    MEDIUM: 'Rotación media',
+    LOW: 'Baja rotación',
+    NONE: 'Sin rotación',
+  }[rotation] || rotation || 'Sin datos';
+}
+
+function commercialCampaignStatusLabel(status) {
+  return {
+    DRAFT: 'Borrador',
+    PLANNED: 'Planeada',
+    APPROVED: 'Aprobada',
+    ACTIVE: 'Activa',
+    FINISHED: 'Finalizada',
+    EVALUATED: 'Evaluada',
+    CANCELLED: 'Cancelada',
+  }[status] || commercialStatusLabel(status);
+}
+
+function commercialExpenseStatusLabel(status) {
+  return {
+    COMMITTED: 'Comprometido',
+    SPENT: 'Gastado',
+    CANCELLED: 'Cancelado',
+  }[status] || status || 'Pendiente';
+}
+
+function syncCommercialPlanningOptions() {
+  const branchValue = elements.commercialPlanBranchId.value;
+  elements.commercialPlanBranchId.replaceChildren(new Option('Toda la empresa', ''));
+  for (const branch of branches.filter((item) => item.active !== false)) {
+    elements.commercialPlanBranchId.append(new Option(branch.name, branch.id));
+  }
+  if ([...elements.commercialPlanBranchId.options].some((option) => option.value === branchValue)) {
+    elements.commercialPlanBranchId.value = branchValue;
+  }
+
+  for (const select of [
+    elements.commercialPlanOwnerId,
+    elements.commercialInitiativeResponsibleId,
+  ]) {
+    const current = select.value;
+    select.replaceChildren(new Option('Sin asignar', ''));
+    for (const person of commercialPlanningPeople) {
+      select.append(new Option(person.full_name, person.id));
+    }
+    if ([...select.options].some((option) => option.value === current)) {
+      select.value = current;
+    }
+  }
+
+  const planValue = elements.commercialInitiativePlanId.value;
+  elements.commercialInitiativePlanId.replaceChildren();
+  for (const plan of commercialPlanningOverview.plans || []) {
+    if (!['CLOSED', 'CANCELLED'].includes(plan.status)) {
+      elements.commercialInitiativePlanId.append(new Option(plan.name, plan.id));
+    }
+  }
+  if ([...elements.commercialInitiativePlanId.options].some((option) => option.value === planValue)) {
+    elements.commercialInitiativePlanId.value = planValue;
+  } else if (commercialPlanningOverview.current_plan?.id) {
+    elements.commercialInitiativePlanId.value = commercialPlanningOverview.current_plan.id;
+  }
+}
+
+function renderCommercialCompactList(container, items, emptyMessage, buildRow) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'product-structure-empty';
+    empty.textContent = emptyMessage;
+    container.append(empty);
+    return;
+  }
+  for (const item of items.slice(0, 6)) {
+    container.append(buildRow(item));
+  }
+}
+
+function commercialCompactRow({ title, meta, value, status }) {
+  const row = document.createElement('article');
+  row.className = 'commercial-compact-row';
+  const copy = document.createElement('div');
+  const strong = document.createElement('strong');
+  strong.textContent = title || 'Sin nombre';
+  const small = document.createElement('small');
+  small.textContent = meta || '—';
+  copy.append(strong, small);
+  const aside = document.createElement('span');
+  if (value) {
+    const amount = document.createElement('b');
+    amount.textContent = value;
+    aside.append(amount);
+  }
+  if (status) {
+    const badge = document.createElement('em');
+    badge.textContent = status;
+    aside.append(badge);
+  }
+  row.append(copy, aside);
+  return row;
+}
+
+function renderCommercialMarketing() {
+  const budgets = commercialBudgets || [];
+  const campaigns = commercialCampaigns || [];
+  const expenses = commercialExpenses || [];
+
+  const budgetTotals = budgets.reduce((total, budget) => ({
+    total: total.total + Number(budget.total_budget || 0),
+    committed: total.committed + Number(budget.committed_budget || 0),
+    spent: total.spent + Number(budget.actual_spend || 0),
+    available: total.available + Number(budget.available_budget || 0),
+  }), { total: 0, committed: 0, spent: 0, available: 0 });
+  const expenseSpent = expenses
+    .filter((expense) => expense.status === 'SPENT')
+    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const expenseCommitted = expenses
+    .filter((expense) => expense.status === 'COMMITTED')
+    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
+  elements.commercialBudgetCount.textContent = String(budgets.length);
+  elements.commercialBudgetTotal.textContent = formatCurrency(budgetTotals.total);
+  elements.commercialBudgetCommitted.textContent = formatCurrency(budgetTotals.committed);
+  elements.commercialBudgetSpent.textContent = formatCurrency(budgetTotals.spent);
+  elements.commercialBudgetAvailable.textContent = formatCurrency(budgetTotals.available);
+  elements.commercialCampaignCount.textContent = String(campaigns.length);
+  elements.commercialExpenseCount.textContent = String(expenses.length);
+  elements.commercialExpenseSpent.textContent = formatCurrency(expenseSpent);
+  elements.commercialExpenseCommitted.textContent = formatCurrency(expenseCommitted);
+
+  renderCommercialCompactList(
+    elements.commercialBudgetList,
+    budgets,
+    'Todavía no hay presupuestos comerciales registrados.',
+    (budget) => commercialCompactRow({
+      title: budget.name,
+      meta: [
+        `${formatShortDate(budget.period_start)} – ${formatShortDate(budget.period_end)}`,
+        budget.responsible_name || 'Sin responsable',
+      ].join(' · '),
+      value: formatCurrency(budget.available_budget || 0),
+      status: commercialStatusLabel(budget.status),
+    }),
+  );
+
+  renderCommercialCompactList(
+    elements.commercialCampaignList,
+    campaigns,
+    'Todavía no hay campañas comerciales registradas.',
+    (campaign) => commercialCompactRow({
+      title: campaign.name,
+      meta: [
+        campaign.branch_name || 'Toda la empresa',
+        campaign.responsible_name || 'Sin responsable',
+        `${Number(campaign.product_count || 0)} productos`,
+      ].join(' · '),
+      value: formatCurrency(campaign.approved_budget || 0),
+      status: commercialCampaignStatusLabel(campaign.status),
+    }),
+  );
+
+  renderCommercialCompactList(
+    elements.commercialExpenseList,
+    expenses,
+    'Todavía no hay gastos de marketing registrados.',
+    (expense) => commercialCompactRow({
+      title: expense.description,
+      meta: [
+        expense.campaign_name || expense.budget_name || 'Sin campaña',
+        formatShortDate(expense.expense_date),
+      ].filter(Boolean).join(' · '),
+      value: formatCurrency(expense.amount || 0),
+      status: commercialExpenseStatusLabel(expense.status),
+    }),
+  );
+}
+
+function renderCommercialOpportunities() {
+  elements.commercialOpportunityList.replaceChildren();
+  elements.commercialOpportunityCount.textContent = String(commercialOpportunities.length);
+  elements.commercialOpportunityState.hidden = Boolean(commercialOpportunities.length);
+  if (!commercialOpportunities.length) return;
+  for (const opportunity of commercialOpportunities.slice(0, 20)) {
+    const row = document.createElement('article');
+    row.className = `commercial-opportunity-row ${opportunity.rotation_class?.toLowerCase() || 'none'}`;
+    const identity = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = opportunity.product_name;
+    const meta = document.createElement('small');
+    meta.textContent = [
+      opportunity.sku,
+      opportunity.category_name || 'Sin categoría',
+      opportunity.season_names || null,
+      `${formatQuantity(opportunity.stock_on_hand)} en stock`,
+    ].filter(Boolean).join(' · ');
+    const recommendation = document.createElement('p');
+    recommendation.textContent = opportunity.recommendation ||
+      'Revisar comportamiento comercial antes de programar campaña.';
+    identity.append(title, meta, recommendation);
+
+    const metrics = document.createElement('div');
+    metrics.className = 'commercial-opportunity-metrics';
+    for (const [label, value] of [
+      ['Ventas', formatQuantity(opportunity.net_units_sold)],
+      ['Margen', `${Number(opportunity.gross_margin_percent || 0).toFixed(1)}%`],
+      ['Cobertura', opportunity.coverage_days ? `${Number(opportunity.coverage_days).toFixed(0)} días` : '—'],
+      ['Rotación', commercialRotationLabel(opportunity.rotation_class)],
+    ]) {
+      const item = document.createElement('span');
+      item.innerHTML = `<small>${label}</small><b>${value}</b>`;
+      metrics.append(item);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'commercial-opportunity-actions';
+    const campaign = document.createElement('button');
+    campaign.type = 'button';
+    campaign.className = 'primary-button compact';
+    campaign.textContent = 'Crear campaña';
+    campaign.addEventListener('click', () => {
+      openCommercialInitiativeDialog();
+      showToast('Crea una iniciativa y asóciala a una campaña en la siguiente fase.');
+    });
+    const follow = document.createElement('button');
+    follow.type = 'button';
+    follow.className = 'secondary-button compact';
+    follow.textContent = 'Seguimiento';
+    follow.addEventListener('click', async () => {
+      await getJson(`/api/commercial-planning/opportunities/${opportunity.product_id}/follow-up`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ reason: opportunity.recommendation || 'Seguimiento comercial' }),
+      });
+      showToast('Producto marcado para seguimiento comercial.');
+    });
+    actions.append(campaign, follow);
+    row.append(identity, metrics, actions);
+    elements.commercialOpportunityList.append(row);
+  }
+}
+
+function renderCommercialPlanning() {
+  const overview = commercialPlanningOverview || {};
+  const plan = overview.current_plan;
+  const canManage = hasAnyPermission('commercial_planning.manage');
+  const targetRevenue = Number(plan?.target_revenue || 0);
+  const actualRevenue = Number(overview.actual_revenue || 0);
+  const actualMargin = Number(overview.actual_margin || 0);
+  const progress = targetRevenue > 0
+    ? Math.min(999, Math.round((actualRevenue / targetRevenue) * 100))
+    : 0;
+  const openInitiatives = (overview.initiatives || [])
+    .filter((initiative) => !['DONE', 'CANCELLED'].includes(initiative.status)).length;
+
+  elements.commercialTargetRevenue.textContent = formatCurrency(targetRevenue);
+  elements.commercialActualRevenue.textContent = formatCurrency(actualRevenue);
+  elements.commercialActualMargin.textContent = formatCurrency(actualMargin);
+  elements.commercialProgress.textContent = `${progress}%`;
+  elements.commercialOpenPlans.textContent = String(overview.open_plans || 0);
+  elements.commercialOpenInitiatives.textContent = String(openInitiatives);
+  elements.commercialCurrentPlanName.textContent = plan?.name || 'Sin plan activo';
+  elements.commercialCurrentPlanStatus.textContent = commercialStatusLabel(plan?.status);
+  elements.commercialCurrentPlanPeriod.textContent = plan
+    ? `${formatShortDate(plan.period_start)} – ${formatShortDate(plan.period_end)}`
+    : '—';
+  elements.commercialCurrentPlanOwner.textContent = plan?.owner_name || 'Sin asignar';
+  elements.commercialCurrentPlanNotes.textContent =
+    plan?.notes || 'Crea un plan para activar seguimiento comercial por empresa o sucursal.';
+  elements.newCommercialPlanButton.disabled = !canManage;
+  elements.newCommercialInitiativeButton.disabled = !canManage;
+  renderCommercialMarketing();
+  renderCommercialOpportunities();
+
+  elements.commercialPlanList.replaceChildren();
+  elements.commercialPlanCount.textContent = String((overview.plans || []).length);
+  if (!(overview.plans || []).length) {
+    const empty = document.createElement('p');
+    empty.className = 'product-structure-empty';
+    empty.textContent = 'Todavía no hay planes comerciales registrados.';
+    elements.commercialPlanList.append(empty);
+  }
+  for (const item of overview.plans || []) {
+    const row = document.createElement('article');
+    row.className = 'commercial-plan-row';
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = item.name;
+    const meta = document.createElement('small');
+    meta.textContent = [
+      item.branch_name || 'Toda la empresa',
+      `${formatShortDate(item.period_start)} – ${formatShortDate(item.period_end)}`,
+      `${Number(item.initiative_count || 0)} iniciativas`,
+    ].join(' · ');
+    copy.append(title, meta);
+    const value = document.createElement('b');
+    value.textContent = formatCurrency(item.target_revenue);
+    const status = document.createElement('span');
+    status.textContent = commercialStatusLabel(item.status);
+    row.append(copy, value, status);
+    elements.commercialPlanList.append(row);
+  }
+
+  elements.commercialInitiativeList.replaceChildren();
+  elements.commercialInitiativeCount.textContent = String((overview.initiatives || []).length);
+  elements.commercialPlanningState.hidden = Boolean((overview.initiatives || []).length);
+  for (const initiative of overview.initiatives || []) {
+    const row = document.createElement('article');
+    row.className = `commercial-initiative-row ${initiative.priority?.toLowerCase() || 'medium'}`;
+    const copy = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = initiative.title;
+    const meta = document.createElement('small');
+    meta.textContent = [
+      commercialChannelLabel(initiative.channel),
+      initiative.responsible_name || 'Sin responsable',
+      initiative.due_date ? `vence ${formatShortDate(initiative.due_date)}` : null,
+      formatCurrency(initiative.expected_revenue || 0),
+    ].filter(Boolean).join(' · ');
+    copy.append(title, meta);
+    const status = document.createElement('select');
+    status.className = 'commercial-status-select';
+    for (const value of ['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED']) {
+      status.append(new Option(commercialStatusLabel(value), value));
+    }
+    status.value = initiative.status;
+    status.addEventListener('change', async () => {
+      await getJson(`/api/commercial-planning/initiatives/${initiative.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenantId,
+        },
+        body: JSON.stringify({ status: status.value }),
+      });
+      await loadCommercialPlanning();
+      showToast('Estado de iniciativa actualizado.');
+    });
+    row.append(copy, status);
+    elements.commercialInitiativeList.append(row);
+  }
+  syncCommercialPlanningOptions();
+}
+
+function showCommercialPlanningError(message) {
+  commercialPlanningOverview = {
+    current_plan: null,
+    plans: [],
+    initiatives: [],
+    actual_revenue: 0,
+    actual_margin: 0,
+    open_plans: 0,
+  };
+  commercialBudgets = [];
+  commercialCampaigns = [];
+  commercialExpenses = [];
+  renderCommercialPlanning();
+  elements.commercialPlanningState.hidden = false;
+  elements.commercialPlanningState.classList.add('error');
+  elements.commercialPlanningState.querySelector('strong').textContent =
+    'No pudimos cargar la planificación comercial';
+  elements.commercialPlanningState.querySelector('p').textContent = message;
+}
+
+async function loadCommercialPlanning() {
+  if (!activeTenantId ||
+      !hasAnyPermission(
+        'commercial_planning.view',
+        'commercial_planning.manage',
+        'commercial_planning.marketing',
+        'commercial_planning.supervise',
+        'reports.view',
+        'sales.operate',
+      )) {
+    commercialPlanningPeople = [];
+    commercialOpportunities = [];
+    commercialBudgets = [];
+    commercialCampaigns = [];
+    commercialExpenses = [];
+    showCommercialPlanningError('Tu usuario no tiene permiso para consultar planificación comercial.');
+    return null;
+  }
+  try {
+    const headers = { 'x-tenant-id': activeTenantId };
+    const opportunityParams = new URLSearchParams();
+    if (elements.commercialOpportunityRotation.value) {
+      opportunityParams.set('rotation', elements.commercialOpportunityRotation.value);
+    }
+    if (elements.commercialOpportunityPriority.value) {
+      opportunityParams.set('priority', elements.commercialOpportunityPriority.value);
+    }
+    if (elements.commercialOpportunityCampaign.value) {
+      opportunityParams.set('campaign', elements.commercialOpportunityCampaign.value);
+    }
+    const opportunityUrl = `/api/commercial-planning/opportunities${
+      opportunityParams.toString() ? `?${opportunityParams}` : ''
+    }`;
+    [
+      commercialPlanningOverview,
+      commercialPlanningPeople,
+      commercialOpportunities,
+      commercialBudgets,
+      commercialCampaigns,
+      commercialExpenses,
+    ] = await Promise.all([
+      getJson('/api/commercial-planning/overview', { headers }),
+      getJson('/api/commercial-planning/people', { headers }),
+      getJson(opportunityUrl, { headers }),
+      getJson('/api/commercial-planning/budgets', { headers }),
+      getJson('/api/commercial-planning/campaigns', { headers }),
+      getJson('/api/commercial-planning/expenses', { headers }),
+    ]);
+    elements.commercialPlanningState.classList.remove('error');
+    renderCommercialPlanning();
+    return commercialPlanningOverview;
+  } catch (error) {
+    showCommercialPlanningError(error.message);
+    return null;
+  }
+}
+
+function openCommercialPlanDialog() {
+  elements.commercialPlanForm.reset();
+  elements.commercialPlanFormError.hidden = true;
+  syncCommercialPlanningOptions();
+  const today = new Date();
+  const start = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+  const end = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0));
+  elements.commercialPlanForm.elements.periodStart.value = start.toISOString().slice(0, 10);
+  elements.commercialPlanForm.elements.periodEnd.value = end.toISOString().slice(0, 10);
+  elements.commercialPlanForm.elements.targetRevenue.value = '0';
+  elements.commercialPlanDialog.showModal();
+}
+
+function closeCommercialPlanDialog() {
+  elements.commercialPlanDialog.close();
+}
+
+async function submitCommercialPlan(event) {
+  event.preventDefault();
+  elements.commercialPlanFormError.hidden = true;
+  elements.saveCommercialPlanButton.disabled = true;
+  try {
+    const data = new FormData(elements.commercialPlanForm);
+    await getJson('/api/commercial-planning/plans', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
+    closeCommercialPlanDialog();
+    await loadCommercialPlanning();
+    showToast('Plan comercial creado.');
+  } catch (error) {
+    elements.commercialPlanFormError.textContent = error.message;
+    elements.commercialPlanFormError.hidden = false;
+  } finally {
+    elements.saveCommercialPlanButton.disabled = false;
+  }
+}
+
+function openCommercialInitiativeDialog() {
+  if (!(commercialPlanningOverview.plans || []).some((plan) => !['CLOSED', 'CANCELLED'].includes(plan.status))) {
+    showToast('Crea un plan comercial antes de agregar iniciativas.');
+    return;
+  }
+  elements.commercialInitiativeForm.reset();
+  elements.commercialInitiativeFormError.hidden = true;
+  syncCommercialPlanningOptions();
+  elements.commercialInitiativeDialog.showModal();
+}
+
+function closeCommercialInitiativeDialog() {
+  elements.commercialInitiativeDialog.close();
+}
+
+async function submitCommercialInitiative(event) {
+  event.preventDefault();
+  elements.commercialInitiativeFormError.hidden = true;
+  elements.saveCommercialInitiativeButton.disabled = true;
+  try {
+    const data = new FormData(elements.commercialInitiativeForm);
+    await getJson('/api/commercial-planning/initiatives', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+      },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
+    closeCommercialInitiativeDialog();
+    await loadCommercialPlanning();
+    showToast('Iniciativa comercial creada.');
+  } catch (error) {
+    elements.commercialInitiativeFormError.textContent = error.message;
+    elements.commercialInitiativeFormError.hidden = false;
+  } finally {
+    elements.saveCommercialInitiativeButton.disabled = false;
+  }
 }
 
 async function submitProductPrice(event) {
@@ -11871,6 +12470,7 @@ async function refreshTenantData() {
     showReceivableError('Primero debes registrar o seleccionar una empresa.');
     showAuditError('Primero debes registrar o seleccionar una empresa.');
     showReportsError('Primero debes registrar o seleccionar una empresa.');
+    showCommercialPlanningError('Primero debes registrar o seleccionar una empresa.');
     setExecutiveSummary();
     setMetric(elements.branchCount, elements.branchDetail, { status: 'rejected' }, ['sucursal', 'sucursales']);
     setMetric(elements.warehouseCount, elements.warehouseDetail, { status: 'rejected' }, ['bodega registrada', 'bodegas registradas']);
@@ -11929,6 +12529,15 @@ async function refreshTenantData() {
     hasAnyPermission('reports.view') ? loadReports() : Promise.resolve({}),
     hasAnyPermission('billing.manage') ? loadElectronicBilling() : Promise.resolve({}),
     hasAnyPermission('billing.manage') ? loadBillingWorkflow() : Promise.resolve({}),
+    hasAnyPermission(
+      'commercial_planning.view',
+      'commercial_planning.manage',
+      'commercial_planning.marketing',
+      'commercial_planning.supervise',
+      'reports.view',
+      'sales.operate',
+    )
+      ? loadCommercialPlanning() : Promise.resolve({}),
     hasAnyPermission('parties.view', 'parties.manage')
       ? loadThirdParties() : Promise.resolve([]),
     isTenantModuleEnabled('LOGISTICS') &&
@@ -13889,6 +14498,7 @@ const viewTitles = {
   caja: 'Caja & POS',
   cartera: 'Cuentas por cobrar',
   facturacion: 'Facturación',
+  'planificacion-comercial': 'Planificación comercial',
   reportes: 'Reportes',
   modulos: 'Mapa del ERP',
   auditoria: 'Auditoría',
@@ -16733,6 +17343,34 @@ elements.customerPriceListForm.addEventListener(
   submitCustomerPriceList,
 );
 elements.promotionForm.addEventListener('submit', submitPromotion);
+elements.reloadCommercialPlanningButton.addEventListener('click', () => {
+  loadCommercialPlanning()
+    .then(() => showToast('Planificación comercial actualizada.'))
+    .catch(() => showToast('No fue posible actualizar la planificación.'));
+});
+elements.newCommercialPlanButton.addEventListener('click', openCommercialPlanDialog);
+elements.newCommercialInitiativeButton.addEventListener('click', openCommercialInitiativeDialog);
+elements.closeCommercialPlanDialog.addEventListener('click', closeCommercialPlanDialog);
+elements.cancelCommercialPlanButton.addEventListener('click', closeCommercialPlanDialog);
+elements.commercialPlanForm.addEventListener('submit', submitCommercialPlan);
+elements.commercialPlanDialog.addEventListener('click', (event) => {
+  if (event.target === elements.commercialPlanDialog) closeCommercialPlanDialog();
+});
+elements.closeCommercialInitiativeDialog.addEventListener('click', closeCommercialInitiativeDialog);
+elements.cancelCommercialInitiativeButton.addEventListener('click', closeCommercialInitiativeDialog);
+elements.commercialInitiativeForm.addEventListener('submit', submitCommercialInitiative);
+elements.commercialInitiativeDialog.addEventListener('click', (event) => {
+  if (event.target === elements.commercialInitiativeDialog) closeCommercialInitiativeDialog();
+});
+[
+  elements.commercialOpportunityRotation,
+  elements.commercialOpportunityPriority,
+  elements.commercialOpportunityCampaign,
+].forEach((select) => {
+  select.addEventListener('change', () => {
+    loadCommercialPlanning().catch(() => showToast('No fue posible filtrar oportunidades.'));
+  });
+});
 elements.pricingCustomerId.addEventListener('change', () => {
   const customer = pricingOverview.customers.find(
     (item) => item.id === elements.pricingCustomerId.value,
@@ -17335,6 +17973,7 @@ async function triggerRealtimeDataRefresh({ force = false } = {}) {
       },
       cartera: () => loadReceivables(),
       facturacion: () => Promise.all([loadElectronicBilling(), loadBillingWorkflow()]),
+      'planificacion-comercial': () => loadCommercialPlanning(),
       reportes: () => loadReports(),
       auditoria: () => Promise.all([loadAudit(), loadAuditReadiness()]),
     };
