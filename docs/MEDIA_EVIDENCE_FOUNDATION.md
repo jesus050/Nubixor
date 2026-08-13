@@ -132,11 +132,15 @@ Nota: mientras el upload use JSON `dataUrl`, `JSON_BODY_LIMIT` puede ser el lím
 
 ## Pendiente para Fase 2
 
-- UI de catálogo con pestañas “Imágenes” y “Evidencias”.
+- Pestaña independiente de evidencias por proceso operativo.
 - La fotografía principal del catálogo ya se guarda mediante `media_assets` y
   `media_links`; Catálogo y Caja la priorizan sin romper las imágenes históricas.
 - El diálogo de imagen incluye **Usar cámara** como mejora progresiva: en móvil
   solicita la cámara trasera y si no está disponible conserva el selector de archivo.
+- Galería comercial de producto: fotos adicionales, cambio de foto principal y
+  retiro de una relación sin borrar el archivo de auditoría.
+- Foto específica para una variante desde “Administrar colores”. Si no existe,
+  el punto de venta sigue usando la fotografía del producto principal.
 - Drag & drop.
 - Escáner de código de barras/QR.
 - Generación real de thumbnails/optimización con librería dedicada.

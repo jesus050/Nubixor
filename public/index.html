@@ -6682,6 +6682,25 @@
           <input id="productImageAlt" name="altText" type="text" maxlength="180" placeholder="Ej. Vista frontal del producto">
         </label>
 
+        <label class="product-image-primary-toggle">
+          <input id="productImageMakePrimary" name="makePrimary" type="checkbox" checked>
+          <span>
+            <strong>Usar como imagen principal</strong>
+            <small>Si la desactivas, se guarda únicamente en la galería comercial.</small>
+          </span>
+        </label>
+
+        <section class="product-media-gallery" aria-labelledby="productMediaGalleryTitle">
+          <div class="product-media-gallery__heading">
+            <div>
+              <p class="eyebrow">Galería comercial</p>
+              <h3 id="productMediaGalleryTitle">Fotografías del producto</h3>
+            </div>
+            <small id="productMediaGalleryState">Cargando…</small>
+          </div>
+          <div class="product-media-gallery__grid" id="productMediaGallery"></div>
+        </section>
+
         <p class="form-error" id="productImageFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelProductImageButton" type="button">Volver sin guardar</button>

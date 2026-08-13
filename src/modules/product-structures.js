@@ -133,7 +133,9 @@ router.get(
       const [variants, components, assemblies] = await Promise.all([
         client.query(
           `SELECT child.*,
-                  COALESCE(stock.total,0) total_stock
+                  COALESCE(stock.total,0) total_stock,
+                  image_source.image_url,
+                  image_source.image_alt
            FROM products child
            LEFT JOIN LATERAL (
              SELECT SUM(balance.on_hand) total
@@ -141,6 +143,20 @@ router.get(
              WHERE balance.tenant_id=child.tenant_id
                AND balance.product_id=child.id
            ) stock ON TRUE
+           LEFT JOIN LATERAL (
+             SELECT '/api/media/assets/' || media.id::text || '/content?tenantId=' || child.tenant_id::text image_url,
+                    COALESCE(NULLIF(media.metadata ->> 'description', ''), child.name) image_alt
+             FROM media_links link
+             JOIN media_assets media
+               ON media.id = link.media_id AND media.company_id = link.company_id
+             WHERE link.company_id = child.tenant_id
+               AND link.entity_type = 'PRODUCT_VARIANT'
+               AND link.entity_id = child.id
+               AND link.purpose = 'PRIMARY_IMAGE'
+               AND media.deleted_at IS NULL
+             ORDER BY link.created_at DESC
+             LIMIT 1
+           ) image_source ON TRUE
            WHERE child.tenant_id=$1
              AND (
                child.parent_product_id = $2

@@ -694,8 +694,11 @@ const elements = {
   productImagePreview: document.querySelector('#productImagePreview'),
   productImagePlaceholder: document.querySelector('#productImagePlaceholder'),
   productImageAlt: document.querySelector('#productImageAlt'),
+  productImageMakePrimary: document.querySelector('#productImageMakePrimary'),
   imageProductName: document.querySelector('#imageProductName'),
   captureProductImageButton: document.querySelector('#captureProductImageButton'),
+  productMediaGallery: document.querySelector('#productMediaGallery'),
+  productMediaGalleryState: document.querySelector('#productMediaGalleryState'),
   closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
   cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
   saveProductImageButton: document.querySelector('#saveProductImageButton'),
@@ -1584,6 +1587,7 @@ const saleCart = new Map();
 let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
+let imageProductEntityType = 'PRODUCT';
 let taxProduct = null;
 let structuredProduct = null;
 let productStructure = null;
@@ -3942,6 +3946,12 @@ function renderProducts() {
         vWrap.append(treeConnector, vBadge, vName);
 
         if (hasAnyPermission('catalog.manage')) {
+          const vImageBtn = document.createElement('button');
+          vImageBtn.type = 'button';
+          vImageBtn.className = 'photo-action';
+          vImageBtn.style.cssText = 'margin-left:8px; font-size:11px; padding:4px 7px;';
+          vImageBtn.textContent = variant.image_url ? 'Cambiar foto' : 'Foto del color';
+          vImageBtn.addEventListener('click', () => openProductImageDialog(variant));
           const vDeleteBtn = document.createElement('button');
           vDeleteBtn.type = 'button';
           vDeleteBtn.style.cssText = 'color:#ef4444; background:none; border:none; cursor:pointer; font-size:12px; margin-left:8px; font-weight:600; display:inline-flex; align-items:center; gap:3px;';
@@ -3960,7 +3970,7 @@ function renderProducts() {
               }
             }
           });
-          vWrap.append(vDeleteBtn);
+          vWrap.append(vImageBtn, vDeleteBtn);
         }
 
         vNameCell.append(vWrap);
@@ -15486,7 +15496,12 @@ function renderProductStructure() {
       }
     });
 
-    values.append(price, stock, delBtn);
+    const imageBtn = document.createElement('button');
+    imageBtn.type = 'button';
+    imageBtn.className = 'photo-action';
+    imageBtn.textContent = variant.image_url ? 'Cambiar foto' : 'Foto del color';
+    imageBtn.addEventListener('click', () => openProductImageDialog(variant));
+    values.append(price, stock, imageBtn, delBtn);
     card.append(copy, values);
     elements.productVariantList.append(card);
   });
@@ -15734,7 +15749,10 @@ function fileToDataUrl(file) {
   });
 }
 
-async function uploadProductImage(productId, file, altText) {
+async function uploadProductImage(productId, file, altText, {
+  entityType = 'PRODUCT',
+  makePrimary = true,
+} = {}) {
   validateImageFile(file);
   const dataUrl = await fileToDataUrl(file);
   const asset = await getJson('/api/media/assets', {
@@ -15757,10 +15775,10 @@ async function uploadProductImage(productId, file, altText) {
     },
     body: JSON.stringify({
       mediaId: asset.id,
-      entityType: 'PRODUCT',
+      entityType,
       entityId: productId,
-      purpose: 'PRIMARY_IMAGE',
-      isPrimary: true,
+      purpose: makePrimary ? 'PRIMARY_IMAGE' : 'GALLERY',
+      isPrimary: makePrimary,
       note: altText || null,
     }),
   });
@@ -15836,14 +15854,98 @@ function resetProductImagePreview() {
   elements.productImagePlaceholder.hidden = false;
 }
 
+function clearProductMediaGallery(message = 'Sin fotografías adicionales') {
+  elements.productMediaGallery.replaceChildren();
+  elements.productMediaGalleryState.textContent = message;
+}
+
+async function loadProductMediaGallery() {
+  if (!imageProduct) return;
+  clearProductMediaGallery('Cargando…');
+  try {
+    const links = await getJson(
+      `/api/media/links?entityType=${encodeURIComponent(imageProductEntityType)}` +
+      `&entityId=${encodeURIComponent(imageProduct.id)}`,
+    );
+    elements.productMediaGallery.replaceChildren();
+    elements.productMediaGalleryState.textContent = links.length
+      ? `${links.length} ${links.length === 1 ? 'foto' : 'fotos'}`
+      : 'Sin fotografías';
+    if (!links.length) return;
+    links.forEach((link) => {
+      const card = document.createElement('article');
+      card.className = 'product-media-gallery__item';
+      const image = document.createElement('img');
+      image.src = resolvePublicAsset(link.media.url);
+      image.alt = link.media.metadata?.description || imageProduct.name;
+      const actions = document.createElement('div');
+      const status = document.createElement('small');
+      status.textContent = link.isPrimary ? 'Principal' : 'Galería';
+      actions.append(status);
+      if (!link.isPrimary) {
+        const makePrimary = document.createElement('button');
+        makePrimary.type = 'button';
+        makePrimary.className = 'photo-action';
+        makePrimary.textContent = 'Usar como principal';
+        makePrimary.addEventListener('click', async () => {
+          makePrimary.disabled = true;
+          try {
+            await getJson(`/api/media/links/${link.id}/primary`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Imagen principal seleccionada desde catálogo' }),
+            });
+            await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+            showToast('Imagen principal actualizada.');
+          } catch (error) {
+            showToast(error.message);
+            makePrimary.disabled = false;
+          }
+        });
+        actions.append(makePrimary);
+      }
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'photo-action danger-action';
+      remove.textContent = 'Quitar';
+      remove.addEventListener('click', async () => {
+        if (!confirm('¿Quitar esta fotografía de la galería? El archivo queda conservado para auditoría.')) return;
+        remove.disabled = true;
+        try {
+          await getJson(`/api/media/links/${link.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Fotografía retirada desde catálogo' }),
+          });
+          await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+          showToast('Fotografía retirada de la galería.');
+        } catch (error) {
+          showToast(error.message);
+          remove.disabled = false;
+        }
+      });
+      actions.append(remove);
+      card.append(image, actions);
+      elements.productMediaGallery.append(card);
+    });
+  } catch (error) {
+    clearProductMediaGallery('No fue posible cargar la galería');
+  }
+}
+
 function openProductImageDialog(product) {
   imageProduct = product;
+  imageProductEntityType = product.product_kind === 'VARIANT' ? 'PRODUCT_VARIANT' : 'PRODUCT';
   elements.productImageForm.reset();
   elements.productImageFormError.hidden = true;
-  elements.imageProductName.textContent = product.name;
+  elements.imageProductName.textContent = imageProductEntityType === 'PRODUCT_VARIANT'
+    ? `${product.name} · imagen específica de la variante`
+    : product.name;
   elements.productImageAlt.value = product.name;
+  elements.productImageMakePrimary.checked = true;
   resetProductImagePreview();
   elements.productImageDialog.showModal();
+  loadProductMediaGallery();
   elements.productImageFile.focus();
 }
 
@@ -15851,6 +15953,7 @@ function closeProductImageDialog() {
   elements.productImageDialog.close();
   resetProductImagePreview();
   imageProduct = null;
+  imageProductEntityType = 'PRODUCT';
 }
 
 function previewProductImage() {
@@ -15885,10 +15988,15 @@ async function submitProductImage(event) {
   elements.saveProductImageButton.disabled = true;
   elements.saveProductImageButton.textContent = 'Guardando fotografía…';
   try {
-    await uploadProductImage(imageProduct.id, file, elements.productImageAlt.value);
-    closeProductImageDialog();
-    await loadCatalog();
-    showToast('Fotografía principal actualizada.');
+    const makePrimary = elements.productImageMakePrimary.checked;
+    await uploadProductImage(imageProduct.id, file, elements.productImageAlt.value, {
+      entityType: imageProductEntityType,
+      makePrimary,
+    });
+    elements.productImageFile.value = '';
+    resetProductImagePreview();
+    await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+    showToast(makePrimary ? 'Fotografía principal actualizada.' : 'Fotografía agregada a la galería.');
   } catch (error) {
     elements.productImageFormError.textContent = error.message;
     elements.productImageFormError.hidden = false;

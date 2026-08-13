@@ -426,6 +426,62 @@ router.get('/links', asyncHandler(async (req, res) => {
   })));
 }));
 
+router.patch('/links/:id/primary', asyncHandler(async (req, res) => {
+  const linkId = normalizeUuid(req.params.id, 'linkId');
+  const reason = typeof req.body?.reason === 'string'
+    ? req.body.reason.trim().slice(0, 500) || null
+    : null;
+  const promoted = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT link.*, media.original_filename
+       FROM media_links link
+       JOIN media_assets media
+         ON media.id = link.media_id AND media.company_id = link.company_id
+       WHERE link.id = $1 AND link.company_id = $2 AND media.deleted_at IS NULL
+       FOR UPDATE`,
+      [linkId, req.context.tenantId],
+    );
+    if (!current.rowCount) {
+      throw new AppError('Fotografía no encontrada.', 404, 'MEDIA_LINK_NOT_FOUND');
+    }
+    const link = current.rows[0];
+    if (!COMMERCIAL_PURPOSES.has(link.purpose)) {
+      throw new AppError(
+        'Solo una imagen comercial puede convertirse en principal.',
+        422,
+        'MEDIA_PRIMARY_PURPOSE_INVALID',
+      );
+    }
+    await client.query(
+      `UPDATE media_links
+       SET purpose = 'GALLERY', is_primary = FALSE
+       WHERE company_id = $1 AND entity_type = $2 AND entity_id = $3
+         AND purpose = 'PRIMARY_IMAGE' AND id <> $4`,
+      [req.context.tenantId, link.entity_type, link.entity_id, link.id],
+    );
+    const updated = await client.query(
+      `UPDATE media_links
+       SET purpose = 'PRIMARY_IMAGE', is_primary = TRUE
+       WHERE id = $1 AND company_id = $2
+       RETURNING id, company_id, media_id, entity_type, entity_id, purpose, is_primary, created_at`,
+      [linkId, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'media.primary_changed',
+      entityType: 'media_link',
+      entityId: linkId,
+      before: link,
+      after: updated.rows[0],
+      reason: reason || 'Imagen principal cambiada desde el catálogo',
+      metadata: { requestId: req.context.requestId },
+    });
+    return updated.rows[0];
+  });
+  res.json(promoted);
+}));
+
 router.delete('/links/:id', asyncHandler(async (req, res) => {
   const linkId = normalizeUuid(req.params.id, 'linkId');
   const reason = typeof req.body?.reason === 'string'

@@ -404,7 +404,7 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/media/links') && read) {
     permissions = ['inventory.evidence.view', 'product.image.manage', 'catalog.manage', 'inventory.view'];
   }
-  else if (path.startsWith('/api/media/links') && req.method === 'POST') {
+  else if (path.startsWith('/api/media/links') && ['POST', 'PATCH'].includes(req.method)) {
     permissions = ['product.image.manage', 'inventory.evidence.upload'];
   }
   else if (path.startsWith('/api/media/links') && req.method === 'DELETE') {
