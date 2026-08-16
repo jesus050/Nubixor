@@ -2685,6 +2685,9 @@
                     <input id="posProductSearch" type="search" placeholder="Buscar nombre, SKU o código">
                     <kbd>/</kbd>
                   </label>
+                  <button class="secondary-button compact pos-scan-button" id="openPosScannerButton" type="button">
+                    Escanear código
+                  </button>
                   <label>
                     <span>Origen del inventario</span>
                     <select id="posWarehouseSelect">
@@ -5429,6 +5432,11 @@
           <span>Motivo de la corrección <b>*</b></span>
           <textarea name="reason" maxlength="500" rows="3" required placeholder="Ej. Avería confirmada, devolución o registro inicial autorizado"></textarea>
         </label>
+        <label class="form-field">
+          <span>Foto o soporte de la novedad</span>
+          <input id="adjustmentEvidenceFile" name="evidenceFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+          <small>Opcional. Se guarda como evidencia auditable de este ajuste.</small>
+        </label>
         <p class="form-error" id="adjustmentFormError" role="alert" hidden></p>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelAdjustmentButton" type="button">Volver sin ajustar</button>
@@ -5570,6 +5578,11 @@
         <label class="form-field">
           <span>Notas o alcance</span>
           <textarea name="notes" maxlength="500" rows="3" placeholder="Responsables, zona o instrucciones para el equipo"></textarea>
+        </label>
+        <label class="form-field">
+          <span>Foto inicial del conteo</span>
+          <input id="countEvidenceFile" name="evidenceFile" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+          <small>Opcional. Sirve como evidencia del estado de la bodega al iniciar.</small>
         </label>
         <p class="form-error" id="countFormError" role="alert" hidden></p>
         <div class="dialog-actions">
@@ -6351,7 +6364,7 @@
           <span class="image-field-symbol" aria-hidden="true">＋</span>
           <span>
             <strong>Imagen principal</strong>
-            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+            <small>JPG, PNG o WEBP · máximo 15 MB</small>
           </span>
           <input id="newProductImage" name="productImage" type="file" accept="image/jpeg,image/png,image/webp">
         </label>
@@ -6667,15 +6680,39 @@
           <img id="productImagePreview" alt="Vista previa de la fotografía seleccionada" hidden>
           <span id="productImagePlaceholder">
             <b>Seleccionar fotografía</b>
-            <small>JPG, PNG o WEBP · máximo 2 MB</small>
+            <small>JPG, PNG o WEBP · máximo 15 MB</small>
           </span>
           <input id="productImageFile" name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
         </label>
+
+        <div class="image-capture-actions">
+          <button class="secondary-button compact" id="captureProductImageButton" type="button">Usar cámara</button>
+          <small>En teléfono abre la cámara trasera; en computador puedes seleccionar un archivo.</small>
+        </div>
 
         <label class="form-field">
           <span>Descripción accesible</span>
           <input id="productImageAlt" name="altText" type="text" maxlength="180" placeholder="Ej. Vista frontal del producto">
         </label>
+
+        <label class="product-image-primary-toggle">
+          <input id="productImageMakePrimary" name="makePrimary" type="checkbox" checked>
+          <span>
+            <strong>Usar como imagen principal</strong>
+            <small>Si la desactivas, se guarda únicamente en la galería comercial.</small>
+          </span>
+        </label>
+
+        <section class="product-media-gallery" aria-labelledby="productMediaGalleryTitle">
+          <div class="product-media-gallery__heading">
+            <div>
+              <p class="eyebrow">Galería comercial</p>
+              <h3 id="productMediaGalleryTitle">Fotografías del producto</h3>
+            </div>
+            <small id="productMediaGalleryState">Cargando…</small>
+          </div>
+          <div class="product-media-gallery__grid" id="productMediaGallery"></div>
+        </section>
 
         <p class="form-error" id="productImageFormError" role="alert" hidden></p>
         <div class="dialog-actions">
@@ -6729,6 +6766,27 @@
         </div>
         <div class="dialog-actions">
           <button class="secondary-button" id="cancelPosVariantSelectorButton" type="button">Cancelar</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="company-dialog pos-scanner-dialog" id="posScannerDialog" aria-labelledby="posScannerTitle">
+      <div class="company-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Caja · lectura rápida</p>
+            <h2 id="posScannerTitle">Escanear código</h2>
+          </div>
+          <button class="icon-button" id="closePosScannerDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="posScannerState">Apunta al código de barras o QR del producto.</p>
+        <div class="pos-scanner-frame">
+          <video id="posScannerVideo" playsinline muted aria-label="Vista de cámara para escanear"></video>
+          <span class="pos-scanner-guide" aria-hidden="true"></span>
+        </div>
+        <p class="scanner-support-copy">Si tu navegador no permite lectura desde cámara, escribe el SKU o código en el buscador de Caja.</p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelPosScannerButton" type="button">Cerrar cámara</button>
         </div>
       </div>
     </dialog>

@@ -31,6 +31,14 @@ function readBodyLimit(value) {
   return limit;
 }
 
+function readStorageProvider(value) {
+  const provider = (value || 'local').trim().toLowerCase();
+  if (!['local', 's3'].includes(provider)) {
+    throw new Error('MEDIA_STORAGE_PROVIDER debe ser "local" o "s3".');
+  }
+  return provider;
+}
+
 function readOptionalUrl(name, value, protocols) {
   const normalized = value?.trim();
   if (!normalized) return null;
@@ -117,6 +125,10 @@ export const config = {
   passwordResetWebhookUrl,
   passwordResetWebhookSecret,
   storageDir: process.env.STORAGE_DIR?.trim() || './storage',
+  mediaStorageProvider: readStorageProvider(process.env.MEDIA_STORAGE_PROVIDER),
+  mediaMaxUploadMb: readPositiveInteger('MEDIA_MAX_UPLOAD_MB', process.env.MEDIA_MAX_UPLOAD_MB, 15),
+  mediaMaxWidth: readPositiveInteger('MEDIA_MAX_WIDTH', process.env.MEDIA_MAX_WIDTH, 2000),
+  mediaThumbWidth: readPositiveInteger('MEDIA_THUMB_WIDTH', process.env.MEDIA_THUMB_WIDTH, 400),
   backupEnabled: readBoolean('BACKUP_ENABLED', process.env.BACKUP_ENABLED),
   backupIntervalHours: readPositiveInteger(
     'BACKUP_INTERVAL_HOURS',

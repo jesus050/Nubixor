@@ -39,6 +39,15 @@ export const permissionCatalog = [
   { code: 'billing.manage', group: 'Control', name: 'Facturación electrónica', description: 'Configura proveedor, resoluciones y transmisiones.' },
   { code: 'accounting.manage', group: 'Finanzas', name: 'Gobierno contable', description: 'Configura cuentas, cierra períodos y registra contraasientos.' },
   { code: 'documents.manage', group: 'Control', name: 'Gestionar documentos protegidos', description: 'Carga y consulta soportes privados de la empresa.' },
+  { code: 'media.upload', group: 'Medios', name: 'Subir imágenes y evidencias', description: 'Carga fotografías comerciales y evidencias operativas.' },
+  { code: 'media.delete', group: 'Medios', name: 'Eliminar medios', description: 'Retira imágenes o evidencias mediante eliminación lógica auditada.' },
+  { code: 'product.image.manage', group: 'Medios', name: 'Gestionar imágenes de producto', description: 'Asocia imágenes principales, galería y variantes.' },
+  { code: 'inventory.evidence.view', group: 'Medios', name: 'Ver evidencias de inventario', description: 'Consulta evidencias privadas de conteos, entradas, traslados y ajustes.' },
+  { code: 'inventory.evidence.upload', group: 'Medios', name: 'Cargar evidencias de inventario', description: 'Adjunta fotografías a procesos operativos de inventario.' },
+  { code: 'inventory.adjustment.approve', group: 'Inventario', name: 'Aprobar ajustes de inventario', description: 'Autoriza diferencias o ajustes que requieren aprobación.' },
+  { code: 'inventory.count.perform', group: 'Inventario', name: 'Realizar conteos', description: 'Ejecuta conteos físicos y registra cantidades.' },
+  { code: 'inventory.count.recount', group: 'Inventario', name: 'Realizar reconteos', description: 'Ejecuta reconteos cuando existen diferencias.' },
+  { code: 'inventory.count.view_expected_stock', group: 'Inventario', name: 'Ver existencia esperada en conteos', description: 'Permite ver el teórico cuando el conteo no sea ciego.' },
 ];
 
 const permissionCodes = new Set(permissionCatalog.map((permission) => permission.code));

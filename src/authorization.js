@@ -31,6 +31,15 @@ const ALL_PERMISSIONS = [
   'billing.manage',
   'accounting.manage',
   'documents.manage',
+  'media.upload',
+  'media.delete',
+  'product.image.manage',
+  'inventory.evidence.view',
+  'inventory.evidence.upload',
+  'inventory.adjustment.approve',
+  'inventory.count.perform',
+  'inventory.count.recount',
+  'inventory.count.view_expected_stock',
   'payroll.view',
   'payroll.manage',
   'payroll.approve',
@@ -383,6 +392,29 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/reports')) permissions = ['reports.view'];
   else if (path.startsWith('/api/electronic-billing')) permissions = ['billing.manage'];
   else if (path.startsWith('/api/billing-workflow')) permissions = ['billing.manage'];
+  else if (path.startsWith('/api/media/assets') && path.endsWith('/content') && read) {
+    permissions = ['inventory.evidence.view', 'product.image.manage', 'catalog.manage', 'inventory.view'];
+  }
+  else if (path.startsWith('/api/media/assets') && req.method === 'POST') {
+    permissions = ['media.upload', 'product.image.manage', 'inventory.evidence.upload'];
+  }
+  else if (path.startsWith('/api/media/assets') && req.method === 'DELETE') {
+    permissions = ['media.delete'];
+  }
+  else if (path.startsWith('/api/media/links') && read) {
+    permissions = ['inventory.evidence.view', 'product.image.manage', 'catalog.manage', 'inventory.view'];
+  }
+  else if (path.startsWith('/api/media/links') && ['POST', 'PATCH'].includes(req.method)) {
+    permissions = ['product.image.manage', 'inventory.evidence.upload'];
+  }
+  else if (path.startsWith('/api/media/links') && req.method === 'DELETE') {
+    permissions = ['media.delete'];
+  }
+  else if (path.startsWith('/api/media/policy')) {
+    permissions = read
+      ? ['inventory.view', 'inventory.evidence.view', 'inventory.adjust']
+      : ['inventory.adjustment.approve'];
+  }
   else if (path.startsWith('/api/commercial-planning')) {
     permissions = read
       ? [

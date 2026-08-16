@@ -449,6 +449,7 @@ const elements = {
   adjustmentFormError: document.querySelector('#adjustmentFormError'),
   adjustmentProductId: document.querySelector('#adjustmentProductId'),
   adjustmentWarehouseId: document.querySelector('#adjustmentWarehouseId'),
+  adjustmentEvidenceFile: document.querySelector('#adjustmentEvidenceFile'),
   closeAdjustmentDialog: document.querySelector('#closeAdjustmentDialog'),
   cancelAdjustmentButton: document.querySelector('#cancelAdjustmentButton'),
   saveAdjustmentButton: document.querySelector('#saveAdjustmentButton'),
@@ -511,6 +512,7 @@ const elements = {
   countForm: document.querySelector('#countForm'),
   countFormError: document.querySelector('#countFormError'),
   countWarehouseId: document.querySelector('#countWarehouseId'),
+  countEvidenceFile: document.querySelector('#countEvidenceFile'),
   closeCountDialog: document.querySelector('#closeCountDialog'),
   cancelCountButton: document.querySelector('#cancelCountButton'),
   saveCountButton: document.querySelector('#saveCountButton'),
@@ -694,7 +696,11 @@ const elements = {
   productImagePreview: document.querySelector('#productImagePreview'),
   productImagePlaceholder: document.querySelector('#productImagePlaceholder'),
   productImageAlt: document.querySelector('#productImageAlt'),
+  productImageMakePrimary: document.querySelector('#productImageMakePrimary'),
   imageProductName: document.querySelector('#imageProductName'),
+  captureProductImageButton: document.querySelector('#captureProductImageButton'),
+  productMediaGallery: document.querySelector('#productMediaGallery'),
+  productMediaGalleryState: document.querySelector('#productMediaGalleryState'),
   closeProductImageDialog: document.querySelector('#closeProductImageDialog'),
   cancelProductImageButton: document.querySelector('#cancelProductImageButton'),
   saveProductImageButton: document.querySelector('#saveProductImageButton'),
@@ -884,6 +890,12 @@ const elements = {
   openSalesHistoryButton: document.querySelector('#openSalesHistoryButton'),
   posSaleHistoryCount: document.querySelector('#posSaleHistoryCount'),
   posProductSearch: document.querySelector('#posProductSearch'),
+  openPosScannerButton: document.querySelector('#openPosScannerButton'),
+  posScannerDialog: document.querySelector('#posScannerDialog'),
+  closePosScannerDialog: document.querySelector('#closePosScannerDialog'),
+  cancelPosScannerButton: document.querySelector('#cancelPosScannerButton'),
+  posScannerVideo: document.querySelector('#posScannerVideo'),
+  posScannerState: document.querySelector('#posScannerState'),
   posCategoryStrip: document.querySelector('#posCategoryStrip'),
   posProductGrid: document.querySelector('#posProductGrid'),
   posCatalogState: document.querySelector('#posCatalogState'),
@@ -1583,6 +1595,11 @@ const saleCart = new Map();
 let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
+let imageProductEntityType = 'PRODUCT';
+let posScannerStream = null;
+let posScannerFrame = null;
+let posScannerLastValue = null;
+let posScannerLastAt = 0;
 let taxProduct = null;
 let structuredProduct = null;
 let productStructure = null;
@@ -3941,6 +3958,12 @@ function renderProducts() {
         vWrap.append(treeConnector, vBadge, vName);
 
         if (hasAnyPermission('catalog.manage')) {
+          const vImageBtn = document.createElement('button');
+          vImageBtn.type = 'button';
+          vImageBtn.className = 'photo-action';
+          vImageBtn.style.cssText = 'margin-left:8px; font-size:11px; padding:4px 7px;';
+          vImageBtn.textContent = variant.image_url ? 'Cambiar foto' : 'Foto del color';
+          vImageBtn.addEventListener('click', () => openProductImageDialog(variant));
           const vDeleteBtn = document.createElement('button');
           vDeleteBtn.type = 'button';
           vDeleteBtn.style.cssText = 'color:#ef4444; background:none; border:none; cursor:pointer; font-size:12px; margin-left:8px; font-weight:600; display:inline-flex; align-items:center; gap:3px;';
@@ -3959,7 +3982,7 @@ function renderProducts() {
               }
             }
           });
-          vWrap.append(vDeleteBtn);
+          vWrap.append(vImageBtn, vDeleteBtn);
         }
 
         vNameCell.append(vWrap);
@@ -6258,6 +6281,109 @@ async function loadPosCatalog() {
     setPosCatalogState('No pudimos cargar las existencias', error.message, true);
     renderCart();
     throw error;
+  }
+}
+
+function stopPosScanner() {
+  if (posScannerFrame) cancelAnimationFrame(posScannerFrame);
+  posScannerFrame = null;
+  if (posScannerStream) {
+    posScannerStream.getTracks().forEach((track) => track.stop());
+  }
+  posScannerStream = null;
+  if (elements.posScannerVideo) elements.posScannerVideo.srcObject = null;
+}
+
+function closePosScanner() {
+  stopPosScanner();
+  if (elements.posScannerDialog?.open) elements.posScannerDialog.close();
+}
+
+function findScannedProduct(value) {
+  const normalized = normalizeSearch(value);
+  const exact = posCatalog.filter((product) =>
+    normalizeSearch(product.barcode || '') === normalized ||
+    normalizeSearch(product.sku || '') === normalized,
+  );
+  if (exact.length === 1) return { product: exact[0] };
+  const families = buildPosCatalogGroups(posCatalog).filter((group) =>
+    normalizeSearch(group.sku || '') === normalized ||
+    normalizeSearch(group.invoice_code || '') === normalized,
+  );
+  if (families.length === 1) return { family: families[0] };
+  return null;
+}
+
+async function scanPosFrame(detector) {
+  if (!posScannerStream || !elements.posScannerDialog?.open) return;
+  try {
+    const detections = await detector.detect(elements.posScannerVideo);
+    const value = detections.find((item) => item.rawValue)?.rawValue?.trim();
+    if (value) {
+      const now = Date.now();
+      if (value !== posScannerLastValue || now - posScannerLastAt > 1800) {
+        posScannerLastValue = value;
+        posScannerLastAt = now;
+        const match = findScannedProduct(value);
+        if (match?.product) {
+          addProductToCart(match.product);
+          elements.posScannerState.textContent = `${match.product.name} agregado a la venta.`;
+          if (navigator.vibrate) navigator.vibrate(80);
+          setTimeout(closePosScanner, 500);
+          return;
+        }
+        if (match?.family) {
+          elements.posScannerState.textContent = 'Código encontrado. Elige el color o presentación.';
+          closePosScanner();
+          if (match.family.isGrouped && match.family.variants.length > 1) {
+            openPosVariantSelectorModal(match.family);
+          } else {
+            addProductToCart(match.family.variants[0]);
+          }
+          return;
+        }
+        elements.posScannerState.textContent = `No encontramos el código ${value}. Intenta con el buscador.`;
+        if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+      }
+    }
+  } catch (error) {
+    elements.posScannerState.textContent = 'No pudimos leer este código. Alinea la cámara e intenta de nuevo.';
+  }
+  posScannerFrame = requestAnimationFrame(() => scanPosFrame(detector));
+}
+
+async function openPosScanner() {
+  if (!posSummary.openSession || !elements.posWarehouseSelect.value) {
+    showToast('Abre un turno y selecciona una bodega antes de escanear.');
+    return;
+  }
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+    showToast('Este navegador no permite escanear desde cámara. Usa el buscador de SKU o código.');
+    elements.posProductSearch.focus();
+    return;
+  }
+  stopPosScanner();
+  elements.posScannerState.textContent = 'Solicitando acceso a la cámara…';
+  elements.posScannerDialog.showModal();
+  try {
+    posScannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    elements.posScannerVideo.srcObject = posScannerStream;
+    await elements.posScannerVideo.play();
+    const detector = new BarcodeDetector({
+      formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code'],
+    });
+    posScannerLastValue = null;
+    posScannerLastAt = 0;
+    elements.posScannerState.textContent = 'Apunta al código de barras o QR del producto.';
+    scanPosFrame(detector);
+  } catch (error) {
+    closePosScanner();
+    showToast(error?.name === 'NotAllowedError'
+      ? 'Permiso de cámara denegado. Puedes usar el buscador manual.'
+      : 'No pudimos abrir la cámara. Usa el buscador manual.');
   }
 }
 
@@ -10067,11 +10193,13 @@ async function submitAdjustment(event) {
   const formData = new FormData(elements.adjustmentForm);
   const quantity = Number(formData.get('quantity'));
   const signedQuantity = formData.get('direction') === 'OUT' ? -quantity : quantity;
+  const reason = formData.get('reason');
+  const evidenceFile = elements.adjustmentEvidenceFile?.files?.[0] || null;
   elements.adjustmentFormError.hidden = true;
   elements.saveAdjustmentButton.disabled = true;
   elements.saveAdjustmentButton.textContent = 'Registrando…';
   try {
-    await getJson('/api/inventory/adjustments', {
+    const created = await getJson('/api/inventory/adjustments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -10081,12 +10209,28 @@ async function submitAdjustment(event) {
         productId: formData.get('productId'),
         warehouseId: formData.get('warehouseId'),
         quantity: signedQuantity,
-        reason: formData.get('reason'),
+        reason,
       }),
     });
+    // El ajuste ya quedó asentado: si la evidencia falla no se puede revertir
+    // ni callar, así que se avisa en lugar de reportar un éxito completo.
+    let evidenceWarning = '';
+    if (evidenceFile) {
+      try {
+        await uploadOperationalEvidence({
+          file: evidenceFile,
+          entityType: 'INVENTORY_ADJUSTMENT',
+          entityId: created.movement.id,
+          purpose: 'DAMAGE_EVIDENCE',
+          note: reason,
+        });
+      } catch (error) {
+        evidenceWarning = ` La foto no se pudo adjuntar: ${error.message}`;
+      }
+    }
     closeAdjustmentDialog();
     await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
-    showToast('Ajuste registrado con trazabilidad.');
+    showToast(`Ajuste registrado con trazabilidad.${evidenceWarning}`);
   } catch (error) {
     elements.adjustmentFormError.textContent = error.message;
     elements.adjustmentFormError.hidden = false;
@@ -11164,6 +11308,11 @@ function closeCountDialog() {
 async function submitPhysicalCount(event) {
   event.preventDefault();
   const formData = new FormData(elements.countForm);
+  const evidenceFile = elements.countEvidenceFile?.files?.[0] || null;
+  // El archivo viaja aparte por /api/media: dejarlo en el objeto lo
+  // serializaría como {} dentro del JSON del conteo.
+  const payload = Object.fromEntries(formData);
+  delete payload.evidenceFile;
   elements.countFormError.hidden = true;
   elements.saveCountButton.disabled = true;
   elements.saveCountButton.textContent = 'Creando fotografía…';
@@ -11174,12 +11323,26 @@ async function submitPhysicalCount(event) {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
       },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(payload),
     });
+    let evidenceWarning = '';
+    if (evidenceFile) {
+      try {
+        await uploadOperationalEvidence({
+          file: evidenceFile,
+          entityType: 'INVENTORY_COUNT',
+          entityId: count.id,
+          purpose: 'COUNT_EVIDENCE',
+          note: payload.notes || null,
+        });
+      } catch (error) {
+        evidenceWarning = ` La foto no se pudo adjuntar: ${error.message}`;
+      }
+    }
     closeCountDialog();
     await loadPhysicalCounts();
     await loadPhysicalCountDetail(count.id);
-    showToast(`${count.count_number} creado con el saldo esperado.`);
+    showToast(`${count.count_number} creado con el saldo esperado.${evidenceWarning}`);
   } catch (error) {
     elements.countFormError.textContent = error.message;
     elements.countFormError.hidden = false;
@@ -15485,7 +15648,12 @@ function renderProductStructure() {
       }
     });
 
-    values.append(price, stock, delBtn);
+    const imageBtn = document.createElement('button');
+    imageBtn.type = 'button';
+    imageBtn.className = 'photo-action';
+    imageBtn.textContent = variant.image_url ? 'Cambiar foto' : 'Foto del color';
+    imageBtn.addEventListener('click', () => openProductImageDialog(variant));
+    values.append(price, stock, imageBtn, delBtn);
     card.append(copy, values);
     elements.productVariantList.append(card);
   });
@@ -15695,8 +15863,8 @@ function validateImageFile(file) {
   if (!file || !allowedTypes.includes(file.type)) {
     throw new Error('Selecciona una imagen JPG, PNG o WEBP.');
   }
-  if (file.size > 2 * 1024 * 1024) {
-    throw new Error('La imagen debe pesar máximo 2 MB.');
+  if (file.size > 15 * 1024 * 1024) {
+    throw new Error('La imagen debe pesar máximo 15 MB.');
   }
 }
 
@@ -15733,16 +15901,102 @@ function fileToDataUrl(file) {
   });
 }
 
-async function uploadProductImage(productId, file, altText) {
+async function uploadProductImage(productId, file, altText, {
+  entityType = 'PRODUCT',
+  makePrimary = true,
+} = {}) {
   validateImageFile(file);
   const dataUrl = await fileToDataUrl(file);
-  return getJson(`/api/products/${productId}/images`, {
+  const asset = await getJson('/api/media/assets', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-tenant-id': activeTenantId,
     },
-    body: JSON.stringify({ dataUrl, altText }),
+    body: JSON.stringify({
+      dataUrl,
+      fileName: file.name || 'producto.webp',
+      description: altText || null,
+    }),
+  });
+  return getJson('/api/media/links', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      mediaId: asset.id,
+      entityType,
+      entityId: productId,
+      purpose: makePrimary ? 'PRIMARY_IMAGE' : 'GALLERY',
+      isPrimary: makePrimary,
+      note: altText || null,
+    }),
+  });
+}
+
+// El servidor rechaza imágenes más anchas que MEDIA_MAX_WIDTH (2000px por
+// defecto) y cualquier foto de celular la supera, así que la evidencia se
+// reduce en el cliente antes de subirla.
+const EVIDENCE_MAX_DIMENSION = 1600;
+
+function evidencePhotoToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const img = new Image();
+      img.onload = () => {
+        // A diferencia de las fotos de catálogo, la evidencia no se recorta a
+        // 1:1: cuadrar al centro una avería o un conteo puede dejar fuera
+        // justo lo que documenta el soporte. Solo se reduce la escala.
+        const largestSide = Math.max(img.width, img.height);
+        const ratio = largestSide > EVIDENCE_MAX_DIMENSION
+          ? EVIDENCE_MAX_DIMENSION / largestSide
+          : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/webp', 0.85));
+      };
+      img.onerror = () => reject(new Error('Formato de imagen inválido o corrupto.'));
+      img.src = reader.result;
+    });
+    reader.addEventListener('error', () => reject(new Error('No fue posible leer la imagen.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadOperationalEvidence({ file, entityType, entityId, purpose, note }) {
+  validateImageFile(file);
+  const dataUrl = await evidencePhotoToDataUrl(file);
+  const asset = await getJson('/api/media/assets', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      dataUrl,
+      fileName: file.name || 'evidencia.webp',
+      description: note || null,
+    }),
+  });
+  return getJson('/api/media/links', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      mediaId: asset.id,
+      entityType,
+      entityId,
+      purpose,
+      note: note || null,
+    }),
   });
 }
 
@@ -15816,14 +16070,98 @@ function resetProductImagePreview() {
   elements.productImagePlaceholder.hidden = false;
 }
 
+function clearProductMediaGallery(message = 'Sin fotografías adicionales') {
+  elements.productMediaGallery.replaceChildren();
+  elements.productMediaGalleryState.textContent = message;
+}
+
+async function loadProductMediaGallery() {
+  if (!imageProduct) return;
+  clearProductMediaGallery('Cargando…');
+  try {
+    const links = await getJson(
+      `/api/media/links?entityType=${encodeURIComponent(imageProductEntityType)}` +
+      `&entityId=${encodeURIComponent(imageProduct.id)}`,
+    );
+    elements.productMediaGallery.replaceChildren();
+    elements.productMediaGalleryState.textContent = links.length
+      ? `${links.length} ${links.length === 1 ? 'foto' : 'fotos'}`
+      : 'Sin fotografías';
+    if (!links.length) return;
+    links.forEach((link) => {
+      const card = document.createElement('article');
+      card.className = 'product-media-gallery__item';
+      const image = document.createElement('img');
+      image.src = resolvePublicAsset(link.media.url);
+      image.alt = link.media.metadata?.description || imageProduct.name;
+      const actions = document.createElement('div');
+      const status = document.createElement('small');
+      status.textContent = link.isPrimary ? 'Principal' : 'Galería';
+      actions.append(status);
+      if (!link.isPrimary) {
+        const makePrimary = document.createElement('button');
+        makePrimary.type = 'button';
+        makePrimary.className = 'photo-action';
+        makePrimary.textContent = 'Usar como principal';
+        makePrimary.addEventListener('click', async () => {
+          makePrimary.disabled = true;
+          try {
+            await getJson(`/api/media/links/${link.id}/primary`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ reason: 'Imagen principal seleccionada desde catálogo' }),
+            });
+            await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+            showToast('Imagen principal actualizada.');
+          } catch (error) {
+            showToast(error.message);
+            makePrimary.disabled = false;
+          }
+        });
+        actions.append(makePrimary);
+      }
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'photo-action danger-action';
+      remove.textContent = 'Quitar';
+      remove.addEventListener('click', async () => {
+        if (!confirm('¿Quitar esta fotografía de la galería? El archivo queda conservado para auditoría.')) return;
+        remove.disabled = true;
+        try {
+          await getJson(`/api/media/links/${link.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Fotografía retirada desde catálogo' }),
+          });
+          await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+          showToast('Fotografía retirada de la galería.');
+        } catch (error) {
+          showToast(error.message);
+          remove.disabled = false;
+        }
+      });
+      actions.append(remove);
+      card.append(image, actions);
+      elements.productMediaGallery.append(card);
+    });
+  } catch (error) {
+    clearProductMediaGallery('No fue posible cargar la galería');
+  }
+}
+
 function openProductImageDialog(product) {
   imageProduct = product;
+  imageProductEntityType = product.product_kind === 'VARIANT' ? 'PRODUCT_VARIANT' : 'PRODUCT';
   elements.productImageForm.reset();
   elements.productImageFormError.hidden = true;
-  elements.imageProductName.textContent = product.name;
+  elements.imageProductName.textContent = imageProductEntityType === 'PRODUCT_VARIANT'
+    ? `${product.name} · imagen específica de la variante`
+    : product.name;
   elements.productImageAlt.value = product.name;
+  elements.productImageMakePrimary.checked = true;
   resetProductImagePreview();
   elements.productImageDialog.showModal();
+  loadProductMediaGallery();
   elements.productImageFile.focus();
 }
 
@@ -15831,6 +16169,7 @@ function closeProductImageDialog() {
   elements.productImageDialog.close();
   resetProductImagePreview();
   imageProduct = null;
+  imageProductEntityType = 'PRODUCT';
 }
 
 function previewProductImage() {
@@ -15851,6 +16190,13 @@ function previewProductImage() {
   }
 }
 
+function captureProductImage() {
+  // `capture` is intentionally used as a progressive enhancement: mobile
+  // browsers open the rear camera while desktops retain the normal file picker.
+  elements.productImageFile.setAttribute('capture', 'environment');
+  elements.productImageFile.click();
+}
+
 async function submitProductImage(event) {
   event.preventDefault();
   const file = elements.productImageFile.files[0];
@@ -15858,10 +16204,15 @@ async function submitProductImage(event) {
   elements.saveProductImageButton.disabled = true;
   elements.saveProductImageButton.textContent = 'Guardando fotografía…';
   try {
-    await uploadProductImage(imageProduct.id, file, elements.productImageAlt.value);
-    closeProductImageDialog();
-    await loadCatalog();
-    showToast('Fotografía principal actualizada.');
+    const makePrimary = elements.productImageMakePrimary.checked;
+    await uploadProductImage(imageProduct.id, file, elements.productImageAlt.value, {
+      entityType: imageProductEntityType,
+      makePrimary,
+    });
+    elements.productImageFile.value = '';
+    resetProductImagePreview();
+    await Promise.all([loadProductMediaGallery(), loadCatalog(), loadPosCatalog().catch(() => [])]);
+    showToast(makePrimary ? 'Fotografía principal actualizada.' : 'Fotografía agregada a la galería.');
   } catch (error) {
     elements.productImageFormError.textContent = error.message;
     elements.productImageFormError.hidden = false;
@@ -17417,6 +17768,7 @@ elements.productComboAssemblyForm.addEventListener(
   submitProductComboAssembly,
 );
 elements.productImageFile.addEventListener('change', previewProductImage);
+elements.captureProductImageButton.addEventListener('click', captureProductImage);
 elements.closeProductImageDialog.addEventListener('click', closeProductImageDialog);
 elements.cancelProductImageButton.addEventListener('click', closeProductImageDialog);
 elements.productImageForm.addEventListener('submit', submitProductImage);
@@ -17470,6 +17822,12 @@ elements.posWarehouseSelect.addEventListener('change', async () => {
   await loadPosCatalog().catch(() => {});
 });
 elements.posProductSearch.addEventListener('input', renderPosCatalog);
+elements.openPosScannerButton.addEventListener('click', openPosScanner);
+elements.closePosScannerDialog.addEventListener('click', closePosScanner);
+elements.cancelPosScannerButton.addEventListener('click', closePosScanner);
+elements.posScannerDialog.addEventListener('click', (event) => {
+  if (event.target === elements.posScannerDialog) closePosScanner();
+});
 elements.posProductSearch.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter') return;
   event.preventDefault();
