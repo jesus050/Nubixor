@@ -10193,11 +10193,13 @@ async function submitAdjustment(event) {
   const formData = new FormData(elements.adjustmentForm);
   const quantity = Number(formData.get('quantity'));
   const signedQuantity = formData.get('direction') === 'OUT' ? -quantity : quantity;
+  const reason = formData.get('reason');
+  const evidenceFile = elements.adjustmentEvidenceFile?.files?.[0] || null;
   elements.adjustmentFormError.hidden = true;
   elements.saveAdjustmentButton.disabled = true;
   elements.saveAdjustmentButton.textContent = 'Registrando…';
   try {
-    await getJson('/api/inventory/adjustments', {
+    const created = await getJson('/api/inventory/adjustments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -10207,12 +10209,28 @@ async function submitAdjustment(event) {
         productId: formData.get('productId'),
         warehouseId: formData.get('warehouseId'),
         quantity: signedQuantity,
-        reason: formData.get('reason'),
+        reason,
       }),
     });
+    // El ajuste ya quedó asentado: si la evidencia falla no se puede revertir
+    // ni callar, así que se avisa en lugar de reportar un éxito completo.
+    let evidenceWarning = '';
+    if (evidenceFile) {
+      try {
+        await uploadOperationalEvidence({
+          file: evidenceFile,
+          entityType: 'INVENTORY_ADJUSTMENT',
+          entityId: created.movement.id,
+          purpose: 'DAMAGE_EVIDENCE',
+          note: reason,
+        });
+      } catch (error) {
+        evidenceWarning = ` La foto no se pudo adjuntar: ${error.message}`;
+      }
+    }
     closeAdjustmentDialog();
     await Promise.all([loadInventory(), loadPosCatalog().catch(() => [])]);
-    showToast('Ajuste registrado con trazabilidad.');
+    showToast(`Ajuste registrado con trazabilidad.${evidenceWarning}`);
   } catch (error) {
     elements.adjustmentFormError.textContent = error.message;
     elements.adjustmentFormError.hidden = false;
@@ -11290,6 +11308,11 @@ function closeCountDialog() {
 async function submitPhysicalCount(event) {
   event.preventDefault();
   const formData = new FormData(elements.countForm);
+  const evidenceFile = elements.countEvidenceFile?.files?.[0] || null;
+  // El archivo viaja aparte por /api/media: dejarlo en el objeto lo
+  // serializaría como {} dentro del JSON del conteo.
+  const payload = Object.fromEntries(formData);
+  delete payload.evidenceFile;
   elements.countFormError.hidden = true;
   elements.saveCountButton.disabled = true;
   elements.saveCountButton.textContent = 'Creando fotografía…';
@@ -11300,12 +11323,26 @@ async function submitPhysicalCount(event) {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
       },
-      body: JSON.stringify(Object.fromEntries(formData)),
+      body: JSON.stringify(payload),
     });
+    let evidenceWarning = '';
+    if (evidenceFile) {
+      try {
+        await uploadOperationalEvidence({
+          file: evidenceFile,
+          entityType: 'INVENTORY_COUNT',
+          entityId: count.id,
+          purpose: 'COUNT_EVIDENCE',
+          note: payload.notes || null,
+        });
+      } catch (error) {
+        evidenceWarning = ` La foto no se pudo adjuntar: ${error.message}`;
+      }
+    }
     closeCountDialog();
     await loadPhysicalCounts();
     await loadPhysicalCountDetail(count.id);
-    showToast(`${count.count_number} creado con el saldo esperado.`);
+    showToast(`${count.count_number} creado con el saldo esperado.${evidenceWarning}`);
   } catch (error) {
     elements.countFormError.textContent = error.message;
     elements.countFormError.hidden = false;
@@ -15895,6 +15932,70 @@ async function uploadProductImage(productId, file, altText, {
       purpose: makePrimary ? 'PRIMARY_IMAGE' : 'GALLERY',
       isPrimary: makePrimary,
       note: altText || null,
+    }),
+  });
+}
+
+// El servidor rechaza imágenes más anchas que MEDIA_MAX_WIDTH (2000px por
+// defecto) y cualquier foto de celular la supera, así que la evidencia se
+// reduce en el cliente antes de subirla.
+const EVIDENCE_MAX_DIMENSION = 1600;
+
+function evidencePhotoToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const img = new Image();
+      img.onload = () => {
+        // A diferencia de las fotos de catálogo, la evidencia no se recorta a
+        // 1:1: cuadrar al centro una avería o un conteo puede dejar fuera
+        // justo lo que documenta el soporte. Solo se reduce la escala.
+        const largestSide = Math.max(img.width, img.height);
+        const ratio = largestSide > EVIDENCE_MAX_DIMENSION
+          ? EVIDENCE_MAX_DIMENSION / largestSide
+          : 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/webp', 0.85));
+      };
+      img.onerror = () => reject(new Error('Formato de imagen inválido o corrupto.'));
+      img.src = reader.result;
+    });
+    reader.addEventListener('error', () => reject(new Error('No fue posible leer la imagen.')));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadOperationalEvidence({ file, entityType, entityId, purpose, note }) {
+  validateImageFile(file);
+  const dataUrl = await evidencePhotoToDataUrl(file);
+  const asset = await getJson('/api/media/assets', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      dataUrl,
+      fileName: file.name || 'evidencia.webp',
+      description: note || null,
+    }),
+  });
+  return getJson('/api/media/links', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': activeTenantId,
+    },
+    body: JSON.stringify({
+      mediaId: asset.id,
+      entityType,
+      entityId,
+      purpose,
+      note: note || null,
     }),
   });
 }

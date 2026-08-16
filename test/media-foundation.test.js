@@ -74,3 +74,42 @@ test('LocalStorageProvider evita path traversal y confirma existencia', async ()
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// Espeja EVIDENCE_MAX_DIMENSION de public/app.js. El navegador reduce la foto
+// antes de subirla porque el servidor rechaza cualquier imagen más ancha que
+// MEDIA_MAX_WIDTH; si alguien sube este tope por encima del límite del
+// servidor, la evidencia operativa vuelve a fallar con 422 en producción.
+const CLIENT_EVIDENCE_MAX_DIMENSION = 1600;
+const SERVER_MAX_WIDTH = 2000;
+
+function pngWithDimensions(width, height) {
+  const buffer = Buffer.from(PNG_1X1);
+  buffer.writeUInt32BE(width, 16);
+  buffer.writeUInt32BE(height, 20);
+  return `data:image/png;base64,${buffer.toString('base64')}`;
+}
+
+test('evidencia: el tope del cliente cabe dentro del ancho máximo del servidor', () => {
+  assert.ok(
+    CLIENT_EVIDENCE_MAX_DIMENSION < SERVER_MAX_WIDTH,
+    'El redimensionado del navegador debe quedar bajo MEDIA_MAX_WIDTH.',
+  );
+
+  const resized = decodeImageDataUrl(
+    pngWithDimensions(CLIENT_EVIDENCE_MAX_DIMENSION, 1200),
+    { maxBytes: 1024 * 1024, maxWidth: SERVER_MAX_WIDTH },
+  );
+  assert.equal(resized.width, CLIENT_EVIDENCE_MAX_DIMENSION);
+});
+
+test('evidencia: una foto de celular sin redimensionar es rechazada', () => {
+  // 3024px es el ancho típico de una cámara de teléfono: sin el escalado del
+  // cliente, adjuntar la evidencia de un ajuste fallaría siempre.
+  assert.throws(
+    () => decodeImageDataUrl(pngWithDimensions(3024, 4032), {
+      maxBytes: 1024 * 1024,
+      maxWidth: SERVER_MAX_WIDTH,
+    }),
+    /ancho máximo permitido/,
+  );
+});
