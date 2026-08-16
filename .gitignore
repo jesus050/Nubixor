@@ -1,10 +1,12 @@
 node_modules/
 .env
 .env.*
+*.env
 !.env.example
 coverage/
 *.log
 .DS_Store
+hostinger-*.json
 public/uploads/product-images/*
 !public/uploads/product-images/.gitkeep
 storage/
