@@ -1,5 +1,5 @@
 (() => {
-  const CORE_SRC = './app-core.js?v=20260816-LOGIN-INTRO-v1';
+  const CORE_SRC = './app-core.js?v=20260818-COUNT-SCAN-CAMERA-v1';
   const VIDEO_SRC = './assets/brand/nubixor-login-intro.mp4';
   const POSTER_SRC = './assets/brand/nubixor-official-logo.png';
   const REDUCED_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
