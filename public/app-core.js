@@ -11232,6 +11232,7 @@ function renderCountItems() {
   for (const item of filtered) {
     const card = document.createElement('article');
     card.className = 'count-item-card';
+    card.dataset.countProductId = item.product_id;
     if (item.severity === 'HIGH') card.classList.add('high-severity');
 
     const identity = document.createElement('div');
@@ -11301,7 +11302,19 @@ function renderCountItems() {
       save.textContent = item.counted_quantity === null ? 'Registrar' : 'Actualizar';
       save.addEventListener('click', () =>
         savePhysicalCountItem(item.product_id, quantity.value, notes.value, save));
-      editor.append(quantityLabel, notesLabel, save);
+
+      if (!item.image_url) {
+        const capture = document.createElement('button');
+        capture.type = 'button';
+        capture.className = 'secondary-button count-save-item';
+        capture.textContent = 'Tomar foto';
+        capture.title = 'Tomar una foto o seleccionar una imagen para esta referencia';
+        capture.addEventListener('click', () =>
+          capturePhysicalCountProductImage(item, capture));
+        editor.append(quantityLabel, notesLabel, capture, save);
+      } else {
+        editor.append(quantityLabel, notesLabel, save);
+      }
       card.append(editor);
     } else if (item.notes) {
       const note = document.createElement('p');
