@@ -11099,6 +11099,109 @@ function countClassificationMeta(item) {
   };
 }
 
+function normalizeCountScanValue(value) {
+  return normalizeSearch(value || '').replace(/[^a-z0-9]/g, '');
+}
+
+function focusPhysicalCountItem(productId) {
+  const card = document.querySelector(`[data-count-product-id="${productId}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => {
+    const quantity = card.querySelector('input[type="number"]');
+    quantity?.focus();
+    quantity?.select();
+  }, 220);
+}
+
+function revealPhysicalCountScannedItem(value) {
+  const scanned = normalizeCountScanValue(value);
+  if (!scanned || !selectedPhysicalCount) return;
+
+  const item = selectedPhysicalCount.items.find((candidate) =>
+    normalizeCountScanValue(candidate.sku_snapshot) === scanned
+    || normalizeCountScanValue(candidate.barcode_snapshot) === scanned,
+  );
+
+  if (!item) {
+    elements.countProductSearch.value = value.trim();
+    renderCountItems();
+    showToast('No encontramos una referencia exacta en esta jornada. Revisa el código o usa el buscador.');
+    return;
+  }
+
+  elements.countProductSearch.value = item.sku_snapshot;
+  elements.countItemFilter.value = 'ALL';
+  renderCountItems();
+  focusPhysicalCountItem(item.product_id);
+  showToast(`${item.name_snapshot} listo para registrar.`);
+}
+
+function ensurePhysicalCountScanner() {
+  let scanner = document.querySelector('#physicalCountScanner');
+  if (!scanner) {
+    scanner = document.createElement('form');
+    scanner.id = 'physicalCountScanner';
+    scanner.className = 'count-item-editor count-scan-panel';
+    scanner.innerHTML = `
+      <label class="form-field">
+        <span>Escanear código o SKU</span>
+        <input id="physicalCountScanInput" type="search" inputmode="search"
+          autocomplete="off" placeholder="Escanea con lector o escribe el código">
+      </label>
+      <button class="primary-button count-save-item" type="submit">Buscar y registrar</button>
+    `;
+    scanner.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input = scanner.querySelector('#physicalCountScanInput');
+      revealPhysicalCountScannedItem(input.value);
+      input.value = '';
+      input.focus();
+    });
+    elements.countItemList.before(scanner);
+  }
+
+  const isActive = selectedPhysicalCount?.status === 'IN_PROGRESS';
+  scanner.hidden = !isActive;
+  scanner.querySelector('input').disabled = !isActive;
+  scanner.querySelector('button').disabled = !isActive;
+}
+
+async function capturePhysicalCountProductImage(item, button) {
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = 'image/*';
+  picker.setAttribute('capture', 'environment');
+
+  picker.addEventListener('change', async () => {
+    const file = picker.files?.[0];
+    if (!file) return;
+
+    button.disabled = true;
+    button.textContent = 'Subiendo foto…';
+    try {
+      await uploadProductImage(
+        item.product_id,
+        file,
+        item.name_snapshot,
+        { makePrimary: true },
+      );
+      await Promise.all([
+        loadPhysicalCountDetail(selectedPhysicalCount.id),
+        loadCatalog().catch(() => []),
+      ]);
+      showToast('Fotografía principal guardada para este producto.');
+    } catch (error) {
+      showToast(`No fue posible guardar la fotografía: ${error.message}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Tomar foto';
+    }
+  }, { once: true });
+
+  picker.click();
+}
+
 function renderCountItems() {
   if (!selectedPhysicalCount) return;
   const search = normalizeSearch(elements.countProductSearch.value.trim());
