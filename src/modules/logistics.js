@@ -661,6 +661,13 @@ router.post(
           'INVALID_LOGISTICS_TRANSITION',
         );
       }
+      if ([batch.created_by, batch.counted_by, batch.priced_by].includes(req.context.userId)) {
+        throw new AppError(
+          'Quien creó, contó o valoró el lote no puede devolverlo desde aprobación.',
+          403,
+          'LOGISTICS_SELF_APPROVAL_FORBIDDEN',
+        );
+      }
       const result = await client.query(
         `UPDATE logistics_intake_batches
          SET status='PRICING',updated_at=now()
@@ -697,6 +704,13 @@ router.post(
           'El lote no está disponible para aprobación.',
           409,
           'LOGISTICS_APPROVAL_LOCKED',
+        );
+      }
+      if ([batch.created_by, batch.counted_by, batch.priced_by].includes(req.context.userId)) {
+        throw new AppError(
+          'Quien creó, contó o valoró el lote no puede aprobarlo.',
+          403,
+          'LOGISTICS_SELF_APPROVAL_FORBIDDEN',
         );
       }
       const items = await client.query(

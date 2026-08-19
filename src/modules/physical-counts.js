@@ -322,6 +322,15 @@ router.post('/:id/submit', asyncHandler(async (req, res) => {
         'INVENTORY_COUNT_NOT_SUBMITTABLE',
       );
     }
+    await writeAudit(client, {
+      tenantId: req.context.tenantId,
+      userId: req.context.userId,
+      action: 'inventory_count.submitted_for_review',
+      entityType: 'inventory_count',
+      entityId: result.rows[0].id,
+      after: result.rows[0],
+      reason: 'Conteo físico enviado a revisión sin modificar existencias.',
+    });
     return result.rows[0];
   });
   res.json(count);
@@ -338,7 +347,7 @@ router.post('/:id/complete', asyncHandler(async (req, res) => {
 
   const completed = await withTransaction(async (client) => {
     const countResult = await client.query(
-      `SELECT id, count_number, warehouse_id, status
+      `SELECT id, count_number, warehouse_id, status, created_by, started_by
        FROM inventory_counts
        WHERE id = $1 AND tenant_id = $2
        FOR UPDATE`,
@@ -352,14 +361,28 @@ router.post('/:id/complete', asyncHandler(async (req, res) => {
       );
     }
     const count = countResult.rows[0];
+    if ([count.created_by, count.started_by].includes(req.context.userId)) {
+      throw new AppError(
+        'La persona que creó o ejecutó el conteo no puede aprobar su propio ajuste.',
+        403,
+        'COUNT_SELF_APPROVAL_FORBIDDEN',
+      );
+    }
     const items = await client.query(
-      `SELECT product_id, name_snapshot, expected_quantity, counted_quantity,
+      `SELECT product_id, name_snapshot, expected_quantity, counted_quantity, counted_by,
               counted_quantity - expected_quantity difference
        FROM inventory_count_items
        WHERE count_id = $1 AND tenant_id = $2
        FOR UPDATE`,
       [count.id, req.context.tenantId],
     );
+    if (items.rows.some((item) => item.counted_by === req.context.userId)) {
+      throw new AppError(
+        'La persona que registró cantidades no puede aprobar el conteo.',
+        403,
+        'COUNT_SELF_APPROVAL_FORBIDDEN',
+      );
+    }
 
     let adjustments = 0;
     for (const item of items.rows) {

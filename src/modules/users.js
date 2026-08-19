@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
-import { requirePermission } from '../authorization.js';
+import { PERMISSION_CATALOG, requireAnyPermission } from '../authorization.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
@@ -12,48 +12,12 @@ const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLE_COLORS = new Set(['BLUE', 'PURPLE', 'CYAN', 'AMBER', 'ROSE', 'GREEN']);
 
-export const permissionCatalog = [
-  { code: 'dashboard.view', group: 'General', name: 'Ver dashboard', description: 'Consulta indicadores generales.' },
-  { code: 'companies.manage', group: 'Administración', name: 'Gestionar empresas', description: 'Crea y actualiza empresas.' },
-  { code: 'branches.manage', group: 'Administración', name: 'Gestionar sucursales', description: 'Administra sedes y sucursales.' },
-  { code: 'warehouses.manage', group: 'Administración', name: 'Gestionar bodegas', description: 'Administra ubicaciones de inventario.' },
-  { code: 'catalog.manage', group: 'Inventario', name: 'Gestionar catálogo', description: 'Crea productos, categorías, marcas, impuestos e imágenes.' },
-  { code: 'inventory.view', group: 'Inventario', name: 'Consultar inventario', description: 'Consulta saldos y movimientos.' },
-  { code: 'inventory.adjust', group: 'Inventario', name: 'Ajustar inventario', description: 'Realiza ajustes, transferencias y conteos.' },
-  { code: 'logistics.view', group: 'Logística', name: 'Consultar logística', description: 'Consulta lotes, recepciones, trazabilidad y etiquetas.' },
-  { code: 'logistics.count', group: 'Logística', name: 'Contar y recibir', description: 'Crea lotes y registra mercancía con escáner.' },
-  { code: 'logistics.price', group: 'Logística', name: 'Asignar costos y precios', description: 'Valora los productos recibidos sin aprobar la carga.' },
-  { code: 'logistics.approve', group: 'Logística', name: 'Aprobar lotes', description: 'Autoriza la carga definitiva de existencias, costos y precios.' },
-  { code: 'logistics.labels', group: 'Logística', name: 'Gestionar etiquetas', description: 'Imprime y controla etiquetas y reimpresiones.' },
-  { code: 'purchases.manage', group: 'Abastecimiento', name: 'Gestionar compras', description: 'Crea órdenes y recibe mercancía.' },
-  { code: 'sales.operate', group: 'Ventas', name: 'Operar caja y ventas', description: 'Abre caja, cobra y registra ventas.' },
-  { code: 'receivables.manage', group: 'Finanzas', name: 'Gestionar cuentas por cobrar', description: 'Registra facturas y recaudos.' },
-  { code: 'payables.manage', group: 'Finanzas', name: 'Gestionar cuentas por pagar', description: 'Registra obligaciones y pagos.' },
-  { code: 'expenses.view', group: 'Gastos', name: 'Consultar gastos', description: 'Consulta solicitudes, soportes, centros y pagos.' },
-  { code: 'expenses.manage', group: 'Gastos', name: 'Registrar gastos', description: 'Crea gastos, categorías y centros de costos.' },
-  { code: 'expenses.approve', group: 'Gastos', name: 'Aprobar gastos', description: 'Aprueba o rechaza gastos y genera su reconocimiento contable.' },
-  { code: 'expenses.pay', group: 'Gastos', name: 'Pagar gastos', description: 'Registra abonos desde caja o cuentas bancarias.' },
-  { code: 'users.manage', group: 'Seguridad', name: 'Gestionar usuarios y roles', description: 'Invita personas y define sus accesos.' },
-  { code: 'audit.view', group: 'Seguridad', name: 'Consultar auditoría', description: 'Consulta trazabilidad de cambios.' },
-  { code: 'reports.view', group: 'General', name: 'Consultar reportes', description: 'Consulta y exporta reportes operativos y financieros.' },
-  { code: 'billing.manage', group: 'Control', name: 'Facturación electrónica', description: 'Configura proveedor, resoluciones y transmisiones.' },
-  { code: 'accounting.manage', group: 'Finanzas', name: 'Gobierno contable', description: 'Configura cuentas, cierra períodos y registra contraasientos.' },
-  { code: 'documents.manage', group: 'Control', name: 'Gestionar documentos protegidos', description: 'Carga y consulta soportes privados de la empresa.' },
-  { code: 'media.upload', group: 'Medios', name: 'Subir imágenes y evidencias', description: 'Carga fotografías comerciales y evidencias operativas.' },
-  { code: 'media.delete', group: 'Medios', name: 'Eliminar medios', description: 'Retira imágenes o evidencias mediante eliminación lógica auditada.' },
-  { code: 'product.image.manage', group: 'Medios', name: 'Gestionar imágenes de producto', description: 'Asocia imágenes principales, galería y variantes.' },
-  { code: 'inventory.evidence.view', group: 'Medios', name: 'Ver evidencias de inventario', description: 'Consulta evidencias privadas de conteos, entradas, traslados y ajustes.' },
-  { code: 'inventory.evidence.upload', group: 'Medios', name: 'Cargar evidencias de inventario', description: 'Adjunta fotografías a procesos operativos de inventario.' },
-  { code: 'inventory.adjustment.approve', group: 'Inventario', name: 'Aprobar ajustes de inventario', description: 'Autoriza diferencias o ajustes que requieren aprobación.' },
-  { code: 'inventory.count.perform', group: 'Inventario', name: 'Realizar conteos', description: 'Ejecuta conteos físicos y registra cantidades.' },
-  { code: 'inventory.count.recount', group: 'Inventario', name: 'Realizar reconteos', description: 'Ejecuta reconteos cuando existen diferencias.' },
-  { code: 'inventory.count.view_expected_stock', group: 'Inventario', name: 'Ver existencia esperada en conteos', description: 'Permite ver el teórico cuando el conteo no sea ciego.' },
-];
+export const permissionCatalog = PERMISSION_CATALOG;
 
 const permissionCodes = new Set(permissionCatalog.map((permission) => permission.code));
 
 router.use(requireTenant);
-router.use(requirePermission('users.manage'));
+router.use(requireAnyPermission(['users.manage', 'user.manage']));
 
 function normalizedText(value, maxLength) {
   if (typeof value !== 'string') return null;
@@ -202,7 +166,9 @@ router.get('/roles', asyncHandler(async (req, res) => {
      ORDER BY r.is_system DESC,
        CASE r.code
          WHEN 'OWNER' THEN 1 WHEN 'ADMIN' THEN 2 WHEN 'OPERATIONS' THEN 3
-         WHEN 'CASHIER' THEN 4 WHEN 'AUDITOR' THEN 5 ELSE 6
+         WHEN 'SUPERVISOR' THEN 3 WHEN 'WAREHOUSE' THEN 4 WHEN 'CASHIER' THEN 5
+         WHEN 'SELLER' THEN 6 WHEN 'MARKETING' THEN 7 WHEN 'ACCOUNTANT' THEN 8
+         WHEN 'OPERATIONS' THEN 9 WHEN 'AUDITOR' THEN 10 ELSE 11
        END,
        r.name`,
     [req.context.tenantId],

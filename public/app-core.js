@@ -1691,7 +1691,7 @@ function accountInitials(name) {
 function renderTenantModules() {
   const logisticsEnabled = isTenantModuleEnabled('LOGISTICS');
   const payrollEnabled = isTenantModuleEnabled('PAYROLL');
-  const canManageModules = hasAnyPermission('users.manage');
+  const canManageModules = hasAnyPermission('users.manage', 'user.manage');
   const logisticsCard = document.querySelector('[data-module-setting="LOGISTICS"]');
   const payrollCard = document.querySelector('[data-module-setting="PAYROLL"]');
 
@@ -2610,22 +2610,22 @@ function applyAccessVisibility() {
   const viewPermissions = {
     inicio: ['dashboard.view'],
     empresas: [],
-    sucursales: ['branches.manage', 'dashboard.view', 'inventory.view', 'sales.operate'],
-    terceros: ['parties.view', 'parties.manage'],
-    bodegas: ['warehouses.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
-    inventario: ['inventory.view', 'inventory.adjust'],
-    logistica: ['logistics.view'],
-    productos: ['catalog.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
-    compras: ['purchases.manage'],
-    'cuentas-pagar': ['payables.manage'],
+    sucursales: ['branches.manage', 'branch.view', 'dashboard.view', 'inventory.view', 'sales.operate'],
+    terceros: ['parties.view', 'parties.manage', 'customer.view', 'supplier.view'],
+    bodegas: ['warehouses.manage', 'warehouse.view', 'inventory.view', 'purchases.manage', 'sales.operate'],
+    inventario: ['inventory.view', 'inventory.count.view', 'inventory.adjust'],
+    logistica: ['logistics.view', 'inventory.receive', 'inventory.transfer'],
+    productos: ['product.view', 'catalog.manage', 'inventory.view', 'purchases.manage', 'sales.operate'],
+    compras: ['purchase.view', 'purchase.create', 'purchases.manage'],
+    'cuentas-pagar': ['payable.view', 'payable.manage', 'payables.manage'],
     gastos: ['expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay'],
     nomina: ['payroll.view', 'payroll.manage', 'payroll.approve'],
-    caja: ['sales.operate'],
-    cartera: ['receivables.manage'],
-    facturacion: ['billing.manage'],
-    usuarios: ['users.manage'],
+    caja: ['pos.use', 'cash.view', 'sales.operate'],
+    cartera: ['receivable.view', 'receivable.manage', 'receivables.manage'],
+    facturacion: ['billing.view', 'billing.manage'],
+    usuarios: ['user.view', 'user.manage', 'users.manage'],
     modulos: ['dashboard.view'],
-    reportes: ['reports.view'],
+    reportes: ['reports.view', 'report.export'],
     auditoria: ['audit.view'],
     sistema: ['audit.view', 'users.manage', 'billing.manage'],
   };
@@ -2644,22 +2644,22 @@ function applyAccessVisibility() {
   elements.accountRole.textContent = membership?.roleName || 'Sin acceso a empresa';
   elements.newCompanyButton.hidden = !hasAnyPermission('companies.manage');
   elements.newBranchButton.hidden = !hasAnyPermission('branches.manage');
-  elements.newWarehouseButton.hidden = !hasAnyPermission('warehouses.manage');
-  elements.newAdjustmentButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newWarehouseButton.hidden = !hasAnyPermission('warehouses.manage', 'warehouse.manage');
+  elements.newAdjustmentButton.hidden = !hasAnyPermission('inventory.adjust', 'inventory.adjustment.request');
   elements.newTransferButton.hidden =
-    !isTenantModuleEnabled('LOGISTICS') || !hasAnyPermission('inventory.adjust');
+    !isTenantModuleEnabled('LOGISTICS') || !hasAnyPermission('inventory.adjust', 'inventory.transfer');
   elements.newLogisticsBatchButton.hidden = !hasAnyPermission('logistics.count');
-  elements.newCountButton.hidden = !hasAnyPermission('inventory.adjust');
+  elements.newCountButton.hidden = !hasAnyPermission('inventory.adjust', 'inventory.count.perform');
   elements.newCategoryButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newBrandButton.hidden = !hasAnyPermission('catalog.manage');
   elements.newTaxButton.hidden = !hasAnyPermission('catalog.manage');
-  elements.newProductButton.hidden = !hasAnyPermission('catalog.manage');
+  elements.newProductButton.hidden = !hasAnyPermission('catalog.manage', 'product.create');
   elements.openCatalogImportButton.hidden = !hasAnyPermission('catalog.manage');
   elements.categoryPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.brandPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
   elements.taxPanelCreateButton.hidden = !hasAnyPermission('catalog.manage');
-  elements.newPurchaseButton.hidden = !hasAnyPermission('purchases.manage');
-  elements.newSupplierButton.hidden = !hasAnyPermission('purchases.manage');
+  elements.newPurchaseButton.hidden = !hasAnyPermission('purchases.manage', 'purchase.create');
+  elements.newSupplierButton.hidden = !hasAnyPermission('purchases.manage', 'supplier.manage');
   elements.supplierPanelCreateButton.hidden = !hasAnyPermission('purchases.manage');
   elements.newExpenseButton.hidden = !hasAnyPermission('expenses.manage');
   elements.newCostCenterButton.hidden = !hasAnyPermission('expenses.manage');
@@ -2668,8 +2668,8 @@ function applyAccessVisibility() {
   elements.newPayrollPeriodButton.hidden = !hasAnyPermission('payroll.manage');
   elements.newThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
   elements.editThirdPartyButton.hidden = !hasAnyPermission('parties.manage');
-  elements.inviteUserButton.hidden = !hasAnyPermission('users.manage');
-  elements.newRoleButton.hidden = !hasAnyPermission('users.manage');
+  elements.inviteUserButton.hidden = !hasAnyPermission('users.manage', 'user.manage');
+  elements.newRoleButton.hidden = !hasAnyPermission('users.manage', 'user.manage');
   renderTenantModules();
 }
 
@@ -12781,34 +12781,38 @@ async function refreshTenantData() {
       'billing.manage',
     )
       ? loadBranches() : Promise.resolve([]),
-    hasAnyPermission('inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate')
+    hasAnyPermission('inventory.view', 'warehouse.view', 'warehouses.manage', 'purchase.view', 'purchases.manage', 'pos.use', 'sales.operate')
       ? loadWarehouses() : Promise.resolve([]),
-    hasAnyPermission('inventory.view', 'inventory.adjust')
+    hasAnyPermission('inventory.view', 'inventory.count.view', 'inventory.adjust')
       ? loadInventory() : Promise.resolve([]),
-    hasAnyPermission('inventory.view', 'inventory.adjust')
+    hasAnyPermission('inventory.view', 'inventory.count.view', 'inventory.adjust')
       ? loadPhysicalCounts() : Promise.resolve([]),
     hasAnyPermission(
       'inventory.view',
+      'product.view',
       'catalog.manage',
       'purchases.manage',
       'sales.operate',
       'billing.manage',
     )
       ? loadCatalog() : Promise.resolve([]),
-    hasAnyPermission('purchases.manage') ? loadPurchases() : Promise.resolve([]),
-    hasAnyPermission('payables.manage') ? loadPayables() : Promise.resolve([]),
+    hasAnyPermission('purchase.view', 'purchases.manage') ? loadPurchases() : Promise.resolve([]),
+    hasAnyPermission('payable.view', 'payables.manage') ? loadPayables() : Promise.resolve([]),
     hasAnyPermission('expenses.view', 'expenses.manage', 'expenses.approve', 'expenses.pay')
       ? loadExpenses() : Promise.resolve([]),
-    hasAnyPermission('sales.operate') ? loadPos() : Promise.resolve([]),
-    hasAnyPermission('receivables.manage') ? loadReceivables() : Promise.resolve([]),
-    hasAnyPermission('users.manage') ? loadUsers() : Promise.resolve([]),
+    hasAnyPermission('pos.use', 'sales.operate') ? loadPos() : Promise.resolve([]),
+    hasAnyPermission('receivable.view', 'receivables.manage') ? loadReceivables() : Promise.resolve([]),
+    hasAnyPermission('user.view', 'users.manage') ? loadUsers() : Promise.resolve([]),
     hasAnyPermission('dashboard.view') ? loadExecutiveSummary() : Promise.resolve({}),
     hasAnyPermission('audit.view') && !activeMembership()?.branchId
       ? loadAudit() : Promise.resolve({}),
     hasAnyPermission('reports.view') ? loadReports() : Promise.resolve({}),
-    hasAnyPermission('billing.manage') ? loadElectronicBilling() : Promise.resolve({}),
-    hasAnyPermission('billing.manage') ? loadBillingWorkflow() : Promise.resolve({}),
+    hasAnyPermission('billing.view', 'billing.manage') ? loadElectronicBilling() : Promise.resolve({}),
+    hasAnyPermission('billing.view', 'billing.manage') ? loadBillingWorkflow() : Promise.resolve({}),
     hasAnyPermission(
+      'commercial.view',
+      'marketing.budget.view',
+      'marketing.campaign.view',
       'commercial_planning.view',
       'commercial_planning.manage',
       'commercial_planning.marketing',
