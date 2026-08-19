@@ -2,7 +2,7 @@ import { query } from './db.js';
 import { AppError } from './shared/errors.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-const ALL_PERMISSIONS = [
+const LEGACY_PERMISSIONS = [
   'dashboard.view',
   'companies.manage',
   'branches.manage',
@@ -45,67 +45,170 @@ const ALL_PERMISSIONS = [
   'payroll.approve',
 ];
 
-const BASE_ROLES = [
+const ENTERPRISE_PERMISSION_DETAILS = [
+  ['dashboard.financial.view', 'Dashboard', 'Ver indicadores financieros'],
+  ['dashboard.margin.view', 'Dashboard', 'Ver márgenes'],
+  ['dashboard.marketing.view', 'Dashboard', 'Ver indicadores comerciales'],
+  ['dashboard.inventory.view', 'Dashboard', 'Ver indicadores de inventario'],
+  ['company.view', 'Administración', 'Ver empresa'], ['branch.view', 'Administración', 'Ver sucursales'],
+  ['warehouse.view', 'Administración', 'Ver bodegas'], ['warehouse.manage', 'Administración', 'Gestionar bodegas'],
+  ['product.view', 'Catálogo', 'Ver productos'], ['product.create', 'Catálogo', 'Crear productos'],
+  ['product.edit', 'Catálogo', 'Editar productos'], ['product.delete', 'Catálogo', 'Eliminar productos'],
+  ['product.cost.view', 'Catálogo', 'Ver costos'], ['product.margin.view', 'Catálogo', 'Ver márgenes'],
+  ['product.price.view', 'Catálogo', 'Ver precios'], ['product.price.edit', 'Catálogo', 'Editar precios'],
+  ['product.image.manage', 'Catálogo', 'Gestionar imágenes'],
+  ['inventory.receive', 'Inventario', 'Recibir mercancía'], ['inventory.transfer', 'Inventario', 'Transferir inventario'],
+  ['inventory.count.view', 'Inventario', 'Ver conteos'], ['inventory.adjustment.request', 'Inventario', 'Solicitar ajustes'],
+  ['inventory.adjustment.execute', 'Inventario', 'Ejecutar ajustes aprobados'],
+  ['inventory.damage.report', 'Inventario', 'Reportar averías'], ['inventory.damage.review', 'Inventario', 'Revisar averías'],
+  ['sale.view', 'Ventas', 'Ver ventas'], ['sale.create', 'Ventas', 'Crear ventas'],
+  ['sale.cancel', 'Ventas', 'Anular ventas'], ['sale.return', 'Ventas', 'Registrar devoluciones'],
+  ['sale.discount.apply', 'Ventas', 'Aplicar descuentos autorizados'], ['sale.discount.override', 'Ventas', 'Autorizar descuentos especiales'],
+  ['pos.use', 'Ventas', 'Usar punto de venta'],
+  ['cash.open', 'Caja', 'Abrir caja'], ['cash.close', 'Caja', 'Cerrar caja'], ['cash.view', 'Caja', 'Ver caja'],
+  ['cash.movement.create', 'Caja', 'Registrar movimientos de caja'], ['cash.report.view', 'Caja', 'Ver reportes de caja'],
+  ['customer.view', 'Clientes', 'Ver clientes'], ['customer.create', 'Clientes', 'Crear clientes'],
+  ['customer.edit', 'Clientes', 'Editar clientes'], ['customer.group.manage', 'Clientes', 'Gestionar segmentos de clientes'],
+  ['supplier.view', 'Compras', 'Ver proveedores'], ['supplier.manage', 'Compras', 'Gestionar proveedores'],
+  ['purchase.view', 'Compras', 'Ver compras'], ['purchase.create', 'Compras', 'Crear compras'],
+  ['purchase.receive', 'Compras', 'Recibir compras'], ['purchase.approve', 'Compras', 'Aprobar compras'],
+  ['receivable.view', 'Finanzas', 'Ver cuentas por cobrar'], ['receivable.manage', 'Finanzas', 'Gestionar cuentas por cobrar'],
+  ['payable.view', 'Finanzas', 'Ver cuentas por pagar'], ['payable.manage', 'Finanzas', 'Gestionar cuentas por pagar'],
+  ['bank.view', 'Finanzas', 'Ver bancos'], ['bank.manage', 'Finanzas', 'Gestionar bancos'],
+  ['accounting.view', 'Contabilidad', 'Ver contabilidad'], ['accounting.manage', 'Contabilidad', 'Gestionar contabilidad'],
+  ['report.export', 'Reportes', 'Exportar reportes'], ['billing.view', 'Facturación', 'Ver facturación electrónica'],
+  ['billing.manage', 'Facturación', 'Gestionar facturación electrónica'],
+  ['user.view', 'Seguridad', 'Ver usuarios'], ['user.manage', 'Seguridad', 'Gestionar usuarios y roles'],
+  ['configuration.view', 'Configuración', 'Ver configuración'], ['configuration.manage', 'Configuración', 'Gestionar configuración'],
+  ['commercial.view', 'Centro comercial', 'Ver planificación comercial'],
+  ['commercial.manage', 'Centro comercial', 'Gestionar planificación comercial'],
+  ['promotion.view', 'Centro comercial', 'Ver promociones'], ['promotion.manage', 'Centro comercial', 'Gestionar promociones'],
+  ['marketing.budget.view', 'Marketing', 'Ver presupuesto comercial'], ['marketing.budget.manage', 'Marketing', 'Gestionar presupuesto comercial'],
+  ['marketing.campaign.view', 'Marketing', 'Ver campañas'], ['marketing.campaign.manage', 'Marketing', 'Gestionar campañas'],
+  ['marketing.performance.view', 'Marketing', 'Ver resultados de campañas'],
+  ['field_sales.view', 'Ventas', 'Ver ventas de campo'], ['field_sales.manage', 'Ventas', 'Gestionar ventas de campo'],
+];
+
+export const PERMISSION_CATALOG = [
+  ...LEGACY_PERMISSIONS.map((code) => ({
+    code,
+    group: 'Compatibilidad',
+    name: code,
+    description: 'Permiso de compatibilidad para módulos existentes.',
+  })),
+  ...ENTERPRISE_PERMISSION_DETAILS.map(([code, group, name]) => ({
+    code,
+    group,
+    name,
+    description: `Permite ${name.toLowerCase()}.`,
+  })),
+];
+
+export const ALL_PERMISSIONS = [...new Set(PERMISSION_CATALOG.map((permission) => permission.code))];
+
+const rolePermissions = {
+  OWNER: ALL_PERMISSIONS,
+  ADMIN: ALL_PERMISSIONS.filter((permission) => ![
+    'companies.manage', 'configuration.manage', 'billing.manage', 'accounting.manage',
+  ].includes(permission)),
+  SUPERVISOR: [
+    'dashboard.view', 'dashboard.inventory.view', 'inventory.view', 'inventory.count.view',
+    'inventory.count.view_expected_stock', 'inventory.count.recount', 'inventory.adjustment.approve',
+    'inventory.adjustment.execute', 'inventory.damage.review', 'logistics.view', 'logistics.approve',
+    'logistics.labels', 'product.view', 'product.price.view', 'sale.view', 'cash.view',
+    'cash.report.view', 'reports.view', 'report.export', 'commercial.view',
+    'commercial_planning.view', 'commercial_planning.supervise', 'audit.view',
+  ],
+  WAREHOUSE: [
+    'dashboard.view', 'dashboard.inventory.view', 'product.view', 'product.price.view',
+    'product.image.manage', 'inventory.view', 'inventory.receive', 'inventory.transfer',
+    'inventory.count.view', 'inventory.count.perform', 'inventory.count.recount',
+    'inventory.adjustment.request', 'inventory.damage.report', 'inventory.evidence.view',
+    'inventory.evidence.upload', 'media.upload', 'logistics.view', 'logistics.count',
+    'logistics.labels', 'purchase.view', 'purchase.receive', 'warehouse.view',
+  ],
+  CASHIER: [
+    'dashboard.view', 'product.view', 'product.price.view', 'inventory.view', 'sale.view',
+    'sale.create', 'sale.return', 'sale.discount.apply', 'pos.use', 'cash.open', 'cash.close',
+    'cash.view', 'cash.movement.create', 'cash.report.view', 'customer.view', 'customer.create',
+  ],
+  SELLER: [
+    'dashboard.view', 'product.view', 'product.price.view', 'inventory.view', 'sale.view',
+    'sale.create', 'sale.discount.apply', 'customer.view', 'customer.create', 'customer.edit',
+    'promotion.view', 'commercial.view', 'field_sales.view', 'field_sales.manage',
+  ],
+  MARKETING: [
+    'dashboard.view', 'dashboard.marketing.view', 'dashboard.inventory.view', 'product.view',
+    'product.price.view', 'product.image.manage', 'inventory.view', 'customer.view',
+    'customer.group.manage', 'commercial.view', 'commercial.manage', 'promotion.view',
+    'promotion.manage', 'marketing.budget.view', 'marketing.budget.manage',
+    'marketing.campaign.view', 'marketing.campaign.manage', 'marketing.performance.view',
+    'commercial_planning.view', 'commercial_planning.marketing', 'media.upload',
+  ],
+  ACCOUNTANT: [
+    'dashboard.view', 'dashboard.financial.view', 'sale.view', 'cash.view', 'cash.report.view',
+    'receivable.view', 'receivable.manage', 'payable.view', 'payable.manage', 'bank.view',
+    'bank.manage', 'accounting.view', 'accounting.manage', 'reports.view', 'report.export',
+    'billing.view', 'audit.view',
+  ],
+  OPERATIONS: [
+    'dashboard.view', 'catalog.manage', 'inventory.view', 'inventory.adjust', 'logistics.view',
+    'logistics.count', 'logistics.price', 'logistics.labels', 'purchases.manage', 'expenses.view',
+    'expenses.manage', 'parties.view', 'parties.manage', 'sales.operate', 'reports.view',
+  ],
+  AUDITOR: ['dashboard.view', 'inventory.view', 'logistics.view', 'receivables.manage', 'payables.manage', 'expenses.view', 'parties.view', 'audit.view', 'reports.view'],
+};
+
+export const BASE_ROLES = [
   {
     code: 'OWNER',
     name: 'Propietario',
     description: 'Control total de la empresa, el equipo y la configuración.',
     color: 'PURPLE',
-    permissions: ALL_PERMISSIONS,
+    permissions: rolePermissions.OWNER,
   },
   {
     code: 'ADMIN',
     name: 'Administrador',
-    description: 'Administra la operación diaria y la mayoría de módulos.',
+    description: 'Administra la operación diaria sin acceso a infraestructura SaaS.',
     color: 'BLUE',
-    permissions: ALL_PERMISSIONS,
+    permissions: rolePermissions.ADMIN,
+  },
+  {
+    code: 'SUPERVISOR', name: 'Supervisor', description: 'Supervisa inventario y aprueba diferencias sin gestionar la plataforma.', color: 'AMBER', permissions: rolePermissions.SUPERVISOR,
+  },
+  {
+    code: 'WAREHOUSE', name: 'Bodeguero', description: 'Recibe, cuenta, transfiere y documenta mercancía; no aprueba sus propios ajustes.', color: 'CYAN', permissions: rolePermissions.WAREHOUSE,
   },
   {
     code: 'OPERATIONS',
     name: 'Operaciones',
     description: 'Gestiona catálogo, inventario, compras y ventas.',
     color: 'CYAN',
-    permissions: [
-      'dashboard.view',
-      'catalog.manage',
-      'inventory.view',
-      'inventory.adjust',
-      'logistics.view',
-      'logistics.count',
-      'logistics.price',
-      'logistics.labels',
-      'purchases.manage',
-      'expenses.view',
-      'expenses.manage',
-      'parties.view',
-      'parties.manage',
-      'sales.operate',
-      'reports.view',
-    ],
+    permissions: rolePermissions.OPERATIONS,
   },
   {
     code: 'CASHIER',
     name: 'Caja',
     description: 'Opera exclusivamente caja, ventas y cobros del punto de venta.',
     color: 'GREEN',
-    permissions: ['sales.operate'],
+    permissions: rolePermissions.CASHIER,
+  },
+  {
+    code: 'SELLER', name: 'Vendedor', description: 'Gestiona ventas, clientes y pedidos comerciales asignados.', color: 'GREEN', permissions: rolePermissions.SELLER,
+  },
+  {
+    code: 'MARKETING', name: 'Marketing', description: 'Gestiona campañas y presupuesto comercial sin acceder a finanzas contables.', color: 'ROSE', permissions: rolePermissions.MARKETING,
+  },
+  {
+    code: 'ACCOUNTANT', name: 'Contador', description: 'Gestiona cartera, bancos, contabilidad y reportes financieros.', color: 'BLUE', permissions: rolePermissions.ACCOUNTANT,
   },
   {
     code: 'AUDITOR',
     name: 'Auditor',
     description: 'Consulta información financiera, inventario y trazabilidad.',
     color: 'AMBER',
-    permissions: [
-      'dashboard.view',
-      'inventory.view',
-      'logistics.view',
-      'receivables.manage',
-      'payables.manage',
-      'expenses.view',
-      'parties.view',
-      'audit.view',
-      'reports.view',
-    ],
+    permissions: rolePermissions.AUDITOR,
   },
 ];
 
@@ -346,8 +449,11 @@ export function authorizeApiRequest(req, res, next) {
       : ['warehouses.manage'];
   } else if (/^\/api\/(categories|brands|products|product-structures|pricing|taxes|catalog-import)/.test(path)) {
     permissions = read
-      ? ['inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate']
-      : ['catalog.manage'];
+      ? ['product.view', 'product.price.view', 'inventory.view', 'catalog.manage', 'purchases.manage', 'sales.operate']
+      : [
+        path.startsWith('/api/pricing') ? 'product.price.edit' : 'product.edit',
+        'product.create', 'catalog.manage',
+      ];
   } else if (path.startsWith('/api/inventory-advanced/warehouse-permissions')) {
     permissions = ['users.manage', 'warehouses.manage'];
   } else if (path.startsWith('/api/module-settings')) {
@@ -356,19 +462,23 @@ export function authorizeApiRequest(req, res, next) {
       : ['users.manage'];
   } else if (path.startsWith('/api/logistics')) {
     permissions = read
-      ? ['logistics.view']
+      ? ['logistics.view', 'inventory.view', 'product.view']
       : [
+        'inventory.receive',
         'logistics.count',
         'logistics.price',
         'logistics.approve',
         'logistics.labels',
       ];
   } else if (path.startsWith('/api/inventory')) {
-    permissions = read ? ['inventory.view'] : ['inventory.adjust'];
+    permissions = read ? ['inventory.view'] : ['inventory.adjust', 'inventory.adjustment.execute', 'inventory.transfer', 'inventory.receive'];
   } else if (path.startsWith('/api/physical-counts')) {
-    permissions = read ? ['inventory.view', 'inventory.adjust'] : ['inventory.adjust'];
+    if (read) permissions = ['inventory.view', 'inventory.count.view', 'inventory.adjust'];
+    else if (/\/complete$/.test(path)) permissions = ['inventory.adjustment.approve', 'inventory.adjustment.execute', 'inventory.adjust'];
+    else if (/\/submit$/.test(path)) permissions = ['inventory.count.perform', 'inventory.count.recount', 'inventory.adjust'];
+    else permissions = ['inventory.count.perform', 'inventory.count.recount', 'inventory.adjust'];
   } else if (path.startsWith('/api/purchases')) permissions = ['purchases.manage'];
-  else if (path.startsWith('/api/pos')) permissions = ['sales.operate'];
+  else if (path.startsWith('/api/pos')) permissions = ['pos.use', 'sale.create', 'sales.operate'];
   else if (path.startsWith('/api/receivables')) permissions = ['receivables.manage'];
   else if (path.startsWith('/api/payables')) permissions = ['payables.manage'];
   else if (path.startsWith('/api/expenses')) {
@@ -386,7 +496,7 @@ export function authorizeApiRequest(req, res, next) {
       ? ['parties.view', 'parties.manage']
       : ['parties.manage'];
   }
-  else if (path.startsWith('/api/users')) permissions = ['users.manage'];
+  else if (path.startsWith('/api/users')) permissions = ['users.manage', 'user.manage'];
   else if (path.startsWith('/api/dashboard')) permissions = ['dashboard.view'];
   else if (path.startsWith('/api/audit')) permissions = ['audit.view'];
   else if (path.startsWith('/api/reports')) permissions = ['reports.view'];
@@ -418,6 +528,11 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/commercial-planning')) {
     permissions = read
       ? [
+        'commercial.view',
+        'promotion.view',
+        'marketing.budget.view',
+        'marketing.campaign.view',
+        'marketing.performance.view',
         'commercial_planning.view',
         'commercial_planning.manage',
         'commercial_planning.marketing',
@@ -425,7 +540,10 @@ export function authorizeApiRequest(req, res, next) {
         'reports.view',
         'sales.operate',
       ]
-      : ['commercial_planning.manage', 'commercial_planning.marketing'];
+      : [
+        'commercial.manage', 'promotion.manage', 'marketing.budget.manage',
+        'marketing.campaign.manage', 'commercial_planning.manage', 'commercial_planning.marketing',
+      ];
   }
   else if (path.startsWith('/api/secure-files')) {
     permissions = read
