@@ -600,6 +600,7 @@ test(
   async () => {
     const pool = new pg.Pool({ connectionString });
     const ownerId = randomUUID();
+    const approverId = randomUUID();
     const cashierId = randomUUID();
     const email = `owner-${ownerId}@example.test`;
     let companyId = null;
@@ -614,7 +615,7 @@ test(
       application.use((req, _res, next) => {
         req.context = {
           tenantId: req.header('x-tenant-id') || null,
-          userId: ownerId,
+          userId: req.header('x-user-id') || ownerId,
           authenticated: true,
           requestId: randomUUID(),
           branchId: null,
@@ -678,6 +679,21 @@ test(
           taxes: Number(setup.rows[0].taxes),
         },
         { memberships: 1, branches: 1, warehouses: 2, registers: 1, taxes: 3 },
+      );
+      // La recepción la opera el propietario, pero la aprobación debe hacerla
+      // una segunda persona autorizada. Así la prueba conserva la segregación
+      // de funciones que exige el flujo real de logística.
+      await pool.query(
+        `INSERT INTO users(id, email, full_name, status)
+         VALUES($1,$2,'Aprobador de prueba','ACTIVE')`,
+        [approverId, `approver-${approverId}@example.test`],
+      );
+      await pool.query(
+        `INSERT INTO tenant_users(tenant_id, user_id, role_code, role_id, status, joined_at)
+         SELECT $1,$2,'OWNER',id,'ACTIVE',now()
+         FROM roles
+         WHERE tenant_id = $1 AND code = 'OWNER'`,
+        [companyId, approverId],
       );
       assert.equal(response.body.setup.warehouse.warehouse_type, 'AVAILABLE');
       assert.equal(response.body.setup.displayWarehouse.warehouse_type, 'DISPLAY');
@@ -946,6 +962,7 @@ test(
       const completedLogisticsBatch = await request(application)
         .post(`/api/logistics/batches/${logisticsBatch.body.id}/approve`)
         .set('x-tenant-id', companyId)
+        .set('x-user-id', approverId)
         .send({ reason: 'Aprobación de integración' })
         .expect(200);
       assert.equal(completedLogisticsBatch.body.status, 'COMPLETED');

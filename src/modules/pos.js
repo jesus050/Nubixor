@@ -808,7 +808,7 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
            FROM role_permissions permission
            WHERE permission.tenant_id = membership.tenant_id
              AND permission.role_id = membership.role_id
-             AND permission.permission_code = 'sales.operate'
+             AND permission.permission_code = ANY(ARRAY['sales.operate', 'sale.create', 'pos.use'])
          )
          OR (
            membership.role_id IS NULL
@@ -1325,7 +1325,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
              FROM role_permissions permission
              WHERE permission.tenant_id = membership.tenant_id
                AND permission.role_id = membership.role_id
-               AND permission.permission_code = 'sales.operate'
+               AND permission.permission_code = ANY(ARRAY['sales.operate', 'sale.create', 'pos.use'])
            )
            OR (
              membership.role_id IS NULL
