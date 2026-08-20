@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
-import { PERMISSION_CATALOG, requireAnyPermission } from '../authorization.js';
+import {
+  ensureTenantBaseRoles,
+  PERMISSION_CATALOG,
+  requireAnyPermission,
+} from '../authorization.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
 import { writeAudit } from '../audit.js';
@@ -147,6 +151,9 @@ router.get('/summary', asyncHandler(async (req, res) => {
 }));
 
 router.get('/roles', asyncHandler(async (req, res) => {
+  // Preserve existing memberships while adding protected roles introduced
+  // after this tenant was created.
+  await withTransaction((client) => ensureTenantBaseRoles(client, req.context.tenantId));
   const result = await query(
     `SELECT r.id, r.code, r.name, r.description, r.color, r.is_system,
             r.active, r.created_at,
@@ -165,8 +172,8 @@ router.get('/roles', asyncHandler(async (req, res) => {
      GROUP BY r.id
      ORDER BY r.is_system DESC,
        CASE r.code
-         WHEN 'OWNER' THEN 1 WHEN 'ADMIN' THEN 2 WHEN 'OPERATIONS' THEN 3
-         WHEN 'SUPERVISOR' THEN 3 WHEN 'WAREHOUSE' THEN 4 WHEN 'CASHIER' THEN 5
+         WHEN 'OWNER' THEN 1 WHEN 'ADMIN' THEN 2 WHEN 'SUPERVISOR' THEN 3
+         WHEN 'WAREHOUSE' THEN 4 WHEN 'CASHIER' THEN 5
          WHEN 'SELLER' THEN 6 WHEN 'MARKETING' THEN 7 WHEN 'ACCOUNTANT' THEN 8
          WHEN 'OPERATIONS' THEN 9 WHEN 'AUDITOR' THEN 10 ELSE 11
        END,
