@@ -212,25 +212,15 @@ export const BASE_ROLES = [
   },
 ];
 
-export async function bootstrapTenantAccess(client, { tenantId, ownerUserId }) {
-  if (!UUID_PATTERN.test(ownerUserId || '')) {
-    throw new AppError(
-      'Debes identificar al propietario de la nueva empresa.',
-      401,
-      'OWNER_CONTEXT_REQUIRED',
-    );
-  }
-  const user = await client.query(
-    `SELECT id FROM users WHERE id = $1 AND status = 'ACTIVE'`,
-    [ownerUserId],
-  );
-  if (!user.rowCount) {
-    throw new AppError(
-      'El propietario indicado no tiene una cuenta activa.',
-      403,
-      'OWNER_NOT_ACTIVE',
-    );
-  }
+/**
+ * Ensures that every tenant has the current set of protected operational
+ * roles. This is deliberately additive: legacy roles and current user
+ * assignments are never removed or reassigned.
+ *
+ * It is also used as a small self-healing guard for tenants created before a
+ * new base role was introduced in a later migration.
+ */
+export async function ensureTenantBaseRoles(client, tenantId) {
   let ownerRole;
   for (const template of BASE_ROLES) {
     const role = await client.query(
@@ -243,6 +233,7 @@ export async function bootstrapTenantAccess(client, { tenantId, ownerUserId }) {
            description = EXCLUDED.description,
            color = EXCLUDED.color,
            active = TRUE,
+           is_system = TRUE,
            updated_at = now()
        RETURNING id, code`,
       [
@@ -263,6 +254,29 @@ export async function bootstrapTenantAccess(client, { tenantId, ownerUserId }) {
     }
     if (template.code === 'OWNER') ownerRole = role.rows[0];
   }
+  return ownerRole;
+}
+
+export async function bootstrapTenantAccess(client, { tenantId, ownerUserId }) {
+  if (!UUID_PATTERN.test(ownerUserId || '')) {
+    throw new AppError(
+      'Debes identificar al propietario de la nueva empresa.',
+      401,
+      'OWNER_CONTEXT_REQUIRED',
+    );
+  }
+  const user = await client.query(
+    `SELECT id FROM users WHERE id = $1 AND status = 'ACTIVE'`,
+    [ownerUserId],
+  );
+  if (!user.rowCount) {
+    throw new AppError(
+      'El propietario indicado no tiene una cuenta activa.',
+      403,
+      'OWNER_NOT_ACTIVE',
+    );
+  }
+  const ownerRole = await ensureTenantBaseRoles(client, tenantId);
   await client.query(
     `INSERT INTO tenant_users(
        tenant_id, user_id, role_code, role_id, status, joined_at
