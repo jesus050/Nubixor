@@ -64,6 +64,9 @@ function databaseConnection(urlValue) {
     ],
     environment: {
       PGPASSWORD: decodeURIComponent(url.password),
+      // Las tablas contables tienen aislamiento por fila forzado. Sin levantarlo
+      // el respaldo fallaría, o peor, guardaría esas tablas vacías.
+      PGOPTIONS: '-c app.bypass_tenant_isolation=on',
       ...(config.databaseSsl ? { PGSSLMODE: 'require' } : {}),
     },
   };
@@ -128,6 +131,10 @@ export async function runBackup() {
       '--format=custom',
       '--no-owner',
       '--no-privileges',
+      // pg_dump apaga las políticas por su cuenta y eso lo rechaza PostgreSQL
+      // cuando el usuario no puede saltárselas; aquí sí aplican, y la compuerta
+      // de mantenimiento las deja pasar todas.
+      '--enable-row-security',
       '--file',
       databaseFile,
       ...database.args,

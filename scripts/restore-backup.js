@@ -49,7 +49,12 @@ function databaseConnection(urlValue) {
       '--username', decodeURIComponent(url.username),
       '--dbname', decodeURIComponent(url.pathname.replace(/^\//, '')),
     ],
-    environment: { PGPASSWORD: decodeURIComponent(url.password) },
+    environment: {
+      PGPASSWORD: decodeURIComponent(url.password),
+      // Reinsertar en tablas con aislamiento forzado exige levantarlo: si no,
+      // la política rechazaría cada fila contable de la restauración.
+      PGOPTIONS: '-c app.bypass_tenant_isolation=on',
+    },
   };
 }
 
