@@ -106,3 +106,14 @@ jobs:
 
       - name: Verify published container manifest
         run: docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:latest
+
+      - name: Build and push Caddy proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Caddy.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-proxy:latest
+
+      - name: Verify published proxy manifest
+        run: docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-proxy:latest
