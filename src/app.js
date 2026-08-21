@@ -161,6 +161,15 @@ export function createApp({
   application.use('/api/commercial-planning', commercialPlanningRouter);
   application.use('/api/secure-files', secureFilesRouter);
 
+  // La interfaz usa rutas basadas en hash, pero /login puede quedar guardada o
+  // compartida como URL. Entregamos el documento de entrada para que la propia
+  // aplicación muestre su pantalla de autenticación, sin convertir rutas API o
+  // archivos inexistentes en respuestas HTML.
+  application.get('/login', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+
   application.use(notFound);
   application.use(errorHandler);
   return application;
