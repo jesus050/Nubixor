@@ -3869,6 +3869,17 @@ function renderProducts() {
       });
       productActions.append(barcodeButton);
 
+      const printBarcodeButton = document.createElement('button');
+      printBarcodeButton.className = 'photo-action';
+      printBarcodeButton.type = 'button';
+      printBarcodeButton.textContent = 'Imprimir etiqueta';
+      printBarcodeButton.disabled = !product.barcode;
+      printBarcodeButton.title = product.barcode
+        ? 'Imprime etiquetas térmicas para este producto'
+        : 'Primero genera o registra un código de barras';
+      printBarcodeButton.addEventListener('click', () => printProductBarcodeLabels(product));
+      productActions.append(printBarcodeButton);
+
       const einvoiceButton = document.createElement('button');
       einvoiceButton.className = 'photo-action';
       einvoiceButton.type = 'button';
@@ -15398,6 +15409,64 @@ async function submitTax(event) {
     elements.saveTaxButton.disabled = false;
     elements.saveTaxButton.textContent = 'Crear impuesto';
   }
+}
+
+function ean13CheckDigit(value) {
+  return String((10 - ([...String(value)].reduce((sum, digit, index) =>
+    sum + Number(digit) * (index % 2 === 0 ? 1 : 3), 0) % 10)) % 10);
+}
+
+function ean13LabelSvg(value) {
+  const code = String(value || '').trim();
+  if (!/^\d{13}$/.test(code) || ean13CheckDigit(code.slice(0, 12)) !== code[12]) return null;
+  const left = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
+  const middle = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111'];
+  const right = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100'];
+  const parity = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+  const digit = (index) => Number(code[index]);
+  let modules = '101';
+  for (let index = 1; index <= 6; index += 1) {
+    modules += (parity[digit(0)][index - 1] === 'L' ? left : middle)[digit(index)];
+  }
+  modules += '01010';
+  for (let index = 7; index <= 12; index += 1) modules += right[digit(index)];
+  modules += '101';
+  const moduleWidth = 2;
+  const quietZone = 11;
+  const bars = [...modules].map((bit, index) => {
+    if (bit !== '1') return '';
+    const guard = index < 3 || (index >= 45 && index < 50) || index >= 92;
+    return `<rect x="${(index + quietZone) * moduleWidth}" y="0" width="${moduleWidth}" height="${guard ? 66 : 58}"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 234 82" role="img" aria-label="Código de barras ${code}" xmlns="http://www.w3.org/2000/svg"><rect width="234" height="82" fill="white"/><g fill="black">${bars}</g><text x="117" y="79" text-anchor="middle" font-family="monospace" font-size="13">${code}</text></svg>`;
+}
+
+function printProductBarcodeLabels(product) {
+  const barcode = String(product.barcode || '').trim();
+  const barcodeSvg = ean13LabelSvg(barcode);
+  if (!barcodeSvg) {
+    showToast('La impresión directa requiere un EAN-13 válido. Genera un código interno o edita el código del producto.');
+    return;
+  }
+  const requestedCopies = Number(window.prompt('¿Cuántas etiquetas deseas imprimir?', '1'));
+  if (!Number.isInteger(requestedCopies) || requestedCopies < 1 || requestedCopies > 100) return;
+  const popup = window.open('', '_blank', 'width=480,height=640');
+  if (!popup) {
+    showToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e inténtalo de nuevo.');
+    return;
+  }
+  const productName = escapeHtml(product.name);
+  const price = escapeHtml(formatCurrency(product.sale_price));
+  const labels = Array.from({ length: requestedCopies }, () => `
+    <article class="label"><strong>${productName}</strong><span>${price}</span>${barcodeSvg}</article>
+  `).join('');
+  popup.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Etiquetas · ${productName}</title><style>
+    @page { size: 50mm 25mm; margin: 0; }
+    * { box-sizing: border-box; } body { margin: 0; font-family: Arial, sans-serif; }
+    .label { width: 50mm; height: 25mm; padding: 1.2mm 2mm; overflow: hidden; page-break-after: always; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; gap: .4mm 2mm; }
+    .label strong { font-size: 8pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .label span { font-size: 8pt; font-weight: 700; } .label svg { grid-column: 1 / -1; width: 100%; height: 16mm; }
+  </style></head><body>${labels}<script>window.addEventListener('load', () => window.print());<\/script></body></html>`);
+  popup.document.close();
 }
 
 function openProductTaxDialog(product) {
