@@ -2744,6 +2744,16 @@
                   <div class="cart-summary">
                     <div><span>Subtotal</span><strong id="cartSubtotal">$0</strong></div>
                     <div><span>Impuestos incluidos</span><strong id="cartTax">$0</strong></div>
+                    <div class="cart-discount">
+                      <span>Descuento</span>
+                      <select id="posDiscountType" aria-label="Tipo de descuento">
+                        <option value="PERCENT">%</option>
+                        <option value="AMOUNT">COP</option>
+                      </select>
+                      <input id="posDiscountAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0" aria-label="Valor del descuento">
+                      <input id="posDiscountReason" type="text" maxlength="240" placeholder="Motivo" aria-label="Motivo del descuento">
+                    </div>
+                    <div class="cart-discount-total" id="cartDiscountTotal" hidden><span>Descuento aplicado</span><strong>$0</strong></div>
                     <div class="cart-total"><span>Total</span><strong id="cartTotal">$0</strong></div>
                   </div>
                   <div class="sale-terms">
@@ -6975,6 +6985,7 @@
         <div class="receipt-totals">
           <div><span>Subtotal</span><strong id="receiptSubtotal">$0</strong></div>
           <div><span>Impuestos incluidos</span><strong id="receiptTax">$0</strong></div>
+          <div id="receiptDiscountRow" hidden><span>Descuento</span><strong id="receiptDiscount">$0</strong></div>
           <div class="receipt-grand-total"><span>Total de la venta</span><strong id="receiptTotal">$0</strong></div>
           <div><span>Cliente</span><strong id="receiptCustomer">Consumidor final</strong></div>
           <div><span>Medio de pago</span><strong id="receiptPaymentMethod">—</strong></div>

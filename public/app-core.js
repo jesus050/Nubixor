@@ -905,6 +905,10 @@ const elements = {
   cartSubtotal: document.querySelector('#cartSubtotal'),
   cartTax: document.querySelector('#cartTax'),
   cartTotal: document.querySelector('#cartTotal'),
+  posDiscountType: document.querySelector('#posDiscountType'),
+  posDiscountAmount: document.querySelector('#posDiscountAmount'),
+  posDiscountReason: document.querySelector('#posDiscountReason'),
+  cartDiscountTotal: document.querySelector('#cartDiscountTotal'),
   clearCartButton: document.querySelector('#clearCartButton'),
   posCustomerSelect: document.querySelector('#posCustomerSelect'),
   posCustomerBalance: document.querySelector('#posCustomerBalance'),
@@ -950,6 +954,8 @@ const elements = {
   receiptLines: document.querySelector('#receiptLines'),
   receiptSubtotal: document.querySelector('#receiptSubtotal'),
   receiptTax: document.querySelector('#receiptTax'),
+  receiptDiscountRow: document.querySelector('#receiptDiscountRow'),
+  receiptDiscount: document.querySelector('#receiptDiscount'),
   receiptTotal: document.querySelector('#receiptTotal'),
   receiptCustomer: document.querySelector('#receiptCustomer'),
   receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
@@ -5637,6 +5643,13 @@ function calculateCartTotals() {
     tax += taxRate > 0 ? lineTotal * taxRate / (100 + taxRate) : 0;
     itemCount += item.quantity;
   }
+  const discount = posManualDiscountDraft(total);
+  if (discount.amount > 0) {
+    const appliedAmount = Math.min(discount.amount, total);
+    const ratio = (total - appliedAmount) / total;
+    tax *= ratio;
+    total -= appliedAmount;
+  }
   total = Math.round(total * 100) / 100;
   tax = Math.round(tax * 100) / 100;
   return {
@@ -5645,6 +5658,14 @@ function calculateCartTotals() {
     total,
     itemCount,
   };
+}
+
+function posManualDiscountDraft(grossTotal = 0) {
+  const type = elements.posDiscountType?.value || 'PERCENT';
+  const value = Number(elements.posDiscountAmount?.value) || 0;
+  if (value <= 0 || grossTotal <= 0) return { amount: 0, type, value: 0, reason: null };
+  const amount = type === 'PERCENT' ? Math.round(grossTotal * value) / 100 : value;
+  return { amount: Math.round(amount * 100) / 100, type, value, reason: elements.posDiscountReason?.value.trim() || null };
 }
 
 function cashTenderOptions(total) {
@@ -6152,6 +6173,13 @@ function renderCart() {
   elements.cartSubtotal.textContent = formatCurrency(totals.subtotal);
   elements.cartTax.textContent = formatCurrency(totals.tax);
   elements.cartTotal.textContent = formatCurrency(totals.total);
+  const grossTotal = [...saleCart.values()].reduce((sum, item) =>
+    sum + productCommercialPrice(item.product, item.quantity).unitPrice * item.quantity, 0);
+  const discount = posManualDiscountDraft(grossTotal);
+  elements.cartDiscountTotal.hidden = discount.amount <= 0;
+  elements.cartDiscountTotal.querySelector('strong').textContent = `−${formatCurrency(
+    Math.min(discount.amount, grossTotal),
+  )}`;
   elements.clearCartButton.hidden = totals.itemCount === 0;
   elements.completeSaleButton.disabled =
     !posSummary.openSession || !elements.posWarehouseSelect.value || saleCart.size === 0;
@@ -6234,6 +6262,8 @@ function clearCart() {
   elements.posMixedCashAmount.value = '0';
   elements.posMixedCardAmount.value = '0';
   elements.posMixedTransferAmount.value = '0';
+  elements.posDiscountAmount.value = '';
+  elements.posDiscountReason.value = '';
   renderCart();
   renderPosCatalog();
 }
@@ -16726,6 +16756,9 @@ function showReceipt(receipt) {
   }
   elements.receiptSubtotal.textContent = formatCurrency(receipt.subtotal);
   elements.receiptTax.textContent = formatCurrency(receipt.tax_total);
+  const receiptDiscount = Number(receipt.manualDiscountAmount || receipt.manual_discount_amount || 0);
+  elements.receiptDiscountRow.hidden = receiptDiscount <= 0;
+  elements.receiptDiscount.textContent = `−${formatCurrency(receiptDiscount)}`;
   elements.receiptTotal.textContent = formatCurrency(receipt.total);
   elements.receiptCustomer.textContent = receipt.customer?.name || 'Consumidor final';
   elements.receiptPaymentMethod.textContent =
@@ -17103,8 +17136,6 @@ function posPaymentPayload() {
 async function completeSale() {
   if (!posSummary.openSession || !saleCart.size) return;
   elements.posSaleError.hidden = true;
-  elements.completeSaleButton.disabled = true;
-  elements.completeSaleButton.textContent = 'Confirmando venta…';
   try {
     const sellerCompanies = new Set(
       [...saleCart.values()].map(({ product }) =>
@@ -17125,6 +17156,18 @@ async function completeSale() {
       billingPolicies.size > 1 ||
       requiresPolicyAwareCheckout
     );
+    const grossTotal = [...saleCart.values()].reduce((sum, item) =>
+      sum + productCommercialPrice(item.product, item.quantity).unitPrice * item.quantity, 0);
+    const discount = posManualDiscountDraft(grossTotal);
+    if (discount.amount > 0 && (!discount.reason || discount.amount > grossTotal ||
+      (discount.type === 'PERCENT' && discount.value > 100))) {
+      throw new Error('Revisa el descuento: debe tener un motivo y no superar el total de la venta.');
+    }
+    if (sharedCheckout && discount.amount > 0) {
+      throw new Error('El descuento manual aún no está disponible en cobros combinados. Registra la venta por empresa para aplicarlo.');
+    }
+    elements.completeSaleButton.disabled = true;
+    elements.completeSaleButton.textContent = 'Confirmando venta…';
     const firstCartItem = saleCart.values().next().value;
     const receipt = await getJson(sharedCheckout ? '/api/pos/sales/grouped' : '/api/pos/sales', {
       method: 'POST',
@@ -17159,6 +17202,9 @@ async function completeSale() {
           && !posMixedPayment
           ? elements.posTransferReference.value.trim()
           : null,
+        manualDiscount: discount.amount > 0
+          ? { type: discount.type, amount: discount.value, reason: discount.reason }
+          : null,
         items: [...saleCart.values()].map((item) => ({
           productId: item.product.id,
           ...(sharedCheckout ? { warehouseId: item.product.warehouse_id } : {}),
@@ -17172,6 +17218,8 @@ async function completeSale() {
     elements.posMixedCashAmount.value = '0';
     elements.posMixedCardAmount.value = '0';
     elements.posMixedTransferAmount.value = '0';
+    elements.posDiscountAmount.value = '';
+    elements.posDiscountReason.value = '';
     elements.posCustomerSelect.value = '';
     posSaleTerms = 'IMMEDIATE';
     elements.posSaleTermButtons.forEach((button) => {
@@ -18014,6 +18062,10 @@ elements.posSaleTermButtons.forEach((button) => {
   });
 });
 elements.posCreditDueDate.addEventListener('change', renderCart);
+for (const input of [elements.posDiscountType, elements.posDiscountAmount, elements.posDiscountReason]) {
+  input.addEventListener('input', renderCart);
+  input.addEventListener('change', renderCart);
+}
 elements.posCashReceived.addEventListener('input', () => {
   updateCashSettlement(calculateCartTotals());
 });

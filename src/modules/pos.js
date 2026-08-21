@@ -51,6 +51,48 @@ function money(value) {
   return Math.round(Number(value) * 100) / 100;
 }
 
+function normalizeManualDiscount(value) {
+  if (value === null || value === undefined) return { amount: 0, type: null, reason: null };
+  const type = typeof value?.type === 'string' ? value.type.trim().toUpperCase() : '';
+  const amount = Number(value?.amount);
+  const reason = normalizedText(value?.reason, 240);
+  if (!['PERCENT', 'AMOUNT'].includes(type) || !Number.isFinite(amount) || amount <= 0) {
+    throw new AppError('El descuento debe indicar un porcentaje o valor válido.', 422, 'INVALID_MANUAL_DISCOUNT');
+  }
+  if (type === 'PERCENT' && amount > 100) {
+    throw new AppError('El porcentaje de descuento no puede superar 100%.', 422, 'INVALID_MANUAL_DISCOUNT');
+  }
+  if (!reason) {
+    throw new AppError('Indica el motivo del descuento.', 422, 'DISCOUNT_REASON_REQUIRED');
+  }
+  return { amount, type, reason };
+}
+
+function applyManualDiscount(lines, discount) {
+  const grossTotal = money(lines.reduce((sum, line) => sum + line.lineTotal, 0));
+  const requested = discount.type === 'PERCENT'
+    ? money(grossTotal * discount.amount / 100)
+    : money(discount.amount);
+  if (requested > grossTotal) {
+    throw new AppError('El descuento no puede ser mayor que el total de la venta.', 422, 'DISCOUNT_EXCEEDS_SALE');
+  }
+  if (!requested || !grossTotal) {
+    lines.forEach((line) => { line.manualDiscountAmount = 0; });
+    return 0;
+  }
+  let remaining = requested;
+  lines.forEach((line, index) => {
+    const share = index === lines.length - 1
+      ? remaining
+      : money(requested * line.lineTotal / grossTotal);
+    line.manualDiscountAmount = share;
+    line.lineTotal = money(line.lineTotal - share);
+    line.lineTax = line.taxRate > 0 ? money(line.lineTotal * line.taxRate / (100 + line.taxRate)) : 0;
+    remaining = money(remaining - share);
+  });
+  return requested;
+}
+
 function internalReceiptControlCode(payload) {
   const canonical = JSON.stringify(payload);
   return (config.receiptVerificationKey
@@ -1941,6 +1983,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     customerId = null,
     saleTerms = 'IMMEDIATE',
     dueDate = null,
+    manualDiscount = null,
     items,
   } = req.body;
   const requestedPayment = typeof paymentMethod === 'string'
@@ -2012,6 +2055,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     !Number.isFinite(Number(item.quantity)) || Number(item.quantity) <= 0)) {
     return res.status(422).json({ error: 'Los productos y cantidades de la venta no son válidos.' });
   }
+  const requestedDiscount = normalizeManualDiscount(manualDiscount);
 
   const consolidatedItems = new Map();
   for (const item of items) {
@@ -2034,6 +2078,24 @@ router.post('/sales', asyncHandler(async (req, res) => {
     );
     if (!session.rowCount) {
       throw new AppError('La venta requiere un turno de caja abierto.', 409, 'CASH_SESSION_REQUIRED');
+    }
+    if (requestedDiscount.amount > 0) {
+      const discountPermission = await client.query(
+        `SELECT 1
+         FROM tenant_users membership
+         JOIN role_permissions permission
+           ON permission.tenant_id = membership.tenant_id
+          AND permission.role_id = membership.role_id
+          AND permission.permission_code = 'sale.discount.apply'
+         WHERE membership.tenant_id = $1
+           AND membership.user_id = $2
+           AND membership.status = 'ACTIVE'
+         LIMIT 1`,
+        [req.context.tenantId, req.context.userId],
+      );
+      if (!discountPermission.rowCount) {
+        throw new AppError('Tu perfil no tiene autorización para aplicar descuentos.', 403, 'DISCOUNT_PERMISSION_DENIED');
+      }
     }
     const fiscalProfile = await client.query(
       `SELECT electronic_invoicing_required, default_document_type
@@ -2161,8 +2223,9 @@ router.post('/sales', asyncHandler(async (req, res) => {
         pricing: appliedPrice,
       });
     }
-    total = Math.round(total * 100) / 100;
-    taxTotal = Math.round(taxTotal * 100) / 100;
+    const manualDiscountAmount = applyManualDiscount(lines, requestedDiscount);
+    total = money(lines.reduce((sum, line) => sum + line.lineTotal, 0));
+    taxTotal = money(lines.reduce((sum, line) => sum + line.lineTax, 0));
     const subtotal = Math.round((total - taxTotal) * 100) / 100;
     const saleTenders = normalizedTerms === 'IMMEDIATE'
       ? normalizeSaleTenders({
@@ -2196,9 +2259,10 @@ router.post('/sales', asyncHandler(async (req, res) => {
       `INSERT INTO sales(
          tenant_id, cash_session_id, warehouse_id, payment_method,
          subtotal, tax_total, total, cash_received, cash_change, created_by,
-         customer_id, sale_terms, due_date, document_type, billing_resolution_id
+         customer_id, sale_terms, due_date, document_type, billing_resolution_id,
+         manual_discount_amount, manual_discount_reason
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id, sequence_number, status, payment_method,
                  subtotal, tax_total, total, cash_received, cash_change,
                  customer_id, sale_terms, due_date, document_type,
@@ -2219,6 +2283,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
         normalizedTerms === 'CREDIT' ? dueDate : null,
         documentType,
         billingResolution?.id || null,
+        manualDiscountAmount,
+        requestedDiscount.reason,
       ],
     );
     const sale = saleResult.rows[0];
@@ -2300,10 +2366,10 @@ router.post('/sales', asyncHandler(async (req, res) => {
       await client.query(
         `INSERT INTO sale_items(
            tenant_id, sale_id, product_id, sku_snapshot, name_snapshot,
-           quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total,
+           quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total, discount_amount,
            list_unit_price,pricing_source,pricing_label
          )
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
         [
           req.context.tenantId,
           sale.id,
@@ -2316,6 +2382,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
           line.taxRate,
           line.lineTax,
           line.lineTotal,
+          line.manualDiscountAmount || 0,
           line.pricing.basePrice,
           line.pricing.source,
           line.pricing.label,
@@ -2438,8 +2505,10 @@ router.post('/sales', asyncHandler(async (req, res) => {
       action: 'sale.completed',
       entityType: 'sale',
       entityId: sale.id,
-      after: { ...sale, items: lines.length },
-      reason: 'Venta confirmada desde Caja & POS',
+      after: { ...sale, items: lines.length, manualDiscountAmount, discountReason: requestedDiscount.reason },
+      reason: manualDiscountAmount
+        ? `Venta confirmada desde Caja & POS con descuento: ${requestedDiscount.reason}`
+        : 'Venta confirmada desde Caja & POS',
     });
 
     return {
@@ -2451,6 +2520,8 @@ router.post('/sales', asyncHandler(async (req, res) => {
       ...transferRecord,
       customer: customer || null,
       receivable,
+      manualDiscountAmount,
+      discountReason: requestedDiscount.reason,
       payments: saleTenders.map((tender) => ({
         method: tender.method,
         amount: tender.amount,
@@ -2469,6 +2540,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
         unitPrice: line.unitPrice,
         taxRate: line.taxRate,
         taxAmount: line.lineTax,
+        discountAmount: line.manualDiscountAmount || 0,
         lineTotal: line.lineTotal,
       })),
     };
