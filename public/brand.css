@@ -340,6 +340,54 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
   letter-spacing: -0.02em;
 }
 
+/* Recursos oficiales: se muestran sin filtros ni recreaciones en CSS. */
+.brand-logo-full,
+.cashier-brand-logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.auth-brand .brand-logo-full {
+  width: min(280px, 72vw);
+  max-height: 82px;
+}
+
+.sidebar .brand-logo-full {
+  width: 186px;
+  max-height: 58px;
+}
+
+.cashier-terminal-brand > .cashier-brand-logo {
+  width: 124px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.receipt-brand-logo {
+  width: 178px !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+@media (max-width: 580px) {
+  .auth-brand .brand-logo-full {
+    width: min(230px, 68vw);
+  }
+
+  .sidebar .brand-logo-full {
+    width: 168px;
+  }
+
+  .cashier-terminal-brand > .cashier-brand-logo {
+    width: 102px;
+  }
+}
+
 .sidebar-section-title, .nav-label {
   color: #38bdf8 !important;
   font-size: 10px !important;
@@ -1905,5 +1953,4 @@ dialog::backdrop, .app-dialog::backdrop, .company-dialog::backdrop {
     max-width: 38vw !important;
   }
 }
-
 
