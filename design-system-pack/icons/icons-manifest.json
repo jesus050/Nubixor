@@ -1,0 +1,323 @@
+{
+  "version": "1.0.0",
+  "description": "Nubixor Icon System & Brand Assets",
+  "totalCount": 62,
+  "categories": {
+    "navigation": [
+      {
+        "name": "dashboard",
+        "file": "navigation/dashboard.svg",
+        "path": "assets/icons/navigation/dashboard.svg"
+      },
+      {
+        "name": "empresas",
+        "file": "navigation/empresas.svg",
+        "path": "assets/icons/navigation/empresas.svg"
+      },
+      {
+        "name": "sucursales",
+        "file": "navigation/sucursales.svg",
+        "path": "assets/icons/navigation/sucursales.svg"
+      },
+      {
+        "name": "terceros",
+        "file": "navigation/terceros.svg",
+        "path": "assets/icons/navigation/terceros.svg"
+      },
+      {
+        "name": "bodegas",
+        "file": "navigation/bodegas.svg",
+        "path": "assets/icons/navigation/bodegas.svg"
+      },
+      {
+        "name": "inventario",
+        "file": "navigation/inventario.svg",
+        "path": "assets/icons/navigation/inventario.svg"
+      },
+      {
+        "name": "productos",
+        "file": "navigation/productos.svg",
+        "path": "assets/icons/navigation/productos.svg"
+      },
+      {
+        "name": "logistica",
+        "file": "navigation/logistica.svg",
+        "path": "assets/icons/navigation/logistica.svg"
+      },
+      {
+        "name": "compras",
+        "file": "navigation/compras.svg",
+        "path": "assets/icons/navigation/compras.svg"
+      },
+      {
+        "name": "cuentas-pagar",
+        "file": "navigation/cuentas-pagar.svg",
+        "path": "assets/icons/navigation/cuentas-pagar.svg"
+      },
+      {
+        "name": "gastos",
+        "file": "navigation/gastos.svg",
+        "path": "assets/icons/navigation/gastos.svg"
+      },
+      {
+        "name": "caja",
+        "file": "navigation/caja.svg",
+        "path": "assets/icons/navigation/caja.svg"
+      },
+      {
+        "name": "cartera",
+        "file": "navigation/cartera.svg",
+        "path": "assets/icons/navigation/cartera.svg"
+      },
+      {
+        "name": "facturacion",
+        "file": "navigation/facturacion.svg",
+        "path": "assets/icons/navigation/facturacion.svg"
+      },
+      {
+        "name": "nomina",
+        "file": "navigation/nomina.svg",
+        "path": "assets/icons/navigation/nomina.svg"
+      },
+      {
+        "name": "crm",
+        "file": "navigation/crm.svg",
+        "path": "assets/icons/navigation/crm.svg"
+      },
+      {
+        "name": "proyectos",
+        "file": "navigation/proyectos.svg",
+        "path": "assets/icons/navigation/proyectos.svg"
+      },
+      {
+        "name": "soporte",
+        "file": "navigation/soporte.svg",
+        "path": "assets/icons/navigation/soporte.svg"
+      },
+      {
+        "name": "reportes",
+        "file": "navigation/reportes.svg",
+        "path": "assets/icons/navigation/reportes.svg"
+      },
+      {
+        "name": "auditoria",
+        "file": "navigation/auditoria.svg",
+        "path": "assets/icons/navigation/auditoria.svg"
+      },
+      {
+        "name": "configuracion",
+        "file": "navigation/configuracion.svg",
+        "path": "assets/icons/navigation/configuracion.svg"
+      },
+      {
+        "name": "usuarios",
+        "file": "navigation/usuarios.svg",
+        "path": "assets/icons/navigation/usuarios.svg"
+      },
+      {
+        "name": "seguridad",
+        "file": "navigation/seguridad.svg",
+        "path": "assets/icons/navigation/seguridad.svg"
+      }
+    ],
+    "actions": [
+      {
+        "name": "plus",
+        "file": "actions/plus.svg",
+        "path": "assets/icons/actions/plus.svg"
+      },
+      {
+        "name": "edit",
+        "file": "actions/edit.svg",
+        "path": "assets/icons/actions/edit.svg"
+      },
+      {
+        "name": "trash",
+        "file": "actions/trash.svg",
+        "path": "assets/icons/actions/trash.svg"
+      },
+      {
+        "name": "eye",
+        "file": "actions/eye.svg",
+        "path": "assets/icons/actions/eye.svg"
+      },
+      {
+        "name": "download",
+        "file": "actions/download.svg",
+        "path": "assets/icons/actions/download.svg"
+      },
+      {
+        "name": "upload",
+        "file": "actions/upload.svg",
+        "path": "assets/icons/actions/upload.svg"
+      },
+      {
+        "name": "printer",
+        "file": "actions/printer.svg",
+        "path": "assets/icons/actions/printer.svg"
+      },
+      {
+        "name": "search",
+        "file": "actions/search.svg",
+        "path": "assets/icons/actions/search.svg"
+      },
+      {
+        "name": "filter",
+        "file": "actions/filter.svg",
+        "path": "assets/icons/actions/filter.svg"
+      },
+      {
+        "name": "refresh",
+        "file": "actions/refresh.svg",
+        "path": "assets/icons/actions/refresh.svg"
+      },
+      {
+        "name": "copy",
+        "file": "actions/copy.svg",
+        "path": "assets/icons/actions/copy.svg"
+      },
+      {
+        "name": "x",
+        "file": "actions/x.svg",
+        "path": "assets/icons/actions/x.svg"
+      },
+      {
+        "name": "check",
+        "file": "actions/check.svg",
+        "path": "assets/icons/actions/check.svg"
+      },
+      {
+        "name": "more-vertical",
+        "file": "actions/more-vertical.svg",
+        "path": "assets/icons/actions/more-vertical.svg"
+      },
+      {
+        "name": "more-horizontal",
+        "file": "actions/more-horizontal.svg",
+        "path": "assets/icons/actions/more-horizontal.svg"
+      },
+      {
+        "name": "barcode",
+        "file": "actions/barcode.svg",
+        "path": "assets/icons/actions/barcode.svg"
+      },
+      {
+        "name": "qr-code",
+        "file": "actions/qr-code.svg",
+        "path": "assets/icons/actions/qr-code.svg"
+      },
+      {
+        "name": "file-text",
+        "file": "actions/file-text.svg",
+        "path": "assets/icons/actions/file-text.svg"
+      },
+      {
+        "name": "file-spreadsheet",
+        "file": "actions/file-spreadsheet.svg",
+        "path": "assets/icons/actions/file-spreadsheet.svg"
+      },
+      {
+        "name": "file-pdf",
+        "file": "actions/file-pdf.svg",
+        "path": "assets/icons/actions/file-pdf.svg"
+      },
+      {
+        "name": "send",
+        "file": "actions/send.svg",
+        "path": "assets/icons/actions/send.svg"
+      },
+      {
+        "name": "lock",
+        "file": "actions/lock.svg",
+        "path": "assets/icons/actions/lock.svg"
+      },
+      {
+        "name": "unlock",
+        "file": "actions/unlock.svg",
+        "path": "assets/icons/actions/unlock.svg"
+      },
+      {
+        "name": "calendar",
+        "file": "actions/calendar.svg",
+        "path": "assets/icons/actions/calendar.svg"
+      },
+      {
+        "name": "clock",
+        "file": "actions/clock.svg",
+        "path": "assets/icons/actions/clock.svg"
+      },
+      {
+        "name": "dollar-sign",
+        "file": "actions/dollar-sign.svg",
+        "path": "assets/icons/actions/dollar-sign.svg"
+      },
+      {
+        "name": "chevron-down",
+        "file": "actions/chevron-down.svg",
+        "path": "assets/icons/actions/chevron-down.svg"
+      },
+      {
+        "name": "chevron-right",
+        "file": "actions/chevron-right.svg",
+        "path": "assets/icons/actions/chevron-right.svg"
+      },
+      {
+        "name": "chevron-left",
+        "file": "actions/chevron-left.svg",
+        "path": "assets/icons/actions/chevron-left.svg"
+      },
+      {
+        "name": "chevron-up",
+        "file": "actions/chevron-up.svg",
+        "path": "assets/icons/actions/chevron-up.svg"
+      },
+      {
+        "name": "arrow-right",
+        "file": "actions/arrow-right.svg",
+        "path": "assets/icons/actions/arrow-right.svg"
+      },
+      {
+        "name": "arrow-left",
+        "file": "actions/arrow-left.svg",
+        "path": "assets/icons/actions/arrow-left.svg"
+      }
+    ],
+    "status": [
+      {
+        "name": "check-circle",
+        "file": "status/check-circle.svg",
+        "path": "assets/icons/status/check-circle.svg"
+      },
+      {
+        "name": "alert-triangle",
+        "file": "status/alert-triangle.svg",
+        "path": "assets/icons/status/alert-triangle.svg"
+      },
+      {
+        "name": "alert-circle",
+        "file": "status/alert-circle.svg",
+        "path": "assets/icons/status/alert-circle.svg"
+      },
+      {
+        "name": "info",
+        "file": "status/info.svg",
+        "path": "assets/icons/status/info.svg"
+      },
+      {
+        "name": "clock-pending",
+        "file": "status/clock-pending.svg",
+        "path": "assets/icons/status/clock-pending.svg"
+      },
+      {
+        "name": "ban",
+        "file": "status/ban.svg",
+        "path": "assets/icons/status/ban.svg"
+      },
+      {
+        "name": "shield-check",
+        "file": "status/shield-check.svg",
+        "path": "assets/icons/status/shield-check.svg"
+      }
+    ]
+  }
+}
