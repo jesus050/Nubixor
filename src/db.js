@@ -2,6 +2,7 @@ import pg from 'pg';
 import { config } from './config.js';
 import { logger } from './shared/logger.js';
 import { ServiceUnavailableError } from './shared/errors.js';
+import { currentTenantScope } from './tenant-context.js';
 
 const { Pool } = pg;
 export const pool = config.databaseUrl
@@ -30,14 +31,56 @@ export function getPool() {
   return pool;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
+// Las políticas de aislamiento leen la empresa desde la conexión. Se declara
+// con SET LOCAL para que muera al terminar la transacción y no se filtre a la
+// siguiente petición que reciba esta conexión del pool.
+function scopeStatement(scope) {
+  if (scope?.bypassIsolation) {
+    return "SET LOCAL app.bypass_tenant_isolation = 'on'";
+  }
+  const tenantId = scope?.tenantId;
+  if (!tenantId) return null;
+  if (!UUID_PATTERN.test(tenantId)) {
+    // Un identificador con otra forma nunca debe llegar a la sentencia: sin
+    // empresa declarada las políticas no devuelven filas, que es el lado
+    // seguro del error.
+    return null;
+  }
+  return `SET LOCAL app.tenant_id = '${tenantId}'`;
+}
+
+async function applyScope(client, scope) {
+  const statement = scopeStatement(scope);
+  if (statement) await client.query(statement);
+}
+
 export async function query(text, params = []) {
-  return getPool().query(text, params);
+  const scope = currentTenantScope();
+  const statement = scopeStatement(scope);
+  // Sin empresa que declarar no hace falta transacción: la consulta va directa.
+  if (!statement) return getPool().query(text, params);
+  const client = await getPool().connect();
+  try {
+    await client.query(`BEGIN; ${statement}`);
+    const result = await client.query(text, params);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function withTransaction(work) {
+  const scope = currentTenantScope();
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
+    await applyScope(client, scope);
     const result = await work(client);
     await client.query('COMMIT');
     return result;
