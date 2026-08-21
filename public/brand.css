@@ -61,7 +61,6 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
 .auth-gate {
   display: grid;
   min-height: 100vh;
-  grid-template-columns: minmax(380px, 0.95fr) minmax(440px, 1.05fr);
   background: var(--color-paper);
 }
 
@@ -385,6 +384,17 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
 
   .cashier-terminal-brand > .cashier-brand-logo {
     width: 102px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -1953,4 +1963,3 @@ dialog::backdrop, .app-dialog::backdrop, .company-dialog::backdrop {
     max-width: 38vw !important;
   }
 }
-
