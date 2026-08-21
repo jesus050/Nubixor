@@ -80,11 +80,14 @@ router.get('/overview', asyncHandler(async (req, res) => {
       [tenantId],
     ),
     query(
-      `SELECT id,name,sku,sale_price,product_kind,active
-       FROM products
-       WHERE tenant_id=$1 AND deleted_at IS NULL
-         AND product_kind <> 'VARIANT_PARENT'
-       ORDER BY name`,
+      `SELECT product.id,product.name,product.sku,product.cost,product.sale_price,
+              product.product_kind,product.active,COALESCE(tax.rate, 0) tax_rate
+       FROM products product
+       LEFT JOIN tax_categories tax
+         ON tax.id = product.sales_tax_category_id AND tax.tenant_id = product.tenant_id
+       WHERE product.tenant_id=$1 AND product.deleted_at IS NULL
+         AND product.product_kind <> 'VARIANT_PARENT'
+       ORDER BY product.name`,
       [tenantId],
     ),
     query(

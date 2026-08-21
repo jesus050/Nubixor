@@ -561,6 +561,12 @@ const elements = {
   pricingProductId: document.querySelector('#pricingProductId'),
   pricingPriceListId: document.querySelector('#pricingPriceListId'),
   productPriceError: document.querySelector('#productPriceError'),
+  pricingMarginCost: document.querySelector('#pricingMarginCost'),
+  pricingMarginRate: document.querySelector('#pricingMarginRate'),
+  pricingMarginTax: document.querySelector('#pricingMarginTax'),
+  pricingMarginResult: document.querySelector('#pricingMarginResult'),
+  pricingMarginProfit: document.querySelector('#pricingMarginProfit'),
+  applyPricingMarginButton: document.querySelector('#applyPricingMarginButton'),
   customerPriceListForm: document.querySelector('#customerPriceListForm'),
   pricingCustomerId: document.querySelector('#pricingCustomerId'),
   customerPriceListId: document.querySelector('#customerPriceListId'),
@@ -4323,6 +4329,7 @@ function renderPricingOverview() {
     .some((option) => option.value === currentCustomerList)
     ? currentCustomerList
     : '';
+  syncPricingMarginFromProduct();
 
   elements.productPriceList.replaceChildren();
   if (!pricingOverview.prices.length) {
@@ -4395,6 +4402,59 @@ function renderPricingOverview() {
     row.append(copy, status, toggle);
     elements.promotionList.append(row);
   }
+}
+
+function pricingMarginState() {
+  const product = pricingOverview.products.find(
+    (item) => item.id === elements.pricingProductId.value,
+  );
+  const cost = Math.max(0, Number(elements.pricingMarginCost.value) || 0);
+  const margin = Number(elements.pricingMarginRate.value);
+  const taxRate = Number(product?.tax_rate) || 0;
+  if (!product || !Number.isFinite(margin) || margin < 0 || margin >= 100) {
+    return { product, cost, margin, taxRate, netPrice: 0, finalPrice: 0, profit: 0, valid: false };
+  }
+  const netPrice = cost / (1 - margin / 100);
+  const finalPrice = Math.round(netPrice * (1 + taxRate / 100) * 100) / 100;
+  return { product, cost, margin, taxRate, netPrice, finalPrice, profit: netPrice - cost, valid: true };
+}
+
+function renderPricingMarginCalculator() {
+  const state = pricingMarginState();
+  elements.applyPricingMarginButton.disabled = !state.valid;
+  if (!state.product) {
+    elements.pricingMarginTax.textContent = 'Selecciona un producto para usar su IVA.';
+    elements.pricingMarginResult.textContent = '$0';
+    elements.pricingMarginProfit.textContent = 'Utilidad antes de IVA: $0';
+    return;
+  }
+  elements.pricingMarginTax.textContent = `IVA del producto: ${state.taxRate}% · el precio sugerido lo incluye.`;
+  if (!state.valid) {
+    elements.pricingMarginResult.textContent = 'Revisa el margen';
+    elements.pricingMarginProfit.textContent = 'El margen debe estar entre 0% y 99,99%.';
+    return;
+  }
+  elements.pricingMarginResult.textContent = formatCurrency(state.finalPrice);
+  elements.pricingMarginProfit.textContent = `Utilidad antes de IVA: ${formatCurrency(state.profit)}`;
+}
+
+function syncPricingMarginFromProduct() {
+  const product = pricingOverview.products.find(
+    (item) => item.id === elements.pricingProductId.value,
+  );
+  if (!product) {
+    renderPricingMarginCalculator();
+    return;
+  }
+  const cost = Math.max(0, Number(product.cost) || 0);
+  const taxRate = Number(product.tax_rate) || 0;
+  const currentNetPrice = Number(product.sale_price) / (1 + taxRate / 100);
+  const currentMargin = currentNetPrice > 0
+    ? Math.max(0, ((currentNetPrice - cost) / currentNetPrice) * 100)
+    : 30;
+  elements.pricingMarginCost.value = String(cost);
+  elements.pricingMarginRate.value = String(Math.round(currentMargin * 100) / 100);
+  renderPricingMarginCalculator();
 }
 
 async function loadCommercialCatalog() {
@@ -18059,6 +18119,16 @@ elements.pricingProductId.addEventListener('change', () => {
     elements.productPriceForm.elements.unitPrice.value =
       String(Number(product.sale_price));
   }
+  syncPricingMarginFromProduct();
+});
+for (const input of [elements.pricingMarginCost, elements.pricingMarginRate]) {
+  input.addEventListener('input', renderPricingMarginCalculator);
+}
+elements.applyPricingMarginButton.addEventListener('click', () => {
+  const state = pricingMarginState();
+  if (!state.valid) return;
+  elements.productPriceForm.elements.unitPrice.value = String(state.finalPrice);
+  showToast(`Precio sugerido ${formatCurrency(state.finalPrice)} aplicado a la escala.`);
 });
 elements.closeProductDialog.addEventListener('click', closeProductDialog);
 elements.cancelProductButton.addEventListener('click', closeProductDialog);

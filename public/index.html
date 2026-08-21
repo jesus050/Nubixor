@@ -1825,6 +1825,24 @@
                         step="0.01" required>
                     </label>
                   </div>
+                  <section class="pricing-margin-calculator" aria-labelledby="pricingMarginTitle">
+                    <div>
+                      <p class="eyebrow">Calculadora de precios</p>
+                      <h4 id="pricingMarginTitle">Margen y precio final</h4>
+                    </div>
+                    <div class="form-grid">
+                      <label class="form-field"><span>Costo unitario</span>
+                        <input id="pricingMarginCost" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
+                      <label class="form-field"><span>Margen objetivo (%)</span>
+                        <input id="pricingMarginRate" type="number" min="0" max="99.99" step="0.01" inputmode="decimal" value="30"></label>
+                    </div>
+                    <small id="pricingMarginTax">Selecciona un producto para usar su IVA.</small>
+                    <div class="pricing-margin-result">
+                      <span>Precio final sugerido</span><strong id="pricingMarginResult">$0</strong>
+                      <small id="pricingMarginProfit">Utilidad antes de IVA: $0</small>
+                    </div>
+                    <button class="secondary-button compact" id="applyPricingMarginButton" type="button">Usar este precio</button>
+                  </section>
                   <p class="form-error" id="productPriceError" hidden></p>
                   <button class="primary-button compact" type="submit">
                     Guardar escala de precio

@@ -2682,6 +2682,11 @@ input:focus-visible {
 }
 
 .pos-scan-button { white-space: nowrap; }
+.pricing-margin-calculator { margin-top: 14px; padding: 14px; border: 1px solid rgba(99, 102, 241, .22); border-radius: 12px; background: linear-gradient(135deg, rgba(99, 102, 241, .07), rgba(34, 211, 238, .05)); }
+.pricing-margin-calculator h4 { margin: 3px 0 10px; font-size: 1rem; }
+.pricing-margin-calculator > small { display: block; margin: 8px 0; color: var(--color-muted, #64748b); }
+.pricing-margin-result { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline; margin: 10px 0; }
+.pricing-margin-result strong { color: #4f46e5; font-size: 1.15rem; }.pricing-margin-result small { grid-column: 1 / -1; color: var(--color-muted, #64748b); }
 .cart-discount { display: grid; grid-template-columns: 1fr 64px 88px; gap: 6px; align-items: center; }
 .cart-discount input, .cart-discount select { min-width: 0; padding: 6px 7px; border: 1px solid var(--color-border, #cbd5e1); border-radius: 7px; font: inherit; }
 .cart-discount input:last-child { grid-column: 2 / -1; }
