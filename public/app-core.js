@@ -437,6 +437,26 @@ const elements = {
   loadKardexButton: document.querySelector('#loadKardexButton'),
   kardexTableBody: document.querySelector('#kardexTableBody'),
   kardexState: document.querySelector('#kardexState'),
+  cashSessionDialog: document.querySelector('#cashSessionDialog'),
+  closeCashSessionDialog: document.querySelector('#closeCashSessionDialog'),
+  dismissCashSessionDialog: document.querySelector('#dismissCashSessionDialog'),
+  printCashSessionButton: document.querySelector('#printCashSessionButton'),
+  cashDetailTitle: document.querySelector('#cashDetailTitle'),
+  cashDetailSubtitle: document.querySelector('#cashDetailSubtitle'),
+  cashDetailKpis: document.querySelector('#cashDetailKpis'),
+  cashDetailCompanyBody: document.querySelector('#cashDetailCompanyBody'),
+  cashDetailCompanyCount: document.querySelector('#cashDetailCompanyCount'),
+  cashDetailCompanyState: document.querySelector('#cashDetailCompanyState'),
+  cashDetailMovementBody: document.querySelector('#cashDetailMovementBody'),
+  cashDetailMovementCount: document.querySelector('#cashDetailMovementCount'),
+  cashDetailMovementState: document.querySelector('#cashDetailMovementState'),
+  cashDetailSaleBody: document.querySelector('#cashDetailSaleBody'),
+  cashDetailSaleCount: document.querySelector('#cashDetailSaleCount'),
+  cashDetailSaleState: document.querySelector('#cashDetailSaleState'),
+  cashDetailCountBody: document.querySelector('#cashDetailCountBody'),
+  cashDetailCountTotal: document.querySelector('#cashDetailCountTotal'),
+  cashDetailCountState: document.querySelector('#cashDetailCountState'),
+  cashDetailNotes: document.querySelector('#cashDetailNotes'),
   replenishmentAlertCount: document.querySelector('#replenishmentAlertCount'),
   replenishmentReadyCount: document.querySelector('#replenishmentReadyCount'),
   replenishmentList: document.querySelector('#replenishmentList'),
@@ -5404,9 +5424,17 @@ function renderCashControl() {
   elements.cashSessionList.replaceChildren();
   elements.cashSessionCount.textContent = String(sessions.length);
   elements.cashSessionState.hidden = sessions.length > 0;
-  for (const item of sessions.slice(0, 8)) {
-    const row = document.createElement('div');
+  for (const item of sessions) {
+    // Cada turno abre su cierre completo: el servidor ya devuelve movimientos,
+    // ventas, conteo y corte por empresa.
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'cash-session-row';
+    row.dataset.sessionId = item.id;
+    row.setAttribute(
+      'aria-label',
+      `Ver el cierre del turno de ${item.register_name}`,
+    );
     const copy = document.createElement('div');
     copy.className = 'cash-session-copy';
     const title = document.createElement('strong');
@@ -10018,6 +10046,187 @@ function openKardexDialog() {
 
 function closeKardexDialog() {
   elements.kardexDialog.close();
+}
+
+/* ---------- Cierre de turno de caja ---------- */
+
+const CASH_MOVEMENT_LABELS = {
+  INCOME: 'Ingreso',
+  EXPENSE: 'Gasto',
+  WITHDRAWAL: 'Retiro',
+};
+
+const CASH_PAYMENT_LABELS = {
+  CASH: 'Efectivo',
+  CARD: 'Tarjeta',
+  TRANSFER: 'Transferencia',
+  MIXED: 'Mixto',
+  CREDIT: 'Crédito',
+};
+
+function formatCashDetailTime(value) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function cashDetailCell(label, value, className) {
+  const cell = createCell(label, value);
+  if (className) cell.className = className;
+  return cell;
+}
+
+function renderCashDetailKpis(detail) {
+  const closed = detail.status !== 'OPEN';
+  const counted = Number(detail.closing_amount || 0);
+  const expected = Number(detail.calculated_cash || 0);
+  const difference = Number(detail.difference || 0);
+  const tiles = [
+    ['Base inicial', formatCurrency(detail.opening_amount || 0)],
+    ['Ventas en efectivo', formatCurrency(detail.cash_sales || 0)],
+    ['Ventas con tarjeta', formatCurrency(detail.card_sales || 0)],
+    ['Transferencias', formatCurrency(detail.transfer_sales || 0)],
+    ['Ingresos manuales', formatCurrency(detail.manual_income || 0)],
+    ['Gastos', formatCurrency(detail.expenses || 0)],
+    ['Retiros', formatCurrency(detail.withdrawals || 0)],
+    ['Efectivo esperado', formatCurrency(expected)],
+  ];
+  if (closed) tiles.push(['Efectivo contado', formatCurrency(counted)]);
+  elements.cashDetailKpis.replaceChildren();
+  for (const [label, value] of tiles) {
+    const tile = document.createElement('article');
+    const caption = document.createElement('small');
+    caption.textContent = label;
+    const amount = document.createElement('strong');
+    amount.textContent = value;
+    tile.append(caption, amount);
+    elements.cashDetailKpis.append(tile);
+  }
+  if (!closed) return;
+  const tile = document.createElement('article');
+  tile.className = Math.abs(difference) < 0.01
+    ? 'cash-detail-difference ok'
+    : 'cash-detail-difference alert';
+  const caption = document.createElement('small');
+  caption.textContent = 'Diferencia';
+  const amount = document.createElement('strong');
+  amount.textContent = formatCurrency(difference);
+  tile.append(caption, amount);
+  elements.cashDetailKpis.append(tile);
+}
+
+function renderCashDetailCompanies(rows) {
+  elements.cashDetailCompanyBody.replaceChildren();
+  elements.cashDetailCompanyCount.textContent = String(rows.length);
+  elements.cashDetailCompanyState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Empresa', row.company_name),
+      cashDetailCell('Ventas', String(row.sale_count), 'numeric'),
+      cashDetailCell('Efectivo', formatCurrency(row.cash_sales), 'numeric'),
+      cashDetailCell('Tarjeta', formatCurrency(row.card_sales), 'numeric'),
+      cashDetailCell('Transferencia', formatCurrency(row.transfer_sales), 'numeric'),
+      cashDetailCell('Recaudado', formatCurrency(row.collected), 'numeric'),
+    );
+    elements.cashDetailCompanyBody.append(line);
+  }
+}
+
+function renderCashDetailMovements(rows) {
+  elements.cashDetailMovementBody.replaceChildren();
+  elements.cashDetailMovementCount.textContent = String(rows.length);
+  elements.cashDetailMovementState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    const incoming = row.movement_type === 'INCOME';
+    line.append(
+      cashDetailCell('Hora', formatCashDetailTime(row.created_at)),
+      cashDetailCell('Tipo', CASH_MOVEMENT_LABELS[row.movement_type] || row.movement_type),
+      cashDetailCell('Categoría', row.category),
+      cashDetailCell('Referencia', row.reference),
+      cashDetailCell('Notas', row.notes),
+      cashDetailCell(
+        'Monto',
+        `${incoming ? '+' : '−'} ${formatCurrency(row.amount)}`,
+        incoming ? 'numeric' : 'numeric negative',
+      ),
+    );
+    elements.cashDetailMovementBody.append(line);
+  }
+}
+
+function renderCashDetailSales(rows) {
+  elements.cashDetailSaleBody.replaceChildren();
+  elements.cashDetailSaleCount.textContent = String(rows.length);
+  elements.cashDetailSaleState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Hora', formatCashDetailTime(row.created_at)),
+      cashDetailCell('Comprobante', row.sequence_number ? `#${row.sequence_number}` : ''),
+      cashDetailCell('Empresa', row.company_name),
+      cashDetailCell('Cliente', row.customer_name),
+      cashDetailCell('Medio', CASH_PAYMENT_LABELS[row.payment_method] || row.payment_method),
+      cashDetailCell('Ítems', String(row.item_count), 'numeric'),
+      cashDetailCell('Total', formatCurrency(row.total), 'numeric'),
+    );
+    elements.cashDetailSaleBody.append(line);
+  }
+}
+
+function renderCashDetailCounts(rows) {
+  elements.cashDetailCountBody.replaceChildren();
+  elements.cashDetailCountState.hidden = rows.length > 0;
+  const total = rows.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  elements.cashDetailCountTotal.textContent = formatCurrency(total);
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Denominación', formatCurrency(row.denomination), 'numeric'),
+      cashDetailCell('Cantidad', String(row.quantity), 'numeric'),
+      cashDetailCell('Subtotal', formatCurrency(row.total), 'numeric'),
+    );
+    elements.cashDetailCountBody.append(line);
+  }
+}
+
+function renderCashSessionDetail(detail) {
+  const closed = detail.status !== 'OPEN';
+  elements.cashDetailTitle.textContent =
+    `${detail.register_name} · ${closed ? 'Turno cerrado' : 'Turno abierto'}`;
+  const opened = formatCashDetailTime(detail.opened_at);
+  elements.cashDetailSubtitle.textContent = closed
+    ? `${detail.branch_name} · abierto ${opened} · cerrado ${formatCashDetailTime(detail.closed_at)}`
+    : `${detail.branch_name} · abierto ${opened} · en operación`;
+  renderCashDetailKpis(detail);
+  renderCashDetailCompanies(detail.companyBreakdown || []);
+  renderCashDetailMovements(detail.movements || []);
+  renderCashDetailSales(detail.sales || []);
+  renderCashDetailCounts(detail.counts || []);
+  const notes = (detail.closing_notes || '').trim();
+  elements.cashDetailNotes.hidden = !notes;
+  elements.cashDetailNotes.textContent = notes ? `Notas de cierre: ${notes}` : '';
+}
+
+async function openCashSessionDetail(sessionId) {
+  try {
+    const detail = await getJson(`/api/pos/sessions/${sessionId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderCashSessionDetail(detail);
+    elements.cashSessionDialog.showModal();
+  } catch (error) {
+    showToast(error.message || 'No pudimos abrir el cierre del turno.');
+  }
+}
+
+function closeCashSessionDialog() {
+  elements.cashSessionDialog.close();
 }
 
 async function loadKardex(event) {
@@ -17511,6 +17720,17 @@ elements.closeKardexDialog.addEventListener('click', closeKardexDialog);
 elements.kardexForm.addEventListener('submit', loadKardex);
 elements.kardexDialog.addEventListener('click', (event) => {
   if (event.target === elements.kardexDialog) closeKardexDialog();
+});
+
+elements.closeCashSessionDialog.addEventListener('click', closeCashSessionDialog);
+elements.dismissCashSessionDialog.addEventListener('click', closeCashSessionDialog);
+elements.cashSessionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.cashSessionDialog) closeCashSessionDialog();
+});
+elements.printCashSessionButton.addEventListener('click', () => window.print());
+elements.cashSessionList.addEventListener('click', (event) => {
+  const row = event.target.closest('[data-session-id]');
+  if (row) openCashSessionDetail(row.dataset.sessionId);
 });
 document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
   button.addEventListener('click', () => selectInventoryPanel(button.dataset.inventoryTab));

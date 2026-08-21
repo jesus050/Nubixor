@@ -16,9 +16,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260818-AUTH-LOADER-v1">
+    <link rel="stylesheet" href="./styles.css?v=20260821-CASH-CLOSING-v1">
     <link rel="stylesheet" href="./brand.css?v=20260813-MOBILE-v129">
-    <script src="./app.js?v=20260818-COUNT-SCAN-CAMERA-v1" defer></script>
+    <script src="./app.js?v=20260821-CASH-CLOSING-v1" defer></script>
 
   </head>
   <body>
@@ -1646,6 +1646,112 @@
                   <p>Puedes consultar hasta 500 movimientos.</p></div>
               </div>
             </form>
+          </dialog>
+
+          <dialog class="app-dialog cash-session-dialog" id="cashSessionDialog">
+            <div class="dialog-card wide">
+              <div class="dialog-heading">
+                <div>
+                  <p class="panel-kicker">Cierre de turno</p>
+                  <h3 id="cashDetailTitle">Turno de caja</h3>
+                  <p id="cashDetailSubtitle">Movimientos, ventas y conteo del turno.</p>
+                </div>
+                <button class="dialog-close" id="closeCashSessionDialog" type="button"
+                  aria-label="Cerrar">&times;</button>
+              </div>
+
+              <div class="cash-detail-kpis" id="cashDetailKpis"></div>
+
+              <div class="cash-detail-block">
+                <div class="data-state-heading">
+                  <span>Corte por empresa</span>
+                  <strong id="cashDetailCompanyCount">0</strong>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr>
+                      <th>Empresa</th><th>Ventas</th><th>Efectivo</th>
+                      <th>Tarjeta</th><th>Transferencia</th><th>Recaudado</th>
+                    </tr></thead>
+                    <tbody id="cashDetailCompanyBody"></tbody>
+                  </table>
+                </div>
+                <div class="data-state compact" id="cashDetailCompanyState" hidden>
+                  <div><strong>Sin ventas en el turno</strong>
+                    <p>El corte por empresa aparece cuando hay ventas completadas.</p></div>
+                </div>
+              </div>
+
+              <div class="cash-detail-block">
+                <div class="data-state-heading">
+                  <span>Movimientos del turno</span>
+                  <strong id="cashDetailMovementCount">0</strong>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr>
+                      <th>Hora</th><th>Tipo</th><th>Categoría</th>
+                      <th>Referencia</th><th>Notas</th><th>Monto</th>
+                    </tr></thead>
+                    <tbody id="cashDetailMovementBody"></tbody>
+                  </table>
+                </div>
+                <div class="data-state compact" id="cashDetailMovementState" hidden>
+                  <div><strong>Sin movimientos manuales</strong>
+                    <p>No se registraron ingresos, gastos ni retiros.</p></div>
+                </div>
+              </div>
+
+              <div class="cash-detail-block">
+                <div class="data-state-heading">
+                  <span>Ventas del turno</span>
+                  <strong id="cashDetailSaleCount">0</strong>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr>
+                      <th>Hora</th><th>Comprobante</th><th>Empresa</th>
+                      <th>Cliente</th><th>Medio</th><th>Ítems</th><th>Total</th>
+                    </tr></thead>
+                    <tbody id="cashDetailSaleBody"></tbody>
+                  </table>
+                </div>
+                <div class="data-state compact" id="cashDetailSaleState" hidden>
+                  <div><strong>Sin ventas registradas</strong>
+                    <p>Este turno no tiene ventas completadas.</p></div>
+                </div>
+              </div>
+
+              <div class="cash-detail-block">
+                <div class="data-state-heading">
+                  <span>Conteo de efectivo</span>
+                  <strong id="cashDetailCountTotal">$0</strong>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr>
+                      <th>Denominación</th><th>Cantidad</th><th>Subtotal</th>
+                    </tr></thead>
+                    <tbody id="cashDetailCountBody"></tbody>
+                  </table>
+                </div>
+                <div class="data-state compact" id="cashDetailCountState" hidden>
+                  <div><strong>Sin conteo por denominación</strong>
+                    <p>El turno se cerró registrando solo el monto total.</p></div>
+                </div>
+              </div>
+
+              <div class="cash-detail-notes" id="cashDetailNotes" hidden></div>
+
+              <div class="dialog-actions">
+                <button class="secondary-button" id="printCashSessionButton" type="button">
+                  Imprimir cierre
+                </button>
+                <button class="primary-button" id="dismissCashSessionDialog" type="button">
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </dialog>
 
           <section class="section products-section app-view" id="productos" data-view="productos" aria-labelledby="productsTitle" hidden>

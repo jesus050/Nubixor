@@ -573,7 +573,7 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
       'INVALID_CASH_SESSION_ID',
     );
   }
-  const [session, movements, sales, counts] = await Promise.all([
+  const [session, movements, sales, counts, companies] = await Promise.all([
     query(
       `SELECT cs.*, cr.name register_name, cr.code register_code,
               b.name branch_name,
@@ -646,6 +646,28 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
        ORDER BY denomination DESC`,
       [req.params.id, req.context.tenantId],
     ),
+    // Una caja compartida puede vender para varias empresas en el mismo turno.
+    // El cierre necesita el corte por empresa vendedora, no solo el total.
+    query(
+      `SELECT sale.company_id,
+              seller.trade_name company_name,
+              COUNT(DISTINCT sale.id)::integer sale_count,
+              COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CASH'), 0) cash_sales,
+              COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'CARD'), 0) card_sales,
+              COALESCE(SUM(tender.amount) FILTER (WHERE tender.method = 'TRANSFER'), 0) transfer_sales,
+              COALESCE(SUM(tender.amount), 0) collected
+       FROM sales sale
+       JOIN tenants seller ON seller.id = sale.company_id
+       JOIN sale_payment_tenders tender
+         ON tender.sale_id = sale.id
+        AND tender.seller_company_id = sale.company_id
+        AND tender.reconciliation_status <> 'REVERSED'
+       WHERE sale.cash_session_id = $1
+         AND sale.status = 'COMPLETED'
+       GROUP BY sale.company_id, seller.trade_name
+       ORDER BY collected DESC`,
+      [req.params.id],
+    ),
   ]);
   if (!session.rowCount) {
     throw new AppError(
@@ -659,6 +681,7 @@ router.get('/sessions/:id', asyncHandler(async (req, res) => {
     movements: movements.rows,
     sales: sales.rows,
     counts: counts.rows,
+    companyBreakdown: companies.rows,
   });
 }));
 
