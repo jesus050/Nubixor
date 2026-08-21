@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config.js';
 import { query } from '../db.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import {
