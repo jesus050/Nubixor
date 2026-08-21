@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nubixor · ERP y facturación electrónica DIAN para PyMEs</title>
+<meta name="description" content="POS, inventario, contabilidad y facturación electrónica DIAN en un solo sistema. Pensado para empresas colombianas que quieren dejar de pelear con el Excel y el papeleo.">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" href="/assets/favicon-32x32.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   Nubixor · Sitio comercial — dirección "ledger" (referencia Stripe)
+   Estructura y sobriedad de Stripe, con la calidez subida:
+   pesos 500-600 en vez de 300, y el degradado de marca reservado
+   exclusivamente al logo y al CTA principal.
+   ========================================================================== */
+
+:root {
+  /* Acento único. El degradado NO es un color de UI: sólo logo y CTA. */
+  --accent:       #5b3ce0;
+  --accent-hover: #4a2fc4;
+  --accent-wash:  #f1eeff;
+  --accent-line:  #d6cdfa;
+
+  --gradient-brand: linear-gradient(120deg, #00BAF2 0%, #7746F2 42%, #EE2BB2 72%, #FF981D 100%);
+
+  /* Neutros fríos */
+  --ink:    #071D59;   /* títulos y texto principal */
+  --steel:  #47566f;   /* cuerpo */
+  --slate:  #6b7a94;   /* secundario */
+  --smoke:  #93a2bd;   /* terciario, metadatos */
+
+  --white:  #ffffff;
+  --mist:   #f7f9fc;   /* bandeo de secciones */
+  --frost:  #e4eaf2;   /* líneas y divisores */
+
+  --ok:     #0f7a4a;
+  --ok-bg:  #e8f6ef;
+  --warn:   #9a5b00;
+  --warn-bg:#fdf1de;
+
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body:    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Radio contenido: ni píldora ni esquina viva. */
+  --r:    6px;
+  --r-lg: 10px;
+
+  --wrap: 1240px;
+  --gap-section: clamp(64px, 8vw, 96px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--white);
+  color: var(--steel);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.12;
+  /* El tracking se cierra a medida que crece el tamaño. */
+  letter-spacing: -0.02em;
+}
+h1 { letter-spacing: -0.035em; }
+h2 { letter-spacing: -0.03em; }
+
+p { margin: 0; }
+a { color: inherit; }
+img { max-width: 100%; height: auto; display: block; }
+
+.wrap {
+  width: 100%;
+  max-width: var(--wrap);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5vw, 40px);
+}
+
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+/* --- Botones ---------------------------------------------------------
+   Un solo botón lleva el degradado en toda la página. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, filter .15s ease;
+}
+
+.btn-primary {
+  background: var(--gradient-brand);
+  color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+
+.btn-ghost {
+  background: var(--white);
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+.btn-ghost:hover { background: var(--accent-wash); }
+
+.btn-quiet {
+  background: transparent;
+  color: var(--accent);
+  padding-inline: 0;
+}
+.btn-quiet:hover { color: var(--accent-hover); }
+
+.btn-invert {
+  background: rgb(255 255 255 / .1);
+  color: #fff;
+  border-color: rgb(255 255 255 / .28);
+}
+.btn-invert:hover { background: rgb(255 255 255 / .18); }
+
+/* --- Header: hairline, no sombra ------------------------------------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgb(255 255 255 / .88);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--frost);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+}
+.nav-logo img { width: 132px; }
+
+.nav-links { display: none; gap: 28px; font-size: 15px; font-weight: 500; }
+.nav-links a {
+  color: var(--steel);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+.nav-links a:hover { color: var(--ink); }
+
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.nav-login {
+  display: none;
+  color: var(--steel);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 9px 14px;
+}
+.nav-login:hover { color: var(--ink); }
+
+/* --- Hero: claro, con una sola banda de degradado -------------------- */
+
+.hero {
+  position: relative;
+  padding-block: clamp(56px, 8vw, 92px) clamp(56px, 8vw, 88px);
+  border-bottom: 1px solid var(--frost);
+  overflow: hidden;
+}
+/* Filete de marca. Es el único degradado decorativo de la página. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(40px, 5vw, 64px);
+  align-items: center;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 9px;
+  margin-bottom: 22px;
+  border: 1px solid var(--frost);
+  border-radius: var(--r);
+  background: var(--mist);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--steel);
+}
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.hero h1 {
+  font-size: clamp(36px, 5.6vw, 58px);
+  margin-bottom: 20px;
+}
+.hero h1 em {
+  font-style: normal;
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-sub {
+  font-size: clamp(17px, 2vw, 19px);
+  color: var(--slate);
+  max-width: 50ch;
+  margin-bottom: 30px;
+}
+
+.hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 28px; }
+
+.hero-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding-top: 24px;
+  border-top: 1px solid var(--frost);
+  font-size: 14px;
+  color: var(--smoke);
+}
+.hero-note span { display: inline-flex; align-items: center; gap: 7px; }
+.hero-note svg { flex: none; color: var(--accent); }
+
+/* --- Mock: panel claro, hairlines, sin sombra ------------------------ */
+
+.mock {
+  border: 1px solid var(--frost);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  overflow: hidden;
+}
+.mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--frost);
+  background: var(--mist);
+}
+.mock-bar i { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
+.mock-bar .addr {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--smoke);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.mock-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+  border-bottom: 1px solid var(--frost);
+}
+.mock-kpi { padding: 16px 18px; border-right: 1px solid var(--frost); }
+.mock-kpi:last-child { border-right: 0; }
+.mock-kpi small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--smoke);
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.mock-kpi b {
+  font-family: var(--font-display);
+  font-size: clamp(17px, 2.6vw, 21px);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.02em;
+}
+.mock-kpi.pos b { color: var(--ok); }
+
+.mock-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 104px;
+  padding: 18px;
+  border-bottom: 1px solid var(--frost);
+}
+.mock-chart i { flex: 1; border-radius: 2px; background: var(--accent); opacity: .22; }
+.mock-chart i:nth-child(n+6) { opacity: .55; }
+.mock-chart i:last-child { opacity: 1; }
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--frost);
+  font-size: 13.5px;
+  color: var(--steel);
+}
+.mock-row:last-child { border-bottom: 0; }
+.mock-row .tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  white-space: nowrap;
+}
+.mock-row .tag.wait { background: var(--warn-bg); color: var(--warn); }
+
+/* --- Secciones ------------------------------------------------------- */
+
+section { padding-block: var(--gap-section); }
+.band { background: var(--mist); border-block: 1px solid var(--frost); }
+
+.section-head { max-width: 60ch; margin-bottom: clamp(36px, 4.5vw, 52px); }
+.section-head h2 { font-size: clamp(27px, 3.8vw, 40px); margin-bottom: 14px; }
+.section-head p { font-size: clamp(16px, 1.9vw, 18px); color: var(--slate); }
+.section-head.center { margin-inline: auto; text-align: center; }
+
+/* --- Dolor: rejilla de hairlines, no tarjetas ------------------------ */
+
+.pain-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 1px;
+  background: var(--frost);
+  border: 1px solid var(--frost);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.pain { padding: 28px 26px; background: var(--white); }
+.pain h3 { font-size: 17px; margin-bottom: 8px; }
+.pain p { font-size: 14.5px; color: var(--slate); }
+.pain .num {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+/* --- Módulos --------------------------------------------------------- */
+
+.mod-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 1px;
+  background: var(--frost);
+  border: 1px solid var(--frost);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.mod {
+  padding: 26px 24px;
+  background: var(--white);
+  transition: background-color .15s ease;
+}
+.mod:hover { background: var(--mist); }
+.mod h3 { font-size: 16px; margin-bottom: 7px; }
+.mod p { font-size: 14px; color: var(--slate); }
+.mod .ico { color: var(--accent); margin-bottom: 14px; }
+
+/* --- DIAN: banda oscura, el único bloque a contraluz ----------------- */
+
+.dark {
+  background: var(--ink);
+  color: rgb(255 255 255 / .72);
+  border-block: 1px solid var(--ink);
+}
+.dark h2, .dark h3 { color: #fff; }
+.dark .eyebrow { color: #9db4ff; }
+
+.dian-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(36px, 5vw, 60px);
+  align-items: start;
+}
+
+.steps { display: grid; }
+.step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 0;
+  border-top: 1px solid rgb(255 255 255 / .14);
+}
+.step:last-child { border-bottom: 1px solid rgb(255 255 255 / .14); }
+.step b {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: #9db4ff;
+  padding-top: 2px;
+  min-width: 22px;
+}
+.step strong { display: block; color: #fff; font-size: 15.5px; margin-bottom: 3px; font-weight: 600; }
+.step p { font-size: 14.5px; color: rgb(255 255 255 / .66); }
+
+/* --- Precios: tabla contable ----------------------------------------- */
+
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 1px;
+  background: var(--frost);
+  border: 1px solid var(--frost);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.plan {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 28px;
+  background: var(--white);
+}
+.plan.feat { background: var(--accent-wash); }
+
+.plan-flag {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 9px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.plan-flag.ghost { background: transparent; color: transparent; }
+
+.plan h3 { font-size: 19px; margin-bottom: 6px; }
+.plan .who { font-size: 14px; color: var(--slate); margin-bottom: 22px; }
+.plan .amount {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 4vw, 36px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1;
+  color: var(--ink);
+}
+.plan .per { font-size: 13.5px; color: var(--smoke); margin-bottom: 22px; }
+.plan .annual-price { font-size: 13.5px; color: var(--slate); margin: -14px 0 22px; }
+.plan .btn { width: 100%; margin-bottom: 24px; }
+.plan ul {
+  list-style: none;
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--frost);
+  display: grid;
+  gap: 10px;
+}
+.plan.feat ul { border-top-color: var(--accent-line); }
+.plan li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--steel);
+}
+.plan li svg { flex: none; margin-top: 5px; color: var(--accent); }
+
+.price-note {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--smoke);
+}
+
+/* --- FAQ: filas de libro contable ------------------------------------ */
+
+.faq { max-width: 780px; margin-inline: auto; }
+details { border-bottom: 1px solid var(--frost); }
+details:first-child { border-top: 1px solid var(--frost); }
+summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 20px 34px 20px 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16.5px;
+  color: var(--ink);
+  position: relative;
+  letter-spacing: -.01em;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: "";
+  position: absolute;
+  right: 6px; top: 50%;
+  width: 8px; height: 8px;
+  border-right: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  translate: 0 -60%;
+  rotate: 45deg;
+  transition: rotate .2s ease;
+}
+details[open] summary::after { rotate: -135deg; translate: 0 -20%; }
+details p { padding-bottom: 20px; font-size: 15px; color: var(--slate); max-width: 62ch; }
+
+/* --- CTA final -------------------------------------------------------- */
+
+.cta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: clamp(36px, 5vw, 52px);
+  border: 1px solid var(--frost);
+  border-radius: var(--r-lg);
+  background: var(--mist);
+}
+.cta h2 { font-size: clamp(25px, 3.4vw, 34px); margin-bottom: 12px; }
+.cta p { color: var(--slate); font-size: 17px; max-width: 46ch; }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* --- Footer ----------------------------------------------------------- */
+
+.site-footer {
+  padding-block: 48px 36px;
+  border-top: 1px solid var(--frost);
+  margin-top: var(--gap-section);
+}
+.foot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: 30px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--frost);
+}
+.foot-brand img { width: 120px; margin-bottom: 12px; }
+.foot-brand p { font-size: 14px; color: var(--slate); max-width: 32ch; }
+.foot-col h4 {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 12px;
+  letter-spacing: 0;
+}
+.foot-col a {
+  display: block;
+  font-size: 14.5px;
+  color: var(--slate);
+  text-decoration: none;
+  padding: 4px 0;
+}
+.foot-col a:hover { color: var(--accent); }
+.foot-legal {
+  padding-top: 24px;
+  font-size: 13.5px;
+  color: var(--smoke);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  justify-content: space-between;
+}
+
+/* --- Breakpoints (tres) ---------------------------------------------- */
+
+@media (min-width: 900px) {
+  .nav-links { display: flex; }
+  .nav-login { display: inline-flex; }
+  .hero-grid { grid-template-columns: 1.02fr .98fr; }
+  .dian-grid { grid-template-columns: .9fr 1.1fr; }
+  .cta { grid-template-columns: 1.4fr auto; }
+}
+
+@media (min-width: 1200px) {
+  .hero-grid { gap: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="nav-logo" href="/" aria-label="Nubixor — inicio">
+      <img src="/assets/logo-dark.png" alt="Nubixor" width="132">
+    </a>
+    <nav class="nav-links" aria-label="Principal">
+      <a href="#modulos">Módulos</a>
+      <a href="#dian">Facturación DIAN</a>
+      <a href="#precios">Precios</a>
+      <a href="#faq">Preguntas</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" href="https://app.nubixor.tech">Iniciar sesión</a>
+      <a class="btn btn-primary" href="#demo"><span>Agendar demo</span></a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="hero-badge">
+          <span class="dot" aria-hidden="true"></span>
+          Facturación electrónica habilitada ante la DIAN
+        </div>
+        <h1>El sistema que <em>tu empresa</em> necesita, sin el papeleo.</h1>
+        <p class="hero-sub">
+          Punto de venta, inventario, contabilidad y facturación electrónica DIAN
+          en una sola plataforma. Diseñado para empresas colombianas que ya no caben
+          en una hoja de Excel.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#demo"><span>Agendar una demo</span></a>
+          <a class="btn btn-ghost" href="#precios">Ver precios</a>
+        </div>
+        <div class="hero-note">
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Sin instalar nada
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Puesta en marcha acompañada
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Tus datos en Colombia
+          </span>
+        </div>
+      </div>
+
+      <!-- Ilustración del producto. Reemplazar por capturas reales. -->
+      <div class="mock" role="img" aria-label="Vista ilustrativa del panel de Nubixor">
+        <div class="mock-bar">
+          <i></i><i></i><i></i>
+          <span class="addr">app.nubixor.tech</span>
+        </div>
+        <div class="mock-kpis">
+          <div class="mock-kpi"><small>Ventas hoy</small><b>$4.280.000</b></div>
+          <div class="mock-kpi pos"><small>Margen</small><b>38,4 %</b></div>
+          <div class="mock-kpi"><small>Facturas DIAN</small><b>127</b></div>
+        </div>
+        <div class="mock-chart" aria-hidden="true">
+          <i style="height:38%"></i><i style="height:56%"></i><i style="height:34%"></i>
+          <i style="height:70%"></i><i style="height:50%"></i><i style="height:84%"></i>
+          <i style="height:63%"></i><i style="height:95%"></i>
+        </div>
+        <div>
+          <div class="mock-row"><span>FE-1042 · Distribuciones del Valle</span><span class="tag">Aceptada</span></div>
+          <div class="mock-row"><span>FE-1043 · Comercial Andina</span><span class="tag">Aceptada</span></div>
+          <div class="mock-row"><span>FE-1044 · Surtitienda Norte</span><span class="tag wait">Enviando</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DOLOR ================= -->
+  <section class="band">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Por qué existe Nubixor</p>
+        <h2>Tu operación está repartida en cinco lugares distintos.</h2>
+        <p>
+          El inventario en un Excel, las ventas en un cuaderno, la facturación en el
+          portal de la DIAN y la contabilidad en la cabeza del contador. Cada cierre
+          de mes es una reconstrucción arqueológica.
+        </p>
+      </div>
+      <div class="pain-grid">
+        <article class="pain">
+          <span class="num">01</span>
+          <h3>No sabes cuánto ganaste</h3>
+          <p>Sabes cuánto vendiste, que no es lo mismo. Sin costo real por producto, el margen es una corazonada.</p>
+        </article>
+        <article class="pain">
+          <span class="num">02</span>
+          <h3>El inventario nunca cuadra</h3>
+          <p>Lo que dice el sistema y lo que hay en la bodega son dos números distintos, y nadie sabe cuándo se separaron.</p>
+        </article>
+        <article class="pain">
+          <span class="num">03</span>
+          <h3>Facturar es un trámite aparte</h3>
+          <p>Vendes en un sistema y facturas en otro. Cada factura electrónica se digita dos veces, con el riesgo que eso implica.</p>
+        </article>
+        <article class="pain">
+          <span class="num">04</span>
+          <h3>Todos ven todo</h3>
+          <p>Sin permisos por rol, cualquiera consulta la nómina o cambia precios. Y no queda rastro de quién hizo qué.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MÓDULOS ================= -->
+  <section id="modulos">
+    <div class="wrap">
+      <div class="section-head center">
+        <p class="eyebrow">Un solo sistema</p>
+        <h2>Todo lo que mueve tu empresa, conectado.</h2>
+        <p>Activa únicamente los módulos que necesitas hoy. Los demás quedan listos para cuando crezcas.</p>
+      </div>
+      <div class="mod-grid">
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg></div>
+          <h3>Punto de venta</h3>
+          <p>Caja rápida con lector de código de barras, pagos mixtos, crédito a clientes y cierre de turno.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></div>
+          <h3>Inventario y bodegas</h3>
+          <p>Kardex, traslados entre sucursales, conteos físicos con evidencia y puntos de reposición.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <h3>Facturación electrónica</h3>
+          <p>Emisión ante la DIAN, notas crédito y débito, y control de rangos de numeración.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <h3>Contabilidad</h3>
+          <p>Asientos automáticos desde la operación, conciliación bancaria y plan de cuentas.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+          <h3>Nómina</h3>
+          <p>Contratos, novedades, liquidación de períodos y conceptos configurables.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
+          <h3>Reportes y auditoría</h3>
+          <p>Estado de resultados, rotación de inventario y bitácora de cada acción con su responsable.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <h3>Cartera y proveedores</h3>
+          <p>Cuentas por cobrar y por pagar, gastos con aprobación y compras con recepción.</p>
+        </article>
+        <article class="mod">
+          <div class="ico" aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+          <h3>Multiempresa</h3>
+          <p>Varias empresas y sucursales bajo una misma cuenta, con permisos independientes por rol.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DIAN ================= -->
+  <section id="dian" class="dark">
+    <div class="wrap dian-grid">
+      <div>
+        <p class="eyebrow">Facturación electrónica</p>
+        <h2>Factura ante la DIAN sin salir del sistema.</h2>
+        <p>
+          La factura electrónica no debería ser un proceso aparte. En Nubixor nace
+          de la venta que acabas de registrar y viaja sola. Tú ves el estado; del
+          resto se encarga la plataforma.
+        </p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <b>01</b>
+          <p><strong>Registras la venta</strong>Desde el punto de venta o creando la factura a un cliente a crédito.</p>
+        </div>
+        <div class="step">
+          <b>02</b>
+          <p><strong>Se emite y se firma</strong>Nubixor arma el documento con tu resolución y rango de numeración vigente.</p>
+        </div>
+        <div class="step">
+          <b>03</b>
+          <p><strong>Llega a la DIAN</strong>Se transmite y queda el acuse. Si algo falla, el sistema reintenta y te avisa.</p>
+        </div>
+        <div class="step">
+          <b>04</b>
+          <p><strong>Tu cliente la recibe</strong>Con su representación gráfica y el soporte legal correspondiente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PRECIOS ================= -->
+  <section id="precios">
+    <div class="wrap">
+      <div class="section-head center">
+        <p class="eyebrow">Precios</p>
+        <h2>Claro desde el primer día.</h2>
+        <p>Planes claros y predecibles, con las herramientas que tu empresa realmente necesita.</p>
+      </div>
+
+      <div class="price-grid">
+        <article class="plan">
+          <span class="plan-flag ghost">·</span>
+          <h3>Esencial</h3>
+          <p class="who">Para el negocio que quiere ordenar sus ventas y su inventario.</p>
+          <div class="amount">$99.900</div>
+          <p class="per">COP / mes + IVA</p>
+          <p class="annual-price">O $999.000 COP / año + IVA</p>
+          <a class="btn btn-ghost" href="#demo">Agendar demo</a>
+          <ul>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>1 empresa · 1 sucursal</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Hasta 3 usuarios</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Punto de venta e inventario</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Facturación electrónica DIAN</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Reportes básicos</li>
+          </ul>
+        </article>
+
+        <article class="plan feat">
+          <span class="plan-flag">Más elegido</span>
+          <h3>Profesional</h3>
+          <p class="who">Para la empresa con varias sucursales y contabilidad formal.</p>
+          <div class="amount">$199.900</div>
+          <p class="per">COP / mes + IVA</p>
+          <p class="annual-price">O $1.999.000 COP / año + IVA</p>
+          <a class="btn btn-primary" href="#demo"><span>Agendar demo</span></a>
+          <ul>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Todo lo del plan Esencial</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Hasta 3 sucursales y 5 bodegas</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Hasta 10 usuarios</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Contabilidad y conciliación bancaria</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Cartera, compras y gastos</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Auditoría y permisos por rol</li>
+          </ul>
+        </article>
+
+        <article class="plan">
+          <span class="plan-flag ghost">·</span>
+          <h3>Empresarial</h3>
+          <p class="who">Para grupos con varias empresas, nómina y operación logística.</p>
+          <div class="amount">Desde $399.900</div>
+          <p class="per">COP / mes + IVA</p>
+          <p class="annual-price">Según empresas, sucursales, usuarios, integraciones y requerimientos de implementación.</p>
+          <a class="btn btn-ghost" href="#demo">Contactar</a>
+          <ul>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Todo lo del plan Profesional</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Multiempresa bajo una cuenta</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Módulo de nómina</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Módulo de logística</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Usuarios definidos según la operación</li>
+            <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Migración de datos acompañada</li>
+          </ul>
+        </article>
+      </div>
+
+      <p class="price-note">Todos los planes incluyen respaldos diarios cifrados, actualizaciones y soporte.</p>
+    </div>
+  </section>
+
+  <!-- ================= FAQ ================= -->
+  <section id="faq" class="band">
+    <div class="wrap">
+      <div class="section-head center">
+        <p class="eyebrow">Preguntas</p>
+        <h2>Lo que suelen preguntarnos.</h2>
+      </div>
+      <div class="faq">
+        <details open>
+          <summary>¿Nubixor factura electrónicamente ante la DIAN?</summary>
+          <p>Sí. La emisión, las notas crédito y débito y el control de rangos de numeración están integrados en el sistema, conectados a un proveedor tecnológico autorizado.</p>
+        </details>
+        <details>
+          <summary>¿Tengo que instalar algo?</summary>
+          <p>No. Nubixor funciona en el navegador, desde cualquier computador o celular con internet. No hay servidores que mantener en tu oficina.</p>
+        </details>
+        <details>
+          <summary>¿Puedo traer mi catálogo actual?</summary>
+          <p>Sí. Puedes importar tus productos desde un archivo de Excel o CSV. En la puesta en marcha te acompañamos en ese proceso.</p>
+        </details>
+        <details>
+          <summary>¿Qué pasa con mis datos si dejo de usarlo?</summary>
+          <p>Son tuyos. Puedes exportar tu información en cualquier momento y te entregamos un respaldo completo al cerrar la cuenta.</p>
+        </details>
+        <details>
+          <summary>¿Sirve para varias empresas a la vez?</summary>
+          <p>Sí. Puedes administrar varias empresas y sucursales desde una sola cuenta, con permisos independientes para cada usuario en cada una.</p>
+        </details>
+        <details>
+          <summary>¿Cómo se manejan los permisos del equipo?</summary>
+          <p>Por roles. Defines qué puede ver y hacer cada persona —caja, inventario, contabilidad, nómina— y toda acción queda registrada en la bitácora de auditoría.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section id="demo">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>Veámoslo con tus propios números.</h2>
+          <p>Agenda 30 minutos y te mostramos Nubixor funcionando con un caso parecido al tuyo. Sin compromiso y sin presentación de ventas.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="mailto:hola@nubixor.tech?subject=Quiero%20agendar%20una%20demo%20de%20Nubixor"><span>Escribir a hola@nubixor.tech</span></a>
+          <a class="btn btn-ghost" href="https://app.nubixor.tech">Ya soy cliente</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <img src="/assets/logo-dark.png" alt="Nubixor" width="120">
+        <p>Software de gestión empresarial y facturación electrónica para empresas colombianas.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Producto</h4>
+        <a href="#modulos">Módulos</a>
+        <a href="#dian">Facturación DIAN</a>
+        <a href="#precios">Precios</a>
+      </div>
+      <div class="foot-col">
+        <h4>Empresa</h4>
+        <a href="#faq">Preguntas frecuentes</a>
+        <a href="#demo">Agendar demo</a>
+        <a href="mailto:hola@nubixor.tech">Contacto</a>
+      </div>
+      <div class="foot-col">
+        <h4>Acceso</h4>
+        <a href="https://app.nubixor.tech">Iniciar sesión</a>
+      </div>
+    </div>
+    <div class="foot-legal">
+      <span>&copy; <span id="year">2026</span> Nubixor. Todos los derechos reservados.</span>
+      <span>Hecho en Colombia</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>

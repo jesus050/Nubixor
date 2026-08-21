@@ -63,6 +63,7 @@ services:
       - api
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?Configura APP_DOMAIN}
+      MARKETING_DOMAIN: ${MARKETING_DOMAIN:?Configura MARKETING_DOMAIN}
     ports:
       - "80:80"
       - "443:443"

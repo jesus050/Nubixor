@@ -11,3 +11,35 @@
 
   reverse_proxy api:4100
 }
+
+# Sitio comercial (dominio raíz). Estáticos servidos por el mismo Caddy.
+{$MARKETING_DOMAIN} {
+  encode zstd gzip
+
+  root * /srv/site
+  file_server
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    -Server
+  }
+
+  # Los assets con hash o de marca cambian poco: cache larga.
+  @assets path /assets/*
+  header @assets Cache-Control "public, max-age=604800"
+
+  header /index.html Cache-Control "public, max-age=300"
+
+  handle_errors {
+    rewrite * /index.html
+    file_server
+  }
+}
+
+# www redirige al dominio sin www.
+www.{$MARKETING_DOMAIN} {
+  redir https://{$MARKETING_DOMAIN}{uri} permanent
+}
