@@ -841,6 +841,13 @@ test('la exportación de auditoría neutraliza fórmulas de hoja de cálculo', (
   assert.equal(csvCell(new Date('2026-07-26T12:00:00Z')), '"2026-07-26T12:00:00.000Z"');
 });
 
+test('GET /login entrega la interfaz para enlaces de acceso compartidos', async () => {
+  const response = await request(createUnsecuredApp()).get('/login').expect(200);
+  assert.match(response.headers['content-type'], /^text\/html/);
+  assert.match(response.headers['cache-control'], /no-store/);
+  assert.match(response.text, /Nubixor/);
+});
+
 test('reportes valida tipo, fechas, sucursal y paginación antes de consultar PostgreSQL', async () => {
   const application = createUnsecuredApp();
   const headers = { 'x-tenant-id': DEMO_TENANT_ID };
