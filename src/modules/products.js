@@ -424,6 +424,57 @@ router.post(
   }),
 );
 
+router.patch(
+  '/:id/barcode',
+  requirePermission('catalog.manage'),
+  asyncHandler(async (req, res) => {
+    if (!UUID_PATTERN.test(req.params.id)) {
+      throw new AppError('El producto debe tener un UUID válido.', 422, 'INVALID_PRODUCT_ID');
+    }
+    const barcode = typeof req.body?.barcode === 'string' ? req.body.barcode.trim() : '';
+    if (!barcode || barcode.length > 80) {
+      throw new AppError('El código debe tener entre 1 y 80 caracteres.', 422, 'INVALID_BARCODE');
+    }
+    const product = await withTransaction(async (client) => {
+      const current = await client.query(
+        `SELECT * FROM products
+         WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [req.params.id, req.context.tenantId],
+      );
+      if (!current.rowCount) {
+        throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+      }
+      const existing = await client.query(
+        `SELECT id FROM products
+         WHERE tenant_id = $1 AND barcode = $2 AND id <> $3 AND deleted_at IS NULL
+         LIMIT 1`,
+        [req.context.tenantId, barcode, req.params.id],
+      );
+      if (existing.rowCount) {
+        throw new AppError('Ese código de barras ya pertenece a otro producto.', 409, 'BARCODE_EXISTS');
+      }
+      const updated = await client.query(
+        `UPDATE products SET barcode = $1, updated_at = now()
+         WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+        [barcode, req.params.id, req.context.tenantId],
+      );
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'product.barcode_updated',
+        entityType: 'product',
+        entityId: req.params.id,
+        before: current.rows[0],
+        after: updated.rows[0],
+        reason: 'Código de barras editado manualmente desde Catálogo.',
+      });
+      return updated.rows[0];
+    });
+    res.json(product);
+  }),
+);
+
 router.post('/:id/images', asyncHandler(async (req, res) => {
   const { dataUrl, altText = null } = req.body;
   const normalizedAltText = typeof altText === 'string' ? altText.trim() || null : null;

@@ -6391,6 +6391,29 @@
       </form>
     </dialog>
 
+    <dialog class="company-dialog" id="productBarcodeDialog" aria-labelledby="productBarcodeDialogTitle">
+      <form class="company-form" id="productBarcodeForm">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Identificación para Caja y etiquetas</p>
+            <h2 id="productBarcodeDialogTitle">Editar código de barras</h2>
+          </div>
+          <button class="icon-button" id="closeProductBarcodeDialog" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <p class="dialog-copy" id="productBarcodeProductName"></p>
+        <label class="form-field">
+          <span>Código de barras <b>*</b></span>
+          <input id="productBarcodeValue" name="barcode" maxlength="80" required autocomplete="off" placeholder="EAN, UPC o código interno">
+          <small>Debe ser único por empresa. Si cambias el código, reimprime las etiquetas existentes.</small>
+        </label>
+        <p class="form-error" id="productBarcodeFormError" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="cancelProductBarcodeButton" type="button">Cancelar</button>
+          <button class="primary-button compact" id="saveProductBarcodeButton" type="submit">Guardar código</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="company-dialog catalog-import-dialog" id="catalogImportDialog"
       aria-labelledby="catalogImportTitle">
       <div class="company-form catalog-import-shell">

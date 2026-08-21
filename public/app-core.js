@@ -662,6 +662,12 @@ const elements = {
   productDialog: document.querySelector('#productDialog'),
   productForm: document.querySelector('#productForm'),
   productFormError: document.querySelector('#productFormError'),
+  productBarcodeDialog: document.querySelector('#productBarcodeDialog'),
+  productBarcodeForm: document.querySelector('#productBarcodeForm'),
+  productBarcodeProductName: document.querySelector('#productBarcodeProductName'),
+  productBarcodeValue: document.querySelector('#productBarcodeValue'),
+  productBarcodeFormError: document.querySelector('#productBarcodeFormError'),
+  saveProductBarcodeButton: document.querySelector('#saveProductBarcodeButton'),
   productCategoryId: document.querySelector('#productCategoryId'),
   productBrandId: document.querySelector('#productBrandId'),
   productTaxId: document.querySelector('#productTaxId'),
@@ -1607,6 +1613,7 @@ let posScannerFrame = null;
 let posScannerLastValue = null;
 let posScannerLastAt = 0;
 let taxProduct = null;
+let barcodeProduct = null;
 let structuredProduct = null;
 let productStructure = null;
 let imagePreviewUrl = null;
@@ -3868,6 +3875,14 @@ function renderProducts() {
         }
       });
       productActions.append(barcodeButton);
+
+      const editBarcodeButton = document.createElement('button');
+      editBarcodeButton.className = 'photo-action';
+      editBarcodeButton.type = 'button';
+      editBarcodeButton.textContent = 'Editar código';
+      editBarcodeButton.title = 'Corrige o registra el código de barras del proveedor';
+      editBarcodeButton.addEventListener('click', () => openProductBarcodeDialog(product));
+      productActions.append(editBarcodeButton);
 
       const printBarcodeButton = document.createElement('button');
       printBarcodeButton.className = 'photo-action';
@@ -15555,6 +15570,51 @@ function closeProductDialog() {
   elements.productDialog.close();
 }
 
+function openProductBarcodeDialog(product) {
+  barcodeProduct = product;
+  elements.productBarcodeProductName.textContent = product.name;
+  elements.productBarcodeValue.value = product.barcode || '';
+  elements.productBarcodeFormError.hidden = true;
+  elements.productBarcodeDialog.showModal();
+  elements.productBarcodeValue.focus();
+  elements.productBarcodeValue.select();
+}
+
+function closeProductBarcodeDialog() {
+  elements.productBarcodeDialog.close();
+  barcodeProduct = null;
+}
+
+async function submitProductBarcode(event) {
+  event.preventDefault();
+  if (!barcodeProduct) return;
+  const barcode = elements.productBarcodeValue.value.trim();
+  if (!barcode) {
+    elements.productBarcodeFormError.textContent = 'Escribe un código de barras.';
+    elements.productBarcodeFormError.hidden = false;
+    return;
+  }
+  elements.productBarcodeFormError.hidden = true;
+  elements.saveProductBarcodeButton.disabled = true;
+  elements.saveProductBarcodeButton.textContent = 'Guardando…';
+  try {
+    const updated = await getJson(`/api/products/${barcodeProduct.id}/barcode`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+      body: JSON.stringify({ barcode }),
+    });
+    closeProductBarcodeDialog();
+    await loadCatalog();
+    showToast(`Código ${updated.barcode} guardado y listo para escanear.`);
+  } catch (error) {
+    elements.productBarcodeFormError.textContent = error.message;
+    elements.productBarcodeFormError.hidden = false;
+  } finally {
+    elements.saveProductBarcodeButton.disabled = false;
+    elements.saveProductBarcodeButton.textContent = 'Guardar código';
+  }
+}
+
 function resetCatalogImportPreview() {
   catalogImportCsv = null;
   catalogImportPreview = null;
@@ -18006,6 +18066,12 @@ elements.productForm.addEventListener('submit', submitProduct);
 elements.productExcludeFromEinvoice.addEventListener('change', syncProductEinvoiceExclusion);
 elements.productDialog.addEventListener('click', (event) => {
   if (event.target === elements.productDialog) closeProductDialog();
+});
+document.querySelector('#closeProductBarcodeDialog').addEventListener('click', closeProductBarcodeDialog);
+document.querySelector('#cancelProductBarcodeButton').addEventListener('click', closeProductBarcodeDialog);
+elements.productBarcodeForm.addEventListener('submit', submitProductBarcode);
+elements.productBarcodeDialog.addEventListener('click', (event) => {
+  if (event.target === elements.productBarcodeDialog) closeProductBarcodeDialog();
 });
 elements.closeProductStructureDialog.addEventListener(
   'click',
