@@ -14,7 +14,7 @@
 }
 
 # Sitio comercial (dominio raíz). Estáticos servidos por el mismo Caddy.
-{$MARKETING_DOMAIN} {
+{$MARKETING_DOMAIN:nubixor.tech} {
   encode zstd gzip
 
   root * /srv/site
@@ -41,6 +41,6 @@
 }
 
 # www redirige al dominio sin www.
-www.{$MARKETING_DOMAIN} {
-  redir https://{$MARKETING_DOMAIN}{uri} permanent
+www.{$MARKETING_DOMAIN:nubixor.tech} {
+  redir https://{$MARKETING_DOMAIN:nubixor.tech}{uri} permanent
 }
