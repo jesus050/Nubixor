@@ -70,6 +70,7 @@ export function errorHandler(error, req, res, _next) {
   return res.status(status).json({
     error: expose ? error.message : 'Error interno.',
     code: expose ? (error.code || 'REQUEST_ERROR') : 'INTERNAL_ERROR',
+    ...(expose && error.details ? { details: error.details } : {}),
     requestId: req.context?.requestId,
   });
 }
