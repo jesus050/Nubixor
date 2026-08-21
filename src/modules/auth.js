@@ -58,7 +58,9 @@ router.get('/status', asyncHandler(async (req, res) => {
   res.json({
     authenticated: Boolean(profile),
     setupRequired: !passwordState.rows[0].configured,
-    initialEmail: passwordState.rows[0].initial_email,
+    // No exponemos direcciones de usuarios activos en el dominio público de
+    // producción. En desarrollo se conserva para facilitar el primer montaje.
+    initialEmail: config.nodeEnv === 'production' ? null : passwordState.rows[0].initial_email,
     user: profile,
     csrfToken,
   });

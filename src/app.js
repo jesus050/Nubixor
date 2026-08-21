@@ -93,6 +93,12 @@ export function createApp({
   application.use(express.json({ limit: config.jsonBodyLimit }));
   application.use(requestContext);
   application.use(requestLogger);
+  // El subdominio de la aplicación es un área privada, no una página pública
+  // de adquisición. Esta cabecera cubre HTML, API y respuestas de error.
+  application.use((_req, res, next) => {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    next();
+  });
 
   application.use('/uploads', (_req, res) => {
     res.status(404).json({ error: 'Los archivos públicos están deshabilitados.' });
