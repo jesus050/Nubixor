@@ -17163,9 +17163,6 @@ async function completeSale() {
       (discount.type === 'PERCENT' && discount.value > 100))) {
       throw new Error('Revisa el descuento: debe tener un motivo y no superar el total de la venta.');
     }
-    if (sharedCheckout && discount.amount > 0) {
-      throw new Error('El descuento manual aún no está disponible en cobros combinados. Registra la venta por empresa para aplicarlo.');
-    }
     elements.completeSaleButton.disabled = true;
     elements.completeSaleButton.textContent = 'Confirmando venta…';
     const firstCartItem = saleCart.values().next().value;

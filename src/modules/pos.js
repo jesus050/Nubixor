@@ -88,6 +88,7 @@ function applyManualDiscount(lines, discount) {
     line.manualDiscountAmount = share;
     line.lineTotal = money(line.lineTotal - share);
     line.lineTax = line.taxRate > 0 ? money(line.lineTotal * line.taxRate / (100 + line.taxRate)) : 0;
+    line.taxAmount = line.lineTax;
     remaining = money(remaining - share);
   });
   return requested;
@@ -1246,6 +1247,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     paymentReference = null,
     customerId = null,
     saleTerms = 'IMMEDIATE',
+    manualDiscount = null,
     items,
   } = req.body;
   const stockSource = normalizePosStockSource(requestedStockSource);
@@ -1275,6 +1277,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     });
   }
   const consolidated = new Map();
+  const requestedDiscount = normalizeManualDiscount(manualDiscount);
   for (const item of items) {
     const current = consolidated.get(item.productId);
     if (current && current.warehouseId !== item.warehouseId) {
@@ -1409,8 +1412,6 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       customerId,
     );
     const groups = new Map();
-    let grandTotal = 0;
-    let grandTax = 0;
     for (const product of products.rows) {
       const quantity = consolidated.get(product.id).quantity;
       const appliedPrice = resolveCommercialPrice(
@@ -1437,11 +1438,33 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       const group = groups.get(groupKey) || [];
       group.push(line);
       groups.set(groupKey, group);
-      grandTotal += lineTotal;
-      grandTax += taxAmount;
     }
-    grandTotal = Math.round(grandTotal * 100) / 100;
-    grandTax = Math.round(grandTax * 100) / 100;
+    const allLines = [...groups.values()].flat();
+    if (requestedDiscount.amount > 0) {
+      const sellerCompanyIds = [...new Set(allLines.map((line) => line.seller_company_id))];
+      const discountPermissions = await client.query(
+        `SELECT DISTINCT membership.tenant_id
+         FROM tenant_users membership
+         JOIN role_permissions permission
+           ON permission.tenant_id = membership.tenant_id
+          AND permission.role_id = membership.role_id
+          AND permission.permission_code = 'sale.discount.apply'
+         WHERE membership.tenant_id = ANY($1::uuid[])
+           AND membership.user_id = $2
+           AND membership.status = 'ACTIVE'`,
+        [sellerCompanyIds, req.context.userId],
+      );
+      if (discountPermissions.rowCount !== sellerCompanyIds.length) {
+        throw new AppError(
+          'Tu perfil no tiene autorización para aplicar descuentos en todas las empresas de esta venta.',
+          403,
+          'DISCOUNT_PERMISSION_DENIED',
+        );
+      }
+    }
+    const manualDiscountAmount = applyManualDiscount(allLines, requestedDiscount);
+    const grandTotal = money(allLines.reduce((sum, line) => sum + line.lineTotal, 0));
+    const grandTax = money(allLines.reduce((sum, line) => sum + line.taxAmount, 0));
     const tenders = normalizeSaleTenders({
       payments,
       paymentMethod: normalizedPayment,
@@ -1556,9 +1579,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
            warehouse_id, payment_method, subtotal, tax_total, total,
            cash_received, cash_change, created_by, sale_terms,
            document_type, billing_resolution_id,customer_id,
-           sale_group_id, applied_billing_policy
+           sale_group_id, applied_billing_policy,
+           manual_discount_amount, manual_discount_reason
          )
-         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13,$14,$15)
+         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13,$14,$15,$16,$17)
          RETURNING id, sequence_number, status, payment_method, subtotal,
                    tax_total, total, cash_received, cash_change,
                    document_type, created_at`,
@@ -1581,7 +1605,9 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           resolution?.id || null,
           companyId === req.context.tenantId ? customerId : null,
           saleGroupId,
-          billingPolicy
+          billingPolicy,
+          money(lines.reduce((sum, line) => sum + line.manualDiscountAmount, 0)),
+          requestedDiscount.reason,
         ],
       );
       const sale = saleResult.rows[0];
@@ -1661,12 +1687,13 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           `INSERT INTO sale_items(
              tenant_id, sale_id, product_id, sku_snapshot, name_snapshot,
              quantity, unit_price, unit_cost, tax_rate, tax_amount, line_total,
-             list_unit_price,pricing_source,pricing_label
+             discount_amount, list_unit_price,pricing_source,pricing_label
            )
-           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
           [
             companyId, sale.id, line.id, line.sku, line.name, line.quantity,
             line.unitPrice, line.cost, line.taxRate, line.taxAmount, line.lineTotal,
+            line.manualDiscountAmount || 0,
             line.pricing.basePrice,line.pricing.source,line.pricing.label,
           ],
         );
@@ -1721,8 +1748,16 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         action: 'sale.completed',
         entityType: 'sale',
         entityId: sale.id,
-        after: { ...sale, items: lines.length, sharedCashSessionId: cashSessionId },
-        reason: 'Venta confirmada desde caja multiempresa',
+        after: {
+          ...sale,
+          items: lines.length,
+          sharedCashSessionId: cashSessionId,
+          manualDiscountAmount: money(lines.reduce((sum, line) => sum + line.manualDiscountAmount, 0)),
+          discountReason: requestedDiscount.reason,
+        },
+        reason: manualDiscountAmount
+          ? `Venta confirmada desde caja multiempresa con descuento: ${requestedDiscount.reason}`
+          : 'Venta confirmada desde caja multiempresa',
       });
       receipts.push({
         ...sale,
@@ -1733,6 +1768,8 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           : `POS-${String(sale.sequence_number).padStart(6, '0')}`,
         billingDocument,
         customer: null,
+        manualDiscountAmount: money(lines.reduce((sum, line) => sum + line.manualDiscountAmount, 0)),
+        discountReason: requestedDiscount.reason,
         payments: groupTenders.map((tender) => ({
           method: tender.method,
           amount: tender.amount,
@@ -1753,6 +1790,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           unitPrice: line.unitPrice,
           taxRate: line.taxRate,
           taxAmount: line.taxAmount,
+          discountAmount: line.manualDiscountAmount || 0,
           lineTotal: line.lineTotal,
         })),
       });
@@ -1764,6 +1802,8 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       subtotal: Math.round((grandTotal - grandTax) * 100) / 100,
       tax_total: grandTax,
       total: grandTotal,
+      manualDiscountAmount,
+      discountReason: requestedDiscount.reason,
       payment_method: checkoutPaymentMethod,
       payments: tenders.map((tender) => ({
         method: tender.method,
