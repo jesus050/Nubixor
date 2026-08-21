@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Router } from 'express';
@@ -37,6 +37,21 @@ function hasValidImageSignature(contentType, buffer) {
       buffer.subarray(8, 12).toString('ascii') === 'WEBP';
   }
   return false;
+}
+
+function ean13CheckDigit(value) {
+  const digits = String(value);
+  let sum = 0;
+  for (let index = 0; index < digits.length; index += 1) {
+    sum += Number(digits[index]) * (index % 2 === 0 ? 1 : 3);
+  }
+  return String((10 - (sum % 10)) % 10);
+}
+
+function internalEan13() {
+  // El prefijo 200 identifica códigos para uso interno; no suplanta un prefijo GS1.
+  const payload = `200${randomInt(0, 1_000_000_000).toString().padStart(9, '0')}`;
+  return `${payload}${ean13CheckDigit(payload)}`;
 }
 
 router.use(requireTenant);
@@ -346,6 +361,66 @@ router.patch(
       return result.rows[0];
     });
     res.json(updated);
+  }),
+);
+
+router.post(
+  '/:id/barcode',
+  requirePermission('catalog.manage'),
+  asyncHandler(async (req, res) => {
+    if (!UUID_PATTERN.test(req.params.id)) {
+      throw new AppError('El producto debe tener un UUID válido.', 422, 'INVALID_PRODUCT_ID');
+    }
+    const replace = req.body?.replace === true;
+    const product = await withTransaction(async (client) => {
+      const current = await client.query(
+        `SELECT * FROM products
+         WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+         FOR UPDATE`,
+        [req.params.id, req.context.tenantId],
+      );
+      if (!current.rowCount) {
+        throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+      }
+      if (current.rows[0].barcode && !replace) {
+        return { product: current.rows[0], generated: false };
+      }
+
+      let updated = null;
+      for (let attempt = 0; attempt < 8 && !updated; attempt += 1) {
+        const barcode = internalEan13();
+        const result = await client.query(
+          `UPDATE products
+           SET barcode = $1, updated_at = now()
+           WHERE id = $2 AND tenant_id = $3
+             AND NOT EXISTS (
+               SELECT 1 FROM products existing
+               WHERE existing.tenant_id = $3
+                 AND existing.barcode = $1
+                 AND existing.id <> $2
+                 AND existing.deleted_at IS NULL
+             )
+           RETURNING *`,
+          [barcode, req.params.id, req.context.tenantId],
+        );
+        updated = result.rows[0] || null;
+      }
+      if (!updated) {
+        throw new AppError('No pudimos reservar un código único. Inténtalo de nuevo.', 409, 'BARCODE_GENERATION_CONFLICT');
+      }
+      await writeAudit(client, {
+        tenantId: req.context.tenantId,
+        userId: req.context.userId,
+        action: 'product.barcode_generated',
+        entityType: 'product',
+        entityId: updated.id,
+        before: current.rows[0],
+        after: updated,
+        reason: replace ? 'Código de barras interno regenerado.' : 'Código de barras interno generado.',
+      });
+      return { product: updated, generated: true };
+    });
+    res.status(product.generated ? 201 : 200).json(product);
   }),
 );
 

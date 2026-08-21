@@ -3840,6 +3840,35 @@ function renderProducts() {
       );
       productActions.append(organizeButton);
 
+      const barcodeButton = document.createElement('button');
+      barcodeButton.className = 'photo-action';
+      barcodeButton.type = 'button';
+      barcodeButton.textContent = product.barcode ? 'Regenerar código' : 'Generar código';
+      barcodeButton.title = product.barcode
+        ? `Código actual: ${product.barcode}`
+        : 'Genera un EAN-13 para uso interno y etiquetas';
+      barcodeButton.addEventListener('click', async () => {
+        const replace = Boolean(product.barcode);
+        if (replace && !confirm(`¿Regenerar el código ${product.barcode} de “${product.name}”? Las etiquetas anteriores dejarán de funcionar.`)) return;
+        barcodeButton.disabled = true;
+        try {
+          const result = await getJson(`/api/products/${product.id}/barcode`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+            body: JSON.stringify({ replace }),
+          });
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(result.product.barcode).catch(() => {});
+          }
+          await loadCatalog();
+          showToast(`Código ${result.product.barcode} generado y copiado para etiquetas.`);
+        } catch (error) {
+          showToast(error.message);
+          barcodeButton.disabled = false;
+        }
+      });
+      productActions.append(barcodeButton);
+
       const einvoiceButton = document.createElement('button');
       einvoiceButton.className = 'photo-action';
       einvoiceButton.type = 'button';
