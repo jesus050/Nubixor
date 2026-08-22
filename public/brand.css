@@ -353,6 +353,28 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
   max-height: 82px;
 }
 
+/* El wordmark original es azul marino y pierde contraste sobre los fondos
+   oscuros del acceso y del menú. Esta firma conserva el icono oficial y una
+   lectura clara, sin depender de un PNG ancho que pueda verse recortado. */
+.auth-brand .nubixor-lockup-mark,
+.sidebar .nubixor-lockup-mark {
+  display: block;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.auth-brand .nubixor-lockup-wordmark,
+.sidebar .nubixor-lockup-wordmark {
+  color: #fff;
+  font-family: var(--font-display, "Outfit", system-ui, sans-serif);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
 .sidebar .brand-logo-full {
   width: 186px;
   max-height: 58px;
@@ -376,6 +398,12 @@ h1, h2, h3, h4, h5, h6, .brand-name, .section-heading h2 {
 @media (max-width: 580px) {
   .auth-brand .brand-logo-full {
     width: min(230px, 68vw);
+  }
+
+  .auth-brand .nubixor-lockup-mark,
+  .sidebar .nubixor-lockup-mark {
+    width: 40px;
+    height: 40px;
   }
 
   .sidebar .brand-logo-full {
