@@ -45,6 +45,7 @@ import mediaRouter from './modules/media.js';
 import sessionContextRouter from './modules/session-context.js';
 import versionRouter from './modules/version.js';
 import { requireTenantModule } from './module-gates.js';
+import { createRateLimiter } from './middleware/rate-limiter.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
 
@@ -120,7 +121,18 @@ export function createApp({
   application.use('/api/version', versionRouter);
   application.use('/api/auth', authRouter);
   if (security) {
-    application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
+    // El límite general va después de identificar la sesión, para contar por
+    // persona y no por dirección. Es holgado a propósito: no está para moderar
+    // a un cajero con prisa, sino para que un script que se lleve una sesión no
+    // pueda barrer el catálogo entero de una empresa en un minuto.
+    const apiLimiter = createRateLimiter({
+      windowMs: 60 * 1000,
+      max: 1200,
+      scope: 'api',
+      message: 'Demasiadas solicitudes seguidas. Espera un momento y vuelve a intentarlo.',
+      errorCode: 'API_RATE_LIMIT_EXCEEDED',
+    });
+    application.use('/api', requireAuthenticatedSession, apiLimiter, authorizeApiRequest);
   }
   application.use('/api/session', sessionContextRouter);
   application.use('/api/assets', secureAssetsRouter);
