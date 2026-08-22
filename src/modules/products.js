@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Router } from 'express';
+import QRCode from 'qrcode';
 import { query, withTransaction } from '../db.js';
 import { requireTenant } from '../middleware.js';
 import { writeAudit } from '../audit.js';
@@ -472,6 +473,32 @@ router.patch(
       return updated.rows[0];
     });
     res.json(product);
+  }),
+);
+
+router.get(
+  '/:id/qr',
+  requirePermission('catalog.manage'),
+  asyncHandler(async (req, res) => {
+    if (!UUID_PATTERN.test(req.params.id)) {
+      throw new AppError('El producto debe tener un UUID válido.', 422, 'INVALID_PRODUCT_ID');
+    }
+    const product = await query(
+      `SELECT id, name, sku, barcode FROM products
+       WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [req.params.id, req.context.tenantId],
+    );
+    if (!product.rowCount) {
+      throw new AppError('Producto no encontrado.', 404, 'PRODUCT_NOT_FOUND');
+    }
+    const value = product.rows[0].barcode || product.rows[0].sku;
+    const dataUrl = await QRCode.toDataURL(value, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 320,
+      color: { dark: '#071226', light: '#ffffff' },
+    });
+    res.json({ product: product.rows[0], value, dataUrl });
   }),
 );
 

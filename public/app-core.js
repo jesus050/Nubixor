@@ -3901,6 +3901,14 @@ function renderProducts() {
       printBarcodeButton.addEventListener('click', () => printProductBarcodeLabels(product));
       productActions.append(printBarcodeButton);
 
+      const printQrButton = document.createElement('button');
+      printQrButton.className = 'photo-action';
+      printQrButton.type = 'button';
+      printQrButton.textContent = 'Imprimir QR';
+      printQrButton.title = 'Imprime un QR que Caja puede leer como código o SKU';
+      printQrButton.addEventListener('click', () => printProductQrLabels(product));
+      productActions.append(printQrButton);
+
       const einvoiceButton = document.createElement('button');
       einvoiceButton.className = 'photo-action';
       einvoiceButton.type = 'button';
@@ -15542,6 +15550,34 @@ function printProductBarcodeLabels(product) {
     .label strong { font-size: 8pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .label span { font-size: 8pt; font-weight: 700; } .label svg { grid-column: 1 / -1; width: 100%; height: 16mm; }
   </style></head><body>${labels}<script>window.addEventListener('load', () => window.print());<\/script></body></html>`);
   popup.document.close();
+}
+
+async function printProductQrLabels(product) {
+  const requestedCopies = Number(window.prompt('¿Cuántas etiquetas QR deseas imprimir?', '1'));
+  if (!Number.isInteger(requestedCopies) || requestedCopies < 1 || requestedCopies > 100) return;
+  try {
+    const qr = await getJson(`/api/products/${product.id}/qr`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    const popup = window.open('', '_blank', 'width=480,height=640');
+    if (!popup) {
+      showToast('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e inténtalo de nuevo.');
+      return;
+    }
+    const productName = escapeHtml(product.name);
+    const value = escapeHtml(qr.value);
+    const labels = Array.from({ length: requestedCopies }, () => `
+      <article class="label"><strong>${productName}</strong><img src="${qr.dataUrl}" alt="QR ${value}"><small>${value}</small></article>
+    `).join('');
+    popup.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>QR · ${productName}</title><style>
+      @page { size: 30mm 30mm; margin: 0; } * { box-sizing: border-box; } body { margin: 0; font-family: Arial, sans-serif; }
+      .label { width: 30mm; height: 30mm; padding: 1mm; page-break-after: always; display: grid; grid-template-rows: auto 1fr auto; text-align: center; overflow: hidden; }
+      .label strong { font-size: 7pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .label img { width: 22mm; height: 22mm; justify-self: center; } .label small { font-size: 6pt; }
+    </style></head><body>${labels}<script>window.addEventListener('load', () => window.print());<\/script></body></html>`);
+    popup.document.close();
+  } catch (error) {
+    showToast(error.message);
+  }
 }
 
 function openProductTaxDialog(product) {
