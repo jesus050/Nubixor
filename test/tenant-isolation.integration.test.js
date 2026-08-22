@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import express from 'express';
@@ -10,6 +10,10 @@ import { createApp } from '../src/app.js';
 import { closeDatabase } from '../src/db.js';
 
 const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
+
+after(async () => {
+  await closeDatabase();
+});
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -93,7 +97,6 @@ test(
       await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
-      await closeDatabase();
     }
   },
 );
@@ -180,7 +183,6 @@ test(
       await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
-      await closeDatabase();
     }
   },
 );
