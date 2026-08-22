@@ -23,6 +23,14 @@ async function assertMembership(userId, tenantId) {
   }
 }
 
+function assertActiveTenant(req, tenantId) {
+  // Tener membresía en dos empresas no autoriza a cruzar el contexto activo
+  // mediante un UUID conocido. El usuario debe cambiar empresa explícitamente.
+  if (!req.context?.tenantId || req.context.tenantId !== tenantId) {
+    throw new AppError('Archivo no encontrado.', 404, 'ASSET_NOT_FOUND');
+  }
+}
+
 router.get('/product-images/:id', asyncHandler(async (req, res) => {
   if (!UUID_PATTERN.test(req.params.id)) {
     throw new AppError('La imagen no es válida.', 422, 'INVALID_IMAGE_ID');
@@ -36,6 +44,7 @@ router.get('/product-images/:id', asyncHandler(async (req, res) => {
     throw new AppError('Imagen no encontrada.', 404, 'IMAGE_NOT_FOUND');
   }
   const image = result.rows[0];
+  assertActiveTenant(req, image.tenant_id);
   await assertMembership(req.context.userId, image.tenant_id);
   const securePath = path.join(storageRoot, 'product-images', image.tenant_id, image.file_name);
   const legacyPath = path.join(legacyImageRoot, path.basename(image.file_name));
@@ -69,6 +78,7 @@ router.get('/documents/:id', asyncHandler(async (req, res) => {
     throw new AppError('Documento no encontrado.', 404, 'DOCUMENT_NOT_FOUND');
   }
   const document = result.rows[0];
+  assertActiveTenant(req, document.tenant_id);
   await assertMembership(req.context.userId, document.tenant_id);
   const filePath = path.resolve(storageRoot, document.storage_key);
   if (!filePath.startsWith(`${storageRoot}${path.sep}`)) {

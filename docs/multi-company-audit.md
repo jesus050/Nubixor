@@ -74,6 +74,11 @@ se documentarán junto a cada corrección.
 
 ## Validación y rollback
 
+**Corrección adicional:** los adjuntos protegidos ahora requieren que el propietario
+del archivo coincida con la empresa activa de la sesión, además de la membresía del
+usuario. Esto cierra el acceso por ID de Empresa B cuando el usuario está operando
+en Empresa A.
+
 `npm test` pasa en esta rama (69 pruebas correctas y 3 integraciones omitidas al no
 haber `DATABASE_URL`/`TEST_DATABASE_URL` disponible en el entorno de revisión).
 La migración 077 es aditiva: para revertir el cambio de aplicación, se puede volver
