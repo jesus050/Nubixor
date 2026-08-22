@@ -23,6 +23,11 @@ export function requestContext(req, _res, next) {
     userId: null,
     authenticated: false,
     requestId,
+    // Quién y desde dónde: la auditoría los sella junto al resto del evento sin
+    // que cada módulo tenga que acordarse de pasarlos. req.ip respeta el proxy
+    // cuando TRUST_PROXY está activo, que es como corre en producción.
+    ip: req.ip || req.socket?.remoteAddress || null,
+    userAgent: req.header('user-agent')?.slice(0, 500) || null,
   };
   _res.setHeader('x-request-id', requestId);
   next();

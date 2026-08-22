@@ -6,6 +6,7 @@ import {
 } from 'node:crypto';
 import { promisify } from 'node:util';
 import { query, withTransaction } from './db.js';
+import { writeAccessAudit } from './audit.js';
 import { config } from './config.js';
 import { AppError } from './shared/errors.js';
 
@@ -253,10 +254,21 @@ export function requireAuthenticatedSession(req, res, next) {
 export async function revokeCurrentSession(req, res) {
   const token = sessionToken(req);
   if (token) {
-    await query(
-      'UPDATE auth_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL',
-      [digest(token)],
-    );
+    await withTransaction(async (client) => {
+      const revoked = await client.query(
+        `UPDATE auth_sessions SET revoked_at = now()
+         WHERE token_hash = $1 AND revoked_at IS NULL
+         RETURNING user_id`,
+        [digest(token)],
+      );
+      if (revoked.rowCount) {
+        await writeAccessAudit(client, {
+          userId: revoked.rows[0].user_id,
+          action: 'auth.logout',
+          reason: 'Cierre de sesión solicitado por la persona',
+        });
+      }
+    });
   }
   clearSessionCookie(res);
 }
@@ -304,7 +316,11 @@ export async function loginWithPassword(req, res, { email, password, remember })
       'LOGIN_FIELDS_REQUIRED',
     );
   }
-  return withTransaction(async (client) => {
+  // El intento fallido se registra y la transacción se cierra bien; el error se
+  // lanza después. Antes se lanzaba dentro, así que la reversión se llevaba por
+  // delante el contador de intentos y el bloqueo por fuerza bruta no llegaba a
+  // activarse nunca: cada intento partía de cero.
+  const outcome = await withTransaction(async (client) => {
     const result = await client.query(
       `SELECT id, email, full_name, password_hash, status,
               failed_login_attempts, locked_until
@@ -318,23 +334,33 @@ export async function loginWithPassword(req, res, { email, password, remember })
     const valid = user && user.status === 'ACTIVE' && !blocked &&
       await verifyPassword(password, user.password_hash);
     if (!valid) {
+      let locked = false;
       if (user && !blocked) {
         const attempts = Number(user.failed_login_attempts) + 1;
+        locked = attempts >= 5;
         await client.query(
           `UPDATE users
            SET failed_login_attempts = $1,
-               locked_until = CASE WHEN $1 >= 5 THEN now() + interval '15 minutes' ELSE NULL END
-           WHERE id = $2`,
-          [attempts >= 5 ? 0 : attempts, user.id],
+               locked_until = CASE WHEN $2 THEN now() + interval '15 minutes' ELSE NULL END
+           WHERE id = $3`,
+          // El contador vuelve a cero al bloquear para que, pasados los quince
+          // minutos, la cuenta empiece con cinco oportunidades otra vez. Antes
+          // ese cero viajaba en el mismo parámetro que decidía el bloqueo, así
+          // que la condición nunca se cumplía y la cuenta no se bloqueaba nunca.
+          [locked ? 0 : attempts, locked, user.id],
         );
       }
-      throw new AppError(
-        blocked
-          ? 'La cuenta está temporalmente bloqueada. Intenta nuevamente más tarde.'
-          : 'El correo o la contraseña no son correctos.',
-        401,
-        blocked ? 'ACCOUNT_TEMPORARILY_LOCKED' : 'INVALID_CREDENTIALS',
-      );
+      if (user) {
+        await writeAccessAudit(client, {
+          userId: user.id,
+          action: locked ? 'auth.account_locked' : 'auth.login_failed',
+          reason: blocked
+            ? 'Intento sobre una cuenta bloqueada temporalmente'
+            : 'Credenciales incorrectas',
+          metadata: { email: normalizedEmail, blocked: Boolean(blocked) },
+        });
+      }
+      return { ok: false, blocked: Boolean(blocked) };
     }
     await client.query(
       `UPDATE users
@@ -348,8 +374,27 @@ export async function loginWithPassword(req, res, { email, password, remember })
       [user.id],
     );
     const auth = await createSession(client, req, res, user.id, Boolean(remember));
-    return { user: { id: user.id, email: user.email, full_name: user.full_name }, ...auth };
+    await writeAccessAudit(client, {
+      userId: user.id,
+      action: 'auth.login',
+      reason: remember ? 'Acceso con sesión recordada' : 'Acceso con contraseña',
+    });
+    return {
+      ok: true,
+      session: { user: { id: user.id, email: user.email, full_name: user.full_name }, ...auth },
+    };
   });
+
+  if (!outcome.ok) {
+    throw new AppError(
+      outcome.blocked
+        ? 'La cuenta está temporalmente bloqueada. Intenta nuevamente más tarde.'
+        : 'El correo o la contraseña no son correctos.',
+      401,
+      outcome.blocked ? 'ACCOUNT_TEMPORARILY_LOCKED' : 'INVALID_CREDENTIALS',
+    );
+  }
+  return outcome.session;
 }
 
 export async function createUserAccessToken(client, { userId, createdBy }) {
@@ -416,6 +461,11 @@ export async function activateUserWithToken(req, res, { token, password }) {
       'UPDATE user_access_tokens SET used_at = now() WHERE id = $1',
       [access.rows[0].id],
     );
+    await writeAccessAudit(client, {
+      userId: user.rows[0].id,
+      action: 'auth.account_activated',
+      reason: 'La persona definió su contraseña desde el enlace de invitación',
+    });
     await client.query(
       `UPDATE auth_sessions
        SET revoked_at = now()
@@ -595,6 +645,14 @@ export async function resetPasswordWithToken(req, res, { token, password }) {
        WHERE user_id = $1 AND revoked_at IS NULL`,
       [access.rows[0].user_id],
     );
+    await writeAccessAudit(client, {
+      userId: user.rows[0].id,
+      action: 'auth.password_changed',
+      reason: 'Contraseña restablecida desde el enlace de recuperación',
+      // Las sesiones abiertas se cerraron: quien tuviera la cuenta tomada queda
+      // fuera, y eso es parte del evento.
+      metadata: { revokedExistingSessions: true },
+    });
     const auth = await createSession(client, req, res, user.rows[0].id);
     return { user: user.rows[0], ...auth };
   });
