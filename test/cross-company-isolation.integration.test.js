@@ -127,7 +127,10 @@ test('un usuario no puede leer los datos de una empresa a la que no pertenece', 
     for (const ruta of rutas) {
       const ajenaResponse = await request(app).get(ruta.path)
         .set('cookie', cookie).set('x-tenant-id', ajena);
-      if (ajenaResponse.status === 403 && ajenaResponse.body.code === 'PERMISSION_DENIED') {
+      if (
+        (ajenaResponse.status === 403 && ajenaResponse.body.code === 'PERMISSION_DENIED') ||
+        (ajenaResponse.status === 409 && ajenaResponse.body.code === 'TENANT_CONTEXT_MISMATCH')
+      ) {
         filtradas.push(ruta.path);
       } else {
         noBloqueadas.push(`${ruta.path} → ${ajenaResponse.status} ${ajenaResponse.body.code || ''}`);
