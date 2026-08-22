@@ -314,12 +314,23 @@ const elements = {
   logisticsItemCount: document.querySelector('#logisticsItemCount'),
   logisticsItemList: document.querySelector('#logisticsItemList'),
   logisticsTimeline: document.querySelector('#logisticsTimeline'),
+  logisticsLabelTemplate: document.querySelector('#logisticsLabelTemplate'),
   logisticsLabelSize: document.querySelector('#logisticsLabelSize'),
+  logisticsLabelWidth: document.querySelector('#logisticsLabelWidth'),
+  logisticsLabelHeight: document.querySelector('#logisticsLabelHeight'),
   logisticsLabelShowCompany: document.querySelector('#logisticsLabelShowCompany'),
   logisticsLabelShowProduct: document.querySelector('#logisticsLabelShowProduct'),
   logisticsLabelShowPrice: document.querySelector('#logisticsLabelShowPrice'),
   logisticsLabelShowSku: document.querySelector('#logisticsLabelShowSku'),
   logisticsLabelShowBarcode: document.querySelector('#logisticsLabelShowBarcode'),
+  logisticsLabelShowBarcodeValue: document.querySelector('#logisticsLabelShowBarcodeValue'),
+  logisticsLabelProductFontSize: document.querySelector('#logisticsLabelProductFontSize'),
+  logisticsLabelPriceFontSize: document.querySelector('#logisticsLabelPriceFontSize'),
+  logisticsLabelBarcodeHeight: document.querySelector('#logisticsLabelBarcodeHeight'),
+  logisticsLabelBarcodeWidth: document.querySelector('#logisticsLabelBarcodeWidth'),
+  logisticsLabelOffsetX: document.querySelector('#logisticsLabelOffsetX'),
+  logisticsLabelOffsetY: document.querySelector('#logisticsLabelOffsetY'),
+  logisticsLabelProductLines: document.querySelector('#logisticsLabelProductLines'),
   logisticsLabelFooter: document.querySelector('#logisticsLabelFooter'),
   logisticsLabelPreview: document.querySelector('#logisticsLabelPreview'),
   logisticsLabelPreviewCompany: document.querySelector('#logisticsLabelPreviewCompany'),
@@ -1816,6 +1827,7 @@ function renderLogisticsOverview() {
 
 function resolvedLogisticsLabelSettings() {
   return {
+    templateId: 'PRICE_COMPACT',
     widthMm: 50,
     heightMm: 25,
     showCompany: true,
@@ -1823,23 +1835,63 @@ function resolvedLogisticsLabelSettings() {
     showPrice: true,
     showSku: true,
     showBarcode: true,
+    showBarcodeValue: true,
+    productFontSizePt: 8,
+    priceFontSizePt: 11,
+    barcodeHeightMm: 8,
+    barcodeWidth: 1.2,
+    offsetXmm: 0,
+    offsetYmm: 0,
+    productLines: 1,
     footerText: 'Gracias por su compra',
     ...(logisticsOverview.labelSettings || {}),
   };
 }
 
+const logisticsLabelTemplates = {
+  PRICE_COMPACT: {
+    widthMm: 50, heightMm: 25, showCompany: false, showProduct: true,
+    showPrice: true, showSku: false, showBarcode: true, showBarcodeValue: true,
+    productFontSizePt: 8, priceFontSizePt: 12, barcodeHeightMm: 8,
+    barcodeWidth: 1.15, productLines: 1, footerText: '', offsetXmm: 0, offsetYmm: 0,
+  },
+  WAREHOUSE: {
+    widthMm: 50, heightMm: 30, showCompany: false, showProduct: true,
+    showPrice: false, showSku: true, showBarcode: true, showBarcodeValue: true,
+    productFontSizePt: 8, priceFontSizePt: 11, barcodeHeightMm: 10,
+    barcodeWidth: 1.1, productLines: 2, footerText: '', offsetXmm: 0, offsetYmm: 0,
+  },
+  LARGE_PRICE: {
+    widthMm: 70, heightMm: 40, showCompany: true, showProduct: true,
+    showPrice: true, showSku: true, showBarcode: true, showBarcodeValue: true,
+    productFontSizePt: 11, priceFontSizePt: 18, barcodeHeightMm: 13,
+    barcodeWidth: 1.35, productLines: 2, footerText: '', offsetXmm: 0, offsetYmm: 0,
+  },
+};
+
+function labelNumber(element, fallback) {
+  const value = Number(element.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 function readLogisticsLabelSettings() {
-  const [widthMm, heightMm] = elements.logisticsLabelSize.value
-    .split('x')
-    .map(Number);
   return {
-    widthMm,
-    heightMm,
+    templateId: elements.logisticsLabelTemplate.value,
+    widthMm: labelNumber(elements.logisticsLabelWidth, 50),
+    heightMm: labelNumber(elements.logisticsLabelHeight, 25),
     showCompany: elements.logisticsLabelShowCompany.checked,
     showProduct: elements.logisticsLabelShowProduct.checked,
     showPrice: elements.logisticsLabelShowPrice.checked,
     showSku: elements.logisticsLabelShowSku.checked,
     showBarcode: elements.logisticsLabelShowBarcode.checked,
+    showBarcodeValue: elements.logisticsLabelShowBarcodeValue.checked,
+    productFontSizePt: labelNumber(elements.logisticsLabelProductFontSize, 8),
+    priceFontSizePt: labelNumber(elements.logisticsLabelPriceFontSize, 11),
+    barcodeHeightMm: labelNumber(elements.logisticsLabelBarcodeHeight, 8),
+    barcodeWidth: labelNumber(elements.logisticsLabelBarcodeWidth, 1.2),
+    offsetXmm: labelNumber(elements.logisticsLabelOffsetX, 0),
+    offsetYmm: labelNumber(elements.logisticsLabelOffsetY, 0),
+    productLines: Math.trunc(labelNumber(elements.logisticsLabelProductLines, 1)),
     footerText: elements.logisticsLabelFooter.value.trim(),
   };
 }
@@ -1849,6 +1901,12 @@ function updateLogisticsLabelPreview() {
   const company = getActiveCompany();
   elements.logisticsLabelPreview.style.aspectRatio =
     `${settings.widthMm} / ${settings.heightMm}`;
+  elements.logisticsLabelPreview.style.setProperty('--label-product-size', `${settings.productFontSizePt}px`);
+  elements.logisticsLabelPreview.style.setProperty('--label-price-size', `${settings.priceFontSizePt}px`);
+  elements.logisticsLabelPreview.style.setProperty('--label-barcode-height', `${settings.barcodeHeightMm * 1.6}px`);
+  elements.logisticsLabelPreview.style.setProperty('--label-product-lines', settings.productLines);
+  elements.logisticsLabelPreview.style.transform =
+    `translate(${settings.offsetXmm * 2}px, ${settings.offsetYmm * 2}px)`;
   elements.logisticsLabelPreviewCompany.textContent =
     company?.trade_name || company?.legal_name || 'Mi empresa';
   elements.logisticsLabelPreviewCompany.hidden = !settings.showCompany;
@@ -1858,6 +1916,17 @@ function updateLogisticsLabelPreview() {
   elements.logisticsLabelPreviewSku.hidden = !settings.showSku;
   elements.logisticsLabelPreviewFooter.textContent = settings.footerText;
   elements.logisticsLabelPreviewFooter.hidden = !settings.footerText;
+  if (settings.showBarcode && window.JsBarcode) {
+    try {
+      window.JsBarcode(elements.logisticsLabelPreviewBarcode, '2000526749610', {
+        format: 'CODE128', displayValue: settings.showBarcodeValue,
+        height: Math.max(18, settings.barcodeHeightMm * 2), width: settings.barcodeWidth,
+        fontSize: 9, margin: 0,
+      });
+    } catch {
+      // La vista previa no bloquea la edición si un navegador no carga la librería.
+    }
+  }
 }
 
 function syncLogisticsLabelSettings() {
@@ -1866,12 +1935,44 @@ function syncLogisticsLabelSettings() {
   if ([...elements.logisticsLabelSize.options].some((option) => option.value === size)) {
     elements.logisticsLabelSize.value = size;
   }
+  elements.logisticsLabelTemplate.value = logisticsLabelTemplates[settings.templateId]
+    ? settings.templateId : 'CUSTOM';
+  elements.logisticsLabelWidth.value = settings.widthMm;
+  elements.logisticsLabelHeight.value = settings.heightMm;
   elements.logisticsLabelShowCompany.checked = settings.showCompany;
   elements.logisticsLabelShowProduct.checked = settings.showProduct;
   elements.logisticsLabelShowPrice.checked = settings.showPrice;
   elements.logisticsLabelShowSku.checked = settings.showSku;
   elements.logisticsLabelShowBarcode.checked = settings.showBarcode;
+  elements.logisticsLabelShowBarcodeValue.checked = settings.showBarcodeValue !== false;
+  elements.logisticsLabelProductFontSize.value = settings.productFontSizePt;
+  elements.logisticsLabelPriceFontSize.value = settings.priceFontSizePt;
+  elements.logisticsLabelBarcodeHeight.value = settings.barcodeHeightMm;
+  elements.logisticsLabelBarcodeWidth.value = settings.barcodeWidth;
+  elements.logisticsLabelOffsetX.value = settings.offsetXmm;
+  elements.logisticsLabelOffsetY.value = settings.offsetYmm;
+  elements.logisticsLabelProductLines.value = settings.productLines;
   elements.logisticsLabelFooter.value = settings.footerText || '';
+  updateLogisticsLabelPreview();
+}
+
+function applyLogisticsLabelTemplate() {
+  const template = logisticsLabelTemplates[elements.logisticsLabelTemplate.value];
+  if (!template) return;
+  Object.entries(template).forEach(([key, value]) => {
+    const controls = {
+      widthMm: elements.logisticsLabelWidth, heightMm: elements.logisticsLabelHeight,
+      showCompany: elements.logisticsLabelShowCompany, showProduct: elements.logisticsLabelShowProduct,
+      showPrice: elements.logisticsLabelShowPrice, showSku: elements.logisticsLabelShowSku,
+      showBarcode: elements.logisticsLabelShowBarcode, showBarcodeValue: elements.logisticsLabelShowBarcodeValue,
+      productFontSizePt: elements.logisticsLabelProductFontSize, priceFontSizePt: elements.logisticsLabelPriceFontSize,
+      barcodeHeightMm: elements.logisticsLabelBarcodeHeight, barcodeWidth: elements.logisticsLabelBarcodeWidth,
+      productLines: elements.logisticsLabelProductLines, footerText: elements.logisticsLabelFooter,
+      offsetXmm: elements.logisticsLabelOffsetX, offsetYmm: elements.logisticsLabelOffsetY,
+    };
+    if (controls[key]) controls[key][typeof value === 'boolean' ? 'checked' : 'value'] = value;
+  });
+  elements.logisticsLabelSize.value = `${template.widthMm}x${template.heightMm}`;
   updateLogisticsLabelPreview();
 }
 
@@ -17880,16 +17981,38 @@ elements.printLogisticsBatchLabels.addEventListener(
   () => openLogisticsLabelPrint(),
 );
 [
+  elements.logisticsLabelTemplate,
   elements.logisticsLabelSize,
+  elements.logisticsLabelWidth,
+  elements.logisticsLabelHeight,
   elements.logisticsLabelShowCompany,
   elements.logisticsLabelShowProduct,
   elements.logisticsLabelShowPrice,
   elements.logisticsLabelShowSku,
   elements.logisticsLabelShowBarcode,
+  elements.logisticsLabelShowBarcodeValue,
+  elements.logisticsLabelProductFontSize,
+  elements.logisticsLabelPriceFontSize,
+  elements.logisticsLabelBarcodeHeight,
+  elements.logisticsLabelBarcodeWidth,
+  elements.logisticsLabelOffsetX,
+  elements.logisticsLabelOffsetY,
+  elements.logisticsLabelProductLines,
   elements.logisticsLabelFooter,
 ].forEach((control) => {
   control.addEventListener('input', updateLogisticsLabelPreview);
   control.addEventListener('change', updateLogisticsLabelPreview);
+});
+elements.logisticsLabelTemplate.addEventListener('change', applyLogisticsLabelTemplate);
+elements.logisticsLabelSize.addEventListener('change', () => {
+  const [widthMm, heightMm] = elements.logisticsLabelSize.value.split('x').map(Number);
+  elements.logisticsLabelWidth.value = widthMm;
+  elements.logisticsLabelHeight.value = heightMm;
+  elements.logisticsLabelTemplate.value = 'CUSTOM';
+  updateLogisticsLabelPreview();
+});
+[elements.logisticsLabelWidth, elements.logisticsLabelHeight].forEach((control) => {
+  control.addEventListener('input', () => { elements.logisticsLabelTemplate.value = 'CUSTOM'; });
 });
 elements.saveLogisticsLabelSettings.addEventListener(
   'click',

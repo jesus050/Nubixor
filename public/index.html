@@ -18,7 +18,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css?v=20260818-AUTH-LOADER-v1">
     <link rel="stylesheet" href="./brand.css?v=20260813-MOBILE-v129">
-    <script src="./app.js?v=20260818-COUNT-SCAN-CAMERA-v1" defer></script>
+    <script src="./vendor/jsbarcode/JsBarcode.all.min.js" defer></script>
+    <script src="./app.js?v=20260822-LABEL-EDITOR-v1" defer></script>
 
   </head>
   <body>
@@ -1462,6 +1463,15 @@
                       <div><p class="eyebrow">Diseño</p><h3>Cómo se verá</h3></div>
                     </div>
                     <label>
+                      <span>Plantilla inicial</span>
+                      <select id="logisticsLabelTemplate">
+                        <option value="PRICE_COMPACT">Precio compacto · 50 × 25 mm</option>
+                        <option value="WAREHOUSE">Bodega · 50 × 30 mm</option>
+                        <option value="LARGE_PRICE">Precio grande · 70 × 40 mm</option>
+                        <option value="CUSTOM">Personalizada</option>
+                      </select>
+                    </label>
+                    <label>
                       <span>Tamaño del papel</span>
                       <select id="logisticsLabelSize">
                         <option value="50x25">Térmica 50 × 25 mm</option>
@@ -1470,13 +1480,30 @@
                         <option value="70x40">Grande 70 × 40 mm</option>
                       </select>
                     </label>
+                    <div class="logistics-label-measurements">
+                      <label><span>Ancho (mm)</span><input id="logisticsLabelWidth" type="number" min="25" max="120" step="0.1"></label>
+                      <label><span>Alto (mm)</span><input id="logisticsLabelHeight" type="number" min="15" max="100" step="0.1"></label>
+                    </div>
                     <div class="logistics-label-options">
                       <label><input id="logisticsLabelShowCompany" type="checkbox" checked> Empresa</label>
                       <label><input id="logisticsLabelShowProduct" type="checkbox" checked> Producto</label>
                       <label><input id="logisticsLabelShowPrice" type="checkbox" checked> Precio</label>
                       <label><input id="logisticsLabelShowSku" type="checkbox" checked> SKU</label>
                       <label><input id="logisticsLabelShowBarcode" type="checkbox" checked> Código de barras</label>
+                      <label><input id="logisticsLabelShowBarcodeValue" type="checkbox" checked> Número del código</label>
                     </div>
+                    <fieldset class="logistics-label-precision">
+                      <legend>Precisión de impresión</legend>
+                      <div class="logistics-label-measurements">
+                        <label><span>Nombre (pt)</span><input id="logisticsLabelProductFontSize" type="number" min="6" max="22" step="0.5"></label>
+                        <label><span>Precio (pt)</span><input id="logisticsLabelPriceFontSize" type="number" min="7" max="26" step="0.5"></label>
+                        <label><span>Alto barras (mm)</span><input id="logisticsLabelBarcodeHeight" type="number" min="5" max="35" step="0.5"></label>
+                        <label><span>Grosor barras</span><input id="logisticsLabelBarcodeWidth" type="number" min="0.6" max="3" step="0.1"></label>
+                        <label><span>Desplaz. X (mm)</span><input id="logisticsLabelOffsetX" type="number" min="-5" max="5" step="0.1"></label>
+                        <label><span>Desplaz. Y (mm)</span><input id="logisticsLabelOffsetY" type="number" min="-5" max="5" step="0.1"></label>
+                      </div>
+                      <label><span>Líneas máximas del nombre</span><select id="logisticsLabelProductLines"><option value="1">1 línea</option><option value="2">2 líneas</option><option value="3">3 líneas</option></select></label>
+                    </fieldset>
                     <label>
                       <span>Texto inferior</span>
                       <input id="logisticsLabelFooter" maxlength="80"
@@ -1488,7 +1515,7 @@
                         <b id="logisticsLabelPreviewCompany">Nubixor</b>
                         <strong id="logisticsLabelPreviewProduct">Nombre del producto</strong>
                         <em id="logisticsLabelPreviewPrice">$ 49.900</em>
-                        <span id="logisticsLabelPreviewBarcode">▌▐▌▌▐▐▌▐▌▐▐▌▌▐</span>
+                        <svg id="logisticsLabelPreviewBarcode" aria-label="Vista previa del código de barras"></svg>
                         <small id="logisticsLabelPreviewSku">SKU-0001</small>
                         <i id="logisticsLabelPreviewFooter">Gracias por su compra</i>
                       </div>
