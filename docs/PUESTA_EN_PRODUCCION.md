@@ -33,8 +33,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO nubixor_app;
 ```
 
-Después apunta `DATABASE_URL` a ese rol y reinicia. Las migraciones siguen
-ejecutándose con el usuario dueño de las tablas, no con este.
+Falta un paso antes de poder apuntar `DATABASE_URL` a ese rol: hoy `migrate.js`
+usa esa misma variable y el contenedor arranca con `npm run migrate && npm start`,
+así que un rol sin privilegios haría fallar las migraciones. Hay que separar la
+conexión de migraciones —por ejemplo con `MIGRATION_DATABASE_URL`, que conserve
+al dueño de las tablas— antes de hacer el cambio.
 
 Al arrancar, la aplicación revisa con qué rol se conectó. Si ese rol puede
 saltarse las políticas, escribe `database.tenant_isolation_not_enforced` en el
