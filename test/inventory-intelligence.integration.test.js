@@ -84,15 +84,15 @@ test('la inteligencia de inventario responde con números que cuadran', {
     // traslado del manual.
     await pool.query(
       `INSERT INTO products(id, tenant_id, sku, name, cost, sale_price, category_id,
-                            sales_tax_category_id, tax_category_id, tax_review_status)
-       VALUES($1,$2,'MOVER-1','Producto que rota en Centro',50000,90000,$3,$4,$4,'REVIEWED')`,
+                            sales_tax_category_id, tax_category_id, tax_review_status, active)
+       VALUES($1,$2,'MOVER-1','Producto que rota en Centro',50000,90000,$3,$4,$4,'REVIEWED',TRUE)`,
       [ids.product, ids.tenant, ids.category, ids.tax],
     );
     // Producto sin ninguna venta: capital detenido puro.
     await pool.query(
       `INSERT INTO products(id, tenant_id, sku, name, cost, sale_price, category_id,
-                            sales_tax_category_id, tax_category_id, tax_review_status)
-       VALUES($1,$2,'QUIETO-1','Producto sin movimiento',20000,40000,$3,$4,$4,'REVIEWED')`,
+                            sales_tax_category_id, tax_category_id, tax_review_status, active)
+       VALUES($1,$2,'QUIETO-1','Producto sin movimiento',20000,40000,$3,$4,$4,'REVIEWED',TRUE)`,
       [ids.quieto, ids.tenant, ids.category, ids.tax],
     );
     // Norte: 80 unidades sin vender. Centro: 2 unidades y las vende.
