@@ -462,11 +462,11 @@ export function authorizeApiRequest(req, res, next) {
   if (path.startsWith('/api/companies')) permissions = ['companies.manage'];
   else if (path.startsWith('/api/branches')) {
     permissions = read
-      ? ['dashboard.view', 'branches.manage', 'inventory.view', 'sales.operate']
+      ? ['branch.view', 'dashboard.view', 'branches.manage', 'inventory.view', 'sales.operate']
       : ['branches.manage'];
   } else if (path.startsWith('/api/warehouses')) {
     permissions = read
-      ? ['inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate']
+      ? ['warehouse.view', 'inventory.view', 'warehouses.manage', 'purchases.manage', 'sales.operate']
       : ['warehouses.manage'];
   } else if (/^\/api\/(categories|brands|products|product-structures|pricing|taxes|catalog-import)/.test(path)) {
     permissions = read
