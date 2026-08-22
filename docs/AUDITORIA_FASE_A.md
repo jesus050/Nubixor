@@ -346,13 +346,13 @@ desconectadas:** los 33 routers reciben llamadas desde el frontend (255 llamadas
 | Requisito | Estado | Qué falta exactamente |
 |---|---|---|
 | 4 Kardex | **Parcial** | Saldo anterior/resultante, `branch_id`, `CHECK(on_hand >= 0)` |
-| 5 Rotación | **Casi completo** | Clasifica solo por unidades vendidas; la cobertura y los días en inventario se **calculan pero no clasifican**. Falta el estado "producto nuevo" como clase propia y los períodos 7/30/60/90 (hoy un único `analysis_period_days`) |
+| 5 Rotación | **Completo** | La cobertura clasifica desde la fase E (agotado, riesgo, sana, exceso) y el período se pide por consulta |
 | 6 Temporadas | **Completo** | — |
-| 7 Inteligencia | **Parcial** | Existen baja rotación, exceso y temporada. Faltan **riesgo de agotamiento** (días restantes) y **comparación entre sucursales con transferencia sugerida** |
-| 8 Capital inmovilizado | **Ausente** | Ningún cálculo de `stock × costo` agregado por producto/categoría/sucursal |
+| 7 Inteligencia | **Completo** | Riesgo de agotamiento y traslados sugeridos entre sucursales añadidos en la fase E |
+| 8 Capital inmovilizado | **Completo** | Agrupable por categoría, marca, sucursal, bodega y producto |
 | 9 Bandeja de oportunidades | **Completo** | Prioridad, campaña, observación, responsable y resolución ya existen |
 | 10 Presupuesto marketing | **Completo** | — |
-| 11 Dashboard ejecutivo | **Parcial** | `/dashboard/executive`, `/trends` y `/attention` existen. `attention` cubre turnos abiertos, documentos rechazados, stock bajo y cartera vencida; **no** cubre productos sin rotación, diferencias de caja, transferencias sugeridas ni estado del respaldo |
+| 11 Dashboard ejecutivo | **Casi completo** | `attention` suma productos sin rotación y diferencias de caja. El estado del respaldo se queda fuera a propósito: es de la plataforma, no de la empresa, y su sitio es el panel de superadmin (requisito 21). Se consulta con `npm run backup:status` |
 | 15 Importación | **Parcial** | Solo CSV; **sin XLSX**, sin mapeo de columnas, sin importador de clientes/proveedores. Rechaza el archivo completo si una fila falla |
 | 16 Onboarding | **Parcial** | `/dashboard/onboarding` calcula el progreso; no existe el asistente guiado de 9 pasos |
 | 19 Buscador global | **Ausente** | — |
