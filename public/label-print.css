@@ -70,6 +70,7 @@ button.secondary { color: #192584; background: #edf2ff; }
   border: 1px dashed #9ba8be;
   text-align: center;
   color: #090d27;
+  transform: translate(var(--label-offset-x, 0), var(--label-offset-y, 0));
 }
 
 .product-label .company {
@@ -86,15 +87,17 @@ button.secondary { color: #192584; background: #edf2ff; }
 .product-label .product {
   max-width: 100%;
   overflow: hidden;
-  font-size: 8pt;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--label-product-lines, 1);
+  font-size: var(--label-product-size, 8pt);
   font-weight: 700;
   line-height: 1.05;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .product-label .price {
-  font-size: 11pt;
+  font-size: var(--label-price-size, 11pt);
   font-style: normal;
   font-weight: 900;
   line-height: 1;
@@ -102,7 +105,7 @@ button.secondary { color: #192584; background: #edf2ff; }
 
 .product-label svg {
   width: 96%;
-  max-height: 8mm;
+  max-height: calc(var(--label-barcode-height, 8mm) + 4mm);
 }
 
 .product-label .sku {

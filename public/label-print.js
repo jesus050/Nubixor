@@ -26,6 +26,12 @@ function formatMoney(value) {
 function renderLabel(item) {
   const label = document.createElement('article');
   label.className = 'product-label';
+  label.style.setProperty('--label-product-size', `${job.settings.productFontSizePt || 8}pt`);
+  label.style.setProperty('--label-price-size', `${job.settings.priceFontSizePt || 11}pt`);
+  label.style.setProperty('--label-barcode-height', `${job.settings.barcodeHeightMm || 8}mm`);
+  label.style.setProperty('--label-product-lines', job.settings.productLines || 1);
+  label.style.setProperty('--label-offset-x', `${job.settings.offsetXmm || 0}mm`);
+  label.style.setProperty('--label-offset-y', `${job.settings.offsetYmm || 0}mm`);
   addText(label, 'company', job.companyName, job.settings.showCompany);
   addText(label, 'product', item.productName, job.settings.showProduct);
   addText(label, 'price', formatMoney(item.price), job.settings.showPrice);
@@ -58,9 +64,10 @@ function renderJob() {
     document.querySelectorAll('.barcode').forEach((barcode) => {
       window.JsBarcode(barcode, barcode.dataset.value, {
         format: 'CODE128',
-        displayValue: false,
-        height: 25,
-        width: 1.2,
+        displayValue: job.settings.showBarcodeValue !== false,
+        height: (job.settings.barcodeHeightMm || 8) * 3.78,
+        width: job.settings.barcodeWidth || 1.2,
+        fontSize: 9,
         margin: 0,
       });
     });
