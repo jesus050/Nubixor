@@ -1,4 +1,4 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import QRCode from 'qrcode';
 import { query, withTransaction } from '../db.js';
@@ -24,6 +24,44 @@ const CASH_DENOMINATIONS = new Set([
   100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50,
 ]);
 const POS_STOCK_SOURCES = new Set(['DISPLAY', 'AVAILABLE']);
+const IDEMPOTENCY_KEY_MAX_LENGTH = 160;
+
+// La clave la genera el punto de venta y viaja en la cabecera Idempotency-Key.
+// Se acepta también en el cuerpo para clientes que no puedan fijar cabeceras.
+// Sin clave la venta se comporta como antes: se inventa una, el cobro funciona
+// y el reintento simplemente no queda cubierto. Eso mantiene compatibles a los
+// clientes que aún no la envían.
+function resolveIdempotencyKey(req) {
+  const fromHeader = req.header('idempotency-key');
+  const supplied = typeof fromHeader === 'string' && fromHeader.trim()
+    ? fromHeader.trim()
+    : normalizedText(req.body?.idempotencyKey, IDEMPOTENCY_KEY_MAX_LENGTH);
+  if (!supplied) return randomUUID();
+  if (supplied.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
+    throw new AppError(
+      `La clave de idempotencia supera ${IDEMPOTENCY_KEY_MAX_LENGTH} caracteres.`,
+      422,
+      'IDEMPOTENCY_KEY_TOO_LONG',
+    );
+  }
+  return supplied;
+}
+
+// Dos peticiones idénticas simultáneas pasan las dos por esta comprobación sin
+// ver nada. Quien las separa es el índice único; esto solo evita rehacer el
+// trabajo en el caso normal, que es el reintento posterior.
+async function findSaleByIdempotencyKey(runQuery, tenantId, idempotencyKey) {
+  const existing = await runQuery(
+    'SELECT id FROM sales WHERE company_id = $1 AND idempotency_key = $2',
+    [tenantId, idempotencyKey],
+  );
+  return existing.rows[0]?.id || null;
+}
+
+function isIdempotencyConflict(error, indexName) {
+  return error?.code === '23505' && error?.constraint === indexName;
+}
+
 
 router.use(requireTenant);
 
@@ -1278,6 +1316,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
   }
   const consolidated = new Map();
   const requestedDiscount = normalizeManualDiscount(manualDiscount);
+  const idempotencyKey = resolveIdempotencyKey(req);
   for (const item of items) {
     const current = consolidated.get(item.productId);
     if (current && current.warehouseId !== item.warehouseId) {
@@ -1293,7 +1332,7 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     });
   }
 
-  const purchase = await withTransaction(async (client) => {
+  const registerGroupedSale = async () => withTransaction(async (client) => {
     const session = await client.query(
       `SELECT cs.id, cs.cash_register_id, cr.branch_id
        FROM cash_sessions cs
@@ -1521,9 +1560,17 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
 
     // Insert Parent Sale Group
     const saleGroupResult = await client.query(
-      `INSERT INTO sale_groups(tenant_id, cash_session_id, total, created_by)
-       VALUES($1, $2, $3, $4) RETURNING id`,
-      [req.context.tenantId, cashSessionId, grandTotal, req.context.userId]
+      `INSERT INTO sale_groups(
+         tenant_id, cash_session_id, total, created_by, idempotency_key
+       )
+       VALUES($1, $2, $3, $4, $5) RETURNING id`,
+      [
+        req.context.tenantId,
+        cashSessionId,
+        grandTotal,
+        req.context.userId,
+        idempotencyKey,
+      ],
     );
     const saleGroupId = saleGroupResult.rows[0].id;
 
@@ -1580,9 +1627,9 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
            cash_received, cash_change, created_by, sale_terms,
            document_type, billing_resolution_id,customer_id,
            sale_group_id, applied_billing_policy,
-           manual_discount_amount, manual_discount_reason
+           manual_discount_amount, manual_discount_reason, idempotency_key
          )
-         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13,$14,$15,$16,$17)
+         VALUES($1,$1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'IMMEDIATE',$11,$12,$13,$14,$15,$16,$17,$18)
          RETURNING id, sequence_number, status, payment_method, subtotal,
                    tax_total, total, cash_received, cash_change,
                    document_type, created_at`,
@@ -1608,6 +1655,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
           billingPolicy,
           money(lines.reduce((sum, line) => sum + line.manualDiscountAmount, 0)),
           requestedDiscount.reason,
+          // La empresa vendedora puede aparecer dos veces en el mismo cobro con
+          // políticas de facturación distintas, y cada aparición es una venta.
+          // La política desempata la clave sin romper la unicidad por empresa.
+          `${idempotencyKey}::${billingPolicy}`,
         ],
       );
       const sale = saleResult.rows[0];
@@ -1831,6 +1882,30 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
     };
   });
 
+  let purchase;
+  try {
+    purchase = await registerGroupedSale();
+  } catch (error) {
+    if (!isIdempotencyConflict(error, 'sale_groups_company_idempotency_unique')) throw error;
+    // El grupo se inserta antes de descontar inventario y de consumir
+    // consecutivos, así que un reintento choca aquí sin haber movido nada. A
+    // diferencia del cobro de una sola empresa, el recibo agrupado no se puede
+    // reconstruir sin recalcular repartos de pago, y devolver cifras recalculadas
+    // sería peor que decir la verdad: el cobro ya está registrado.
+    const registered = await query(
+      `SELECT id FROM sale_groups
+       WHERE tenant_id = $1 AND idempotency_key = $2`,
+      [req.context.tenantId, idempotencyKey],
+    );
+    const conflict = new AppError(
+      'Este cobro ya fue registrado. Consúltalo en el historial del turno; no se creó una segunda venta.',
+      409,
+      'SALE_ALREADY_REGISTERED',
+    );
+    conflict.details = { saleGroupId: registered.rows[0]?.id || null };
+    throw conflict;
+  }
+
   for (const receipt of purchase.receipts || []) {
     if (receipt.billingDocument?.id) {
       const updatedBilling = await autoProcessElectronicDocument({
@@ -1912,10 +1987,10 @@ router.get('/sales/:id/internal-receipt-qr', asyncHandler(async (req, res) => {
   });
 }));
 
-router.get('/sales/:id', asyncHandler(async (req, res) => {
-  if (!UUID_PATTERN.test(req.params.id)) {
-    return res.status(422).json({ error: 'La venta debe tener un UUID válido.' });
-  }
+// El recibo se arma igual lo consulte el cajero, lo pida la impresión o lo
+// devuelva un reintento del cobro. Tenerlo en un solo lugar es lo que permite
+// que una venta repetida responda exactamente lo mismo que la original.
+async function loadSaleReceipt(req, saleId) {
   const [saleResult, itemsResult, tenderResult] = await Promise.all([
     query(
       `SELECT s.id, s.company_id, s.sequence_number, s.status, s.payment_method,
@@ -1944,7 +2019,7 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
        LEFT JOIN tenants receiver ON receiver.id = payment.receiving_company_id
        WHERE s.id = $1 AND s.tenant_id = $2
          AND ($3::uuid IS NULL OR cr.branch_id = $3)`,
-      [req.params.id, req.context.tenantId, req.context.branchId],
+      [saleId, req.context.tenantId, req.context.branchId],
     ),
     query(
       `SELECT item.id, item.product_id, item.sku_snapshot sku,
@@ -1966,7 +2041,7 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
        ) returned ON TRUE
        WHERE item.sale_id = $1 AND item.tenant_id = $2
        ORDER BY item.id`,
-      [req.params.id, req.context.tenantId],
+      [saleId, req.context.tenantId],
     ),
     query(
       `SELECT tender.method, tender.amount, tender.tendered_amount "tenderedAmount",
@@ -1983,14 +2058,12 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
        WHERE tender.sale_id = $1 AND tender.seller_company_id = $2
          AND tender.reconciliation_status <> 'REVERSED'
        ORDER BY tender.recorded_at, tender.id`,
-      [req.params.id, req.context.tenantId],
+      [saleId, req.context.tenantId],
     ),
   ]);
-  if (!saleResult.rowCount) {
-    throw new AppError('No encontramos la venta.', 404, 'SALE_NOT_FOUND');
-  }
+  if (!saleResult.rowCount) return null;
   const sale = saleResult.rows[0];
-  res.json({
+  return {
     ...sale,
     receiptNumber: sale.billing_number
       ? `${sale.billing_prefix || ''}${sale.billing_number}`
@@ -2008,7 +2081,18 @@ router.get('/sales/:id', asyncHandler(async (req, res) => {
     } : null,
     payments: tenderResult.rows,
     items: itemsResult.rows,
-  });
+  };
+}
+
+router.get('/sales/:id', asyncHandler(async (req, res) => {
+  if (!UUID_PATTERN.test(req.params.id)) {
+    return res.status(422).json({ error: 'La venta debe tener un UUID válido.' });
+  }
+  const receipt = await loadSaleReceipt(req, req.params.id);
+  if (!receipt) {
+    throw new AppError('No encontramos la venta.', 404, 'SALE_NOT_FOUND');
+  }
+  res.json(receipt);
 }));
 
 router.post('/sales', asyncHandler(async (req, res) => {
@@ -2096,6 +2180,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     return res.status(422).json({ error: 'Los productos y cantidades de la venta no son válidos.' });
   }
   const requestedDiscount = normalizeManualDiscount(manualDiscount);
+  const idempotencyKey = resolveIdempotencyKey(req);
 
   const consolidatedItems = new Map();
   for (const item of items) {
@@ -2106,7 +2191,17 @@ router.post('/sales', asyncHandler(async (req, res) => {
     );
   }
 
-  const receipt = await withTransaction(async (client) => {
+  const registerSale = async () => withTransaction(async (client) => {
+    const alreadyRegistered = await findSaleByIdempotencyKey(
+      (text, values) => client.query(text, values),
+      req.context.tenantId,
+      idempotencyKey,
+    );
+    // Un cobro ya registrado no se vuelve a procesar: se responde el mismo
+    // recibo. Devolver un error obligaría al cajero a comprobar a mano si la
+    // venta entró, que es justo lo que esto evita.
+    if (alreadyRegistered) return { replayedSaleId: alreadyRegistered };
+
     const session = await client.query(
       `SELECT cs.id, cr.branch_id
        FROM cash_sessions cs
@@ -2300,9 +2395,9 @@ router.post('/sales', asyncHandler(async (req, res) => {
          tenant_id, cash_session_id, warehouse_id, payment_method,
          subtotal, tax_total, total, cash_received, cash_change, created_by,
          customer_id, sale_terms, due_date, document_type, billing_resolution_id,
-         manual_discount_amount, manual_discount_reason
+         manual_discount_amount, manual_discount_reason, idempotency_key
        )
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING id, sequence_number, status, payment_method,
                  subtotal, tax_total, total, cash_received, cash_change,
                  customer_id, sale_terms, due_date, document_type,
@@ -2325,6 +2420,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
         billingResolution?.id || null,
         manualDiscountAmount,
         requestedDiscount.reason,
+        idempotencyKey,
       ],
     );
     const sale = saleResult.rows[0];
@@ -2585,6 +2681,32 @@ router.post('/sales', asyncHandler(async (req, res) => {
       })),
     };
   });
+
+  let receipt;
+  try {
+    receipt = await registerSale();
+  } catch (error) {
+    // Dos peticiones idénticas al mismo tiempo: una registra la venta y la otra
+    // choca contra el índice único. La segunda no es un fallo, es la misma venta
+    // vista dos veces, así que responde el recibo de la que ganó.
+    if (!isIdempotencyConflict(error, 'sales_company_idempotency_unique')) throw error;
+    receipt = { replayedSaleId: null };
+  }
+
+  if ('replayedSaleId' in receipt) {
+    const registeredId = receipt.replayedSaleId
+      || await findSaleByIdempotencyKey(query, req.context.tenantId, idempotencyKey);
+    const priorReceipt = registeredId ? await loadSaleReceipt(req, registeredId) : null;
+    if (!priorReceipt) {
+      throw new AppError(
+        'Esta venta ya fue registrada, pero no pudimos recuperar el recibo. Búscala en el historial del turno.',
+        409,
+        'SALE_ALREADY_REGISTERED',
+      );
+    }
+    res.setHeader('Idempotency-Replayed', 'true');
+    return res.status(200).json({ ...priorReceipt, replayed: true });
+  }
 
   if (receipt.billingDocument?.id) {
     const updatedBilling = await autoProcessElectronicDocument({

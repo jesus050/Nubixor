@@ -1642,6 +1642,20 @@ let csrfToken = null;
 let pendingActivationToken = new URLSearchParams(window.location.search).get('activate');
 let pendingPasswordResetToken = new URLSearchParams(window.location.search).get('reset');
 const saleCart = new Map();
+// La clave del cobro nace con el carrito y sobrevive a los reintentos: si la
+// respuesta se pierde y el cajero vuelve a pulsar, el servidor reconoce el mismo
+// cobro en vez de registrarlo dos veces. Solo se renueva cuando una venta se
+// confirma de verdad.
+let saleIdempotencyKey = null;
+
+function currentSaleIdempotencyKey() {
+  if (!saleIdempotencyKey) {
+    saleIdempotencyKey = crypto.randomUUID
+      ? crypto.randomUUID()
+      : `venta-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+  return saleIdempotencyKey;
+}
 let activePosCategory = 'ALL';
 let customerDialogSource = 'receivables';
 let imageProduct = null;
@@ -17920,6 +17934,7 @@ async function completeSale() {
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
+        'Idempotency-Key': currentSaleIdempotencyKey(),
       },
       body: JSON.stringify({
         cashSessionId: posSummary.openSession.id,
@@ -17959,6 +17974,7 @@ async function completeSale() {
       }),
     });
     saleCart.clear();
+    saleIdempotencyKey = null;
     elements.posCashReceived.value = '';
     elements.posTransferReference.value = '';
     elements.posMixedCashAmount.value = '0';
@@ -17980,6 +17996,13 @@ async function completeSale() {
     showReceipt(receipt);
     showToast('Venta registrada e inventario actualizado.');
   } catch (error) {
+    // El servidor reconoció el cobro como ya registrado: no hubo venta doble.
+    // Dejar el carrito puesto invitaría a insistir sobre algo que ya está hecho.
+    if (error.body?.code === 'SALE_ALREADY_REGISTERED') {
+      saleCart.clear();
+      saleIdempotencyKey = null;
+      await Promise.all([loadPos(), loadPosCatalog()]);
+    }
     elements.posSaleError.textContent = error.message;
     elements.posSaleError.hidden = false;
   } finally {
