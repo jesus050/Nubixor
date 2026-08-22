@@ -12,6 +12,14 @@ const createUnsecuredApp = (options = {}) => createApp({
   moduleGates: false,
 });
 
+test('GET /api/version expone solo la identidad no sensible del artefacto', async () => {
+  const response = await request(createUnsecuredApp()).get('/api/version').expect(200);
+  assert.equal(typeof response.body.version, 'string');
+  assert.equal(typeof response.body.commit, 'string');
+  assert.ok(Object.hasOwn(response.body, 'buildTime'));
+  assert.deepEqual(Object.keys(response.body).sort(), ['buildTime', 'commit', 'version']);
+});
+
 test('GET / sirve la interfaz local', async () => {
   const response = await request(createUnsecuredApp()).get('/').expect(200);
   assert.match(response.headers['content-type'], /^text\/html/);

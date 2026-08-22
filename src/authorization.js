@@ -314,6 +314,13 @@ export function requireAnyPermission(permissionCodes) {
           'USER_CONTEXT_REQUIRED',
         );
       }
+      if (req.context.requestedTenantId && req.context.requestedTenantId !== tenantId) {
+        throw new AppError(
+          'La empresa solicitada no coincide con el contexto seguro de la sesión.',
+          409,
+          'TENANT_CONTEXT_MISMATCH',
+        );
+      }
       const result = await query(
         `SELECT u.id, u.full_name, u.email, tu.status membership_status,
                 r.id role_id, r.code role_code, r.name role_name,

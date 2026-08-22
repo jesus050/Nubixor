@@ -13,6 +13,12 @@ export function requestContext(req, _res, next) {
     ? req.query?.tenantId
     : null;
   req.context = {
+    // Conservamos el valor solicitado exclusivamente para compatibilidad y
+    // trazabilidad. La empresa operativa se deriva de auth_sessions.
+    requestedTenantId: req.header('x-tenant-id') || mediaContentTenant || null,
+    // `requireAuthenticatedSession` reemplaza este valor con la empresa de
+    // auth_sessions antes de atender rutas productivas. Mantenerlo aquí deja
+    // operativas las validaciones unitarias que crean la app sin seguridad.
     tenantId: req.header('x-tenant-id') || mediaContentTenant || null,
     userId: null,
     authenticated: false,
