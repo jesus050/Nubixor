@@ -158,7 +158,6 @@ export async function resolveSession(req, { required = true } = {}) {
     `SELECT tenant_id, branch_id
      FROM tenant_users
      WHERE user_id = $1 AND status = 'ACTIVE'
-       AND ($2::uuid IS NULL OR tenant_id = $2)
      ORDER BY CASE WHEN tenant_id = $2 THEN 0 ELSE 1 END, joined_at NULLS LAST, tenant_id
      LIMIT 1`,
     [session.id, session.active_tenant_id],

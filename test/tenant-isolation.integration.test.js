@@ -20,6 +20,7 @@ function digest(value) {
 }
 
 async function cleanupTenant(pool, tenantId) {
+  await pool.query('DELETE FROM audit_events WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM tenant_users WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM roles WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [tenantId]);
@@ -174,10 +175,25 @@ test(
         .expect(409);
       assert.equal(forcedCompany.body.code, 'TENANT_CONTEXT_MISMATCH');
 
+      await pool.query(
+        `UPDATE auth_sessions SET active_tenant_id = $1 WHERE token_hash = $2`,
+        [ids.companyA, digest(token)],
+      );
+      await pool.query(
+        `UPDATE tenant_users SET status = 'SUSPENDED'
+         WHERE tenant_id = $1 AND user_id = $2`,
+        [ids.companyA, ids.user],
+      );
       await client
         .get('/api/warehouses')
         .set('Cookie', sessionCookie)
         .expect(200);
+
+      const recoveredSession = await pool.query(
+        'SELECT active_tenant_id FROM auth_sessions WHERE token_hash = $1',
+        [digest(token)],
+      );
+      assert.equal(recoveredSession.rows[0].active_tenant_id, ids.companyB);
     } finally {
       await cleanupTenant(pool, ids.companyA);
       await cleanupTenant(pool, ids.companyB);

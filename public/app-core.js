@@ -15269,7 +15269,12 @@ async function submitCompany(event) {
     });
     closeCompanyDialog();
     currentUser = await getJson('/api/auth/me');
-    activeTenantId = createdCompany.id;
+    const context = await getJson('/api/session/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: createdCompany.id }),
+    });
+    activeTenantId = context.tenantId;
     saleCart.clear();
     posCatalog = [];
     await loadCompanies();
