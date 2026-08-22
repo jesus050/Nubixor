@@ -21,6 +21,27 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
   de la empresa vendedora, pero la conexión declaraba la empresa activa y las
   políticas por empresa rechazaban el asiento; el cajero veía un error sobre
   cuentas contables que no tenía nada que ver.
+- El bloqueo por intentos fallidos no ocurría nunca: el contador se
+  incrementaba dentro de la transacción que revertía el error, y el parámetro
+  que decidía el bloqueo se ponía en cero justo al llegar a cinco. Cinco
+  intentos fallidos bloquean la cuenta quince minutos de verdad.
+
+### Añadido en la fase C
+
+- Kardex real: cada movimiento de inventario guarda el saldo anterior, el
+  resultante y la sucursal, encadenado por la propia base de datos. Los
+  movimientos pasan a ser inmutables —una corrección se hace con otro
+  movimiento— y `inventory_balances` ya no admite saldos negativos.
+- `GET /api/inventory/kardex/reconciliation` compara el saldo con el acumulado
+  del kardex y lista las diferencias. Una diferencia significa que alguien movió
+  existencias sin registrar el movimiento; en datos históricos es normal que
+  aparezcan los productos cuyo inventario inicial se cargó directamente.
+- La auditoría registra el origen de cada evento —dirección, dispositivo e
+  identificador de petición— dentro de `metadata`, que la cadena de integridad
+  ya sella. El acceso también se audita: entrar, salir, fallar al entrar,
+  activar la cuenta y restablecer la contraseña.
+- El respaldo y la sincronización de rangos con Factus piden un cerrojo antes de
+  ejecutarse, para que con varias instancias solo una haga el trabajo.
 
 ### Seguridad
 
