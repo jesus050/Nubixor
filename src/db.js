@@ -166,3 +166,19 @@ export async function checkDatabase() {
 export async function closeDatabase() {
   if (pool) await pool.end();
 }
+
+// PostgreSQL nunca aplica las políticas de aislamiento a un superusuario ni a un
+// rol con BYPASSRLS, ni siquiera con FORCE ROW LEVEL SECURITY. La imagen oficial
+// crea al usuario principal como superusuario, así que es fácil quedarse con las
+// políticas puestas y sin efecto: esto lo hace visible en vez de silencioso.
+export async function checkTenantIsolationEnforcement() {
+  if (!pool) return { enforced: false, reason: 'DATABASE_NOT_CONFIGURED' };
+  const result = await query(
+    'SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user',
+  );
+  const role = result.rows[0];
+  if (!role) return { enforced: false, reason: 'ROLE_NOT_FOUND' };
+  if (role.rolsuper) return { enforced: false, reason: 'ROLE_IS_SUPERUSER' };
+  if (role.rolbypassrls) return { enforced: false, reason: 'ROLE_BYPASSES_RLS' };
+  return { enforced: true, reason: null };
+}

@@ -11,6 +11,36 @@
 7. Validar el perfil tributario y el RUT de cada empresa por separado.
 8. Ejecutar y restaurar una copia de seguridad de prueba antes de abrir ventas.
 
+## Rol de base de datos sin privilegios
+
+Las tablas de dinero tienen aislamiento por empresa aplicado dentro de
+PostgreSQL. Esas políticas **no se aplican a un superusuario**, ni siquiera con
+`FORCE ROW LEVEL SECURITY`. La imagen oficial de PostgreSQL crea `POSTGRES_USER`
+como superusuario, así que una instalación recién hecha las tiene puestas y sin
+efecto.
+
+Para que protejan de verdad, la aplicación debe conectarse con un rol propio que
+no sea superusuario y no tenga `BYPASSRLS`:
+
+```sql
+CREATE ROLE nubixor_app LOGIN PASSWORD 'una-clave-larga-y-distinta';
+GRANT USAGE ON SCHEMA public TO nubixor_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO nubixor_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nubixor_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO nubixor_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO nubixor_app;
+```
+
+Después apunta `DATABASE_URL` a ese rol y reinicia. Las migraciones siguen
+ejecutándose con el usuario dueño de las tablas, no con este.
+
+Al arrancar, la aplicación revisa con qué rol se conectó. Si ese rol puede
+saltarse las políticas, escribe `database.tenant_isolation_not_enforced` en el
+registro. Ese mensaje significa que el aislamiento está apagado aunque las
+políticas existan.
+
 ## Variables mínimas
 
 - `APP_DOMAIN`
