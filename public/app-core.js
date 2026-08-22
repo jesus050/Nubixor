@@ -5803,6 +5803,28 @@ function attentionCards(data) {
       action: 'Ver inventario',
     });
   }
+  const diferencias = data.cashDifferences || {};
+  if (Number(diferencias.total) > 0) {
+    tarjetas.push({
+      tone: 'alert',
+      title: Number(diferencias.total) === 1
+        ? 'Una caja cerró con diferencia'
+        : `${diferencias.total} cajas cerraron con diferencia`,
+      detail: `${formatCurrency(diferencias.amount)} sin cuadrar en los últimos siete días.`,
+      href: '#caja',
+      action: 'Revisar cierres',
+    });
+  }
+  const detenidos = data.stagnantProducts || {};
+  if (Number(detenidos.total) > 0) {
+    tarjetas.push({
+      tone: 'warn',
+      title: `${detenidos.total} productos sin una sola venta`,
+      detail: `${formatCurrency(detenidos.immobilizedCapital)} detenidos en inventario.`,
+      href: '#planificacion-comercial',
+      action: 'Ver oportunidades',
+    });
+  }
   return tarjetas;
 }
 

@@ -346,7 +346,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
 // se pierde: un turno sin cerrar o una factura rechazada no son estadística,
 // son trabajo pendiente.
 router.get('/attention', asyncHandler(async (req, res) => {
-  const [shifts, rejected, stock, overdue] = await Promise.all([
+  const [shifts, rejected, stock, overdue, stagnant, differences] = await Promise.all([
     query(
       `SELECT cs.id, cr.name register_name, b.name branch_name, cs.opened_at
        FROM cash_sessions cs
@@ -389,12 +389,74 @@ router.get('/attention', asyncHandler(async (req, res) => {
          AND ($2::uuid IS NULL OR branch_id = $2)`,
       [req.context.tenantId, req.context.branchId],
     ),
+    query(
+      // Productos sin una sola venta en el período de análisis de la empresa,
+      // con existencias. Cada uno es dinero que lleva ahí desde entonces.
+      `WITH settings AS (
+         SELECT analysis_period_days
+         FROM commercial_rotation_settings
+         WHERE tenant_id = $1
+       )
+       SELECT COUNT(*)::integer total,
+              COALESCE(ROUND(SUM(stock.available * stock.cost), 2), 0) immobilized_capital
+       FROM (
+         SELECT balance.product_id,
+                SUM(balance.on_hand) available,
+                MAX(product.cost) cost
+         FROM inventory_balances balance
+         JOIN products product
+           ON product.id = balance.product_id AND product.tenant_id = balance.tenant_id
+         JOIN warehouses warehouse
+           ON warehouse.id = balance.warehouse_id AND warehouse.tenant_id = balance.tenant_id
+         WHERE balance.tenant_id = $1
+           AND balance.on_hand > 0
+           AND product.deleted_at IS NULL
+           AND product.active = TRUE
+           AND ($2::uuid IS NULL OR warehouse.branch_id = $2)
+         GROUP BY balance.product_id
+       ) stock
+       CROSS JOIN settings
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM sale_items item
+         JOIN sales sale
+           ON sale.id = item.sale_id
+          AND sale.tenant_id = item.tenant_id
+          AND sale.status = 'COMPLETED'
+         WHERE item.tenant_id = $1
+           AND item.product_id = stock.product_id
+           AND sale.created_at >= CURRENT_DATE - settings.analysis_period_days * INTERVAL '1 day'
+       )`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      // Diferencias de caja de la última semana. Una sola puede ser un error de
+      // conteo; varias seguidas son otra cosa, y por eso se cuentan aparte.
+      `SELECT COUNT(*)::integer total,
+              COALESCE(SUM(ABS(difference)), 0) amount
+       FROM cash_sessions session
+       JOIN cash_registers register ON register.id = session.cash_register_id
+       WHERE session.tenant_id = $1
+         AND session.status = 'CLOSED'
+         AND session.closed_at >= CURRENT_DATE - INTERVAL '7 days'
+         AND ABS(COALESCE(session.difference, 0)) >= 0.01
+         AND ($2::uuid IS NULL OR register.branch_id = $2)`,
+      [req.context.tenantId, req.context.branchId],
+    ),
   ]);
   res.json({
     openShifts: shifts.rows,
     rejectedDocuments: rejected.rows,
     lowStockCount: stock.rows[0]?.total || 0,
     overdueReceivables: overdue.rows[0] || { total: 0, amount: 0 },
+    stagnantProducts: {
+      total: stagnant.rows[0]?.total || 0,
+      immobilizedCapital: Number(stagnant.rows[0]?.immobilized_capital || 0),
+    },
+    cashDifferences: {
+      total: differences.rows[0]?.total || 0,
+      amount: Number(differences.rows[0]?.amount || 0),
+    },
   });
 }));
 

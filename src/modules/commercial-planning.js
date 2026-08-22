@@ -226,12 +226,34 @@ function buildRotationFilters(req) {
     daysWithoutSale: req.query.daysWithoutSale === undefined
       ? null
       : numberValue(req.query.daysWithoutSale, 'Los días sin venta no son válidos.'),
+    periodDays: parseAnalysisPeriod(req.query.periodDays),
+    coverage: cleanText(req.query.coverage, 20)?.toUpperCase() || null,
   };
 }
 
+// La ventana de análisis venía fija en la configuración de la empresa. Poder
+// pedirla por petición es lo que permite comparar 7, 30, 60 y 90 días sin
+// cambiar un ajuste que afecta a todos los demás: la misma referencia se ve
+// distinta según cuánto se mire hacia atrás, y esa diferencia es la información.
+function parseAnalysisPeriod(value) {
+  if (value === undefined || value === '') return null;
+  const days = Number(value);
+  if (!Number.isInteger(days) || days < 1 || days > 730) {
+    throw new AppError(
+      'El período de análisis debe ser un número de días entre 1 y 730.',
+      422,
+      'INVALID_ANALYSIS_PERIOD',
+    );
+  }
+  return days;
+}
+
+const COVERAGE_CLASSES = new Set(['AGOTADO', 'RIESGO', 'SANA', 'EXCESO', 'SIN_VENTAS']);
+
 function rotationQuery({ opportunitiesOnly = false } = {}) {
   return `WITH settings AS (
-       SELECT *
+       SELECT *,
+              COALESCE($14::integer, analysis_period_days) effective_period_days
        FROM commercial_rotation_settings
        WHERE tenant_id = $1
      ),
@@ -319,7 +341,7 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
         AND sale.status = 'COMPLETED'
        JOIN settings ON settings.tenant_id = item.tenant_id
        WHERE item.tenant_id = $1
-         AND sale.created_at >= CURRENT_DATE - settings.analysis_period_days * INTERVAL '1 day'
+         AND sale.created_at >= CURRENT_DATE - settings.effective_period_days * INTERVAL '1 day'
          AND ($2::uuid IS NULL OR item.warehouse_id IN (
            SELECT id FROM warehouses WHERE tenant_id = $1 AND branch_id = $2
          ))
@@ -342,7 +364,7 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
         AND header.status = 'COMPLETED'
        JOIN settings ON settings.tenant_id = item.company_id
        WHERE item.company_id = $1
-         AND header.created_at >= CURRENT_DATE - settings.analysis_period_days * INTERVAL '1 day'
+         AND header.created_at >= CURRENT_DATE - settings.effective_period_days * INTERVAL '1 day'
          AND ($2::uuid IS NULL OR item.warehouse_id IN (
            SELECT id FROM warehouses WHERE tenant_id = $1 AND branch_id = $2
          ))
@@ -409,14 +431,14 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          END days_since_first_entry,
          ROUND(
            GREATEST(COALESCE(sales.units_sold, 0) - COALESCE(returns.units_returned, 0), 0)
-           / GREATEST(settings.analysis_period_days, 1),
+           / GREATEST(settings.effective_period_days, 1),
            6
          ) sales_velocity,
          CASE
            WHEN GREATEST(COALESCE(sales.units_sold, 0) - COALESCE(returns.units_returned, 0), 0) = 0 THEN NULL
            ELSE ROUND(scope.stock_on_hand / (
              GREATEST(COALESCE(sales.units_sold, 0) - COALESCE(returns.units_returned, 0), 0)
-             / GREATEST(settings.analysis_period_days, 1)
+             / GREATEST(settings.effective_period_days, 1)
            ), 2)
          END coverage_days,
          CASE
@@ -436,15 +458,32 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          settings.high_stock_units,
          settings.stale_days_threshold,
          settings.good_margin_percent,
-         settings.new_product_launch_days
+         settings.new_product_launch_days,
+         settings.coverage_risk_days,
+         settings.coverage_excess_days,
+         settings.effective_period_days analysis_period_days,
+         -- El dinero que está quieto en la bodega. Es la cifra que convierte
+         -- "tengo 45 unidades" en una decisión: son cuatro millones sin usar.
+         ROUND(scope.stock_on_hand * scope.cost, 2) immobilized_capital
        FROM scope
        CROSS JOIN settings
        LEFT JOIN sales_window sales ON sales.product_id = scope.product_id
        LEFT JOIN returns_window returns ON returns.product_id = scope.product_id
        LEFT JOIN active_campaigns campaign ON campaign.product_id = scope.product_id
        LEFT JOIN season_flags season ON season.product_id = scope.product_id
-     )
+     ),
+     enriquecido AS (
      SELECT *,
+       -- La cobertura clasifica lo que la rotación por unidades no ve: un
+       -- producto puede vender poco y estar a punto de agotarse, o vender
+       -- bastante y aun así tener inventario para medio año.
+       CASE
+         WHEN stock_on_hand <= 0 THEN 'AGOTADO'
+         WHEN coverage_days IS NULL THEN 'SIN_VENTAS'
+         WHEN coverage_days <= coverage_risk_days THEN 'RIESGO'
+         WHEN coverage_days >= coverage_excess_days THEN 'EXCESO'
+         ELSE 'SANA'
+       END coverage_class,
        CASE
          WHEN gross_margin_percent >= good_margin_percent
           AND stock_on_hand >= high_stock_units
@@ -461,6 +500,22 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          ELSE NULL
        END recommendation
      FROM calculated
+     )
+     SELECT *,
+       -- Lo que hay que hacer con este producto, dicho en la unidad en que se
+       -- decide: días. "Quedan seis días de inventario" mueve a alguien;
+       -- "rotación alta" no.
+       CASE
+         WHEN coverage_class = 'AGOTADO' THEN 'Sin existencias. Reponer si sigue vigente.'
+         WHEN coverage_class = 'RIESGO'
+          THEN 'Al ritmo actual quedan aproximadamente ' || ROUND(coverage_days)::text
+               || ' días de inventario.'
+         WHEN coverage_class = 'EXCESO'
+          THEN 'Inventario para aproximadamente ' || ROUND(coverage_days)::text
+               || ' días. Hay capital detenido aquí.'
+         ELSE NULL
+       END coverage_note
+     FROM enriquecido
      WHERE ($4::text IS NULL OR rotation_class = $4)
        AND ($5::text IS NULL OR commercial_priority = $5)
        AND ($6::boolean IS NULL OR is_new_product = $6)
@@ -470,6 +525,7 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
        AND ($10::numeric IS NULL OR gross_margin_percent >= $10)
        AND ($12::numeric IS NULL OR gross_margin_percent <= $12)
        AND ($13::numeric IS NULL OR COALESCE(days_since_last_sale, 999999) >= $13)
+       AND ($15::text IS NULL OR coverage_class = $15)
        ${opportunitiesOnly ? `AND (
          rotation_class IN ('LOW','NONE')
          OR is_new_product = TRUE
@@ -491,8 +547,8 @@ const ROTATION_ORDER = `
   stock_on_hand DESC,
   product_name`;
 
-async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
-  const filters = buildRotationFilters(req);
+async function loadRotationRows(req, { opportunitiesOnly = false, coverage = null } = {}) {
+  const filters = { ...buildRotationFilters(req), ...(coverage ? { coverage } : {}) };
   if (filters.rotation && !['HIGH', 'MEDIUM', 'LOW', 'NONE'].includes(filters.rotation)) {
     throw new AppError('La rotación solicitada no es válida.', 422, 'INVALID_ROTATION_FILTER');
   }
@@ -501,6 +557,9 @@ async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
   }
   if (filters.campaign && !['WITH', 'WITHOUT'].includes(filters.campaign.toUpperCase())) {
     throw new AppError('El filtro de campaña no es válido.', 422, 'INVALID_CAMPAIGN_FILTER');
+  }
+  if (filters.coverage && !COVERAGE_CLASSES.has(filters.coverage)) {
+    throw new AppError('La cobertura solicitada no es válida.', 422, 'INVALID_COVERAGE_FILTER');
   }
   // La consulta recorría el catálogo entero sin límite. En una empresa con
   // miles de referencias eso es una respuesta que nadie lee completa y una
@@ -520,6 +579,8 @@ async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
     filters.seasonId,
     filters.maxMargin,
     filters.daysWithoutSale,
+    filters.periodDays,
+    filters.coverage,
   ], pagination, ROTATION_ORDER);
   const result = await query(page.text, page.values);
   return paginatedResponse(result, pagination, 'products');
@@ -837,6 +898,97 @@ router.put(
   }),
 );
 
+
+// ¿Dónde está mi dinero inmovilizado? Un inventario grande no es riqueza: es
+// capital que ya se pagó y todavía no volvió. Esta consulta lo agrupa por donde
+// se toman las decisiones —categoría, sucursal, bodega— en vez de dejar una
+// lista de miles de productos que nadie lee.
+const CAPITAL_GROUPINGS = {
+  product: { column: 'product.id', label: "product.name || ' · ' || product.sku", extra: 'product.sku' },
+  category: { column: 'category.id', label: "COALESCE(category.name, 'Sin categoría')", extra: 'NULL' },
+  brand: { column: 'brand.id', label: "COALESCE(brand.name, 'Sin marca')", extra: 'NULL' },
+  branch: { column: 'branch.id', label: 'branch.name', extra: 'NULL' },
+  warehouse: { column: 'warehouse.id', label: 'warehouse.name', extra: 'warehouse.code' },
+};
+
+router.get('/immobilized-capital', asyncHandler(async (req, res) => {
+  const requested = cleanText(req.query.groupBy, 20)?.toLowerCase() || 'category';
+  const grouping = CAPITAL_GROUPINGS[requested];
+  if (!grouping) {
+    throw new AppError(
+      `El agrupamiento debe ser uno de: ${Object.keys(CAPITAL_GROUPINGS).join(', ')}.`,
+      422,
+      'INVALID_CAPITAL_GROUPING',
+    );
+  }
+  const pagination = parsePagination(req);
+  const page = paginatedQuery(
+    `SELECT ${grouping.column} group_id,
+            ${grouping.label} group_label,
+            ${grouping.extra} group_code,
+            COUNT(DISTINCT product.id)::integer product_count,
+            SUM(balance.on_hand) units,
+            ROUND(SUM(balance.on_hand * product.cost), 2) immobilized_capital,
+            ROUND(AVG(product.cost), 2) average_cost
+     FROM inventory_balances balance
+     JOIN products product
+       ON product.id = balance.product_id AND product.tenant_id = balance.tenant_id
+     JOIN warehouses warehouse
+       ON warehouse.id = balance.warehouse_id AND warehouse.tenant_id = balance.tenant_id
+     JOIN branches branch ON branch.id = warehouse.branch_id
+     LEFT JOIN categories category
+       ON category.id = product.category_id AND category.tenant_id = product.tenant_id
+     LEFT JOIN brands brand
+       ON brand.id = product.brand_id AND brand.tenant_id = product.tenant_id
+     WHERE balance.tenant_id = $1
+       AND balance.on_hand > 0
+       AND product.deleted_at IS NULL
+       AND ($2::uuid IS NULL OR warehouse.branch_id = $2)
+       AND ($3::uuid IS NULL OR balance.warehouse_id = $3)
+     GROUP BY 1, 2, 3`,
+    [
+      req.context.tenantId,
+      branchFilter(req),
+      optionalId(req.query.warehouseId, 'La bodega no es válida.'),
+    ],
+    pagination,
+    'immobilized_capital DESC NULLS LAST',
+  );
+  const [rows, total] = await Promise.all([
+    query(page.text, page.values),
+    query(
+      `SELECT ROUND(SUM(balance.on_hand * product.cost), 2) immobilized_capital,
+              SUM(balance.on_hand) units,
+              COUNT(DISTINCT product.id)::integer product_count
+       FROM inventory_balances balance
+       JOIN products product
+         ON product.id = balance.product_id AND product.tenant_id = balance.tenant_id
+       JOIN warehouses warehouse
+         ON warehouse.id = balance.warehouse_id AND warehouse.tenant_id = balance.tenant_id
+       WHERE balance.tenant_id = $1
+         AND balance.on_hand > 0
+         AND product.deleted_at IS NULL
+         AND ($2::uuid IS NULL OR warehouse.branch_id = $2)
+         AND ($3::uuid IS NULL OR balance.warehouse_id = $3)`,
+      [
+        req.context.tenantId,
+        branchFilter(req),
+        optionalId(req.query.warehouseId, 'La bodega no es válida.'),
+      ],
+    ),
+  ]);
+  res.json({
+    groupBy: requested,
+    ...paginatedResponse(rows, pagination, 'groups'),
+    totals: {
+      immobilizedCapital: Number(total.rows[0]?.immobilized_capital || 0),
+      units: Number(total.rows[0]?.units || 0),
+      productCount: total.rows[0]?.product_count || 0,
+    },
+    note: 'Capital inmovilizado = existencias por costo unitario. No incluye mercancía en tránsito.',
+  });
+}));
+
 router.get('/rotation', asyncHandler(async (req, res) => {
   res.json(await loadRotationRows(req));
 }));
@@ -844,6 +996,143 @@ router.get('/rotation', asyncHandler(async (req, res) => {
 router.get('/opportunities', asyncHandler(async (req, res) => {
   res.json(await loadRotationRows(req, { opportunitiesOnly: true }));
 }));
+
+// ¿Qué productos debería mover entre sucursales? El caso clásico: la sucursal A
+// tiene inventario alto y rotación baja, la B lo vende y se le está acabando.
+// La misma mercancía, quieta en un sitio y faltando en otro.
+//
+// Esto solo sugiere. Nunca ejecuta un traslado: mover mercancía tiene costo,
+// contexto y responsable, y esas tres cosas las pone una persona. El traslado
+// se registra por la ruta de inventario de siempre, con su aprobación.
+router.get('/transfer-suggestions', asyncHandler(async (req, res) => {
+  const pagination = parsePagination(req);
+  const page = paginatedQuery(
+    `WITH settings AS (
+       SELECT *, COALESCE($2::integer, analysis_period_days) period_days
+       FROM commercial_rotation_settings
+       WHERE tenant_id = $1
+     ),
+     stock_por_sucursal AS (
+       SELECT balance.product_id,
+              warehouse.branch_id,
+              SUM(balance.on_hand - balance.reserved) available,
+              MAX(product.cost) cost,
+              MAX(product.sku) sku,
+              MAX(product.name) product_name
+       FROM inventory_balances balance
+       JOIN products product
+         ON product.id = balance.product_id AND product.tenant_id = balance.tenant_id
+       JOIN warehouses warehouse
+         ON warehouse.id = balance.warehouse_id AND warehouse.tenant_id = balance.tenant_id
+       WHERE balance.tenant_id = $1
+         AND product.deleted_at IS NULL
+         AND product.active = TRUE
+         AND warehouse.active = TRUE
+       GROUP BY 1, 2
+     ),
+     ventas_por_sucursal AS (
+       SELECT item.product_id,
+              warehouse.branch_id,
+              SUM(item.quantity) units_sold
+       FROM sale_items item
+       JOIN sales sale
+         ON sale.id = item.sale_id
+        AND sale.tenant_id = item.tenant_id
+        AND sale.status = 'COMPLETED'
+       JOIN warehouses warehouse
+         ON warehouse.id = item.warehouse_id AND warehouse.tenant_id = item.tenant_id
+       CROSS JOIN settings
+       WHERE item.tenant_id = $1
+         AND sale.created_at >= CURRENT_DATE - settings.period_days * INTERVAL '1 day'
+       GROUP BY 1, 2
+     ),
+     situacion AS (
+       SELECT stock.product_id, stock.branch_id, stock.sku, stock.product_name,
+              stock.cost, stock.available,
+              branch.name branch_name,
+              COALESCE(ventas.units_sold, 0) units_sold,
+              COALESCE(ventas.units_sold, 0) / GREATEST(settings.period_days, 1) velocity,
+              settings.coverage_risk_days, settings.coverage_excess_days,
+              settings.transfer_min_units
+       FROM stock_por_sucursal stock
+       JOIN branches branch ON branch.id = stock.branch_id
+       CROSS JOIN settings
+       LEFT JOIN ventas_por_sucursal ventas
+         ON ventas.product_id = stock.product_id AND ventas.branch_id = stock.branch_id
+     ),
+     origenes AS (
+       SELECT *,
+              -- Lo que la sucursal necesita conservar para cubrir su propio
+              -- horizonte. Si no lo vende, no necesita conservar nada.
+              FLOOR(available - velocity * coverage_excess_days) surplus
+       FROM situacion
+       WHERE available > 0
+         AND (velocity = 0 OR available > velocity * coverage_excess_days)
+     ),
+     destinos AS (
+       SELECT *,
+              -- Se repone hasta el doble del umbral de riesgo: lo justo para
+              -- salir del apuro sin trasladar el problema a la otra sucursal.
+              CEIL(velocity * coverage_risk_days * 2 - available) need
+       FROM situacion
+       WHERE velocity > 0
+         AND available < velocity * coverage_risk_days
+     )
+     SELECT DISTINCT ON (destino.product_id, destino.branch_id)
+       destino.product_id, destino.sku, destino.product_name,
+       origen.branch_id source_branch_id, origen.branch_name source_branch_name,
+       origen.available source_available, origen.units_sold source_units_sold,
+       ROUND(origen.velocity, 4) source_velocity,
+       destino.branch_id destination_branch_id,
+       destino.branch_name destination_branch_name,
+       destino.available destination_available,
+       destino.units_sold destination_units_sold,
+       ROUND(destino.velocity, 4) destination_velocity,
+       CASE WHEN destino.velocity > 0
+         THEN ROUND(destino.available / destino.velocity, 1)
+         ELSE NULL
+       END destination_coverage_days,
+       LEAST(origen.surplus, destino.need) suggested_quantity,
+       ROUND(LEAST(origen.surplus, destino.need) * destino.cost, 2) suggested_value,
+       'Sucursal ' || origen.branch_name || ': inventario alto y rotación baja. '
+         || 'Sucursal ' || destino.branch_name || ': inventario bajo y rotación alta.'
+         reason
+     FROM destinos destino
+     JOIN origenes origen
+       ON origen.product_id = destino.product_id
+      AND origen.branch_id <> destino.branch_id
+     WHERE LEAST(origen.surplus, destino.need) >= destino.transfer_min_units
+       AND ($3::uuid IS NULL OR destino.branch_id = $3 OR origen.branch_id = $3)
+     -- Entre varios orígenes posibles se propone el que más puede ceder: es el
+     -- que menos nota la salida.
+     ORDER BY destino.product_id, destino.branch_id, origen.surplus DESC`,
+    [
+      req.context.tenantId,
+      parseAnalysisPeriod(req.query.periodDays),
+      branchFilter(req),
+    ],
+    pagination,
+    'suggested_value DESC NULLS LAST, product_name',
+  );
+  const result = await query(page.text, page.values);
+  res.json({
+    ...paginatedResponse(result, pagination, 'suggestions'),
+    note: 'Sugerencias basadas en rotación por sucursal. Ninguna se ejecuta sola: '
+      + 'el traslado se registra desde Inventario, con su aprobación y su motivo.',
+  });
+}));
+
+// ¿Qué productos están próximos a agotarse? Es la vista de riesgo, ordenada por
+// lo que primero se acaba y no por lo que más se vende.
+router.get('/stockout-risk', asyncHandler(async (req, res) => {
+  const page = await loadRotationRows(req, { coverage: 'RIESGO' });
+  res.json({
+    ...page,
+    note: 'Días estimados al ritmo de venta del período analizado. '
+      + 'Un producto sin ventas en el período no aparece aquí: no tiene ritmo con el que estimar.',
+  });
+}));
+
 
 router.post(
   '/opportunities/:productId/follow-up',
