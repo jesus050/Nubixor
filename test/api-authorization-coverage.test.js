@@ -7,7 +7,7 @@ import {
 } from '../src/authorization.js';
 
 // Rutas montadas antes del guardián de sesión: son públicas a propósito.
-const UNAUTHENTICATED_PREFIXES = ['/api/health', '/api/auth'];
+const UNAUTHENTICATED_PREFIXES = ['/api/health', '/api/version', '/api/auth'];
 
 // Reconstruye el prefijo de montaje desde la expresión regular de Express.
 function mountPath(layer) {

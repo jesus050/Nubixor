@@ -49,7 +49,7 @@ def read_png_rgba(file_path):
     pos = 8
     width = height = bit_depth = color_type = None
     idat_chunks = []
-    
+
     while pos < len(data):
         length = struct.unpack('>I', data[pos:pos+4])[0]
         ctype = data[pos+4:pos+8]
@@ -63,7 +63,7 @@ def read_png_rgba(file_path):
             break
 
     decomp = zlib.decompress(b''.join(idat_chunks))
-    
+
     if color_type == 2:  # RGB
         bpp = 3
     elif color_type == 6:  # RGBA
@@ -73,7 +73,7 @@ def read_png_rgba(file_path):
 
     stride = width * bpp
     raw_rgba = bytearray(width * height * 4)
-    
+
     decomp_pos = 0
     prev_unfiltered = None
     for y in range(height):
@@ -82,7 +82,7 @@ def read_png_rgba(file_path):
         decomp_pos += 1 + stride
         unfiltered = unfilter_scanline(ftype, scanline, prev_unfiltered, bpp)
         prev_unfiltered = unfiltered
-        
+
         row_out_offset = y * width * 4
         if color_type == 2:
             for x in range(width):
@@ -109,20 +109,20 @@ def write_png_rgba(file_path, width, height, rgba_data):
     compressed = zlib.compress(bytes(raw_lines), 9)
 
     out = bytearray(b'\x89PNG\r\n\x1a\n')
-    
+
     # IHDR
     ihdr_data = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
     out.extend(struct.pack('>I', len(ihdr_data)))
     out.extend(b'IHDR')
     out.extend(ihdr_data)
     out.extend(struct.pack('>I', zlib.crc32(b'IHDR' + ihdr_data) & 0xFFFFFFFF))
-    
+
     # IDAT
     out.extend(struct.pack('>I', len(compressed)))
     out.extend(b'IDAT')
     out.extend(compressed)
     out.extend(struct.pack('>I', zlib.crc32(b'IDAT' + compressed) & 0xFFFFFFFF))
-    
+
     # IEND
     out.extend(struct.pack('>I', 0))
     out.extend(b'IEND')
@@ -221,7 +221,7 @@ def main():
 
     cx = (icon_min_x + icon_max_x) // 2
     cy = (icon_min_y + icon_max_y) // 2
-    
+
     icon_x0 = max(0, cx - target_dim // 2)
     icon_y0 = max(0, cy - target_dim // 2)
     icon_x1 = min(width, icon_x0 + target_dim)
@@ -241,7 +241,7 @@ def main():
         write_png_rgba(f"{d}/nubixor-official-logo.png", full_w, full_h, full_rgba)
         write_png_rgba(f"{d}/nubixor-logo.png", full_w, full_h, full_trans)
         write_png_rgba(f"{d}/nubixor-logo-transparent.png", full_w, full_h, full_trans)
-        
+
         # Icon
         write_png_rgba(f"{d}/nubixor-icon.png", ic_w, ic_h, ic_trans)
         write_png_rgba(f"{d}/nubixor-icon-white-bg.png", ic_w, ic_h, ic_rgba)

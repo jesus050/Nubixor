@@ -19,7 +19,7 @@ const taxCode = action === 'on' ? 'IVA19' : 'EXCL';
 console.log(`⏳ Preparando para configurar todos los productos con impuesto: ${taxCode}...`);
 
 const sql = `
-  UPDATE products 
+  UPDATE products
   SET sales_tax_category_id = (
     SELECT id FROM tax_categories WHERE tenant_id = '${tenantId}' AND code = '${taxCode}' LIMIT 1
   ),
@@ -48,9 +48,9 @@ const args = [
 ];
 
 execFile(process.execPath, args, { cwd: path.resolve(scriptDir, '..'), timeout: 40000 }, (err, stdout) => {
-  if (err) { 
-    console.error("❌ Error conectando al servidor:", err.message); 
-    return; 
+  if (err) {
+    console.error("❌ Error conectando al servidor:", err.message);
+    return;
   }
   console.log(`✅ ¡Comando enviado al servidor! Todos los productos se actualizarán a ${taxCode} en breve.`);
   console.log("Nota: Refresca la página de productos en unos segundos para ver el cambio.");

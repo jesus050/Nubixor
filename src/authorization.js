@@ -456,7 +456,7 @@ export function requireAnyPermission(permissionCodes) {
 // Rutas que comprueban la membresía por su cuenta y contra el dueño del recurso,
 // no contra la empresa activa del encabezado. Pasarlas por el mapa de permisos
 // las evaluaría contra la empresa equivocada, así que se declaran aparte.
-export const SELF_GUARDED_API_PREFIXES = ['/api/assets'];
+export const SELF_GUARDED_API_PREFIXES = ['/api/assets', '/api/session'];
 
 // Devuelve los permisos exigidos por una ruta, [] si es de acceso libre para
 // cualquier miembro autenticado, o null si la ruta no está declarada.
