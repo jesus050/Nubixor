@@ -3423,6 +3423,35 @@
               </article>
             </div>
 
+            <article class="commercial-plan-panel commercial-inventory-rules">
+              <div class="commercial-plan-heading">
+                <div>
+                  <p class="eyebrow">Reglas de inventario</p>
+                  <h3>Cuándo alertar y cuándo sugerir un traslado</h3>
+                </div>
+                <span>Por empresa</span>
+              </div>
+              <p class="commercial-plan-note">
+                Ajusta estas reglas al ritmo real de tu negocio. Las sugerencias nunca
+                ejecutan un traslado por sí solas.
+              </p>
+              <form class="commercial-opportunity-filters commercial-rules-form" id="commercialRulesForm">
+                <label>
+                  <span>Riesgo de agotarse (días)</span>
+                  <input id="commercialCoverageRiskDays" type="number" min="1" max="365" step="1" required>
+                </label>
+                <label>
+                  <span>Exceso de inventario (días)</span>
+                  <input id="commercialCoverageExcessDays" type="number" min="2" max="3650" step="1" required>
+                </label>
+                <label>
+                  <span>Mínimo para sugerir traslado</span>
+                  <input id="commercialTransferMinUnits" type="number" min="0.0001" step="0.0001" required>
+                </label>
+                <button class="secondary-button compact" id="saveCommercialRulesButton" type="submit">Guardar reglas</button>
+              </form>
+            </article>
+
             <article class="commercial-plan-panel commercial-opportunity-panel">
               <div class="commercial-plan-heading">
                 <div>

@@ -148,6 +148,11 @@ function numberValue(input, message, { min = 0, max = Number.MAX_SAFE_INTEGER } 
   return value;
 }
 
+function optionalNumberValue(input, message, options) {
+  if (input === undefined || input === null || input === '') return null;
+  return numberValue(input, message, options);
+}
+
 function bool(input) {
   return input === true || input === 'true' || input === 'on' || input === 1 || input === '1';
 }
@@ -709,6 +714,9 @@ router.put(
       staleDaysThreshold: numberValue(req.body.staleDaysThreshold, 'Los días sin venta no son válidos.', { min: 1, max: 3650 }),
       goodMarginPercent: numberValue(req.body.goodMarginPercent, 'El margen objetivo no es válido.'),
       newProductLaunchDays: numberValue(req.body.newProductLaunchDays, 'Los días para lanzamiento no son válidos.', { min: 0, max: 365 }),
+      coverageRiskDays: optionalNumberValue(req.body.coverageRiskDays, 'Los días de riesgo no son válidos.', { min: 1, max: 365 }),
+      coverageExcessDays: optionalNumberValue(req.body.coverageExcessDays, 'Los días de exceso no son válidos.', { min: 2, max: 3650 }),
+      transferMinUnits: optionalNumberValue(req.body.transferMinUnits, 'El mínimo de traslado no es válido.', { min: 0.0001 }),
     };
     if (payload.highRotationMinUnits < payload.mediumRotationMinUnits ||
         payload.mediumRotationMinUnits < payload.lowRotationMinUnits) {
@@ -719,12 +727,19 @@ router.put(
         'SELECT * FROM commercial_rotation_settings WHERE tenant_id = $1',
         [req.context.tenantId],
       );
+      const coverageRiskDays = payload.coverageRiskDays ?? Number(before.rows[0]?.coverage_risk_days ?? 15);
+      const coverageExcessDays = payload.coverageExcessDays ?? Number(before.rows[0]?.coverage_excess_days ?? 120);
+      const transferMinUnits = payload.transferMinUnits ?? Number(before.rows[0]?.transfer_min_units ?? 3);
+      if (coverageExcessDays <= coverageRiskDays) {
+        throw new AppError('El exceso de inventario debe ser mayor que el riesgo de agotarse.', 422, 'INVALID_COVERAGE_THRESHOLDS');
+      }
       const result = await client.query(
         `INSERT INTO commercial_rotation_settings(
            tenant_id, analysis_period_days, high_rotation_min_units,
            medium_rotation_min_units, low_rotation_min_units, high_stock_units,
-           stale_days_threshold, good_margin_percent, new_product_launch_days
-         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           stale_days_threshold, good_margin_percent, new_product_launch_days,
+           coverage_risk_days, coverage_excess_days, transfer_min_units
+         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          ON CONFLICT(tenant_id) DO UPDATE SET
            analysis_period_days = EXCLUDED.analysis_period_days,
            high_rotation_min_units = EXCLUDED.high_rotation_min_units,
@@ -734,6 +749,9 @@ router.put(
            stale_days_threshold = EXCLUDED.stale_days_threshold,
            good_margin_percent = EXCLUDED.good_margin_percent,
            new_product_launch_days = EXCLUDED.new_product_launch_days,
+           coverage_risk_days = EXCLUDED.coverage_risk_days,
+           coverage_excess_days = EXCLUDED.coverage_excess_days,
+           transfer_min_units = EXCLUDED.transfer_min_units,
            updated_at = now()
          RETURNING *`,
         [
@@ -746,6 +764,9 @@ router.put(
           payload.staleDaysThreshold,
           payload.goodMarginPercent,
           payload.newProductLaunchDays,
+          coverageRiskDays,
+          coverageExcessDays,
+          transferMinUnits,
         ],
       );
       await writeAudit(client, {

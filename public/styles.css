@@ -17865,12 +17865,19 @@ main,
   font-weight: 800;
 }
 
-.commercial-opportunity-filters select {
+.commercial-opportunity-filters select,
+.commercial-opportunity-filters input {
   min-height: 38px;
   border: 1px solid var(--color-line);
   border-radius: 8px;
   background: #fff;
   color: var(--color-ink-soft);
+  padding: 0 10px;
+}
+
+.commercial-rules-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
 }
 
 .commercial-opportunity-list {

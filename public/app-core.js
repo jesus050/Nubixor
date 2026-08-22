@@ -663,6 +663,11 @@ const elements = {
   commercialTransferCount: document.querySelector('#commercialTransferCount'),
   commercialTransferList: document.querySelector('#commercialTransferList'),
   commercialTransferState: document.querySelector('#commercialTransferState'),
+  commercialRulesForm: document.querySelector('#commercialRulesForm'),
+  commercialCoverageRiskDays: document.querySelector('#commercialCoverageRiskDays'),
+  commercialCoverageExcessDays: document.querySelector('#commercialCoverageExcessDays'),
+  commercialTransferMinUnits: document.querySelector('#commercialTransferMinUnits'),
+  saveCommercialRulesButton: document.querySelector('#saveCommercialRulesButton'),
   commercialOpportunityList: document.querySelector('#commercialOpportunityList'),
   commercialOpportunityState: document.querySelector('#commercialOpportunityState'),
   commercialBudgetCount: document.querySelector('#commercialBudgetCount'),
@@ -1592,6 +1597,7 @@ let commercialOpportunities = [];
 let commercialOpportunityTotal = 0;
 let commercialCapital = null;
 let commercialTransfers = null;
+let commercialRotationSettings = null;
 let commercialBudgets = [];
 let commercialCampaigns = [];
 let commercialExpenses = [];
@@ -5197,9 +5203,61 @@ function renderCommercialTransfers() {
   }
 }
 
+function renderCommercialInventoryRules() {
+  const settings = commercialRotationSettings;
+  const canManage = hasAnyPermission('commercial_planning.manage', 'commercial_planning.marketing');
+  const fields = [
+    elements.commercialCoverageRiskDays,
+    elements.commercialCoverageExcessDays,
+    elements.commercialTransferMinUnits,
+  ];
+  if (settings) {
+    elements.commercialCoverageRiskDays.value = String(settings.coverage_risk_days);
+    elements.commercialCoverageExcessDays.value = String(settings.coverage_excess_days);
+    elements.commercialTransferMinUnits.value = String(settings.transfer_min_units);
+  }
+  fields.forEach((field) => { field.disabled = !canManage || !settings; });
+  elements.saveCommercialRulesButton.disabled = !canManage || !settings;
+}
+
+async function submitCommercialInventoryRules(event) {
+  event.preventDefault();
+  if (!commercialRotationSettings) return;
+  const riskDays = Number(elements.commercialCoverageRiskDays.value);
+  const excessDays = Number(elements.commercialCoverageExcessDays.value);
+  const minUnits = Number(elements.commercialTransferMinUnits.value);
+  if (!Number.isInteger(riskDays) || riskDays < 1 || riskDays > 365 ||
+      !Number.isInteger(excessDays) || excessDays <= riskDays || excessDays > 3650 ||
+      !Number.isFinite(minUnits) || minUnits <= 0) {
+    showToast('Revisa las reglas: exceso debe ser mayor que riesgo y el mínimo debe ser positivo.');
+    return;
+  }
+  const settings = commercialRotationSettings;
+  await getJson('/api/commercial-planning/rotation-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenantId },
+    body: JSON.stringify({
+      analysisPeriodDays: settings.analysis_period_days,
+      highRotationMinUnits: settings.high_rotation_min_units,
+      mediumRotationMinUnits: settings.medium_rotation_min_units,
+      lowRotationMinUnits: settings.low_rotation_min_units,
+      highStockUnits: settings.high_stock_units,
+      staleDaysThreshold: settings.stale_days_threshold,
+      goodMarginPercent: settings.good_margin_percent,
+      newProductLaunchDays: settings.new_product_launch_days,
+      coverageRiskDays: riskDays,
+      coverageExcessDays: excessDays,
+      transferMinUnits: minUnits,
+    }),
+  });
+  await loadCommercialPlanning();
+  showToast('Reglas de inventario actualizadas.');
+}
+
 function renderCommercialPlanning() {
   renderCommercialCapital();
   renderCommercialTransfers();
+  renderCommercialInventoryRules();
   const overview = commercialPlanningOverview || {};
   const plan = overview.current_plan;
   const canManage = hasAnyPermission('commercial_planning.manage');
@@ -5313,6 +5371,7 @@ function showCommercialPlanningError(message) {
   commercialBudgets = [];
   commercialCampaigns = [];
   commercialExpenses = [];
+  commercialRotationSettings = null;
   renderCommercialPlanning();
   elements.commercialPlanningState.hidden = false;
   elements.commercialPlanningState.classList.add('error');
@@ -5336,6 +5395,7 @@ async function loadCommercialPlanning() {
     commercialOpportunityTotal = 0;
     commercialCapital = null;
     commercialTransfers = null;
+    commercialRotationSettings = null;
     commercialBudgets = [];
     commercialCampaigns = [];
     commercialExpenses = [];
@@ -5378,6 +5438,7 @@ async function loadCommercialPlanning() {
       commercialExpenses,
       commercialCapital,
       commercialTransfers,
+      commercialRotationSettings,
     ] = await Promise.all([
       getJson('/api/commercial-planning/overview', { headers }),
       getJson('/api/commercial-planning/people', { headers }),
@@ -5387,6 +5448,7 @@ async function loadCommercialPlanning() {
       getJson('/api/commercial-planning/expenses', { headers }),
       getJson(capitalUrl, { headers }),
       getJson(transferUrl, { headers }),
+      getJson('/api/commercial-planning/rotation-settings', { headers }),
     ]);
     // La bandeja llega paginada: se muestra la primera página y el contador
     // dice cuántas oportunidades hay en total, no cuántas cupieron.
@@ -19268,6 +19330,10 @@ elements.reloadCommercialPlanningButton.addEventListener('click', () => {
 });
 elements.newCommercialPlanButton.addEventListener('click', openCommercialPlanDialog);
 elements.newCommercialInitiativeButton.addEventListener('click', openCommercialInitiativeDialog);
+elements.commercialRulesForm.addEventListener('submit', (event) => {
+  submitCommercialInventoryRules(event)
+    .catch(() => showToast('No fue posible actualizar las reglas de inventario.'));
+});
 elements.closeCommercialPlanDialog.addEventListener('click', closeCommercialPlanDialog);
 elements.cancelCommercialPlanButton.addEventListener('click', closeCommercialPlanDialog);
 elements.commercialPlanForm.addEventListener('submit', submitCommercialPlan);
