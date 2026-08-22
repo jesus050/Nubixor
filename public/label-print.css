@@ -60,16 +60,21 @@ button.secondary { color: #192584; background: #edf2ff; }
 .product-label {
   width: var(--label-width);
   height: var(--label-height);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
   overflow: hidden;
   padding: 1.4mm 1.8mm;
   background: #fff;
   border: 1px dashed #9ba8be;
-  text-align: center;
   color: #090d27;
+}
+
+.label-content {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: var(--label-align-items, center);
+  justify-content: space-between;
+  text-align: var(--label-text-align, center);
   transform: translate(var(--label-offset-x, 0), var(--label-offset-y, 0));
 }
 

@@ -26,23 +26,30 @@ function formatMoney(value) {
 function renderLabel(item) {
   const label = document.createElement('article');
   label.className = 'product-label';
+  const content = document.createElement('div');
+  content.className = 'label-content';
   label.style.setProperty('--label-product-size', `${job.settings.productFontSizePt || 8}pt`);
   label.style.setProperty('--label-price-size', `${job.settings.priceFontSizePt || 11}pt`);
   label.style.setProperty('--label-barcode-height', `${job.settings.barcodeHeightMm || 8}mm`);
   label.style.setProperty('--label-product-lines', job.settings.productLines || 1);
   label.style.setProperty('--label-offset-x', `${job.settings.offsetXmm || 0}mm`);
   label.style.setProperty('--label-offset-y', `${job.settings.offsetYmm || 0}mm`);
-  addText(label, 'company', job.companyName, job.settings.showCompany);
-  addText(label, 'product', item.productName, job.settings.showProduct);
-  addText(label, 'price', formatMoney(item.price), job.settings.showPrice);
+  label.style.setProperty('--label-text-align', job.settings.textAlign || 'center');
+  label.style.setProperty('--label-align-items',
+    job.settings.textAlign === 'left' ? 'flex-start' :
+      job.settings.textAlign === 'right' ? 'flex-end' : 'center');
+  addText(content, 'company', job.companyName, job.settings.showCompany);
+  addText(content, 'product', item.productName, job.settings.showProduct);
+  addText(content, 'price', formatMoney(item.price), job.settings.showPrice);
   if (job.settings.showBarcode) {
     const barcode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     barcode.classList.add('barcode');
     barcode.dataset.value = item.barcode || item.sku;
-    label.append(barcode);
+    content.append(barcode);
   }
-  addText(label, 'sku', item.sku, job.settings.showSku);
-  addText(label, 'footer', job.settings.footerText, Boolean(job.settings.footerText));
+  addText(content, 'sku', item.sku, job.settings.showSku);
+  addText(content, 'footer', job.settings.footerText, Boolean(job.settings.footerText));
+  label.append(content);
   return label;
 }
 
@@ -68,7 +75,7 @@ function renderJob() {
         height: (job.settings.barcodeHeightMm || 8) * 3.78,
         width: job.settings.barcodeWidth || 1.2,
         fontSize: 9,
-        margin: 0,
+        margin: Math.max(0, (job.settings.barcodeMarginMm ?? 1) * 3.78),
       });
     });
   }
@@ -76,7 +83,13 @@ function renderJob() {
 }
 
 function notifyPrinted() {
-  if (!printingRequested || !job || !window.opener) return;
+  if (!printingRequested || !job) return;
+  if (job.previewOnly) {
+    window.localStorage.removeItem(storageKey);
+    printingRequested = false;
+    return;
+  }
+  if (!window.opener) return;
   window.opener.postMessage({
     type: 'nubixor:labels-printed',
     jobId,
@@ -93,7 +106,10 @@ document.querySelector('#startPrint').addEventListener('click', () => {
   printingRequested = true;
   window.print();
 });
-document.querySelector('#closePrintWindow').addEventListener('click', () => window.close());
+document.querySelector('#closePrintWindow').addEventListener('click', () => {
+  if (job?.previewOnly) window.localStorage.removeItem(storageKey);
+  window.close();
+});
 window.addEventListener('afterprint', notifyPrinted);
 
 try {

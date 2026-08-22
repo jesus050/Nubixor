@@ -170,9 +170,11 @@ router.patch(
       priceFontSizePt: 11,
       barcodeHeightMm: 8,
       barcodeWidth: 1.2,
+      barcodeMarginMm: 1,
       offsetXmm: 0,
       offsetYmm: 0,
       productLines: 1,
+      textAlign: 'center',
     };
     const submitted = { ...defaults, ...req.body };
     const widthMm = Number(req.body.widthMm);
@@ -199,10 +201,12 @@ router.patch(
         !boundedNumber(submitted.priceFontSizePt, 7, 26) ||
         !boundedNumber(submitted.barcodeHeightMm, 5, 35) ||
         !boundedNumber(submitted.barcodeWidth, 0.6, 3) ||
+        !boundedNumber(submitted.barcodeMarginMm, 0, 5) ||
         !boundedNumber(submitted.offsetXmm, -5, 5) ||
         !boundedNumber(submitted.offsetYmm, -5, 5) ||
         !Number.isInteger(Number(submitted.productLines)) ||
-        Number(submitted.productLines) < 1 || Number(submitted.productLines) > 3) {
+        Number(submitted.productLines) < 1 || Number(submitted.productLines) > 3 ||
+        !['left', 'center', 'right'].includes(submitted.textAlign)) {
       throw new AppError(
         'Revisa el tamaño y las opciones de la etiqueta.',
         422,
@@ -223,9 +227,11 @@ router.patch(
       priceFontSizePt: Number(submitted.priceFontSizePt),
       barcodeHeightMm: Number(submitted.barcodeHeightMm),
       barcodeWidth: Number(submitted.barcodeWidth),
+      barcodeMarginMm: Number(submitted.barcodeMarginMm),
       offsetXmm: Number(submitted.offsetXmm),
       offsetYmm: Number(submitted.offsetYmm),
       productLines: Number(submitted.productLines),
+      textAlign: submitted.textAlign,
       footerText: text(req.body.footerText, 80) || '',
     };
     const saved = await withTransaction(async (client) => {

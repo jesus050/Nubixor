@@ -981,7 +981,7 @@ test(
       );
       assert.equal(Number(labelTracking.rows[0].print_count), 1);
       assert.equal(Number(labelTracking.rows[0].label_quantity_printed), 2);
-      await request(application)
+      const savedLabelSettings = await request(application)
         .patch('/api/logistics/labels/settings')
         .set('x-tenant-id', companyId)
         .send({
@@ -995,6 +995,8 @@ test(
           footerText: 'Calidad garantizada',
         })
         .expect(200);
+      assert.equal(Number(savedLabelSettings.body.barcodeMarginMm), 1);
+      assert.equal(savedLabelSettings.body.textAlign, 'center');
       const logisticsStock = await pool.query(
         `SELECT on_hand
          FROM inventory_balances

@@ -93,6 +93,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Decisión de jefatura/);
   assert.match(response.text, /Imprimir lote completo/);
   assert.match(response.text, /Código de barras/);
+  assert.match(response.text, /Margen barras \(mm\)/);
+  assert.match(response.text, /Vista previa de impresión/);
+  assert.match(response.text, /Imprimir una prueba/);
   assert.match(response.text, /Historial del lote/);
   assert.match(response.text, /Existencias actuales/);
   assert.match(response.text, /Programar toma física/);

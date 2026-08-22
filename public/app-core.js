@@ -328,18 +328,23 @@ const elements = {
   logisticsLabelPriceFontSize: document.querySelector('#logisticsLabelPriceFontSize'),
   logisticsLabelBarcodeHeight: document.querySelector('#logisticsLabelBarcodeHeight'),
   logisticsLabelBarcodeWidth: document.querySelector('#logisticsLabelBarcodeWidth'),
+  logisticsLabelBarcodeMargin: document.querySelector('#logisticsLabelBarcodeMargin'),
   logisticsLabelOffsetX: document.querySelector('#logisticsLabelOffsetX'),
   logisticsLabelOffsetY: document.querySelector('#logisticsLabelOffsetY'),
   logisticsLabelProductLines: document.querySelector('#logisticsLabelProductLines'),
+  logisticsLabelTextAlign: document.querySelector('#logisticsLabelTextAlign'),
   logisticsLabelFooter: document.querySelector('#logisticsLabelFooter'),
   logisticsLabelPreview: document.querySelector('#logisticsLabelPreview'),
+  logisticsLabelPreviewContent: document.querySelector('#logisticsLabelPreviewContent'),
   logisticsLabelPreviewCompany: document.querySelector('#logisticsLabelPreviewCompany'),
   logisticsLabelPreviewProduct: document.querySelector('#logisticsLabelPreviewProduct'),
   logisticsLabelPreviewPrice: document.querySelector('#logisticsLabelPreviewPrice'),
   logisticsLabelPreviewBarcode: document.querySelector('#logisticsLabelPreviewBarcode'),
   logisticsLabelPreviewSku: document.querySelector('#logisticsLabelPreviewSku'),
   logisticsLabelPreviewFooter: document.querySelector('#logisticsLabelPreviewFooter'),
+  logisticsLabelFitMessage: document.querySelector('#logisticsLabelFitMessage'),
   saveLogisticsLabelSettings: document.querySelector('#saveLogisticsLabelSettings'),
+  testLogisticsLabelPrint: document.querySelector('#testLogisticsLabelPrint'),
   logisticsLabelBatchCount: document.querySelector('#logisticsLabelBatchCount'),
   logisticsLabelBatchList: document.querySelector('#logisticsLabelBatchList'),
   logisticsLabelSelectedBatch: document.querySelector('#logisticsLabelSelectedBatch'),
@@ -1830,20 +1835,22 @@ function resolvedLogisticsLabelSettings() {
     templateId: 'PRICE_COMPACT',
     widthMm: 50,
     heightMm: 25,
-    showCompany: true,
+    showCompany: false,
     showProduct: true,
     showPrice: true,
-    showSku: true,
+    showSku: false,
     showBarcode: true,
     showBarcodeValue: true,
     productFontSizePt: 8,
-    priceFontSizePt: 11,
+    priceFontSizePt: 12,
     barcodeHeightMm: 8,
-    barcodeWidth: 1.2,
+    barcodeWidth: 1.15,
+    barcodeMarginMm: 1,
     offsetXmm: 0,
     offsetYmm: 0,
     productLines: 1,
-    footerText: 'Gracias por su compra',
+    textAlign: 'center',
+    footerText: '',
     ...(logisticsOverview.labelSettings || {}),
   };
 }
@@ -1853,19 +1860,22 @@ const logisticsLabelTemplates = {
     widthMm: 50, heightMm: 25, showCompany: false, showProduct: true,
     showPrice: true, showSku: false, showBarcode: true, showBarcodeValue: true,
     productFontSizePt: 8, priceFontSizePt: 12, barcodeHeightMm: 8,
-    barcodeWidth: 1.15, productLines: 1, footerText: '', offsetXmm: 0, offsetYmm: 0,
+    barcodeWidth: 1.15, barcodeMarginMm: 1, productLines: 1, textAlign: 'center',
+    footerText: '', offsetXmm: 0, offsetYmm: 0,
   },
   WAREHOUSE: {
     widthMm: 50, heightMm: 30, showCompany: false, showProduct: true,
     showPrice: false, showSku: true, showBarcode: true, showBarcodeValue: true,
     productFontSizePt: 8, priceFontSizePt: 11, barcodeHeightMm: 10,
-    barcodeWidth: 1.1, productLines: 2, footerText: '', offsetXmm: 0, offsetYmm: 0,
+    barcodeWidth: 1.1, barcodeMarginMm: 1, productLines: 2, textAlign: 'left',
+    footerText: '', offsetXmm: 0, offsetYmm: 0,
   },
   LARGE_PRICE: {
     widthMm: 70, heightMm: 40, showCompany: true, showProduct: true,
     showPrice: true, showSku: true, showBarcode: true, showBarcodeValue: true,
     productFontSizePt: 11, priceFontSizePt: 18, barcodeHeightMm: 13,
-    barcodeWidth: 1.35, productLines: 2, footerText: '', offsetXmm: 0, offsetYmm: 0,
+    barcodeWidth: 1.35, barcodeMarginMm: 1.5, productLines: 2, textAlign: 'center',
+    footerText: '', offsetXmm: 0, offsetYmm: 0,
   },
 };
 
@@ -1889,11 +1899,29 @@ function readLogisticsLabelSettings() {
     priceFontSizePt: labelNumber(elements.logisticsLabelPriceFontSize, 11),
     barcodeHeightMm: labelNumber(elements.logisticsLabelBarcodeHeight, 8),
     barcodeWidth: labelNumber(elements.logisticsLabelBarcodeWidth, 1.2),
+    barcodeMarginMm: labelNumber(elements.logisticsLabelBarcodeMargin, 1),
     offsetXmm: labelNumber(elements.logisticsLabelOffsetX, 0),
     offsetYmm: labelNumber(elements.logisticsLabelOffsetY, 0),
     productLines: Math.trunc(labelNumber(elements.logisticsLabelProductLines, 1)),
+    textAlign: elements.logisticsLabelTextAlign.value,
     footerText: elements.logisticsLabelFooter.value.trim(),
   };
+}
+
+function logisticsLabelSettingsError(settings) {
+  const within = (value, min, max) => Number.isFinite(value) && value >= min && value <= max;
+  if (!within(settings.widthMm, 25, 120) || !within(settings.heightMm, 15, 100)) {
+    return 'El tamaño debe estar entre 25–120 mm de ancho y 15–100 mm de alto.';
+  }
+  if (!within(settings.productFontSizePt, 6, 22) ||
+      !within(settings.priceFontSizePt, 7, 26) ||
+      !within(settings.barcodeHeightMm, 5, 35) ||
+      !within(settings.barcodeWidth, 0.6, 3) ||
+      !within(settings.barcodeMarginMm, 0, 5) ||
+      !within(settings.offsetXmm, -5, 5) || !within(settings.offsetYmm, -5, 5)) {
+    return 'Revisa las medidas de precisión antes de imprimir.';
+  }
+  return '';
 }
 
 function updateLogisticsLabelPreview() {
@@ -1901,14 +1929,25 @@ function updateLogisticsLabelPreview() {
   const company = getActiveCompany();
   elements.logisticsLabelPreview.style.aspectRatio =
     `${settings.widthMm} / ${settings.heightMm}`;
-  elements.logisticsLabelPreview.style.setProperty('--label-product-size', `${settings.productFontSizePt}px`);
-  elements.logisticsLabelPreview.style.setProperty('--label-price-size', `${settings.priceFontSizePt}px`);
-  elements.logisticsLabelPreview.style.setProperty('--label-barcode-height', `${settings.barcodeHeightMm * 1.6}px`);
+  elements.logisticsLabelPreview.style.setProperty('--label-product-size', `${settings.productFontSizePt}pt`);
+  elements.logisticsLabelPreview.style.setProperty('--label-price-size', `${settings.priceFontSizePt}pt`);
+  elements.logisticsLabelPreview.style.setProperty('--label-barcode-height', `${settings.barcodeHeightMm}mm`);
   elements.logisticsLabelPreview.style.setProperty('--label-product-lines', settings.productLines);
-  elements.logisticsLabelPreview.style.transform =
-    `translate(${settings.offsetXmm * 2}px, ${settings.offsetYmm * 2}px)`;
+  elements.logisticsLabelPreviewContent.style.transform =
+    `translate(${settings.offsetXmm}mm, ${settings.offsetYmm}mm)`;
+  elements.logisticsLabelPreviewContent.style.textAlign = settings.textAlign;
+  elements.logisticsLabelPreviewContent.style.alignItems =
+    settings.textAlign === 'left' ? 'flex-start' : settings.textAlign === 'right' ? 'flex-end' : 'center';
   elements.logisticsLabelPreviewCompany.textContent =
     company?.trade_name || company?.legal_name || 'Mi empresa';
+  const sampleItem = selectedLogisticsBatch?.items?.[0];
+  const sampleBarcode = sampleItem?.barcode || sampleItem?.sku || '2000526749610';
+  elements.logisticsLabelPreviewProduct.textContent =
+    sampleItem?.product_name || 'Nombre completo del producto';
+  elements.logisticsLabelPreviewPrice.textContent = formatCurrency(
+    sampleItem?.approved_price || sampleItem?.proposed_price || 49900,
+  );
+  elements.logisticsLabelPreviewSku.textContent = sampleItem?.sku || 'SKU-0001';
   elements.logisticsLabelPreviewCompany.hidden = !settings.showCompany;
   elements.logisticsLabelPreviewProduct.hidden = !settings.showProduct;
   elements.logisticsLabelPreviewPrice.hidden = !settings.showPrice;
@@ -1918,15 +1957,26 @@ function updateLogisticsLabelPreview() {
   elements.logisticsLabelPreviewFooter.hidden = !settings.footerText;
   if (settings.showBarcode && window.JsBarcode) {
     try {
-      window.JsBarcode(elements.logisticsLabelPreviewBarcode, '2000526749610', {
+      window.JsBarcode(elements.logisticsLabelPreviewBarcode, sampleBarcode, {
         format: 'CODE128', displayValue: settings.showBarcodeValue,
         height: Math.max(18, settings.barcodeHeightMm * 2), width: settings.barcodeWidth,
-        fontSize: 9, margin: 0,
+        fontSize: 9, margin: Math.max(0, settings.barcodeMarginMm * 2),
       });
     } catch {
       // La vista previa no bloquea la edición si un navegador no carga la librería.
     }
   }
+  const usedHeightMm =
+    (settings.showCompany ? 3 : 0) +
+    (settings.showProduct ? settings.productLines * settings.productFontSizePt * 0.38 : 0) +
+    (settings.showPrice ? settings.priceFontSizePt * 0.42 : 0) +
+    (settings.showBarcode ? settings.barcodeHeightMm + (settings.showBarcodeValue ? 3 : 0) : 0) +
+    (settings.showSku ? 3 : 0) + (settings.footerText ? 4 : 0) + 3;
+  const fits = usedHeightMm <= settings.heightMm;
+  elements.logisticsLabelFitMessage.textContent = fits
+    ? `El contenido ocupa aproximadamente ${usedHeightMm.toFixed(1)} de ${settings.heightMm} mm.`
+    : `El contenido supera el alto por aproximadamente ${(usedHeightMm - settings.heightMm).toFixed(1)} mm.`;
+  elements.logisticsLabelFitMessage.classList.toggle('warning', !fits);
 }
 
 function syncLogisticsLabelSettings() {
@@ -1949,9 +1999,11 @@ function syncLogisticsLabelSettings() {
   elements.logisticsLabelPriceFontSize.value = settings.priceFontSizePt;
   elements.logisticsLabelBarcodeHeight.value = settings.barcodeHeightMm;
   elements.logisticsLabelBarcodeWidth.value = settings.barcodeWidth;
+  elements.logisticsLabelBarcodeMargin.value = settings.barcodeMarginMm;
   elements.logisticsLabelOffsetX.value = settings.offsetXmm;
   elements.logisticsLabelOffsetY.value = settings.offsetYmm;
   elements.logisticsLabelProductLines.value = settings.productLines;
+  elements.logisticsLabelTextAlign.value = settings.textAlign;
   elements.logisticsLabelFooter.value = settings.footerText || '';
   updateLogisticsLabelPreview();
 }
@@ -1967,6 +2019,7 @@ function applyLogisticsLabelTemplate() {
       showBarcode: elements.logisticsLabelShowBarcode, showBarcodeValue: elements.logisticsLabelShowBarcodeValue,
       productFontSizePt: elements.logisticsLabelProductFontSize, priceFontSizePt: elements.logisticsLabelPriceFontSize,
       barcodeHeightMm: elements.logisticsLabelBarcodeHeight, barcodeWidth: elements.logisticsLabelBarcodeWidth,
+      barcodeMarginMm: elements.logisticsLabelBarcodeMargin, textAlign: elements.logisticsLabelTextAlign,
       productLines: elements.logisticsLabelProductLines, footerText: elements.logisticsLabelFooter,
       offsetXmm: elements.logisticsLabelOffsetX, offsetYmm: elements.logisticsLabelOffsetY,
     };
@@ -2072,6 +2125,7 @@ async function selectLogisticsLabelBatch(batchId) {
   logisticsLabelBatchId = batchId;
   await loadLogisticsBatch(batchId);
   renderLogisticsLabelCenter();
+  updateLogisticsLabelPreview();
 }
 
 function logisticsLabelJobItems(itemId = null) {
@@ -2094,25 +2148,23 @@ function logisticsLabelJobItems(itemId = null) {
     });
 }
 
-function openLogisticsLabelPrint(itemId = null) {
-  const items = logisticsLabelJobItems(itemId);
-  if (!items.length) {
-    showToast('Selecciona un lote aprobado para imprimir.');
-    return;
-  }
-  if (items.reduce((total, item) => total + item.quantity, 0) > 10000) {
-    showToast('El trabajo supera 10.000 etiquetas. Divide la impresión en partes.');
+function createLogisticsLabelPrintJob({ items, previewOnly = false }) {
+  const settings = readLogisticsLabelSettings();
+  const settingsError = logisticsLabelSettingsError(settings);
+  if (settingsError) {
+    showToast(settingsError);
     return;
   }
   const jobId = window.crypto?.randomUUID?.() ||
     `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const company = getActiveCompany();
   window.localStorage.setItem(`nubixor.label-job.${jobId}`, JSON.stringify({
-    batchId: selectedLogisticsBatch.batch.id,
-    batchNumber: selectedLogisticsBatch.batch.batch_number,
+    batchId: previewOnly ? null : selectedLogisticsBatch.batch.id,
+    batchNumber: previewOnly ? 'Prueba de diseño' : selectedLogisticsBatch.batch.batch_number,
     companyName: company?.trade_name || company?.legal_name || 'Mi empresa',
-    settings: readLogisticsLabelSettings(),
+    settings,
     items,
+    previewOnly,
   }));
   const printWindow = window.open(
     `/label-print.html?job=${encodeURIComponent(jobId)}`,
@@ -2123,16 +2175,47 @@ function openLogisticsLabelPrint(itemId = null) {
   }
 }
 
+function openLogisticsLabelPrint(itemId = null) {
+  const items = logisticsLabelJobItems(itemId);
+  if (!items.length) {
+    showToast('Selecciona un lote aprobado para imprimir.');
+    return;
+  }
+  if (items.reduce((total, item) => total + item.quantity, 0) > 10000) {
+    showToast('El trabajo supera 10.000 etiquetas. Divide la impresión en partes.');
+    return;
+  }
+  createLogisticsLabelPrintJob({ items });
+}
+
+function openLogisticsLabelTestPrint() {
+  const item = selectedLogisticsBatch?.items?.[0];
+  createLogisticsLabelPrintJob({
+    previewOnly: true,
+    items: [{
+      itemId: null,
+      productName: item?.product_name || 'Nombre completo del producto',
+      sku: item?.sku || 'SKU-0001',
+      barcode: item?.barcode || item?.sku || '2000526749610',
+      price: item?.approved_price || item?.proposed_price || 49900,
+      quantity: 1,
+    }],
+  });
+}
+
 async function saveLogisticsLabelConfiguration() {
   elements.saveLogisticsLabelSettings.disabled = true;
   try {
+    const settings = readLogisticsLabelSettings();
+    const settingsError = logisticsLabelSettingsError(settings);
+    if (settingsError) throw new Error(settingsError);
     logisticsOverview.labelSettings = await getJson('/api/logistics/labels/settings', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'x-tenant-id': activeTenantId,
       },
-      body: JSON.stringify(readLogisticsLabelSettings()),
+      body: JSON.stringify(settings),
     });
     syncLogisticsLabelSettings();
     showToast('Diseño de etiqueta guardado para esta empresa.');
@@ -17995,9 +18078,11 @@ elements.printLogisticsBatchLabels.addEventListener(
   elements.logisticsLabelPriceFontSize,
   elements.logisticsLabelBarcodeHeight,
   elements.logisticsLabelBarcodeWidth,
+  elements.logisticsLabelBarcodeMargin,
   elements.logisticsLabelOffsetX,
   elements.logisticsLabelOffsetY,
   elements.logisticsLabelProductLines,
+  elements.logisticsLabelTextAlign,
   elements.logisticsLabelFooter,
 ].forEach((control) => {
   control.addEventListener('input', updateLogisticsLabelPreview);
@@ -18018,6 +18103,7 @@ elements.saveLogisticsLabelSettings.addEventListener(
   'click',
   saveLogisticsLabelConfiguration,
 );
+elements.testLogisticsLabelPrint.addEventListener('click', openLogisticsLabelTestPrint);
 window.addEventListener('message', (event) => {
   if (event.origin !== window.location.origin ||
       event.data?.type !== 'nubixor:labels-printed') return;
