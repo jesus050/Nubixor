@@ -29,6 +29,7 @@ Los tres hallazgos que más importan:
 |---|----------|---------|
 | **C-1** | El aislamiento por fila en PostgreSQL cubre **13 de 128 tablas**. Productos, inventario, ventas, clientes y cajas dependen todavía de que cada consulta escriba su filtro. | Un olvido en cualquier consulta futura filtra datos entre empresas sin que nada lo detecte. |
 | **C-2** | El margen bruto suma el IVA. Se calcula `line_total − costo`, pero `line_total` **incluye impuesto** (los precios son IVA incluido). | Todo indicador de margen —dashboard, reportes, rotación, oportunidades— está inflado ~19 %. Las decisiones comerciales que el sistema recomienda parten de un número falso. |
+| **C-4** | La venta multiempresa quedó rota por la migración 077: la contabilidad se registra a nombre de la empresa vendedora, pero la conexión declara la empresa activa y la política la rechaza. | No se puede cobrar un producto de otra empresa en una caja compartida; el error que ve el cajero habla de cuentas contables. |
 | **C-3** | `POST /api/pos/sales` no tiene idempotencia. La restricción `UNIQUE(checkout_cart_id, company_id, idempotency_key)` no aplica al POS porque `checkout_cart_id` es NULL. | Un doble clic en "Cobrar", un reintento de red o una respuesta perdida crea **dos ventas** y descuenta el inventario dos veces. |
 
 ---
@@ -148,6 +149,18 @@ corren **sin empresa declarada**. Al extender RLS a `electronic_documents` o
 silencio. Deben envolverse en `runWithoutTenantIsolation()` *antes* de aplicar las
 políticas, y la migración debe llegar acompañada de esa modificación.
 
+**El obstáculo real (descubierto al empezar la corrección):** la caja compartida
+lee y escribe legítimamente filas de varias empresas dentro de una misma
+petición. `GET /api/pos/shared-catalog` (`pos.js:750`) consulta `products`,
+`inventory_balances`, `warehouses`, `customers`, `sales_price_lists`,
+`sales_promotions` y `product_images` de todas las empresas que comparten la
+caja, autorizadas por la membresía del usuario en cada una. Una política que
+filtre por la empresa activa deja ese catálogo vacío.
+
+Es decir: extender RLS a las tablas del núcleo operativo **no es una migración
+mecánica**, exige decidir antes cuál es el alcance que declara la conexión. Las
+dos opciones se detallan en §9.
+
 ---
 
 **C-2 · El margen bruto incluye el IVA**
@@ -206,6 +219,37 @@ si la política es factura electrónica, dos consecutivos DIAN consumidos.
 
 Nota: las **devoluciones sí** son idempotentes (`src/modules/returns.js:69`). El
 patrón correcto ya existe en la casa; solo falta aplicarlo a la venta.
+
+---
+
+**C-4 · La venta multiempresa está rota desde la migración 077**
+`src/modules/pos.js:1814` · `src/accounting.js:313` · migración 077
+
+Descubierto al preparar la corrección de C-1. En el cobro agrupado, la
+contabilidad se registra a nombre de cada **empresa vendedora**:
+
+```js
+await postSaleAccounting(client, { tenantId: companyId, ... }); // companyId = vendedora
+```
+
+Pero la conexión declara `app.tenant_id` con la empresa **activa** del cajero, y
+desde la migración 077 `accounting_accounts`, `accounting_account_mappings`,
+`accounting_periods`, `accounting_entry_counters`, `journal_entries` y
+`journal_entry_lines` tienen políticas con `FORCE ROW LEVEL SECURITY`.
+
+Cuando la vendedora no es la empresa activa, `mappedAccounts` no ve ninguna
+cuenta de esa empresa y la venta muere con un mensaje que despista por completo:
+*"Falta configurar una cuenta contable activa para: …"*. La transacción se
+revierte entera, así que **no se puede cobrar un producto de otra empresa en una
+caja compartida**.
+
+La migración 077 dejó fuera `sales` y sus pagos precisamente por este motivo, y
+lo explica en su encabezado; lo que no vio es que la contabilidad de esa misma
+venta sí quedó dentro.
+
+*Nota de honestidad:* esto está deducido leyendo la política, el parámetro y la
+consulta, no ejecutado — no hay PostgreSQL en la máquina donde se hizo la
+auditoría. La corrección incluye una prueba que lo demuestra en CI.
 
 ---
 
@@ -406,3 +450,45 @@ Para que no se lea como una garantía que no es:
   (ausencia de paginación, N+1 en bucles de escritura), no medidos.
 - **No se auditaron en profundidad** nómina, contabilidad NIIF ni conciliación
   bancaria, por indicación explícita del requisito 29.
+
+---
+
+## 9. Decisión pendiente: alcance del aislamiento en PostgreSQL (C-1)
+
+Extender las políticas al núcleo operativo choca con el modelo multiempresa de
+la caja compartida. Hoy la conexión declara **una** empresa (`app.tenant_id`),
+pero una petición legítima toca varias. Hay dos formas de resolverlo y la
+elección cambia la garantía de seguridad que ofrece el sistema.
+
+**Opción A — Alcance por conjunto de empresas.**
+La conexión declara la lista de empresas que la petición puede tocar (la activa
+más las que comparten la caja), y las políticas usan `tenant_id = ANY(...)`. El
+middleware calcula ese conjunto a partir de `cash_register_companies` y la
+membresía del usuario.
+*A favor:* la garantía sigue siendo estricta y explícita — lo que no está en la
+lista no existe para esa petición.
+*En contra:* hay que decidir en cada ruta qué empresas entran; una ruta que
+olvide declararlas se rompe (falla cerrada, que es el lado correcto del error,
+pero se nota en producción).
+
+**Opción B — Alcance por membresía del usuario.**
+La conexión declara el usuario, y la política admite las filas de cualquier
+empresa donde ese usuario tenga membresía activa.
+*A favor:* nada que declarar por ruta; el catálogo compartido funciona solo.
+*En contra:* la garantía baja de "solo la empresa activa" a "cualquier empresa
+del usuario". Sigue bloqueando la fuga hacia empresas ajenas —que es el riesgo
+real— pero no separa entre las empresas del propio usuario. Además añade un
+`EXISTS` sobre `tenant_users` a cada fila evaluada.
+
+**Recomendación: opción A**, aplicada por tandas y empezando por las tablas que
+no participan del catálogo compartido (`purchases`, `business_expenses`,
+`payroll_*`, `inventory_counts`, `inventory_lots`, `inventory_reservations`),
+donde el alcance es siempre la empresa activa y el riesgo de romper algo es
+nulo. Las tablas del catálogo compartido —`products`, `inventory_balances`,
+`customers`, `warehouses`, `sales`, `sale_items`— entran después, ya con el
+conjunto de empresas declarado en el middleware y con la venta multiempresa
+cubierta por pruebas.
+
+Mientras tanto, `withDeclaredTenant()` (`src/db.js`) resuelve el caso puntual de
+escribir a nombre de otra empresa dentro de una transacción, y es la pieza que
+la opción A reutiliza.

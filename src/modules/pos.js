@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import QRCode from 'qrcode';
-import { query, withTransaction } from '../db.js';
+import { query, withDeclaredTenant, withTransaction } from '../db.js';
 import { config } from '../config.js';
 import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
@@ -1788,11 +1788,13 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
         }
       }
       isFirstReceipt = false;
-      await postSaleAccounting(client, {
+      // La empresa vendedora puede no ser la empresa activa del cajero. El
+      // asiento es suyo, así que se declara mientras se contabiliza.
+      await withDeclaredTenant(client, companyId, () => postSaleAccounting(client, {
         tenantId: companyId,
         saleId: sale.id,
         userId: req.context.userId,
-      });
+      }));
       await writeAudit(client, {
         tenantId: companyId,
         userId: req.context.userId,
