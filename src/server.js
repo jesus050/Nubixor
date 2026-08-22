@@ -1,6 +1,6 @@
 import { app } from './app.js';
 import { config } from './config.js';
-import { closeDatabase } from './db.js';
+import { checkTenantIsolationEnforcement, closeDatabase } from './db.js';
 import { logger } from './shared/logger.js';
 import { startBillingRetryScheduler } from './electronic-billing/retry-scheduler.js';
 import { startBackupScheduler } from './backup-scheduler.js';
@@ -15,6 +15,30 @@ const server = app.listen(config.port, () => {
     redisConfigured: Boolean(config.redisUrl),
   });
 });
+// Las políticas de aislamiento por empresa solo surten efecto si la aplicación
+// se conecta con un rol que no pueda saltárselas. Si puede, hay que decirlo:
+// creerlas activas cuando no lo están es peor que no tenerlas.
+if (config.databaseUrl) {
+  checkTenantIsolationEnforcement()
+    .then(({ enforced, reason }) => {
+      if (enforced) {
+        logger.info('database.tenant_isolation_enforced');
+      } else {
+        logger.error('database.tenant_isolation_not_enforced', {
+          reason,
+          message: 'Las políticas por empresa no se aplican a este rol de base de datos. '
+            + 'Conéctate con un rol sin SUPERUSER ni BYPASSRLS para que tengan efecto.',
+        });
+      }
+    })
+    .catch((error) => {
+      logger.error('database.tenant_isolation_check_failed', {
+        errorName: error.name,
+        message: error.message,
+      });
+    });
+}
+
 const stopBillingRetryScheduler = startBillingRetryScheduler();
 const stopBackupScheduler = startBackupScheduler();
 
