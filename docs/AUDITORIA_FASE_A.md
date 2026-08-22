@@ -506,3 +506,48 @@ cubierta por pruebas.
 Mientras tanto, `withDeclaredTenant()` (`src/db.js`) resuelve el caso puntual de
 escribir a nombre de otra empresa dentro de una transacción, y es la pieza que
 la opción A reutiliza.
+
+---
+
+## 10. Estado de los hallazgos
+
+Actualizado al cierre de la fase C. Los commits van sobre `codex/nubixor-brand-pack`.
+
+| Hallazgo | Estado | Dónde |
+|---|---|---|
+| C-1 Aislamiento parcial en PostgreSQL | **Resuelto en su mayor parte** | Migraciones 079 y 080. Faltan `sales`, `sale_items` y `customers` |
+| C-2 El margen incluía el IVA | **Resuelto** | Cinco cálculos corregidos; devoluciones descontadas |
+| C-3 Venta sin idempotencia | **Resuelto** | Migración 078 + `Idempotency-Key` |
+| C-4 Venta multiempresa rota por la 077 | **Resuelto** | `withDeclaredTenant()` |
+| A-1 Planificadores duplicados al escalar | **Resuelto** | Cerrojo en respaldo y sincronización de rangos |
+| A-2 Kardex sin saldo anterior/resultante | **Resuelto** | Migración 081; movimientos inmutables |
+| A-3 `on_hand` admitía negativos | **Resuelto** | `CHECK` en `inventory_balances` |
+| A-4 Limitación de tasa en memoria | Pendiente | Fase D |
+| A-5 Sin paginación en la API | Pendiente | Fase D |
+| A-6 Acceso sin auditar, sin IP ni dispositivo | **Resuelto** | Origen automático en `metadata` |
+| A-7 El bloqueo por fuerza bruta no ocurría | **Resuelto** | Descubierto al auditar el acceso |
+| M-1 a M-7 | Pendientes | Fase F en su mayoría |
+
+**A-7** no estaba en la auditoría original: apareció al escribir la auditoría del
+acceso. El contador de intentos fallidos se incrementaba dentro de la
+transacción que a continuación revertía el error, y además el parámetro que
+decidía el bloqueo se ponía en cero justo al llegar a cinco. Dos fallos
+independientes que se tapaban entre sí, así que la cuenta no se bloqueaba nunca.
+
+### Advertencia sobre la conciliación del kardex
+
+`GET /api/inventory/kardex/reconciliation` compara el saldo con el acumulado de
+movimientos. **En datos históricos es normal que devuelva diferencias**: los
+productos cuyo inventario inicial se cargó directamente en `inventory_balances`
+no tienen un movimiento que lo respalde, así que su kardex arranca en cero.
+Conviene mirar la lista una vez, decidir cuáles son inventario inicial legítimo,
+y registrar el ajuste correspondiente para que a partir de ahí toda diferencia
+signifique algo.
+
+### Verificación pendiente
+
+Ninguna de las 22 pruebas de integración escritas en estas fases se ha ejecutado:
+la máquina donde se trabajó no tiene PostgreSQL. Pasan las 84 que no necesitan
+base de datos. Antes de desplegar conviene levantar el entorno local
+(`npm run setup:local`), correr `npm test` completo y ejercitar a mano el punto
+de venta multiempresa, que es el camino con más superficie tocada.
