@@ -154,17 +154,25 @@ export async function applyInventoryBalanceDelta(
   client,
   { tenantId, productId, warehouseId, quantity },
 ) {
+  // La restricción de saldo no negativo se evalúa antes del DO UPDATE. Por eso
+  // no podemos usar `quantity` como valor inicial del UPSERT: una salida de 5
+  // sobre un saldo de 20 se rechazaría por el -5 provisional. Primero
+  // aseguramos el registro con saldo cero y luego aplicamos el delta de forma
+  // atómica sobre el saldo persistido.
+  await client.query(
+    `INSERT INTO inventory_balances(tenant_id, product_id, warehouse_id, on_hand)
+     VALUES($1::uuid,$2::uuid,$3::uuid,0)
+     ON CONFLICT(tenant_id, product_id, warehouse_id) DO NOTHING`,
+    [tenantId, productId, warehouseId],
+  );
   return client.query(
-    `INSERT INTO inventory_balances(
-       tenant_id, product_id, warehouse_id, on_hand
-     )
-     VALUES($1::uuid,$2::uuid,$3::uuid,$4::numeric)
-     ON CONFLICT(tenant_id, product_id, warehouse_id)
-     DO UPDATE SET
-       on_hand = inventory_balances.on_hand + EXCLUDED.on_hand,
-       updated_at = now()
-     WHERE inventory_balances.on_hand + EXCLUDED.on_hand
-       >= inventory_balances.reserved
+    `UPDATE inventory_balances
+     SET on_hand = on_hand + $4::numeric,
+         updated_at = now()
+     WHERE tenant_id = $1::uuid
+       AND product_id = $2::uuid
+       AND warehouse_id = $3::uuid
+       AND on_hand + $4::numeric >= reserved
      RETURNING *`,
     [tenantId, productId, warehouseId, quantity],
   );
