@@ -20,33 +20,42 @@ function digest(value) {
 }
 
 async function cleanupTenant(pool, tenantId) {
-  await pool.query('DELETE FROM audit_events WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM tenant_users WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM roles WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [tenantId]);
-  await pool.query('DELETE FROM expense_categories WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM cost_centers WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM accounting_periods WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM accounting_account_mappings WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM accounting_entry_counters WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM sales_price_lists WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_opportunity_actions WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_marketing_expenses WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_campaign_categories WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_campaign_products WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_campaigns WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_marketing_budgets WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_plan_initiatives WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_plans WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_rotation_snapshots WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_product_seasons WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_product_profiles WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_seasons WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM commercial_rotation_settings WHERE tenant_id = $1', [tenantId]);
-  await pool.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
+  const client = await pool.connect();
+  try {
+    // La inmutabilidad se conserva en producción. Solo el aislamiento de
+    // pruebas desactiva los triggers en esta conexión de limpieza.
+    await client.query("SET session_replication_role = 'replica'");
+    await client.query('DELETE FROM audit_chain_heads WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM audit_events WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM tenant_users WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM roles WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [tenantId]);
+    await client.query('DELETE FROM expense_categories WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM cost_centers WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM accounting_periods WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM accounting_account_mappings WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM accounting_entry_counters WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM sales_price_lists WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_opportunity_actions WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_marketing_expenses WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_campaign_categories WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_campaign_products WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_campaigns WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_marketing_budgets WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_plan_initiatives WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_plans WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_rotation_snapshots WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_product_profiles WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_seasons WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM commercial_rotation_settings WHERE tenant_id = $1', [tenantId]);
+    await client.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
+  } finally {
+    await client.query("SET session_replication_role = 'origin'");
+    client.release();
+  }
 }
 
 test(
