@@ -10,7 +10,10 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import pg from 'pg';
 import { config } from '../src/config.js';
+import { closeDatabase } from '../src/db.js';
+import { failBackupRun, finishBackupRun, startBackupRun } from './backup-log.js';
 
 const MAGIC = Buffer.from('MSBACK01');
 
@@ -139,15 +142,50 @@ async function restore() {
     }
     await run('mkdir', ['-p', restoreStorage]);
     await run('tar', ['-xzf', path.join(temporary, 'storage.tar.gz'), '-C', restoreStorage]);
+    const conteos = await contarTablasClave(targetDatabase);
     process.stdout.write(
       `Restauración verificada. Copia creada: ${manifest.createdAt}\n`,
     );
+    process.stdout.write(`Contenido restaurado: ${JSON.stringify(conteos)}\n`);
+    return { manifest, conteos, fileName: path.basename(backupFile) };
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
 }
 
-restore().catch((error) => {
+// Que pg_restore termine sin error no significa que haya datos: un volcado
+// vacío se restaura perfectamente. Contar las tablas que no pueden estar vacías
+// en un sistema en uso es lo que convierte esto en una prueba de verdad.
+async function contarTablasClave(targetDatabase) {
+  const pool = new pg.Pool({ connectionString: targetDatabase });
+  try {
+    const conteos = {};
+    for (const tabla of ['tenants', 'users', 'products', 'sales', 'inventory_movements']) {
+      const resultado = await pool.query(`SELECT COUNT(*)::integer total FROM ${tabla}`);
+      conteos[tabla] = resultado.rows[0].total;
+    }
+    if (!conteos.tenants || !conteos.users) {
+      throw new Error(
+        'La restauración terminó pero no hay empresas ni usuarios: la copia está vacía o incompleta.',
+      );
+    }
+    return conteos;
+  } finally {
+    await pool.end();
+  }
+}
+
+// La prueba de restauración se anota en la base operativa, no en la restaurada:
+// lo que interesa recordar es que se hizo, y eso hay que poder consultarlo desde
+// el sistema que está vivo.
+const ejecucion = await startBackupRun('RESTORE_TEST');
+try {
+  const resultado = await restore();
+  await finishBackupRun(ejecucion, { file: resultado.fileName });
+} catch (error) {
+  await failBackupRun(ejecucion, error);
   process.stderr.write(`Restauración fallida: ${error.message}\n`);
   process.exitCode = 1;
-});
+} finally {
+  await closeDatabase().catch(() => {});
+}

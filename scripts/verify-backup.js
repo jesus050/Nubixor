@@ -11,6 +11,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { config } from '../src/config.js';
+import { closeDatabase } from '../src/db.js';
+import { failBackupRun, finishBackupRun, startBackupRun } from './backup-log.js';
 
 const MAGIC = Buffer.from('MSBACK01');
 const EXPECTED_ENTRIES = new Set([
@@ -124,10 +126,26 @@ if (!backupFile) {
   process.stderr.write('Uso: npm run backup:verify -- archivo.msbackup\n');
   process.exitCode = 1;
 } else {
-  verifyBackup(backupFile)
-    .then((result) => process.stdout.write(`${JSON.stringify(result)}\n`))
+  // La verificación se anota igual que el respaldo: saber que la última copia
+  // se comprobó, y cuándo, es parte de saber si hay respaldo.
+  startBackupRun('VERIFICATION')
+    .then(async (run) => {
+      try {
+        const result = await verifyBackup(backupFile);
+        await finishBackupRun(run, {
+          file: result.fileName,
+          bytes: result.bytes,
+          sha256: result.databaseSha256,
+        });
+        process.stdout.write(`${JSON.stringify(result)}\n`);
+      } catch (error) {
+        await failBackupRun(run, error);
+        throw error;
+      }
+    })
     .catch((error) => {
       process.stderr.write(`Verificación fallida: ${error.message}\n`);
       process.exitCode = 1;
-    });
+    })
+    .finally(() => closeDatabase().catch(() => {}));
 }

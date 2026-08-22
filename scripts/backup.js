@@ -20,6 +20,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { config } from '../src/config.js';
+import { failBackupRun, finishBackupRun, startBackupRun } from './backup-log.js';
 
 const MAGIC = Buffer.from('MSBACK01');
 
@@ -107,6 +108,9 @@ async function pruneBackups(directory) {
 
 export async function runBackup() {
   if (!config.databaseUrl) throw new Error('DATABASE_URL es obligatoria.');
+  // La ejecución se anota antes de empezar: si el proceso muere a mitad, la
+  // fila queda en RUNNING y eso ya dice que esa noche el respaldo no terminó.
+  const run = await startBackupRun('BACKUP');
   const key = encryptionKey();
   const backupDir = path.resolve(config.backupDir);
   const storageDir = path.resolve(config.storageDir);
@@ -152,12 +156,22 @@ export async function runBackup() {
     ]);
     await encryptFile(bundleFile, finalFile, key);
     const removed = await pruneBackups(backupDir);
-    return {
+    const result = {
       file: finalFile,
       bytes: (await stat(finalFile)).size,
       sha256: await sha256(finalFile),
       removed,
     };
+    await finishBackupRun(run, {
+      file: path.basename(result.file),
+      bytes: result.bytes,
+      sha256: result.sha256,
+      prunedCount: removed.length,
+    });
+    return result;
+  } catch (error) {
+    await failBackupRun(run, error);
+    throw error;
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
