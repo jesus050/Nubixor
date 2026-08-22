@@ -14,6 +14,32 @@ function digest(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+async function cleanupTenant(pool, tenantId) {
+  await pool.query('DELETE FROM tenant_users WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM roles WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM company_tax_profiles WHERE company_id = $1', [tenantId]);
+  await pool.query('DELETE FROM accounting_periods WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM accounting_account_mappings WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM accounting_entry_counters WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_opportunity_actions WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_marketing_expenses WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_campaign_categories WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_campaign_products WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_campaigns WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_marketing_budgets WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_plan_initiatives WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_plans WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_rotation_snapshots WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_product_seasons WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_product_profiles WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_seasons WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM commercial_rotation_settings WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
+}
+
 test(
   'IDOR: el contexto activo A no puede descargar un documento conocido de B',
   { skip: !connectionString },
@@ -59,8 +85,8 @@ test(
       assert.equal(response.body.code, 'ASSET_NOT_FOUND');
     } finally {
       await pool.query('DELETE FROM secure_documents WHERE id = $1', [ids.documentB]);
-      await pool.query('DELETE FROM tenant_users WHERE user_id = $1', [ids.user]);
-      await pool.query('DELETE FROM tenants WHERE id = ANY($1::uuid[])', [[ids.companyA, ids.companyB]]);
+      await cleanupTenant(pool, ids.companyA);
+      await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
     }
@@ -145,9 +171,8 @@ test(
         .set('Cookie', sessionCookie)
         .expect(200);
     } finally {
-      await pool.query('DELETE FROM tenant_users WHERE user_id = $1', [ids.user]);
-      await pool.query('DELETE FROM roles WHERE id = ANY($1::uuid[])', [[ids.ownerRole, ids.warehouseRole]]);
-      await pool.query('DELETE FROM tenants WHERE id = ANY($1::uuid[])', [[ids.companyA, ids.companyB]]);
+      await cleanupTenant(pool, ids.companyA);
+      await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
     }
