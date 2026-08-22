@@ -10627,6 +10627,7 @@ async function loadKardex(event) {
           'Movimiento',
           inventoryMovementLabels[record.movement_type] || record.movement_type,
         ),
+        createCell('Saldo anterior', formatQuantity(record.balance_before)),
         createCell('Cantidad', formatQuantity(record.quantity, { sign: true })),
         createCell('Costo', formatCurrency(record.unit_cost)),
         createCell('Saldo', formatQuantity(record.running_quantity)),

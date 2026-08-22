@@ -494,10 +494,11 @@ router.get('/kardex', asyncHandler(async (req, res) => {
               movement.created_at, product.sku, product.name product_name,
               warehouse.name warehouse_name, warehouse.code warehouse_code,
               branch.name branch_name,
-              SUM(movement.quantity) OVER (
-                PARTITION BY movement.product_id, movement.warehouse_id
-                ORDER BY movement.created_at, movement.id
-              ) running_quantity,
+              movement.balance_before, movement.balance_after,
+              -- El saldo ya no se recalcula recorriendo toda la historia en
+              -- cada consulta: viene sellado en el propio movimiento, que es
+              -- además el que vale si alguna vez discrepan.
+              movement.balance_after running_quantity,
               SUM(movement.quantity * movement.unit_cost) OVER (
                 PARTITION BY movement.product_id, movement.warehouse_id
                 ORDER BY movement.created_at, movement.id
@@ -531,6 +532,50 @@ router.get('/kardex', asyncHandler(async (req, res) => {
     ],
   );
   res.json(result.rows);
+}));
+
+// El kardex y el saldo deberían contar lo mismo. Cuando no coinciden es que
+// alguien movió existencias sin registrar el movimiento, y esa diferencia es
+// justo lo que hay que poder ver: en un inventario, lo que no se explica se
+// termina perdiendo.
+router.get('/kardex/reconciliation', asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT balance.product_id, product.sku, product.name product_name,
+            balance.warehouse_id, warehouse.name warehouse_name,
+            warehouse.code warehouse_code, branch.name branch_name,
+            balance.on_hand, COALESCE(kardex.balance_after, 0) kardex_balance,
+            balance.on_hand - COALESCE(kardex.balance_after, 0) difference,
+            kardex.created_at last_movement_at
+     FROM inventory_balances balance
+     JOIN products product
+       ON product.id = balance.product_id AND product.tenant_id = balance.tenant_id
+     JOIN warehouses warehouse
+       ON warehouse.id = balance.warehouse_id AND warehouse.tenant_id = balance.tenant_id
+     JOIN branches branch ON branch.id = warehouse.branch_id
+     LEFT JOIN LATERAL (
+       SELECT movement.balance_after, movement.created_at
+       FROM inventory_movements movement
+       WHERE movement.tenant_id = balance.tenant_id
+         AND movement.product_id = balance.product_id
+         AND movement.warehouse_id = balance.warehouse_id
+       ORDER BY movement.created_at DESC, movement.id DESC
+       LIMIT 1
+     ) kardex ON TRUE
+     WHERE balance.tenant_id = $1
+       AND ($2::uuid IS NULL OR warehouse.branch_id = $2)
+       AND balance.on_hand <> COALESCE(kardex.balance_after, 0)
+     ORDER BY abs(balance.on_hand - COALESCE(kardex.balance_after, 0)) DESC,
+              product.name
+     LIMIT 200`,
+    [req.context.tenantId, req.context.branchId],
+  );
+  res.json({
+    differences: result.rows,
+    total: result.rowCount,
+    truncated: result.rowCount === 200,
+    note: 'Una diferencia significa que el saldo cambió sin registrar el movimiento. '
+      + 'Corrígela con un ajuste, que sí deja rastro.',
+  });
 }));
 
 router.get('/incidents', asyncHandler(async (req, res) => {
