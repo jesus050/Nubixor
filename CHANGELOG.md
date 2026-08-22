@@ -4,6 +4,37 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 
 ## [Unreleased]
 
+### Corregido
+
+- Un cobro reintentado ya no registra dos ventas. El punto de venta genera una
+  clave con el carrito y la envía en `Idempotency-Key`; el servidor reconoce el
+  cobro repetido y responde el mismo recibo en lugar de descontar el inventario
+  otra vez. La restricción única que existía nunca llegaba a evaluarse porque
+  incluía `checkout_cart_id`, que en el POS siempre es NULL.
+- El margen bruto dejó de contar el IVA como utilidad. Los precios son impuesto
+  incluido, y los cinco cálculos del sistema restaban el costo del total
+  cobrado: un producto vendido justo al costo aparecía con 19 % de margen.
+  Afectaba al dashboard, al reporte de ventas, a la clasificación de rotación,
+  a los resultados de campaña y al plan comercial. El margen del mes y el de
+  rotación descuentan además las devoluciones.
+- La venta multiempresa vuelve a funcionar. La contabilidad se registra a nombre
+  de la empresa vendedora, pero la conexión declaraba la empresa activa y las
+  políticas por empresa rechazaban el asiento; el cajero veía un error sobre
+  cuentas contables que no tenía nada que ver.
+
+### Seguridad
+
+- El aislamiento por empresa dentro de PostgreSQL se extendió a compras, gastos,
+  nómina, conteos físicos, lotes, reservas y series. El catálogo compartido de
+  la caja multiempresa sigue fuera a propósito: necesita que la conexión declare
+  un conjunto de empresas, y eso está pendiente de decisión (ver
+  `docs/AUDITORIA_FASE_A.md` §9).
+
+### Añadido
+
+- `docs/AUDITORIA_FASE_A.md`: auditoría completa del sistema con hallazgos por
+  severidad, verificación de escenarios críticos y prioridades por fases.
+
 ### Cambiado
 
 - Caja & POS funciona como una terminal de venta: catálogo y carrito aparecen
