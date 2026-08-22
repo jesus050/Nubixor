@@ -970,6 +970,7 @@ const elements = {
   receiptDiscount: document.querySelector('#receiptDiscount'),
   receiptTotal: document.querySelector('#receiptTotal'),
   receiptCustomer: document.querySelector('#receiptCustomer'),
+  shareReceiptWhatsAppButton: document.querySelector('#shareReceiptWhatsAppButton'),
   receiptPaymentMethod: document.querySelector('#receiptPaymentMethod'),
   receiptPaymentBreakdown: document.querySelector('#receiptPaymentBreakdown'),
   receiptTransferRow: document.querySelector('#receiptTransferRow'),
@@ -17015,6 +17016,12 @@ function showReceipt(receipt) {
   elements.receiptDiscount.textContent = `−${formatCurrency(receiptDiscount)}`;
   elements.receiptTotal.textContent = formatCurrency(receipt.total);
   elements.receiptCustomer.textContent = receipt.customer?.name || 'Consumidor final';
+  const whatsappPhone = normalizeWhatsappPhone(receipt.customer?.phone);
+  elements.shareReceiptWhatsAppButton.hidden = !whatsappPhone;
+  elements.shareReceiptWhatsAppButton.dataset.phone = whatsappPhone || '';
+  elements.shareReceiptWhatsAppButton.dataset.customer = receipt.customer?.name || '';
+  elements.shareReceiptWhatsAppButton.dataset.receipt = receipt.receiptNumber || '';
+  elements.shareReceiptWhatsAppButton.dataset.total = String(receipt.total || 0);
   elements.receiptPaymentMethod.textContent =
     paymentMethodLabels[receipt.payment_method] || receipt.payment_method;
   const receiptPayments = Array.isArray(receipt.payments) ? receipt.payments : [];
@@ -17127,6 +17134,20 @@ function showReceipt(receipt) {
     receipt.items.some((item) => Number(item.returnableQuantity ?? item.quantity) > 0);
   elements.openReturnDialogButton.hidden = !hasReturnableItems;
   elements.receiptDialog.showModal();
+}
+
+function normalizeWhatsappPhone(value) {
+  let phone = String(value || '').replace(/\D/g, '');
+  if (phone.length === 10 && phone.startsWith('3')) phone = `57${phone}`;
+  return phone.length >= 8 && phone.length <= 15 ? phone : null;
+}
+
+function shareReceiptByWhatsApp() {
+  const { phone, customer, receipt, total } = elements.shareReceiptWhatsAppButton.dataset;
+  if (!phone) return;
+  const greeting = customer ? `Hola ${customer}, ` : 'Hola, ';
+  const message = `${greeting}te compartimos el comprobante ${receipt} por ${formatCurrency(total)}. Gracias por tu compra.`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
 }
 
 function syncReceiptOfficialPdf({ electronic, billing, receipt }) {
@@ -18385,6 +18406,7 @@ elements.completeSaleButton.addEventListener('click', completeSale);
 elements.closeReceiptDialog.addEventListener('click', closeReceiptDialog);
 elements.openReturnDialogButton.addEventListener('click', openReturnDialog);
 elements.printReceiptButton.addEventListener('click', printReceiptTicket);
+elements.shareReceiptWhatsAppButton.addEventListener('click', shareReceiptByWhatsApp);
 elements.finishReceiptButton.addEventListener('click', closeReceiptDialog);
 elements.receiptDialog.addEventListener('click', (event) => {
   if (event.target === elements.receiptDialog) closeReceiptDialog();

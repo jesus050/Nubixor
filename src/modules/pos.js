@@ -2171,7 +2171,7 @@ router.post('/sales', asyncHandler(async (req, res) => {
     let customer = null;
     if (customerId) {
       const customerResult = await client.query(
-        `SELECT id, name, document_type, document_number
+        `SELECT id, name, document_type, document_number, phone
          FROM customers
          WHERE id = $1 AND tenant_id = $2 AND active = TRUE`,
         [customerId, req.context.tenantId],
