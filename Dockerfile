@@ -1,4 +1,7 @@
 FROM node:22-alpine
+ARG BUILD_COMMIT=unknown
+ARG BUILD_TIME
+ENV BUILD_COMMIT=$BUILD_COMMIT BUILD_TIME=$BUILD_TIME
 RUN apk add --no-cache postgresql16-client tar
 WORKDIR /app
 COPY package*.json ./

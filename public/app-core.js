@@ -2775,6 +2775,14 @@ async function completeAuthentication(user, nextCsrfToken) {
   if (!memberships.some((membership) => membership.tenantId === activeTenantId)) {
     activeTenantId = memberships[0]?.tenantId || '';
   }
+  if (activeTenantId) {
+    const context = await getJson('/api/session/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: activeTenantId }),
+    });
+    activeTenantId = context.tenantId;
+  }
   saveTenantPreference(activeTenantId);
   elements.authGate.hidden = true;
   elements.appShell.hidden = false;
@@ -15261,7 +15269,12 @@ async function submitCompany(event) {
     });
     closeCompanyDialog();
     currentUser = await getJson('/api/auth/me');
-    activeTenantId = createdCompany.id;
+    const context = await getJson('/api/session/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: createdCompany.id }),
+    });
+    activeTenantId = context.tenantId;
     saleCart.clear();
     posCatalog = [];
     await loadCompanies();
@@ -17709,7 +17722,18 @@ elements.branchSearch.addEventListener('input', renderBranches);
 elements.warehouseSearch.addEventListener('input', renderWarehouses);
 elements.productSearch.addEventListener('input', renderProducts);
 elements.companyContext.addEventListener('change', async () => {
-  activeTenantId = elements.companyContext.value;
+  const nextTenantId = elements.companyContext.value;
+  if (!nextTenantId || nextTenantId === activeTenantId) return;
+  const previousTenantId = activeTenantId;
+  elements.companyContext.disabled = true;
+  showToast('Cambiando de empresa…');
+  try {
+    const context = await getJson('/api/session/company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: nextTenantId }),
+    });
+    activeTenantId = context.tenantId;
   if (elements.productStructureDialog.open) closeProductStructureDialog();
   saleCart.clear();
   posCatalog = [];
@@ -17734,6 +17758,13 @@ elements.companyContext.addEventListener('change', async () => {
   renderAuthenticatedUser();
   await refreshTenantData();
   showToast('Contexto de empresa actualizado.');
+  } catch (error) {
+    activeTenantId = previousTenantId;
+    elements.companyContext.value = previousTenantId;
+    showToast(error.message);
+  } finally {
+    elements.companyContext.disabled = false;
+  }
 });
 elements.reloadCompaniesButton.addEventListener('click', () => {
   loadCompanies()

@@ -104,6 +104,9 @@ export const config = {
   nodeEnv,
   port: readPort(process.env.PORT),
   appName: process.env.APP_NAME || 'Nubixor',
+  appVersion: process.env.APP_VERSION?.trim() || '0.1.0',
+  buildCommit: process.env.BUILD_COMMIT?.trim() || 'unknown',
+  buildTime: process.env.BUILD_TIME?.trim() || null,
   databaseUrl: readOptionalUrl('DATABASE_URL', process.env.DATABASE_URL, ['postgres:', 'postgresql:']),
   databaseSsl: readBoolean('DATABASE_SSL', process.env.DATABASE_SSL),
   databaseSslRejectUnauthorized: readBoolean(

@@ -95,9 +95,14 @@ export async function createSession(client, req, res, userId, remember = false) 
   const expiresAt = new Date(Date.now() + duration);
   await client.query(
     `INSERT INTO auth_sessions(
-       user_id, token_hash, csrf_token_hash, expires_at, user_agent
+       user_id, token_hash, csrf_token_hash, expires_at, user_agent, active_tenant_id
      )
-     VALUES($1,$2,$3,$4,$5)`,
+     VALUES(
+       $1,$2,$3,$4,$5,
+       (SELECT tenant_id FROM tenant_users
+        WHERE user_id = $1 AND status = 'ACTIVE'
+        ORDER BY joined_at NULLS LAST, tenant_id LIMIT 1)
+     )`,
     [
       userId,
       digest(token),
@@ -121,7 +126,7 @@ export async function resolveSession(req, { required = true } = {}) {
     );
   }
   const result = await query(
-    `SELECT s.id session_id, s.csrf_token_hash, s.expires_at,
+    `SELECT s.id session_id, s.csrf_token_hash, s.expires_at, s.active_tenant_id,
             u.id, u.email, u.full_name, u.job_title, u.status
      FROM auth_sessions s
      JOIN users u ON u.id = s.user_id
@@ -149,6 +154,23 @@ export async function resolveSession(req, { required = true } = {}) {
     fullName: session.full_name,
     jobTitle: session.job_title,
   };
+  const membership = await query(
+    `SELECT tenant_id, branch_id
+     FROM tenant_users
+     WHERE user_id = $1 AND status = 'ACTIVE'
+     ORDER BY CASE WHEN tenant_id = $2 THEN 0 ELSE 1 END, joined_at NULLS LAST, tenant_id
+     LIMIT 1`,
+    [session.id, session.active_tenant_id],
+  );
+  if (!membership.rowCount) {
+    throw new AppError('Tu usuario no tiene una empresa activa asignada.', 403, 'TENANT_MEMBERSHIP_REQUIRED');
+  }
+  const tenantId = membership.rows[0].tenant_id;
+  req.context.tenantId = tenantId;
+  req.context.branchId = membership.rows[0].branch_id || null;
+  if (tenantId !== session.active_tenant_id) {
+    await query('UPDATE auth_sessions SET active_tenant_id = $1 WHERE id = $2', [tenantId, session.session_id]);
+  }
   return session;
 }
 

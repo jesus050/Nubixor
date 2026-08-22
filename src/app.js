@@ -42,6 +42,8 @@ import secureFilesRouter from './modules/secure-files.js';
 import payrollRouter from './modules/payroll.js';
 import commercialPlanningRouter from './modules/commercial-planning.js';
 import mediaRouter from './modules/media.js';
+import sessionContextRouter from './modules/session-context.js';
+import versionRouter from './modules/version.js';
 import { requireTenantModule } from './module-gates.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -115,10 +117,12 @@ export function createApp({
   }));
 
   application.use('/api/health', health);
+  application.use('/api/version', versionRouter);
   application.use('/api/auth', authRouter);
   if (security) {
     application.use('/api', requireAuthenticatedSession, authorizeApiRequest);
   }
+  application.use('/api/session', sessionContextRouter);
   application.use('/api/assets', secureAssetsRouter);
   application.use('/api/media', mediaRouter);
   application.use('/api/companies', companiesRouter);
