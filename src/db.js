@@ -129,6 +129,34 @@ export async function withTransaction(work) {
   }
 }
 
+// Un trabajo periódico que corre dentro del servidor web se ejecuta una vez por
+// instancia. Para el que puede correr en paralelo sin daño —la cola de
+// facturación, que reparte trabajo con SKIP LOCKED— eso es rendimiento. Para el
+// respaldo o la sincronización de rangos con el proveedor es duplicar trabajo
+// caro, así que estos piden turno: quien no lo obtiene, no hace nada.
+//
+// El cerrojo vive en la sesión, no en la transacción, así que hay que sostener
+// la misma conexión mientras dure el trabajo.
+export async function withAdvisoryLock(name, work) {
+  const client = await getPool().connect();
+  try {
+    const lock = await client.query(
+      'SELECT pg_try_advisory_lock(hashtext($1)) acquired',
+      [name],
+    );
+    if (!lock.rows[0]?.acquired) return { acquired: false, result: null };
+    try {
+      return { acquired: true, result: await work() };
+    } finally {
+      await client
+        .query('SELECT pg_advisory_unlock(hashtext($1))', [name])
+        .catch(() => {});
+    }
+  } finally {
+    client.release();
+  }
+}
+
 export async function checkDatabase() {
   const startedAt = performance.now();
   await query('SELECT 1');
