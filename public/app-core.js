@@ -482,6 +482,17 @@ const elements = {
   cashDetailCountTotal: document.querySelector('#cashDetailCountTotal'),
   cashDetailCountState: document.querySelector('#cashDetailCountState'),
   cashDetailNotes: document.querySelector('#cashDetailNotes'),
+  attentionCenter: document.querySelector('#attentionCenter'),
+  attentionGrid: document.querySelector('#attentionGrid'),
+  attentionSummary: document.querySelector('#attentionSummary'),
+  trendCompare: document.querySelector('#trendCompare'),
+  trendChart: document.querySelector('#trendChart'),
+  trendChartCaption: document.querySelector('#trendChartCaption'),
+  trendDailyButton: document.querySelector('#trendDailyButton'),
+  trendMonthlyButton: document.querySelector('#trendMonthlyButton'),
+  trendBranchBody: document.querySelector('#trendBranchBody'),
+  trendBranchCount: document.querySelector('#trendBranchCount'),
+  trendBranchState: document.querySelector('#trendBranchState'),
   replenishmentAlertCount: document.querySelector('#replenishmentAlertCount'),
   replenishmentReadyCount: document.querySelector('#replenishmentReadyCount'),
   replenishmentList: document.querySelector('#replenishmentList'),
@@ -5602,10 +5613,227 @@ async function loadExecutiveSummary() {
       headers: { 'x-tenant-id': activeTenantId },
     });
     setExecutiveSummary(summary);
+    // Tendencia y pendientes acompañan al resumen, pero no lo bloquean: si
+    // alguno falla, el tablero sigue mostrando sus cifras.
+    loadDashboardTrends();
+    loadDashboardAttention();
     return summary;
   } catch (error) {
     setExecutiveSummary();
     throw error;
+  }
+}
+
+/* ---------- Tendencia y pendientes del tablero ---------- */
+
+let dashboardTrends = null;
+let trendRange = 'daily';
+
+function formatTrendLabel(value, range) {
+  const fecha = new Date(value);
+  return range === 'daily'
+    ? new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(fecha)
+    : new Intl.DateTimeFormat('es-CO', { month: 'short', year: '2-digit' }).format(fecha);
+}
+
+function variationLabel(actual, referencia) {
+  const base = Number(referencia || 0);
+  const valor = Number(actual || 0);
+  if (base === 0) return { text: base === valor ? 'Sin referencia' : 'Sin base previa', tone: 'flat' };
+  const cambio = ((valor - base) / base) * 100;
+  const tone = Math.abs(cambio) < 0.5 ? 'flat' : (cambio > 0 ? 'up' : 'down');
+  const signo = cambio > 0 ? '+' : '';
+  return { text: `${signo}${cambio.toFixed(1)} %`, tone };
+}
+
+function renderTrendComparison(comparison = {}) {
+  const tarjetas = [
+    {
+      label: 'Hoy',
+      value: comparison.today,
+      caption: 'contra el mismo día de la semana pasada',
+      reference: comparison.same_weekday_last_week,
+    },
+    {
+      label: 'Este mes',
+      value: comparison.this_month,
+      caption: 'contra el mismo tramo del año pasado',
+      reference: comparison.same_month_last_year,
+    },
+  ];
+  elements.trendCompare.replaceChildren();
+  for (const tarjeta of tarjetas) {
+    const card = document.createElement('article');
+    const label = document.createElement('small');
+    label.textContent = tarjeta.label;
+    const value = document.createElement('strong');
+    value.textContent = formatCurrency(tarjeta.value || 0);
+    const variacion = variationLabel(tarjeta.value, tarjeta.reference);
+    const delta = document.createElement('span');
+    delta.className = `trend-delta ${variacion.tone}`;
+    delta.textContent = variacion.text;
+    const caption = document.createElement('small');
+    caption.className = 'trend-caption';
+    caption.textContent = `${formatCurrency(tarjeta.reference || 0)} ${tarjeta.caption}`;
+    card.append(label, value, delta, caption);
+    elements.trendCompare.append(card);
+  }
+}
+
+// Barras dibujadas con elementos, no con una librería: son treinta valores y
+// así heredan el tema y el foco del resto de la interfaz.
+function renderTrendChart() {
+  if (!dashboardTrends) return;
+  const serie = trendRange === 'daily' ? dashboardTrends.daily : dashboardTrends.monthly;
+  const puntos = Array.isArray(serie) ? serie : [];
+  const maximo = puntos.reduce((mayor, punto) => Math.max(mayor, Number(punto.total || 0)), 0);
+  elements.trendChart.replaceChildren();
+  elements.trendChartCaption.textContent = trendRange === 'daily'
+    ? 'Ventas completadas por día, últimos 30 días.'
+    : 'Ventas completadas por mes, últimos 12 meses.';
+  for (const punto of puntos) {
+    const total = Number(punto.total || 0);
+    const columna = document.createElement('div');
+    columna.className = 'trend-bar';
+    const etiqueta = formatTrendLabel(punto.day || punto.month, trendRange);
+    // El título es lo que lee el lector de pantalla y lo que sale al pasar el
+    // cursor: la barra sola no dice nada.
+    columna.title = `${etiqueta}: ${formatCurrency(total)} · ${punto.sale_count} ventas`;
+    const relleno = document.createElement('i');
+    relleno.style.height = maximo > 0 ? `${Math.max((total / maximo) * 100, total > 0 ? 2 : 0)}%` : '0%';
+    if (total === 0) relleno.classList.add('empty');
+    columna.append(relleno);
+    elements.trendChart.append(columna);
+  }
+  if (!puntos.length) {
+    const vacio = document.createElement('p');
+    vacio.className = 'trend-empty';
+    vacio.textContent = 'Todavía no hay ventas para dibujar una tendencia.';
+    elements.trendChart.append(vacio);
+  }
+}
+
+function renderTrendBranches(rows = []) {
+  elements.trendBranchBody.replaceChildren();
+  elements.trendBranchCount.textContent = String(rows.length);
+  elements.trendBranchState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const linea = document.createElement('tr');
+    linea.append(
+      createCell('Sucursal', row.branch_name),
+      createCell('Ventas hoy', String(row.sale_count_today)),
+      createCell('Hoy', formatCurrency(row.today)),
+      createCell('Mes', formatCurrency(row.month)),
+    );
+    elements.trendBranchBody.append(linea);
+  }
+}
+
+function setTrendRange(range) {
+  trendRange = range;
+  const diario = range === 'daily';
+  elements.trendDailyButton.classList.toggle('is-active', diario);
+  elements.trendMonthlyButton.classList.toggle('is-active', !diario);
+  elements.trendDailyButton.setAttribute('aria-pressed', String(diario));
+  elements.trendMonthlyButton.setAttribute('aria-pressed', String(!diario));
+  renderTrendChart();
+}
+
+async function loadDashboardTrends() {
+  if (!activeTenantId) return;
+  try {
+    dashboardTrends = await getJson('/api/dashboard/trends', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderTrendComparison(dashboardTrends.comparison || {});
+    renderTrendChart();
+    renderTrendBranches(dashboardTrends.byBranch || []);
+  } catch (error) {
+    elements.trendChart.replaceChildren();
+    const aviso = document.createElement('p');
+    aviso.className = 'trend-empty';
+    aviso.textContent = error.message || 'No pudimos cargar la tendencia.';
+    elements.trendChart.append(aviso);
+  }
+}
+
+function attentionCards(data) {
+  const tarjetas = [];
+  const turnos = data.openShifts || [];
+  if (turnos.length) {
+    tarjetas.push({
+      tone: 'alert',
+      title: turnos.length === 1 ? 'Un turno sin cerrar' : `${turnos.length} turnos sin cerrar`,
+      detail: turnos
+        .slice(0, 3)
+        .map((turno) => `${turno.register_name} · ${turno.branch_name}`)
+        .join(' · '),
+      href: '#caja',
+      action: 'Ir a Caja',
+    });
+  }
+  const rechazos = data.rejectedDocuments || [];
+  if (rechazos.length) {
+    tarjetas.push({
+      tone: 'alert',
+      title: rechazos.length === 1
+        ? 'Una factura rechazada por la DIAN'
+        : `${rechazos.length} facturas rechazadas por la DIAN`,
+      detail: 'Corrige y reenvía antes de que se acumulen.',
+      href: '#facturacion',
+      action: 'Ver facturación',
+    });
+  }
+  const cartera = data.overdueReceivables || {};
+  if (Number(cartera.total) > 0) {
+    tarjetas.push({
+      tone: 'warn',
+      title: `${cartera.total} facturas vencidas`,
+      detail: `${formatCurrency(cartera.amount)} pendientes de cobro.`,
+      href: '#cartera',
+      action: 'Ver cartera',
+    });
+  }
+  if (Number(data.lowStockCount) > 0) {
+    tarjetas.push({
+      tone: 'warn',
+      title: `${data.lowStockCount} productos con existencia baja`,
+      detail: 'Quedan cinco unidades disponibles o menos.',
+      href: '#inventario',
+      action: 'Ver inventario',
+    });
+  }
+  return tarjetas;
+}
+
+async function loadDashboardAttention() {
+  if (!activeTenantId) return;
+  try {
+    const data = await getJson('/api/dashboard/attention', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    const tarjetas = attentionCards(data);
+    // Sin pendientes no se muestra un bloque vacío: la sección desaparece.
+    elements.attentionCenter.hidden = tarjetas.length === 0;
+    elements.attentionSummary.textContent = tarjetas.length === 1
+      ? 'Hay un asunto esperando una decisión.'
+      : `Hay ${tarjetas.length} asuntos esperando una decisión.`;
+    elements.attentionGrid.replaceChildren();
+    for (const tarjeta of tarjetas) {
+      const card = document.createElement('a');
+      card.className = `attention-card ${tarjeta.tone}`;
+      card.href = tarjeta.href;
+      const titulo = document.createElement('strong');
+      titulo.textContent = tarjeta.title;
+      const detalle = document.createElement('span');
+      detalle.textContent = tarjeta.detail;
+      const accion = document.createElement('b');
+      accion.textContent = `${tarjeta.action} →`;
+      card.append(titulo, detalle, accion);
+      elements.attentionGrid.append(card);
+    }
+  } catch {
+    elements.attentionCenter.hidden = true;
   }
 }
 
@@ -18534,6 +18762,9 @@ elements.kardexForm.addEventListener('submit', loadKardex);
 elements.kardexDialog.addEventListener('click', (event) => {
   if (event.target === elements.kardexDialog) closeKardexDialog();
 });
+
+elements.trendDailyButton.addEventListener('click', () => setTrendRange('daily'));
+elements.trendMonthlyButton.addEventListener('click', () => setTrendRange('monthly'));
 
 elements.closeCashSessionDialog.addEventListener('click', closeCashSessionDialog);
 elements.dismissCashSessionDialog.addEventListener('click', closeCashSessionDialog);

@@ -230,6 +230,174 @@ router.get('/executive', asyncHandler(async (req, res) => {
   res.json(summary);
 }));
 
+// El resumen ejecutivo entrega números sueltos de hoy y del mes. Sin serie no
+// hay tendencia, y sin tendencia el tablero solo confirma lo que ya se sabía.
+router.get('/trends', asyncHandler(async (req, res) => {
+  const [daily, monthly, comparison, byBranch] = await Promise.all([
+    query(
+      `WITH ventas AS (
+         SELECT s.id, s.total, s.created_at
+         FROM sales s
+         JOIN cash_sessions cs ON cs.id = s.cash_session_id
+         JOIN cash_registers cr ON cr.id = cs.cash_register_id
+         WHERE s.tenant_id = $1
+           AND s.status = 'COMPLETED'
+           AND ($2::uuid IS NULL OR cr.branch_id = $2)
+       )
+       -- generate_series rellena los días sin ventas: si se omitieran, la
+       -- gráfica uniría dos fechas lejanas y dibujaría una tendencia falsa.
+       SELECT dia::date day,
+              COALESCE(SUM(v.total), 0) total,
+              COUNT(v.id)::integer sale_count
+       FROM generate_series(
+              CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day'
+            ) dia
+       LEFT JOIN ventas v
+         ON v.created_at >= dia AND v.created_at < dia + INTERVAL '1 day'
+       GROUP BY dia
+       ORDER BY dia`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      `WITH ventas AS (
+         SELECT s.id, s.total, s.created_at
+         FROM sales s
+         JOIN cash_sessions cs ON cs.id = s.cash_session_id
+         JOIN cash_registers cr ON cr.id = cs.cash_register_id
+         WHERE s.tenant_id = $1
+           AND s.status = 'COMPLETED'
+           AND ($2::uuid IS NULL OR cr.branch_id = $2)
+       )
+       SELECT mes::date month,
+              COALESCE(SUM(v.total), 0) total,
+              COUNT(v.id)::integer sale_count
+       FROM generate_series(
+              date_trunc('month', CURRENT_DATE) - INTERVAL '11 months',
+              date_trunc('month', CURRENT_DATE),
+              INTERVAL '1 month'
+            ) mes
+       LEFT JOIN ventas v
+         ON v.created_at >= mes AND v.created_at < mes + INTERVAL '1 month'
+       GROUP BY mes
+       ORDER BY mes`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      // Comparar contra el mismo día de la semana pasada y el mismo mes del año
+      // pasado evita el espejismo de medir un lunes contra un sábado.
+      `WITH ventas AS (
+         SELECT s.total, s.created_at
+         FROM sales s
+         JOIN cash_sessions cs ON cs.id = s.cash_session_id
+         JOIN cash_registers cr ON cr.id = cs.cash_register_id
+         WHERE s.tenant_id = $1
+           AND s.status = 'COMPLETED'
+           AND ($2::uuid IS NULL OR cr.branch_id = $2)
+       )
+       SELECT
+         COALESCE(SUM(total) FILTER (
+           WHERE created_at >= CURRENT_DATE
+         ), 0) today,
+         COALESCE(SUM(total) FILTER (
+           WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+             AND created_at < CURRENT_DATE - INTERVAL '6 days'
+         ), 0) same_weekday_last_week,
+         COALESCE(SUM(total) FILTER (
+           WHERE created_at >= date_trunc('month', CURRENT_DATE)
+         ), 0) this_month,
+         COALESCE(SUM(total) FILTER (
+           WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 year'
+             AND created_at < date_trunc('month', CURRENT_DATE) - INTERVAL '1 year'
+               + (CURRENT_DATE - date_trunc('month', CURRENT_DATE)::date + 1) * INTERVAL '1 day'
+         ), 0) same_month_last_year
+       FROM ventas`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      `SELECT b.id branch_id, b.name branch_name,
+              COALESCE(SUM(s.total) FILTER (WHERE s.created_at >= CURRENT_DATE), 0) today,
+              COALESCE(SUM(s.total) FILTER (
+                WHERE s.created_at >= date_trunc('month', CURRENT_DATE)
+              ), 0) month,
+              COUNT(s.id) FILTER (WHERE s.created_at >= CURRENT_DATE)::integer sale_count_today
+       FROM branches b
+       LEFT JOIN cash_registers cr ON cr.branch_id = b.id
+       LEFT JOIN cash_sessions cs ON cs.cash_register_id = cr.id
+       LEFT JOIN sales s
+         ON s.cash_session_id = cs.id
+        AND s.tenant_id = $1
+        AND s.status = 'COMPLETED'
+       WHERE b.tenant_id = $1
+         AND b.active = TRUE
+       GROUP BY b.id, b.name
+       ORDER BY month DESC, b.name`,
+      [req.context.tenantId],
+    ),
+  ]);
+  res.json({
+    daily: daily.rows,
+    monthly: monthly.rows,
+    comparison: comparison.rows[0],
+    byBranch: byBranch.rows,
+  });
+}));
+
+// Lo que exige una decisión hoy, junto y arriba. Repartido entre indicadores
+// se pierde: un turno sin cerrar o una factura rechazada no son estadística,
+// son trabajo pendiente.
+router.get('/attention', asyncHandler(async (req, res) => {
+  const [shifts, rejected, stock, overdue] = await Promise.all([
+    query(
+      `SELECT cs.id, cr.name register_name, b.name branch_name, cs.opened_at
+       FROM cash_sessions cs
+       JOIN cash_registers cr ON cr.id = cs.cash_register_id
+       JOIN branches b ON b.id = cr.branch_id
+       WHERE cs.tenant_id = $1
+         AND cs.status = 'OPEN'
+         AND cs.opened_at < CURRENT_DATE
+         AND ($2::uuid IS NULL OR cr.branch_id = $2)
+       ORDER BY cs.opened_at`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      `SELECT id, document_type, status, created_at
+       FROM electronic_documents
+       WHERE company_id = $1
+         AND status = 'REJECTED'
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [req.context.tenantId],
+    ),
+    query(
+      `SELECT COUNT(*)::integer total
+       FROM inventory_balances ib
+       JOIN warehouses w
+         ON w.id = ib.warehouse_id AND w.tenant_id = ib.tenant_id
+       WHERE ib.tenant_id = $1
+         AND ib.on_hand > 0
+         AND ib.on_hand - ib.reserved <= 5
+         AND ($2::uuid IS NULL OR w.branch_id = $2)`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+    query(
+      `SELECT COUNT(*)::integer total,
+              COALESCE(SUM(total - paid_amount), 0) amount
+       FROM ar_invoices
+       WHERE tenant_id = $1
+         AND status IN ('ISSUED','PARTIAL')
+         AND due_date < CURRENT_DATE
+         AND ($2::uuid IS NULL OR branch_id = $2)`,
+      [req.context.tenantId, req.context.branchId],
+    ),
+  ]);
+  res.json({
+    openShifts: shifts.rows,
+    rejectedDocuments: rejected.rows,
+    lowStockCount: stock.rows[0]?.total || 0,
+    overdueReceivables: overdue.rows[0] || { total: 0, amount: 0 },
+  });
+}));
+
 router.get('/onboarding', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT
