@@ -7,6 +7,7 @@ import request from 'supertest';
 import secureAssetsRouter from '../src/modules/secure-assets.js';
 import { errorHandler } from '../src/middleware.js';
 import { createApp } from '../src/app.js';
+import { closeDatabase } from '../src/db.js';
 
 const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
 
@@ -91,6 +92,7 @@ test(
       await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
+      await closeDatabase();
     }
   },
 );
@@ -177,6 +179,7 @@ test(
       await cleanupTenant(pool, ids.companyB);
       await pool.query('DELETE FROM users WHERE id = $1', [ids.user]);
       await pool.end();
+      await closeDatabase();
     }
   },
 );
