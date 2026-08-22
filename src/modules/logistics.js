@@ -163,6 +163,18 @@ router.patch(
   '/labels/settings',
   requirePermission('logistics.labels'),
   asyncHandler(async (req, res) => {
+    const defaults = {
+      templateId: 'CUSTOM',
+      showBarcodeValue: true,
+      productFontSizePt: 8,
+      priceFontSizePt: 11,
+      barcodeHeightMm: 8,
+      barcodeWidth: 1.2,
+      offsetXmm: 0,
+      offsetYmm: 0,
+      productLines: 1,
+    };
+    const submitted = { ...defaults, ...req.body };
     const widthMm = Number(req.body.widthMm);
     const heightMm = Number(req.body.heightMm);
     const booleanFields = [
@@ -177,20 +189,20 @@ router.patch(
       const number = Number(value);
       return Number.isFinite(number) && number >= min && number <= max;
     };
-    const templateId = text(req.body.templateId, 30)?.toUpperCase() || 'CUSTOM';
+    const templateId = text(submitted.templateId, 30)?.toUpperCase() || 'CUSTOM';
     const validTemplates = ['PRICE_COMPACT', 'WAREHOUSE', 'LARGE_PRICE', 'CUSTOM'];
     if (!Number.isFinite(widthMm) || widthMm < 25 || widthMm > 120 ||
         !Number.isFinite(heightMm) || heightMm < 15 || heightMm > 100 ||
-        booleanFields.some((field) => typeof req.body[field] !== 'boolean') ||
+        booleanFields.some((field) => typeof submitted[field] !== 'boolean') ||
         !validTemplates.includes(templateId) ||
-        !boundedNumber(req.body.productFontSizePt, 6, 22) ||
-        !boundedNumber(req.body.priceFontSizePt, 7, 26) ||
-        !boundedNumber(req.body.barcodeHeightMm, 5, 35) ||
-        !boundedNumber(req.body.barcodeWidth, 0.6, 3) ||
-        !boundedNumber(req.body.offsetXmm, -5, 5) ||
-        !boundedNumber(req.body.offsetYmm, -5, 5) ||
-        !Number.isInteger(Number(req.body.productLines)) ||
-        Number(req.body.productLines) < 1 || Number(req.body.productLines) > 3) {
+        !boundedNumber(submitted.productFontSizePt, 6, 22) ||
+        !boundedNumber(submitted.priceFontSizePt, 7, 26) ||
+        !boundedNumber(submitted.barcodeHeightMm, 5, 35) ||
+        !boundedNumber(submitted.barcodeWidth, 0.6, 3) ||
+        !boundedNumber(submitted.offsetXmm, -5, 5) ||
+        !boundedNumber(submitted.offsetYmm, -5, 5) ||
+        !Number.isInteger(Number(submitted.productLines)) ||
+        Number(submitted.productLines) < 1 || Number(submitted.productLines) > 3) {
       throw new AppError(
         'Revisa el tamaño y las opciones de la etiqueta.',
         422,
@@ -206,14 +218,14 @@ router.patch(
       showPrice: req.body.showPrice,
       showSku: req.body.showSku,
       showBarcode: req.body.showBarcode,
-      showBarcodeValue: req.body.showBarcodeValue,
-      productFontSizePt: Number(req.body.productFontSizePt),
-      priceFontSizePt: Number(req.body.priceFontSizePt),
-      barcodeHeightMm: Number(req.body.barcodeHeightMm),
-      barcodeWidth: Number(req.body.barcodeWidth),
-      offsetXmm: Number(req.body.offsetXmm),
-      offsetYmm: Number(req.body.offsetYmm),
-      productLines: Number(req.body.productLines),
+      showBarcodeValue: submitted.showBarcodeValue,
+      productFontSizePt: Number(submitted.productFontSizePt),
+      priceFontSizePt: Number(submitted.priceFontSizePt),
+      barcodeHeightMm: Number(submitted.barcodeHeightMm),
+      barcodeWidth: Number(submitted.barcodeWidth),
+      offsetXmm: Number(submitted.offsetXmm),
+      offsetYmm: Number(submitted.offsetYmm),
+      productLines: Number(submitted.productLines),
       footerText: text(req.body.footerText, 80) || '',
     };
     const saved = await withTransaction(async (client) => {
