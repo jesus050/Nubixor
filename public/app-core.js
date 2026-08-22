@@ -437,6 +437,37 @@ const elements = {
   loadKardexButton: document.querySelector('#loadKardexButton'),
   kardexTableBody: document.querySelector('#kardexTableBody'),
   kardexState: document.querySelector('#kardexState'),
+  cashSessionDialog: document.querySelector('#cashSessionDialog'),
+  closeCashSessionDialog: document.querySelector('#closeCashSessionDialog'),
+  dismissCashSessionDialog: document.querySelector('#dismissCashSessionDialog'),
+  printCashSessionButton: document.querySelector('#printCashSessionButton'),
+  cashDetailTitle: document.querySelector('#cashDetailTitle'),
+  cashDetailSubtitle: document.querySelector('#cashDetailSubtitle'),
+  cashDetailKpis: document.querySelector('#cashDetailKpis'),
+  cashDetailCompanyBody: document.querySelector('#cashDetailCompanyBody'),
+  cashDetailCompanyCount: document.querySelector('#cashDetailCompanyCount'),
+  cashDetailCompanyState: document.querySelector('#cashDetailCompanyState'),
+  cashDetailMovementBody: document.querySelector('#cashDetailMovementBody'),
+  cashDetailMovementCount: document.querySelector('#cashDetailMovementCount'),
+  cashDetailMovementState: document.querySelector('#cashDetailMovementState'),
+  cashDetailSaleBody: document.querySelector('#cashDetailSaleBody'),
+  cashDetailSaleCount: document.querySelector('#cashDetailSaleCount'),
+  cashDetailSaleState: document.querySelector('#cashDetailSaleState'),
+  cashDetailCountBody: document.querySelector('#cashDetailCountBody'),
+  cashDetailCountTotal: document.querySelector('#cashDetailCountTotal'),
+  cashDetailCountState: document.querySelector('#cashDetailCountState'),
+  cashDetailNotes: document.querySelector('#cashDetailNotes'),
+  attentionCenter: document.querySelector('#attentionCenter'),
+  attentionGrid: document.querySelector('#attentionGrid'),
+  attentionSummary: document.querySelector('#attentionSummary'),
+  trendCompare: document.querySelector('#trendCompare'),
+  trendChart: document.querySelector('#trendChart'),
+  trendChartCaption: document.querySelector('#trendChartCaption'),
+  trendDailyButton: document.querySelector('#trendDailyButton'),
+  trendMonthlyButton: document.querySelector('#trendMonthlyButton'),
+  trendBranchBody: document.querySelector('#trendBranchBody'),
+  trendBranchCount: document.querySelector('#trendBranchCount'),
+  trendBranchState: document.querySelector('#trendBranchState'),
   replenishmentAlertCount: document.querySelector('#replenishmentAlertCount'),
   replenishmentReadyCount: document.querySelector('#replenishmentReadyCount'),
   replenishmentList: document.querySelector('#replenishmentList'),
@@ -5226,10 +5257,227 @@ async function loadExecutiveSummary() {
       headers: { 'x-tenant-id': activeTenantId },
     });
     setExecutiveSummary(summary);
+    // Tendencia y pendientes acompañan al resumen, pero no lo bloquean: si
+    // alguno falla, el tablero sigue mostrando sus cifras.
+    loadDashboardTrends();
+    loadDashboardAttention();
     return summary;
   } catch (error) {
     setExecutiveSummary();
     throw error;
+  }
+}
+
+/* ---------- Tendencia y pendientes del tablero ---------- */
+
+let dashboardTrends = null;
+let trendRange = 'daily';
+
+function formatTrendLabel(value, range) {
+  const fecha = new Date(value);
+  return range === 'daily'
+    ? new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' }).format(fecha)
+    : new Intl.DateTimeFormat('es-CO', { month: 'short', year: '2-digit' }).format(fecha);
+}
+
+function variationLabel(actual, referencia) {
+  const base = Number(referencia || 0);
+  const valor = Number(actual || 0);
+  if (base === 0) return { text: base === valor ? 'Sin referencia' : 'Sin base previa', tone: 'flat' };
+  const cambio = ((valor - base) / base) * 100;
+  const tone = Math.abs(cambio) < 0.5 ? 'flat' : (cambio > 0 ? 'up' : 'down');
+  const signo = cambio > 0 ? '+' : '';
+  return { text: `${signo}${cambio.toFixed(1)} %`, tone };
+}
+
+function renderTrendComparison(comparison = {}) {
+  const tarjetas = [
+    {
+      label: 'Hoy',
+      value: comparison.today,
+      caption: 'contra el mismo día de la semana pasada',
+      reference: comparison.same_weekday_last_week,
+    },
+    {
+      label: 'Este mes',
+      value: comparison.this_month,
+      caption: 'contra el mismo tramo del año pasado',
+      reference: comparison.same_month_last_year,
+    },
+  ];
+  elements.trendCompare.replaceChildren();
+  for (const tarjeta of tarjetas) {
+    const card = document.createElement('article');
+    const label = document.createElement('small');
+    label.textContent = tarjeta.label;
+    const value = document.createElement('strong');
+    value.textContent = formatCurrency(tarjeta.value || 0);
+    const variacion = variationLabel(tarjeta.value, tarjeta.reference);
+    const delta = document.createElement('span');
+    delta.className = `trend-delta ${variacion.tone}`;
+    delta.textContent = variacion.text;
+    const caption = document.createElement('small');
+    caption.className = 'trend-caption';
+    caption.textContent = `${formatCurrency(tarjeta.reference || 0)} ${tarjeta.caption}`;
+    card.append(label, value, delta, caption);
+    elements.trendCompare.append(card);
+  }
+}
+
+// Barras dibujadas con elementos, no con una librería: son treinta valores y
+// así heredan el tema y el foco del resto de la interfaz.
+function renderTrendChart() {
+  if (!dashboardTrends) return;
+  const serie = trendRange === 'daily' ? dashboardTrends.daily : dashboardTrends.monthly;
+  const puntos = Array.isArray(serie) ? serie : [];
+  const maximo = puntos.reduce((mayor, punto) => Math.max(mayor, Number(punto.total || 0)), 0);
+  elements.trendChart.replaceChildren();
+  elements.trendChartCaption.textContent = trendRange === 'daily'
+    ? 'Ventas completadas por día, últimos 30 días.'
+    : 'Ventas completadas por mes, últimos 12 meses.';
+  for (const punto of puntos) {
+    const total = Number(punto.total || 0);
+    const columna = document.createElement('div');
+    columna.className = 'trend-bar';
+    const etiqueta = formatTrendLabel(punto.day || punto.month, trendRange);
+    // El título es lo que lee el lector de pantalla y lo que sale al pasar el
+    // cursor: la barra sola no dice nada.
+    columna.title = `${etiqueta}: ${formatCurrency(total)} · ${punto.sale_count} ventas`;
+    const relleno = document.createElement('i');
+    relleno.style.height = maximo > 0 ? `${Math.max((total / maximo) * 100, total > 0 ? 2 : 0)}%` : '0%';
+    if (total === 0) relleno.classList.add('empty');
+    columna.append(relleno);
+    elements.trendChart.append(columna);
+  }
+  if (!puntos.length) {
+    const vacio = document.createElement('p');
+    vacio.className = 'trend-empty';
+    vacio.textContent = 'Todavía no hay ventas para dibujar una tendencia.';
+    elements.trendChart.append(vacio);
+  }
+}
+
+function renderTrendBranches(rows = []) {
+  elements.trendBranchBody.replaceChildren();
+  elements.trendBranchCount.textContent = String(rows.length);
+  elements.trendBranchState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const linea = document.createElement('tr');
+    linea.append(
+      createCell('Sucursal', row.branch_name),
+      createCell('Ventas hoy', String(row.sale_count_today)),
+      createCell('Hoy', formatCurrency(row.today)),
+      createCell('Mes', formatCurrency(row.month)),
+    );
+    elements.trendBranchBody.append(linea);
+  }
+}
+
+function setTrendRange(range) {
+  trendRange = range;
+  const diario = range === 'daily';
+  elements.trendDailyButton.classList.toggle('is-active', diario);
+  elements.trendMonthlyButton.classList.toggle('is-active', !diario);
+  elements.trendDailyButton.setAttribute('aria-pressed', String(diario));
+  elements.trendMonthlyButton.setAttribute('aria-pressed', String(!diario));
+  renderTrendChart();
+}
+
+async function loadDashboardTrends() {
+  if (!activeTenantId) return;
+  try {
+    dashboardTrends = await getJson('/api/dashboard/trends', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderTrendComparison(dashboardTrends.comparison || {});
+    renderTrendChart();
+    renderTrendBranches(dashboardTrends.byBranch || []);
+  } catch (error) {
+    elements.trendChart.replaceChildren();
+    const aviso = document.createElement('p');
+    aviso.className = 'trend-empty';
+    aviso.textContent = error.message || 'No pudimos cargar la tendencia.';
+    elements.trendChart.append(aviso);
+  }
+}
+
+function attentionCards(data) {
+  const tarjetas = [];
+  const turnos = data.openShifts || [];
+  if (turnos.length) {
+    tarjetas.push({
+      tone: 'alert',
+      title: turnos.length === 1 ? 'Un turno sin cerrar' : `${turnos.length} turnos sin cerrar`,
+      detail: turnos
+        .slice(0, 3)
+        .map((turno) => `${turno.register_name} · ${turno.branch_name}`)
+        .join(' · '),
+      href: '#caja',
+      action: 'Ir a Caja',
+    });
+  }
+  const rechazos = data.rejectedDocuments || [];
+  if (rechazos.length) {
+    tarjetas.push({
+      tone: 'alert',
+      title: rechazos.length === 1
+        ? 'Una factura rechazada por la DIAN'
+        : `${rechazos.length} facturas rechazadas por la DIAN`,
+      detail: 'Corrige y reenvía antes de que se acumulen.',
+      href: '#facturacion',
+      action: 'Ver facturación',
+    });
+  }
+  const cartera = data.overdueReceivables || {};
+  if (Number(cartera.total) > 0) {
+    tarjetas.push({
+      tone: 'warn',
+      title: `${cartera.total} facturas vencidas`,
+      detail: `${formatCurrency(cartera.amount)} pendientes de cobro.`,
+      href: '#cartera',
+      action: 'Ver cartera',
+    });
+  }
+  if (Number(data.lowStockCount) > 0) {
+    tarjetas.push({
+      tone: 'warn',
+      title: `${data.lowStockCount} productos con existencia baja`,
+      detail: 'Quedan cinco unidades disponibles o menos.',
+      href: '#inventario',
+      action: 'Ver inventario',
+    });
+  }
+  return tarjetas;
+}
+
+async function loadDashboardAttention() {
+  if (!activeTenantId) return;
+  try {
+    const data = await getJson('/api/dashboard/attention', {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    const tarjetas = attentionCards(data);
+    // Sin pendientes no se muestra un bloque vacío: la sección desaparece.
+    elements.attentionCenter.hidden = tarjetas.length === 0;
+    elements.attentionSummary.textContent = tarjetas.length === 1
+      ? 'Hay un asunto esperando una decisión.'
+      : `Hay ${tarjetas.length} asuntos esperando una decisión.`;
+    elements.attentionGrid.replaceChildren();
+    for (const tarjeta of tarjetas) {
+      const card = document.createElement('a');
+      card.className = `attention-card ${tarjeta.tone}`;
+      card.href = tarjeta.href;
+      const titulo = document.createElement('strong');
+      titulo.textContent = tarjeta.title;
+      const detalle = document.createElement('span');
+      detalle.textContent = tarjeta.detail;
+      const accion = document.createElement('b');
+      accion.textContent = `${tarjeta.action} →`;
+      card.append(titulo, detalle, accion);
+      elements.attentionGrid.append(card);
+    }
+  } catch {
+    elements.attentionCenter.hidden = true;
   }
 }
 
@@ -5490,9 +5738,17 @@ function renderCashControl() {
   elements.cashSessionList.replaceChildren();
   elements.cashSessionCount.textContent = String(sessions.length);
   elements.cashSessionState.hidden = sessions.length > 0;
-  for (const item of sessions.slice(0, 8)) {
-    const row = document.createElement('div');
+  for (const item of sessions) {
+    // Cada turno abre su cierre completo: el servidor ya devuelve movimientos,
+    // ventas, conteo y corte por empresa.
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'cash-session-row';
+    row.dataset.sessionId = item.id;
+    row.setAttribute(
+      'aria-label',
+      `Ver el cierre del turno de ${item.register_name}`,
+    );
     const copy = document.createElement('div');
     copy.className = 'cash-session-copy';
     const title = document.createElement('strong');
@@ -10104,6 +10360,187 @@ function openKardexDialog() {
 
 function closeKardexDialog() {
   elements.kardexDialog.close();
+}
+
+/* ---------- Cierre de turno de caja ---------- */
+
+const CASH_MOVEMENT_LABELS = {
+  INCOME: 'Ingreso',
+  EXPENSE: 'Gasto',
+  WITHDRAWAL: 'Retiro',
+};
+
+const CASH_PAYMENT_LABELS = {
+  CASH: 'Efectivo',
+  CARD: 'Tarjeta',
+  TRANSFER: 'Transferencia',
+  MIXED: 'Mixto',
+  CREDIT: 'Crédito',
+};
+
+function formatCashDetailTime(value) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function cashDetailCell(label, value, className) {
+  const cell = createCell(label, value);
+  if (className) cell.className = className;
+  return cell;
+}
+
+function renderCashDetailKpis(detail) {
+  const closed = detail.status !== 'OPEN';
+  const counted = Number(detail.closing_amount || 0);
+  const expected = Number(detail.calculated_cash || 0);
+  const difference = Number(detail.difference || 0);
+  const tiles = [
+    ['Base inicial', formatCurrency(detail.opening_amount || 0)],
+    ['Ventas en efectivo', formatCurrency(detail.cash_sales || 0)],
+    ['Ventas con tarjeta', formatCurrency(detail.card_sales || 0)],
+    ['Transferencias', formatCurrency(detail.transfer_sales || 0)],
+    ['Ingresos manuales', formatCurrency(detail.manual_income || 0)],
+    ['Gastos', formatCurrency(detail.expenses || 0)],
+    ['Retiros', formatCurrency(detail.withdrawals || 0)],
+    ['Efectivo esperado', formatCurrency(expected)],
+  ];
+  if (closed) tiles.push(['Efectivo contado', formatCurrency(counted)]);
+  elements.cashDetailKpis.replaceChildren();
+  for (const [label, value] of tiles) {
+    const tile = document.createElement('article');
+    const caption = document.createElement('small');
+    caption.textContent = label;
+    const amount = document.createElement('strong');
+    amount.textContent = value;
+    tile.append(caption, amount);
+    elements.cashDetailKpis.append(tile);
+  }
+  if (!closed) return;
+  const tile = document.createElement('article');
+  tile.className = Math.abs(difference) < 0.01
+    ? 'cash-detail-difference ok'
+    : 'cash-detail-difference alert';
+  const caption = document.createElement('small');
+  caption.textContent = 'Diferencia';
+  const amount = document.createElement('strong');
+  amount.textContent = formatCurrency(difference);
+  tile.append(caption, amount);
+  elements.cashDetailKpis.append(tile);
+}
+
+function renderCashDetailCompanies(rows) {
+  elements.cashDetailCompanyBody.replaceChildren();
+  elements.cashDetailCompanyCount.textContent = String(rows.length);
+  elements.cashDetailCompanyState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Empresa', row.company_name),
+      cashDetailCell('Ventas', String(row.sale_count), 'numeric'),
+      cashDetailCell('Efectivo', formatCurrency(row.cash_sales), 'numeric'),
+      cashDetailCell('Tarjeta', formatCurrency(row.card_sales), 'numeric'),
+      cashDetailCell('Transferencia', formatCurrency(row.transfer_sales), 'numeric'),
+      cashDetailCell('Recaudado', formatCurrency(row.collected), 'numeric'),
+    );
+    elements.cashDetailCompanyBody.append(line);
+  }
+}
+
+function renderCashDetailMovements(rows) {
+  elements.cashDetailMovementBody.replaceChildren();
+  elements.cashDetailMovementCount.textContent = String(rows.length);
+  elements.cashDetailMovementState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    const incoming = row.movement_type === 'INCOME';
+    line.append(
+      cashDetailCell('Hora', formatCashDetailTime(row.created_at)),
+      cashDetailCell('Tipo', CASH_MOVEMENT_LABELS[row.movement_type] || row.movement_type),
+      cashDetailCell('Categoría', row.category),
+      cashDetailCell('Referencia', row.reference),
+      cashDetailCell('Notas', row.notes),
+      cashDetailCell(
+        'Monto',
+        `${incoming ? '+' : '−'} ${formatCurrency(row.amount)}`,
+        incoming ? 'numeric' : 'numeric negative',
+      ),
+    );
+    elements.cashDetailMovementBody.append(line);
+  }
+}
+
+function renderCashDetailSales(rows) {
+  elements.cashDetailSaleBody.replaceChildren();
+  elements.cashDetailSaleCount.textContent = String(rows.length);
+  elements.cashDetailSaleState.hidden = rows.length > 0;
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Hora', formatCashDetailTime(row.created_at)),
+      cashDetailCell('Comprobante', row.sequence_number ? `#${row.sequence_number}` : ''),
+      cashDetailCell('Empresa', row.company_name),
+      cashDetailCell('Cliente', row.customer_name),
+      cashDetailCell('Medio', CASH_PAYMENT_LABELS[row.payment_method] || row.payment_method),
+      cashDetailCell('Ítems', String(row.item_count), 'numeric'),
+      cashDetailCell('Total', formatCurrency(row.total), 'numeric'),
+    );
+    elements.cashDetailSaleBody.append(line);
+  }
+}
+
+function renderCashDetailCounts(rows) {
+  elements.cashDetailCountBody.replaceChildren();
+  elements.cashDetailCountState.hidden = rows.length > 0;
+  const total = rows.reduce((sum, row) => sum + Number(row.total || 0), 0);
+  elements.cashDetailCountTotal.textContent = formatCurrency(total);
+  for (const row of rows) {
+    const line = document.createElement('tr');
+    line.append(
+      cashDetailCell('Denominación', formatCurrency(row.denomination), 'numeric'),
+      cashDetailCell('Cantidad', String(row.quantity), 'numeric'),
+      cashDetailCell('Subtotal', formatCurrency(row.total), 'numeric'),
+    );
+    elements.cashDetailCountBody.append(line);
+  }
+}
+
+function renderCashSessionDetail(detail) {
+  const closed = detail.status !== 'OPEN';
+  elements.cashDetailTitle.textContent =
+    `${detail.register_name} · ${closed ? 'Turno cerrado' : 'Turno abierto'}`;
+  const opened = formatCashDetailTime(detail.opened_at);
+  elements.cashDetailSubtitle.textContent = closed
+    ? `${detail.branch_name} · abierto ${opened} · cerrado ${formatCashDetailTime(detail.closed_at)}`
+    : `${detail.branch_name} · abierto ${opened} · en operación`;
+  renderCashDetailKpis(detail);
+  renderCashDetailCompanies(detail.companyBreakdown || []);
+  renderCashDetailMovements(detail.movements || []);
+  renderCashDetailSales(detail.sales || []);
+  renderCashDetailCounts(detail.counts || []);
+  const notes = (detail.closing_notes || '').trim();
+  elements.cashDetailNotes.hidden = !notes;
+  elements.cashDetailNotes.textContent = notes ? `Notas de cierre: ${notes}` : '';
+}
+
+async function openCashSessionDetail(sessionId) {
+  try {
+    const detail = await getJson(`/api/pos/sessions/${sessionId}`, {
+      headers: { 'x-tenant-id': activeTenantId },
+    });
+    renderCashSessionDetail(detail);
+    elements.cashSessionDialog.showModal();
+  } catch (error) {
+    showToast(error.message || 'No pudimos abrir el cierre del turno.');
+  }
+}
+
+function closeCashSessionDialog() {
+  elements.cashSessionDialog.close();
 }
 
 async function loadKardex(event) {
@@ -17700,6 +18137,20 @@ elements.closeKardexDialog.addEventListener('click', closeKardexDialog);
 elements.kardexForm.addEventListener('submit', loadKardex);
 elements.kardexDialog.addEventListener('click', (event) => {
   if (event.target === elements.kardexDialog) closeKardexDialog();
+});
+
+elements.trendDailyButton.addEventListener('click', () => setTrendRange('daily'));
+elements.trendMonthlyButton.addEventListener('click', () => setTrendRange('monthly'));
+
+elements.closeCashSessionDialog.addEventListener('click', closeCashSessionDialog);
+elements.dismissCashSessionDialog.addEventListener('click', closeCashSessionDialog);
+elements.cashSessionDialog.addEventListener('click', (event) => {
+  if (event.target === elements.cashSessionDialog) closeCashSessionDialog();
+});
+elements.printCashSessionButton.addEventListener('click', () => window.print());
+elements.cashSessionList.addEventListener('click', (event) => {
+  const row = event.target.closest('[data-session-id]');
+  if (row) openCashSessionDetail(row.dataset.sessionId);
 });
 document.querySelectorAll('[data-inventory-tab]').forEach((button) => {
   button.addEventListener('click', () => selectInventoryPanel(button.dataset.inventoryTab));

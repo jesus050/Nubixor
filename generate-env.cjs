@@ -1,0 +1,32 @@
+const crypto = require('crypto');
+const dbPass = crypto.randomBytes(16).toString('hex');
+const backupKey = crypto.randomBytes(32).toString('base64');
+const billingKey = crypto.randomBytes(32).toString('base64');
+
+console.log(`NODE_ENV=production
+PORT=4100
+APP_NAME=Nubixor
+PUBLIC_BASE_URL=https://app.nubixor.tech
+DATABASE_URL=postgresql://megasuite:${dbPass}@postgres:5432/megasuite
+DATABASE_SSL=false
+DATABASE_SSL_REJECT_UNAUTHORIZED=true
+DATABASE_POOL_MAX=20
+DATABASE_CONNECT_TIMEOUT_MS=5000
+REDIS_URL=redis://redis:6379/0
+CORS_ORIGINS=https://app.nubixor.tech
+TRUST_PROXY=true
+JSON_BODY_LIMIT=10mb
+STORAGE_DIR=/var/lib/megasuite/storage
+PASSWORD_RESET_WEBHOOK_URL=
+PASSWORD_RESET_WEBHOOK_SECRET=
+BACKUP_ENABLED=true
+BACKUP_INTERVAL_HOURS=24
+BACKUP_RETENTION_DAYS=30
+BACKUP_DIR=/var/lib/megasuite/backups
+BACKUP_ENCRYPTION_KEY=${backupKey}
+ELECTRONIC_BILLING_ENCRYPTION_KEY=${billingKey}
+POSTGRES_USER=megasuite
+POSTGRES_DB=megasuite
+POSTGRES_PASSWORD=${dbPass}
+APP_DOMAIN=app.nubixor.tech
+`);

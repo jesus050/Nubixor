@@ -1,4 +1,5 @@
 import { closeDatabase, query, withTransaction } from '../src/db.js';
+import { runWithoutTenantIsolation } from '../src/tenant-context.js';
 import {
   postCashMovementAccounting,
   postCashSessionClosingAccounting,
@@ -11,6 +12,9 @@ import {
   postSaleAccounting,
 } from '../src/accounting.js';
 
+// El reproceso contable cruza empresas por definición, así que corre con el
+// aislamiento levantado. Es trabajo de mantenimiento, nunca una petición.
+await runWithoutTenantIsolation(async () => {
 const candidates = await query(
   `WITH sources AS (
      SELECT company_id tenant_id, 'SALE' source_type, id source_id,
@@ -127,4 +131,5 @@ for (const source of candidates.rows) {
 }
 
 console.info(`Backfill contable completo: ${candidates.rowCount} operaciones.`);
+});
 await closeDatabase();

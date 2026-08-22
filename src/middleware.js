@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { logger } from './shared/logger.js';
+import { runWithTenantScope } from './tenant-context.js';
 
 export function requestContext(req, _res, next) {
   const suppliedRequestId = req.header('x-request-id');
@@ -19,7 +20,10 @@ export function requestContext(req, _res, next) {
     requestId,
   };
   _res.setHeader('x-request-id', requestId);
-  next();
+  // El resto de la petición corre dentro del ámbito de esta empresa para que la
+  // capa de datos la declare en cada conexión. El objeto es el mismo que
+  // req.context, así que si la empresa se resuelve más adelante, se ve aquí.
+  runWithTenantScope(req.context, next);
 }
 
 export function requestLogger(req, res, next) {
@@ -70,6 +74,7 @@ export function errorHandler(error, req, res, _next) {
   return res.status(status).json({
     error: expose ? error.message : 'Error interno.',
     code: expose ? (error.code || 'REQUEST_ERROR') : 'INTERNAL_ERROR',
+    ...(expose && error.details ? { details: error.details } : {}),
     requestId: req.context?.requestId,
   });
 }

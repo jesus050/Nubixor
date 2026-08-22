@@ -9,6 +9,16 @@ import { AppError } from '../shared/errors.js';
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ORDER_TRANSITIONS = Object.freeze({
+  DRAFT: new Set(['SENT', 'CONFIRMED', 'CANCELLED']),
+  SENT: new Set(['ACCEPTED', 'CANCELLED', 'EXPIRED']),
+  ACCEPTED: new Set(['CONFIRMED', 'CANCELLED']),
+  CONFIRMED: new Set(['READY_TO_INVOICE', 'CANCELLED']),
+  READY_TO_INVOICE: new Set(['INVOICED', 'CANCELLED']),
+  INVOICED: new Set(),
+  CANCELLED: new Set(),
+  EXPIRED: new Set(),
+});
 
 router.use(requireTenant);
 
@@ -19,6 +29,17 @@ function isUuid(value) {
 function text(value, max = 1000) {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, max);
+}
+
+// PostgreSQL devuelve las columnas DATE como Date de JavaScript. validDate solo
+// acepta cadenas AAAA-MM-DD, así que normalizamos antes de validar un valor que
+// viene de la base y no de la petición.
+function dateOnly(value) {
+  if (!(value instanceof Date)) return value;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function validDate(value) {
@@ -80,6 +101,118 @@ async function loadCommercialItems(client, tenantId, items) {
       lineTotal,
     };
   });
+}
+
+function transitionAllowed(from, to) {
+  return ORDER_TRANSITIONS[from]?.has(to) || false;
+}
+
+function statusTransitionError(from, to) {
+  return new AppError(
+    `No se puede pasar un pedido de ${from} a ${to}.`,
+    409,
+    'INVALID_STATUS_TRANSITION',
+  );
+}
+
+async function reserveOrderInventory(client, { tenantId, order, warehouseId = null }) {
+  if (warehouseId && !isUuid(warehouseId)) {
+    throw new AppError('La bodega no es válida.', 422, 'INVALID_ORDER_WAREHOUSE');
+  }
+  if (warehouseId) {
+    const warehouse = await client.query(
+      `SELECT 1 FROM warehouses
+       WHERE id = $1 AND tenant_id = $2 AND branch_id = $3 AND active = TRUE`,
+      [warehouseId, tenantId, order.branch_id],
+    );
+    if (!warehouse.rowCount) {
+      throw new AppError('La bodega no pertenece a la sucursal del pedido.', 422, 'INVALID_ORDER_WAREHOUSE');
+    }
+  }
+  const items = await client.query(
+    `SELECT id, product_id, name_snapshot, quantity
+     FROM commercial_sales_document_items
+     WHERE commercial_document_id = $1 AND company_id = $2
+     ORDER BY product_id, id
+     FOR UPDATE`,
+    [order.id, tenantId],
+  );
+  for (const item of items.rows) {
+    const balances = await client.query(
+      `SELECT balance.warehouse_id, balance.on_hand, balance.reserved
+       FROM inventory_balances balance
+       JOIN warehouses warehouse ON warehouse.id = balance.warehouse_id
+        AND warehouse.tenant_id = balance.tenant_id
+       WHERE balance.tenant_id = $1
+         AND balance.product_id = $2
+         AND warehouse.branch_id = $3
+         AND warehouse.active = TRUE
+         AND ($4::uuid IS NULL OR balance.warehouse_id = $4)
+       ORDER BY balance.warehouse_id
+       FOR UPDATE OF balance`,
+      [tenantId, item.product_id, order.branch_id, warehouseId],
+    );
+    let pending = Number(item.quantity);
+    const allocations = [];
+    for (const balance of balances.rows) {
+      const available = Math.max(Number(balance.on_hand) - Number(balance.reserved), 0);
+      const allocated = Math.min(available, pending);
+      if (allocated > 0) allocations.push({ warehouseId: balance.warehouse_id, quantity: allocated });
+      pending = Math.max(pending - allocated, 0);
+    }
+    if (pending > 0) {
+      const available = Number(item.quantity) - pending;
+      const error = new AppError(
+        `No hay disponibilidad suficiente para ${item.name_snapshot}: faltan ${pending} unidades.`,
+        409,
+        'INSUFFICIENT_AVAILABLE_STOCK',
+      );
+      error.details = { productId: item.product_id, requested: Number(item.quantity), available, missing: pending };
+      throw error;
+    }
+    for (const allocation of allocations) {
+      await client.query(
+        `UPDATE inventory_balances
+         SET reserved = reserved + $4, updated_at = now()
+         WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3`,
+        [tenantId, item.product_id, allocation.warehouseId, allocation.quantity],
+      );
+      await client.query(
+        `INSERT INTO commercial_order_reservations(
+           company_id, commercial_document_id, document_item_id,
+           product_id, warehouse_id, quantity
+         ) VALUES($1,$2,$3,$4,$5,$6)`,
+        [tenantId, order.id, item.id, item.product_id, allocation.warehouseId, allocation.quantity],
+      );
+    }
+  }
+}
+
+async function releaseOrderReservations(client, { tenantId, orderId, reason }) {
+  const reservations = await client.query(
+    `SELECT id, product_id, warehouse_id, quantity
+     FROM commercial_order_reservations
+     WHERE commercial_document_id = $1 AND company_id = $2 AND released_at IS NULL
+     ORDER BY product_id, warehouse_id
+     FOR UPDATE`,
+    [orderId, tenantId],
+  );
+  for (const reservation of reservations.rows) {
+    await client.query(
+      `UPDATE inventory_balances
+       SET reserved = GREATEST(reserved - $4, 0), updated_at = now()
+       WHERE tenant_id = $1 AND product_id = $2 AND warehouse_id = $3`,
+      [tenantId, reservation.product_id, reservation.warehouse_id, reservation.quantity],
+    );
+  }
+  if (reservations.rowCount) {
+    await client.query(
+      `UPDATE commercial_order_reservations
+       SET released_at = now(), release_reason = $3
+       WHERE commercial_document_id = $1 AND company_id = $2 AND released_at IS NULL`,
+      [orderId, tenantId, reason],
+    );
+  }
 }
 
 router.get('/overview', asyncHandler(async (req, res) => {
@@ -313,6 +446,11 @@ router.post('/quotes/:quoteId/convert-order', asyncHandler(async (req, res) => {
        WHERE id = $1`,
       [quoteId],
     );
+    await reserveOrderInventory(client, {
+      tenantId: req.context.tenantId,
+      order: order.rows[0],
+      warehouseId: req.body.warehouseId || null,
+    });
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -328,27 +466,285 @@ router.post('/quotes/:quoteId/convert-order', asyncHandler(async (req, res) => {
   res.status(201).json(result);
 }));
 
+router.post('/orders', asyncHandler(async (req, res) => {
+  const branchId = req.body.branchId;
+  const customerId = req.body.customerId || null;
+  const expectedDate = req.body.expectedDate;
+  const notes = text(req.body.notes, 2000) || null;
+  if (!isUuid(branchId) || (customerId && !isUuid(customerId)) || !validDate(expectedDate)) {
+    throw new AppError(
+      'Selecciona sucursal, cliente opcional y fecha esperada válidos.',
+      422,
+      'INVALID_ORDER_HEADER',
+    );
+  }
+  const result = await withTransaction(async (client) => {
+    const references = await client.query(
+      `SELECT
+         EXISTS(SELECT 1 FROM branches WHERE id = $2 AND tenant_id = $1 AND active = TRUE) branch_ok,
+         ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM customers
+           WHERE id = $3 AND tenant_id = $1 AND active = TRUE)) customer_ok`,
+      [req.context.tenantId, branchId, customerId],
+    );
+    if (!references.rows[0].branch_ok || !references.rows[0].customer_ok) {
+      throw new AppError('La sucursal o el cliente no pertenece a la empresa activa.', 404, 'ORDER_REFERENCE_NOT_FOUND');
+    }
+    const items = await loadCommercialItems(client, req.context.tenantId, req.body.items);
+    const total = Math.round(items.reduce((sum, item) => sum + item.lineTotal, 0) * 100) / 100;
+    const taxTotal = Math.round(items.reduce((sum, item) => sum + item.taxAmount, 0) * 100) / 100;
+    const document = await client.query(
+      `INSERT INTO commercial_sales_documents(
+         company_id, branch_id, customer_id, document_type, document_number,
+         status, expected_date, subtotal, tax_total, total, notes, created_by
+       ) VALUES(
+         $1,$2,$3,'ORDER',
+         'PED-' || to_char(CURRENT_DATE, 'YYYY') || '-' ||
+           lpad(nextval('billing_order_number_seq')::text, 6, '0'),
+         'DRAFT',$4,$5,$6,$7,$8,$9
+       ) RETURNING *`,
+      [req.context.tenantId, branchId, customerId, expectedDate, total - taxTotal,
+        taxTotal, total, notes, req.context.userId],
+    );
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO commercial_sales_document_items(
+           company_id, commercial_document_id, product_id, sku_snapshot,
+           name_snapshot, quantity, unit_price, tax_rate, tax_amount, line_total
+         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [req.context.tenantId, document.rows[0].id, item.id, item.sku, item.name,
+          item.quantity, item.unitPrice, item.taxRate, item.taxAmount, item.lineTotal],
+      );
+    }
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'billing.order_created', entityType: 'commercial_sales_document',
+      entityId: document.rows[0].id, after: { ...document.rows[0], itemCount: items.length },
+      reason: 'Pedido comercial creado directamente',
+    });
+    return document.rows[0];
+  });
+  res.status(201).json(result);
+}));
+
+router.get('/orders', asyncHandler(async (req, res) => {
+  const status = text(req.query.status, 30).toUpperCase() || null;
+  const customerId = req.query.customer_id || null;
+  const branchId = req.query.branch_id || null;
+  const dateFrom = req.query.date_from || null;
+  const dateTo = req.query.date_to || null;
+  const search = text(req.query.search, 100) || null;
+  const page = Math.max(1, Math.trunc(Number(req.query.page) || 1));
+  const limit = Math.min(100, Math.max(1, Math.trunc(Number(req.query.limit) || 25)));
+  if ((status && !Object.hasOwn(ORDER_TRANSITIONS, status)) ||
+      (customerId && !isUuid(customerId)) || (branchId && !isUuid(branchId)) ||
+      (dateFrom && !validDate(dateFrom)) || (dateTo && !validDate(dateTo))) {
+    throw new AppError('Los filtros del listado de pedidos no son válidos.', 422, 'INVALID_ORDER_FILTERS');
+  }
+  const result = await query(
+    `SELECT document.*, customer.name customer_name, branch.name branch_name,
+            COUNT(item.id)::integer item_count, COUNT(*) OVER()::integer total_count
+     FROM commercial_sales_documents document
+     JOIN branches branch ON branch.id = document.branch_id AND branch.tenant_id = document.company_id
+     LEFT JOIN customers customer ON customer.id = document.customer_id AND customer.tenant_id = document.company_id
+     LEFT JOIN commercial_sales_document_items item ON item.commercial_document_id = document.id AND item.company_id = document.company_id
+     WHERE document.company_id = $1 AND document.document_type = 'ORDER'
+       AND ($2::text IS NULL OR document.status = $2)
+       AND ($3::uuid IS NULL OR document.customer_id = $3)
+       AND ($4::uuid IS NULL OR document.branch_id = $4)
+       AND ($5::date IS NULL OR document.created_at >= $5::date)
+       AND ($6::date IS NULL OR document.created_at < ($6::date + INTERVAL '1 day'))
+       AND ($7::text IS NULL OR document.document_number ILIKE '%' || $7 || '%' OR customer.name ILIKE '%' || $7 || '%')
+     GROUP BY document.id, customer.name, branch.name
+     ORDER BY document.created_at DESC
+     LIMIT $8 OFFSET $9`,
+    [req.context.tenantId, status, customerId, branchId, dateFrom, dateTo, search, limit, (page - 1) * limit],
+  );
+  res.json({ items: result.rows, page, limit, total: result.rows[0]?.total_count || 0 });
+}));
+
+router.get('/orders/:orderId', asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!isUuid(orderId)) throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
+  const document = await query(
+    `SELECT order_document.*, customer.name customer_name, source.document_number source_document_number
+     FROM commercial_sales_documents order_document
+     LEFT JOIN customers customer ON customer.id = order_document.customer_id AND customer.tenant_id = order_document.company_id
+     LEFT JOIN commercial_sales_documents source ON source.id = order_document.source_document_id AND source.company_id = order_document.company_id
+     WHERE order_document.id = $1 AND order_document.company_id = $2 AND order_document.document_type = 'ORDER'`,
+    [orderId, req.context.tenantId],
+  );
+  if (!document.rowCount) throw new AppError('No encontramos el pedido.', 404, 'ORDER_NOT_FOUND');
+  const [items, reservations] = await Promise.all([
+    query(`SELECT * FROM commercial_sales_document_items WHERE commercial_document_id = $1 AND company_id = $2 ORDER BY id`, [orderId, req.context.tenantId]),
+    query(`SELECT reservation.*, warehouse.name warehouse_name FROM commercial_order_reservations reservation JOIN warehouses warehouse ON warehouse.id = reservation.warehouse_id AND warehouse.tenant_id = reservation.company_id WHERE reservation.commercial_document_id = $1 AND reservation.company_id = $2 AND reservation.released_at IS NULL ORDER BY reservation.created_at`, [orderId, req.context.tenantId]),
+  ]);
+  res.json({ ...document.rows[0], items: items.rows, reservations: reservations.rows });
+}));
+
+router.patch('/orders/:orderId', asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!isUuid(orderId)) throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
+  const has = (name) => Object.hasOwn(req.body, name);
+  if (!['branchId', 'customerId', 'expectedDate', 'notes', 'items'].some(has)) {
+    throw new AppError('Indica al menos un campo para actualizar.', 422, 'EMPTY_ORDER_UPDATE');
+  }
+  const result = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM commercial_sales_documents
+       WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER' FOR UPDATE`,
+      [orderId, req.context.tenantId],
+    );
+    if (!current.rowCount) throw new AppError('No encontramos el pedido.', 404, 'ORDER_NOT_FOUND');
+    if (current.rows[0].status !== 'DRAFT') {
+      throw new AppError('Un pedido confirmado no puede editarse.', 409, 'CANNOT_EDIT_CONFIRMED_ORDER');
+    }
+    const branchId = has('branchId') ? req.body.branchId : current.rows[0].branch_id;
+    const customerId = has('customerId') ? (req.body.customerId || null) : current.rows[0].customer_id;
+    const expectedDate = has('expectedDate')
+      ? req.body.expectedDate
+      : dateOnly(current.rows[0].expected_date);
+    const notes = has('notes') ? (text(req.body.notes, 2000) || null) : current.rows[0].notes;
+    if (!isUuid(branchId) || (customerId && !isUuid(customerId)) || !validDate(expectedDate)) {
+      throw new AppError('Los datos del pedido no son válidos.', 422, 'INVALID_ORDER_HEADER');
+    }
+    const references = await client.query(
+      `SELECT EXISTS(SELECT 1 FROM branches WHERE id = $2 AND tenant_id = $1 AND active = TRUE) branch_ok,
+         ($3::uuid IS NULL OR EXISTS(SELECT 1 FROM customers WHERE id = $3 AND tenant_id = $1 AND active = TRUE)) customer_ok`,
+      [req.context.tenantId, branchId, customerId],
+    );
+    if (!references.rows[0].branch_ok || !references.rows[0].customer_ok) {
+      throw new AppError('La sucursal o el cliente no pertenece a la empresa activa.', 404, 'ORDER_REFERENCE_NOT_FOUND');
+    }
+    let items = null;
+    if (has('items')) {
+      items = await loadCommercialItems(client, req.context.tenantId, req.body.items);
+      await client.query(
+        `DELETE FROM commercial_sales_document_items WHERE commercial_document_id = $1 AND company_id = $2`,
+        [orderId, req.context.tenantId],
+      );
+      for (const item of items) {
+        await client.query(
+          `INSERT INTO commercial_sales_document_items(company_id, commercial_document_id, product_id, sku_snapshot, name_snapshot, quantity, unit_price, tax_rate, tax_amount, line_total)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [req.context.tenantId, orderId, item.id, item.sku, item.name, item.quantity,
+            item.unitPrice, item.taxRate, item.taxAmount, item.lineTotal],
+        );
+      }
+    }
+    const totals = items || (await client.query(
+      `SELECT COALESCE(SUM(line_total), 0) total, COALESCE(SUM(tax_amount), 0) tax_total
+       FROM commercial_sales_document_items WHERE commercial_document_id = $1 AND company_id = $2`,
+      [orderId, req.context.tenantId],
+    )).rows[0];
+    const total = items
+      ? Math.round(items.reduce((sum, item) => sum + item.lineTotal, 0) * 100) / 100
+      : Number(totals.total);
+    const taxTotal = items
+      ? Math.round(items.reduce((sum, item) => sum + item.taxAmount, 0) * 100) / 100
+      : Number(totals.tax_total);
+    const updated = await client.query(
+      `UPDATE commercial_sales_documents
+       SET branch_id = $3, customer_id = $4, expected_date = $5, notes = $6,
+           subtotal = $7, tax_total = $8, total = $9, updated_at = now()
+       WHERE id = $1 AND company_id = $2 RETURNING *`,
+      [orderId, req.context.tenantId, branchId, customerId, expectedDate, notes,
+        total - taxTotal, taxTotal, total],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'billing.order_updated', entityType: 'commercial_sales_document', entityId: orderId,
+      before: current.rows[0], after: updated.rows[0], reason: 'Pedido en borrador actualizado',
+    });
+    return updated.rows[0];
+  });
+  res.json(result);
+}));
+
+router.post('/orders/:orderId/confirm', asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!isUuid(orderId)) throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
+  const result = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM commercial_sales_documents WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER' FOR UPDATE`,
+      [orderId, req.context.tenantId],
+    );
+    if (!current.rowCount) throw new AppError('No encontramos el pedido.', 404, 'ORDER_NOT_FOUND');
+    if (!transitionAllowed(current.rows[0].status, 'CONFIRMED')) {
+      throw statusTransitionError(current.rows[0].status, 'CONFIRMED');
+    }
+    await reserveOrderInventory(client, {
+      tenantId: req.context.tenantId, order: current.rows[0], warehouseId: req.body.warehouseId || null,
+    });
+    const updated = await client.query(
+      `UPDATE commercial_sales_documents SET status = 'CONFIRMED', updated_at = now()
+       WHERE id = $1 AND company_id = $2 RETURNING *`,
+      [orderId, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'billing.order_confirmed', entityType: 'commercial_sales_document', entityId: orderId,
+      before: current.rows[0], after: updated.rows[0], reason: 'Pedido confirmado y existencias reservadas',
+    });
+    return updated.rows[0];
+  });
+  res.json(result);
+}));
+
+router.post('/orders/:orderId/cancel', asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  const reason = text(req.body.reason, 1000);
+  if (!isUuid(orderId)) throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
+  if (!reason) throw new AppError('Indica el motivo de la cancelación.', 422, 'CANCELLATION_REASON_REQUIRED');
+  const result = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM commercial_sales_documents WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER' FOR UPDATE`,
+      [orderId, req.context.tenantId],
+    );
+    if (!current.rowCount) throw new AppError('No encontramos el pedido.', 404, 'ORDER_NOT_FOUND');
+    if (!transitionAllowed(current.rows[0].status, 'CANCELLED')) {
+      throw statusTransitionError(current.rows[0].status, 'CANCELLED');
+    }
+    await releaseOrderReservations(client, { tenantId: req.context.tenantId, orderId, reason: 'CANCELLED' });
+    const updated = await client.query(
+      `UPDATE commercial_sales_documents SET status = 'CANCELLED', updated_at = now()
+       WHERE id = $1 AND company_id = $2 RETURNING *`, [orderId, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'billing.order_cancelled', entityType: 'commercial_sales_document', entityId: orderId,
+      before: current.rows[0], after: updated.rows[0], reason,
+    });
+    return updated.rows[0];
+  });
+  res.json(result);
+}));
+
 router.post('/orders/:orderId/ready-to-invoice', asyncHandler(async (req, res) => {
   const { orderId } = req.params;
   if (!isUuid(orderId)) {
     throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
   }
   const result = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM commercial_sales_documents
+       WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER'
+       FOR UPDATE`,
+      [orderId, req.context.tenantId],
+    );
+    if (!current.rowCount) {
+      throw new AppError(
+        'El pedido no existe.', 404, 'ORDER_NOT_FOUND',
+      );
+    }
+    if (!transitionAllowed(current.rows[0].status, 'READY_TO_INVOICE')) {
+      throw statusTransitionError(current.rows[0].status, 'READY_TO_INVOICE');
+    }
     const order = await client.query(
       `UPDATE commercial_sales_documents
        SET status = 'READY_TO_INVOICE', updated_at = now()
-       WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER'
-         AND status = 'CONFIRMED'
-       RETURNING *`,
+       WHERE id = $1 AND company_id = $2 RETURNING *`,
       [orderId, req.context.tenantId],
     );
-    if (!order.rowCount) {
-      throw new AppError(
-        'El pedido no existe o no está confirmado.',
-        409,
-        'ORDER_NOT_READY',
-      );
-    }
     await writeAudit(client, {
       tenantId: req.context.tenantId,
       userId: req.context.userId,
@@ -359,6 +755,36 @@ router.post('/orders/:orderId/ready-to-invoice', asyncHandler(async (req, res) =
       reason: text(req.body.reason, 300) || 'Pedido revisado y listo para facturar',
     });
     return order.rows[0];
+  });
+  res.json(result);
+}));
+
+// La integración fiscal debe invocar este cierre una vez haya aplicado el movimiento
+// real de inventario; aquí solo se libera la reserva para no descontar dos veces.
+router.post('/orders/:orderId/invoice', asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!isUuid(orderId)) throw new AppError('El pedido no es válido.', 422, 'INVALID_ORDER_ID');
+  const result = await withTransaction(async (client) => {
+    const current = await client.query(
+      `SELECT * FROM commercial_sales_documents WHERE id = $1 AND company_id = $2 AND document_type = 'ORDER' FOR UPDATE`,
+      [orderId, req.context.tenantId],
+    );
+    if (!current.rowCount) throw new AppError('No encontramos el pedido.', 404, 'ORDER_NOT_FOUND');
+    if (!transitionAllowed(current.rows[0].status, 'INVOICED')) {
+      throw statusTransitionError(current.rows[0].status, 'INVOICED');
+    }
+    await releaseOrderReservations(client, { tenantId: req.context.tenantId, orderId, reason: 'INVOICED' });
+    const updated = await client.query(
+      `UPDATE commercial_sales_documents SET status = 'INVOICED', updated_at = now()
+       WHERE id = $1 AND company_id = $2 RETURNING *`, [orderId, req.context.tenantId],
+    );
+    await writeAudit(client, {
+      tenantId: req.context.tenantId, userId: req.context.userId,
+      action: 'billing.order_invoiced', entityType: 'commercial_sales_document', entityId: orderId,
+      before: current.rows[0], after: updated.rows[0],
+      reason: text(req.body.reason, 300) || 'Pedido facturado; reserva liberada',
+    });
+    return updated.rows[0];
   });
   res.json(result);
 }));

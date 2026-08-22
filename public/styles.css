@@ -19072,3 +19072,301 @@ table tr:last-child td {
   animation: auth-loader-breathe 2.6s ease-in-out infinite;
   box-shadow: 0 10px 28px rgba(94, 75, 228, .25);
 }
+
+/* ==========================================================================
+   Cierre de turno de caja
+   ========================================================================== */
+
+.cash-session-dialog .dialog-card {
+  width: min(1100px, calc(100vw - 32px));
+}
+
+/* El historial ya no se recorta a 8 turnos: se acota el alto y se desplaza. */
+.cash-history-panel .cash-session-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* La fila del historial ahora abre el cierre: se comporta como control. */
+button.cash-session-row {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+button.cash-session-row:hover {
+  border-color: var(--color-purple);
+  transform: translateY(-1px);
+}
+
+button.cash-session-row:focus-visible {
+  outline: 2px solid var(--color-purple);
+  outline-offset: 2px;
+}
+
+.cash-detail-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.cash-detail-kpis article {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 13px;
+  background: var(--color-paper);
+}
+
+.cash-detail-kpis small {
+  color: var(--color-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.cash-detail-kpis strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-detail-difference.ok {
+  border-color: rgba(16, 185, 129, .45);
+  background: var(--color-green-light);
+}
+
+.cash-detail-difference.alert {
+  border-color: rgba(239, 68, 68, .45);
+  background: var(--color-rose-light);
+}
+
+.cash-detail-block {
+  margin-top: 18px;
+}
+
+.cash-detail-block .table-wrap {
+  margin-top: 8px;
+}
+
+.cash-detail-block .data-table td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-detail-block .data-table td.negative {
+  color: var(--color-rose);
+}
+
+.cash-detail-notes {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 13px;
+  background: var(--color-paper);
+  color: var(--color-ink-soft);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .cash-detail-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Al imprimir solo debe salir el cierre. El diálogo está anidado en el
+   documento, así que se oculta por visibilidad y no por el árbol de body. */
+@media print {
+  body { visibility: hidden; }
+  .cash-session-dialog[open],
+  .cash-session-dialog[open] * { visibility: visible; }
+  .cash-session-dialog[open] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .cash-session-dialog[open] .dialog-card {
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+  .cash-session-dialog[open] .dialog-close,
+  .cash-session-dialog[open] .dialog-actions { display: none !important; }
+  .cash-session-dialog[open] .table-wrap { overflow: visible !important; }
+}
+
+/* ==========================================================================
+   Tablero: pendientes y tendencia
+   ========================================================================== */
+
+.attention-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.attention-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-left-width: 4px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: inherit;
+  text-decoration: none;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.attention-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -18px rgba(15, 23, 42, .5);
+}
+
+.attention-card.alert { border-left-color: var(--color-rose); }
+.attention-card.warn { border-left-color: var(--color-amber); }
+
+.attention-card strong { font-size: 15px; }
+.attention-card span { font-size: 13px; color: var(--color-muted); }
+.attention-card b { font-size: 12px; color: var(--color-purple); }
+
+/* La sección hereda una rejilla de dos columnas del resto del tablero; aquí la
+   gráfica es el contenido principal y necesita el ancho completo. */
+.dashboard-trend,
+.dashboard-attention {
+  display: block;
+}
+
+.trend-switch { display: flex; gap: 6px; }
+
+.trend-range {
+  padding: 6px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.trend-range.is-active {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+  font-weight: 700;
+}
+
+.trend-range:focus-visible {
+  outline: 2px solid var(--color-purple);
+  outline-offset: 2px;
+}
+
+.trend-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.trend-compare article {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  background: var(--color-paper);
+}
+
+.trend-compare small {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.trend-compare strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-compare .trend-caption {
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+
+.trend-delta {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-delta.up { color: #0f766e; background: var(--color-green-light); }
+.trend-delta.down { color: #b91c1c; background: var(--color-rose-light); }
+.trend-delta.flat { color: var(--color-muted); background: var(--color-paper); }
+
+.trend-chart-wrap { margin: 0 0 18px; }
+
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 168px;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+
+.trend-bar {
+  flex: 1 1 0;
+  min-width: 8px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.trend-bar i {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, var(--color-purple) 0%, var(--color-cyan) 100%);
+}
+
+.trend-bar i.empty { background: var(--color-line); }
+.trend-bar:hover i { filter: brightness(1.12); }
+
+.trend-chart-wrap figcaption {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.trend-empty {
+  margin: auto;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.trend-branches .table-wrap { margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-card { transition: none; }
+}

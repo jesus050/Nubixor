@@ -446,12 +446,19 @@ export function requireAnyPermission(permissionCodes) {
   };
 }
 
-export function authorizeApiRequest(req, res, next) {
-  const path = `${req.baseUrl}${req.path}`;
-  const read = ['GET', 'HEAD'].includes(req.method);
+// Rutas que comprueban la membresía por su cuenta y contra el dueño del recurso,
+// no contra la empresa activa del encabezado. Pasarlas por el mapa de permisos
+// las evaluaría contra la empresa equivocada, así que se declaran aparte.
+export const SELF_GUARDED_API_PREFIXES = ['/api/assets'];
+
+// Devuelve los permisos exigidos por una ruta, [] si es de acceso libre para
+// cualquier miembro autenticado, o null si la ruta no está declarada.
+export function resolveRequiredPermissions(path, method) {
+  const read = ['GET', 'HEAD'].includes(method);
   let permissions = null;
 
-  if (path === '/api/companies' && read) return next();
+  if (path === '/api/companies' && read) return [];
+
   if (path.startsWith('/api/companies')) permissions = ['companies.manage'];
   else if (path.startsWith('/api/branches')) {
     permissions = read
@@ -519,19 +526,19 @@ export function authorizeApiRequest(req, res, next) {
   else if (path.startsWith('/api/media/assets') && path.endsWith('/content') && read) {
     permissions = ['inventory.evidence.view', 'product.image.manage', 'catalog.manage', 'inventory.view'];
   }
-  else if (path.startsWith('/api/media/assets') && req.method === 'POST') {
+  else if (path.startsWith('/api/media/assets') && method === 'POST') {
     permissions = ['media.upload', 'product.image.manage', 'inventory.evidence.upload'];
   }
-  else if (path.startsWith('/api/media/assets') && req.method === 'DELETE') {
+  else if (path.startsWith('/api/media/assets') && method === 'DELETE') {
     permissions = ['media.delete'];
   }
   else if (path.startsWith('/api/media/links') && read) {
     permissions = ['inventory.evidence.view', 'product.image.manage', 'catalog.manage', 'inventory.view'];
   }
-  else if (path.startsWith('/api/media/links') && ['POST', 'PATCH'].includes(req.method)) {
+  else if (path.startsWith('/api/media/links') && ['POST', 'PATCH'].includes(method)) {
     permissions = ['product.image.manage', 'inventory.evidence.upload'];
   }
-  else if (path.startsWith('/api/media/links') && req.method === 'DELETE') {
+  else if (path.startsWith('/api/media/links') && method === 'DELETE') {
     permissions = ['media.delete'];
   }
   else if (path.startsWith('/api/media/policy')) {
@@ -565,6 +572,24 @@ export function authorizeApiRequest(req, res, next) {
       : ['documents.manage'];
   }
 
-  if (!permissions) return next();
+  return permissions;
+}
+
+export function authorizeApiRequest(req, res, next) {
+  const path = `${req.baseUrl}${req.path}`;
+  if (SELF_GUARDED_API_PREFIXES.some((prefix) => path.startsWith(prefix))) {
+    return next();
+  }
+  const permissions = resolveRequiredPermissions(path, req.method);
+  if (permissions === null) {
+    // Falla cerrado a propósito: una ruta sin permisos declarados es un olvido,
+    // y dejarla pasar la abriría a cualquier miembro de cualquier empresa.
+    return next(new AppError(
+      'Esta operación no está habilitada.',
+      403,
+      'ROUTE_NOT_AUTHORIZED',
+    ));
+  }
+  if (!permissions.length) return next();
   return requireAnyPermission(permissions)(req, res, next);
 }
