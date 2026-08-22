@@ -921,6 +921,11 @@ const elements = {
   posDiscountAmount: document.querySelector('#posDiscountAmount'),
   posDiscountReason: document.querySelector('#posDiscountReason'),
   cartDiscountTotal: document.querySelector('#cartDiscountTotal'),
+  holdSaleButton: document.querySelector('#holdSaleButton'),
+  toggleHeldSalesButton: document.querySelector('#toggleHeldSalesButton'),
+  heldSalesCount: document.querySelector('#heldSalesCount'),
+  heldSalesPanel: document.querySelector('#heldSalesPanel'),
+  heldSalesList: document.querySelector('#heldSalesList'),
   clearCartButton: document.querySelector('#clearCartButton'),
   posCustomerSelect: document.querySelector('#posCustomerSelect'),
   posCustomerBalance: document.querySelector('#posCustomerBalance'),
@@ -1531,6 +1536,7 @@ let posBankAccounts = [];
 let posCustomers = [];
 let posSaleTerms = 'IMMEDIATE';
 let posMixedPayment = false;
+let heldSalesVisible = false;
 let selectedReceiptForReturn = null;
 let receivableCustomers = [];
 let receivableInvoices = [];
@@ -5708,6 +5714,7 @@ async function loadPos() {
       elements.posDocumentCompanyFilter.value = previousCompanyFilter;
     }
     syncPosCustomers();
+    renderHeldSales();
     renderPos();
     renderPosSalesHistory();
     return posSummary;
@@ -6305,6 +6312,7 @@ function renderCart() {
     Math.min(discount.amount, grossTotal),
   )}`;
   elements.clearCartButton.hidden = totals.itemCount === 0;
+  elements.holdSaleButton.disabled = !posSummary.openSession || saleCart.size === 0;
   elements.completeSaleButton.disabled =
     !posSummary.openSession || !elements.posWarehouseSelect.value || saleCart.size === 0;
   elements.completeSaleButton.textContent = totals.itemCount
@@ -6390,6 +6398,141 @@ function clearCart() {
   elements.posDiscountReason.value = '';
   renderCart();
   renderPosCatalog();
+}
+
+function heldSalesStorageKey() {
+  return `nubixor.pos.held-sales:${activeTenantId || 'none'}:${posSummary.openSession?.id || 'none'}`;
+}
+
+function readHeldSales() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(heldSalesStorageKey()) || '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeHeldSales(sales) {
+  window.localStorage.setItem(heldSalesStorageKey(), JSON.stringify(sales));
+}
+
+function resetSaleForm() {
+  elements.posCashReceived.value = '';
+  elements.posTransferReference.value = '';
+  elements.posMixedCashAmount.value = '0';
+  elements.posMixedCardAmount.value = '0';
+  elements.posMixedTransferAmount.value = '0';
+  elements.posDiscountType.value = 'PERCENT';
+  elements.posDiscountAmount.value = '';
+  elements.posDiscountReason.value = '';
+  elements.posCustomerSelect.value = '';
+  posSaleTerms = 'IMMEDIATE';
+  posMixedPayment = false;
+  elements.posSaleTermButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.saleTerms === posSaleTerms);
+  });
+  elements.posPaymentMethod.value = 'CASH';
+  elements.posPaymentButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.paymentMethod === 'CASH');
+  });
+  renderPosCustomerContext();
+}
+
+function renderHeldSales() {
+  const heldSales = readHeldSales();
+  elements.heldSalesCount.textContent = String(heldSales.length);
+  elements.toggleHeldSalesButton.classList.toggle('has-held-sales', heldSales.length > 0);
+  elements.heldSalesPanel.hidden = !heldSalesVisible;
+  elements.heldSalesList.replaceChildren();
+  if (!heldSales.length) {
+    const empty = document.createElement('p');
+    empty.className = 'held-sales-empty';
+    empty.textContent = 'No hay pedidos en espera en este turno.';
+    elements.heldSalesList.append(empty);
+    return;
+  }
+  for (const sale of heldSales) {
+    const row = document.createElement('div');
+    row.className = 'held-sale-row';
+    const info = document.createElement('div');
+    const customer = posCustomers.find((item) => item.id === sale.customerId);
+    const savedAt = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' }).format(new Date(sale.savedAt));
+    info.innerHTML = `<strong>${escapeHtml(customer?.name || 'Consumidor final')}</strong><small>${sale.itemCount} artículos · ${escapeHtml(savedAt)} · ${escapeHtml(formatCurrency(sale.total))}</small>`;
+    const restore = document.createElement('button');
+    restore.type = 'button';
+    restore.textContent = 'Retomar';
+    restore.addEventListener('click', () => restoreHeldSale(sale.id));
+    const discard = document.createElement('button');
+    discard.type = 'button';
+    discard.className = 'held-sale-discard';
+    discard.textContent = '×';
+    discard.setAttribute('aria-label', 'Eliminar pedido pendiente');
+    discard.addEventListener('click', () => {
+      writeHeldSales(readHeldSales().filter((item) => item.id !== sale.id));
+      renderHeldSales();
+    });
+    const actions = document.createElement('div');
+    actions.append(restore, discard);
+    row.append(info, actions);
+    elements.heldSalesList.append(row);
+  }
+}
+
+function holdCurrentSale() {
+  if (!saleCart.size || !posSummary.openSession) return;
+  const totals = calculateCartTotals();
+  const heldSale = {
+    id: crypto.randomUUID(), savedAt: new Date().toISOString(), itemCount: totals.itemCount,
+    total: totals.total, customerId: elements.posCustomerSelect.value || null,
+    items: [...saleCart.values()].map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+    saleTerms: posSaleTerms, creditDueDate: elements.posCreditDueDate.value || '',
+    paymentMethod: elements.posPaymentMethod.value, discountType: elements.posDiscountType.value,
+    discountAmount: elements.posDiscountAmount.value, discountReason: elements.posDiscountReason.value.trim(),
+  };
+  writeHeldSales([...readHeldSales(), heldSale]);
+  saleCart.clear();
+  resetSaleForm();
+  heldSalesVisible = true;
+  renderHeldSales();
+  renderCart();
+  renderPosCatalog();
+  showToast('Pedido dejado en espera. Ya puedes iniciar otra venta.');
+}
+
+function restoreHeldSale(heldSaleId) {
+  if (saleCart.size && !window.confirm('La venta actual se reemplazará por el pedido pendiente. ¿Continuar?')) return;
+  const heldSale = readHeldSales().find((item) => item.id === heldSaleId);
+  if (!heldSale) return;
+  const missing = [];
+  saleCart.clear();
+  for (const line of heldSale.items) {
+    const product = posCatalog.find((item) => item.id === line.productId);
+    if (!product || Number(product.on_hand) < line.quantity) {
+      missing.push(product?.name || 'un producto');
+      continue;
+    }
+    saleCart.set(product.id, { product, quantity: line.quantity });
+  }
+  if (!saleCart.size) {
+    showToast('No fue posible retomar: los productos ya no tienen disponibilidad.');
+    return;
+  }
+  elements.posCustomerSelect.value = heldSale.customerId || '';
+  posSaleTerms = heldSale.saleTerms === 'CREDIT' ? 'CREDIT' : 'IMMEDIATE';
+  elements.posCreditDueDate.value = heldSale.creditDueDate || '';
+  elements.posPaymentMethod.value = heldSale.paymentMethod || 'CASH';
+  elements.posDiscountType.value = heldSale.discountType || 'PERCENT';
+  elements.posDiscountAmount.value = heldSale.discountAmount || '';
+  elements.posDiscountReason.value = heldSale.discountReason || '';
+  elements.posSaleTermButtons.forEach((button) => button.classList.toggle('active', button.dataset.saleTerms === posSaleTerms));
+  elements.posPaymentButtons.forEach((button) => button.classList.toggle('active', button.dataset.paymentMethod === elements.posPaymentMethod.value));
+  writeHeldSales(readHeldSales().filter((item) => item.id !== heldSaleId));
+  renderPosCustomerContext();
+  renderHeldSales();
+  renderCart();
+  renderPosCatalog();
+  showToast(missing.length ? 'Pedido retomado con productos disponibles.' : 'Pedido retomado.');
 }
 
 async function loadPosCatalog() {
@@ -18318,6 +18461,11 @@ elements.posProductSearch.addEventListener('keydown', (event) => {
     : 'No encontramos un SKU o código de barras exacto.');
 });
 elements.clearCartButton.addEventListener('click', clearCart);
+elements.holdSaleButton.addEventListener('click', holdCurrentSale);
+elements.toggleHeldSalesButton.addEventListener('click', () => {
+  heldSalesVisible = !heldSalesVisible;
+  renderHeldSales();
+});
 elements.posCustomerSelect.addEventListener('change', async () => {
   renderPosCustomerContext();
   try {

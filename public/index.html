@@ -2737,10 +2737,16 @@
                       <h3 id="cartTitle">Carrito</h3>
                     </div>
                     <div>
+                      <button class="cart-hold" id="holdSaleButton" type="button" disabled>Dejar pendiente</button>
+                      <button class="cart-hold-list" id="toggleHeldSalesButton" type="button">Pendientes <span id="heldSalesCount">0</span></button>
                       <button class="cart-clear" id="clearCartButton" type="button" hidden>Vaciar</button>
                       <span id="cartItemCount">0 artículos</span>
                     </div>
                   </div>
+                  <section class="held-sales" id="heldSalesPanel" aria-label="Pedidos en espera" hidden>
+                    <div class="held-sales-heading"><strong>Pedidos en espera</strong><small>Solo en esta caja</small></div>
+                    <div id="heldSalesList"></div>
+                  </section>
                   <div class="pos-customer">
                     <div>
                       <label for="posCustomerSelect">Cliente</label>
