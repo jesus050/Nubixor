@@ -26,6 +26,7 @@ async function cleanupTenant(pool, tenantId) {
   await pool.query('DELETE FROM accounting_entry_counters WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM accounting_accounts WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM units_of_measure WHERE tenant_id = $1', [tenantId]);
+  await pool.query('DELETE FROM sales_price_lists WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM tenant_modules WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM commercial_opportunity_actions WHERE tenant_id = $1', [tenantId]);
   await pool.query('DELETE FROM commercial_marketing_expenses WHERE tenant_id = $1', [tenantId]);
