@@ -43,6 +43,20 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - El respaldo y la sincronización de rangos con Factus piden un cerrojo antes de
   ejecutarse, para que con varias instancias solo una haga el trabajo.
 
+### Añadido en la fase D
+
+- El límite de tasa es compartido entre instancias y cubre toda la API, no solo
+  el acceso y las subidas. Cuenta por persona autenticada, no por dirección.
+- El kardex y la bandeja de rotación se paginan. Antes la rotación recorría el
+  catálogo entero sin límite y el kardex cortaba en quinientos movimientos sin
+  decirlo.
+- Los respaldos, sus verificaciones y las pruebas de restauración quedan
+  registrados. `npm run backup:status` responde cuándo fue el último respaldo
+  correcto, cuánto pesó, cuánto tardó y cuándo se probó restaurarlo, y avisa
+  cuando algo lleva demasiado tiempo sin hacerse.
+- `docs/RESTAURACION.md`: procedimiento de restauración, simulacro trimestral y
+  lo que el esquema de respaldo todavía no cubre.
+
 ### Seguridad
 
 - El aislamiento por empresa dentro de PostgreSQL se extendió a compras, gastos,
