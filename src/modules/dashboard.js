@@ -87,8 +87,11 @@ router.get('/executive', asyncHandler(async (req, res) => {
            INTERVAL '1 day'
          ) calendar(day)
        ), '[]'::json) sales_last_7_days,
+       -- Los precios del punto de venta son IVA incluido, así que line_total
+       -- trae el impuesto dentro. Restarlo es lo que separa el margen del
+       -- dinero que solo está de paso hacia la DIAN.
        COALESCE((
-         SELECT SUM(si.line_total - (si.unit_cost * si.quantity))
+         SELECT SUM(si.line_total - si.tax_amount - (si.unit_cost * si.quantity))
          FROM sale_items si
          JOIN sales s ON s.id = si.sale_id AND s.tenant_id = si.tenant_id
          JOIN cash_sessions cs ON cs.id = s.cash_session_id
@@ -96,6 +99,21 @@ router.get('/executive', asyncHandler(async (req, res) => {
          WHERE si.tenant_id = $1
            AND s.status = 'COMPLETED'
            AND s.created_at >= date_trunc('month', CURRENT_DATE)
+           AND ($2::uuid IS NULL OR cr.branch_id = $2)
+       ), 0)
+       - COALESCE((
+         -- Una devolución deshace la venta y su margen; dejarla fuera dejaría el
+         -- mes contando utilidad de mercancía que volvió a la bodega.
+         SELECT SUM(ri.subtotal - (ri.unit_cost * ri.quantity))
+         FROM sale_return_items ri
+         JOIN sale_returns r
+           ON r.id = ri.sale_return_id AND r.company_id = ri.company_id
+         JOIN sales s ON s.id = r.sale_id AND s.company_id = r.company_id
+         JOIN cash_sessions cs ON cs.id = s.cash_session_id
+         JOIN cash_registers cr ON cr.id = cs.cash_register_id
+         WHERE ri.company_id = $1
+           AND r.status = 'COMPLETED'
+           AND r.created_at >= date_trunc('month', CURRENT_DATE)
            AND ($2::uuid IS NULL OR cr.branch_id = $2)
        ), 0) gross_margin_month,
        COALESCE((

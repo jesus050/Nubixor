@@ -247,8 +247,9 @@ para el chequeo de salud** (`src/redis.js` reimplementa el protocolo RESP a mano
 
 **A-5 · Sin paginación en la API**
 
-De 674 `SELECT` en `src/modules/`, 92 tienen `LIMIT` y ninguno acepta `limit`/`cursor`
-del cliente. Casos concretos: la consulta de rotación de
+De 674 `SELECT` en `src/modules/`, 92 tienen `LIMIT`. El módulo de reportes sí
+pagina (`page`/`pageSize` con `COUNT(*) OVER()`), y es el modelo a seguir; el
+resto de la API no. Casos concretos: la consulta de rotación de
 `commercial-planning.js:231` devuelve **todo el catálogo** sin límite;
 `logistics.js:144` tiene un `LIMIT 100` fijo que silenciosamente oculta datos.
 Con un año de operación, inventario, movimientos y auditoría se degradan.

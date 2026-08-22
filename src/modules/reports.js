@@ -24,8 +24,9 @@ const reportDefinitions = {
       ['payment_reference', 'Referencia de pago', 'text'],
       ['units', 'Unidades', 'number'],
       ['revenue', 'Venta', 'currency'],
+      ['net_revenue', 'Venta sin IVA', 'currency'],
       ['cost', 'Costo', 'currency'],
-      ['margin', 'Margen', 'currency'],
+      ['margin', 'Margen bruto', 'currency'],
       ['margin_percent', 'Margen %', 'percent'],
     ],
     orderBy: 'sale_date DESC, receipt_number DESC',
@@ -37,10 +38,14 @@ const reportDefinitions = {
              COALESCE(payment.reference, '—') payment_reference,
              COALESCE(SUM(si.quantity), 0) units,
              s.total revenue,
+             -- Los precios son IVA incluido: s.total es lo que pagó el cliente,
+             -- pero el impuesto no es ingreso de la empresa. El margen se mide
+             -- contra la venta sin IVA o cuenta como utilidad dinero ajeno.
+             s.subtotal net_revenue,
              COALESCE(SUM(si.unit_cost * si.quantity), 0) cost,
-             s.total - COALESCE(SUM(si.unit_cost * si.quantity), 0) margin,
-             CASE WHEN s.total > 0 THEN
-               ((s.total - COALESCE(SUM(si.unit_cost * si.quantity), 0)) / s.total) * 100
+             s.subtotal - COALESCE(SUM(si.unit_cost * si.quantity), 0) margin,
+             CASE WHEN s.subtotal > 0 THEN
+               ((s.subtotal - COALESCE(SUM(si.unit_cost * si.quantity), 0)) / s.subtotal) * 100
              ELSE 0 END margin_percent
       FROM sales s
       JOIN warehouses w ON w.id = s.warehouse_id AND w.tenant_id = s.tenant_id

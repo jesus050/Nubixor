@@ -241,6 +241,8 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          product.name product_name,
          product.cost,
          product.sale_price,
+         product.sale_price
+           / (1 + COALESCE(sales_tax.rate, 0) / 100) net_sale_price,
          category.id category_id,
          category.name category_name,
          brand.id brand_id,
@@ -260,6 +262,9 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          ON category.id = product.category_id AND category.tenant_id = product.tenant_id
        LEFT JOIN brands brand
          ON brand.id = product.brand_id AND brand.tenant_id = product.tenant_id
+       LEFT JOIN tax_categories sales_tax
+         ON sales_tax.id = product.sales_tax_category_id
+        AND sales_tax.tenant_id = product.tenant_id
        LEFT JOIN commercial_product_profiles profile
          ON profile.product_id = product.id AND profile.tenant_id = product.tenant_id
        LEFT JOIN inventory_balances balance
@@ -289,14 +294,22 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          AND product.product_kind <> 'VARIANT_PARENT'
          AND ($2::uuid IS NULL OR warehouse.branch_id = $2)
          AND ($3::uuid IS NULL OR balance.warehouse_id = $3)
-       GROUP BY product.id, category.id, category.name, brand.id, brand.name, profile.id
+       GROUP BY product.id, category.id, category.name, brand.id, brand.name,
+                profile.id, sales_tax.rate
      ),
      sales_window AS (
        SELECT
          item.product_id,
          COALESCE(SUM(item.quantity), 0) units_sold,
          COALESCE(SUM(item.line_total), 0) sales_amount,
-         COALESCE(SUM(item.line_total - (item.unit_cost * item.quantity)), 0) gross_margin_amount,
+         -- Los precios del punto de venta son IVA incluido. El impuesto pasa por
+         -- la caja pero no es ingreso: contarlo como margen haría parecer
+         -- rentable justo el producto que se vende al costo.
+         COALESCE(SUM(item.line_total - item.tax_amount), 0) net_sales_amount,
+         COALESCE(
+           SUM(item.line_total - item.tax_amount - (item.unit_cost * item.quantity)),
+           0
+         ) gross_margin_amount,
          MAX(sale.created_at) last_sale_at
        FROM sale_items item
        JOIN sales sale
@@ -315,7 +328,12 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
      returns_window AS (
        SELECT
          item.product_id,
-         COALESCE(SUM(item.quantity), 0) units_returned
+         COALESCE(SUM(item.quantity), 0) units_returned,
+         COALESCE(SUM(item.subtotal), 0) net_returned_amount,
+         COALESCE(
+           SUM(item.subtotal - (item.unit_cost * item.quantity)),
+           0
+         ) returned_margin_amount
        FROM sale_return_items item
        JOIN sale_returns header
          ON header.id = item.sale_return_id
@@ -361,11 +379,24 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          COALESCE(returns.units_returned, 0) units_returned,
          GREATEST(COALESCE(sales.units_sold, 0) - COALESCE(returns.units_returned, 0), 0) net_units_sold,
          COALESCE(sales.sales_amount, 0) sales_amount,
-         COALESCE(sales.gross_margin_amount, 0) gross_margin_amount,
-         CASE WHEN COALESCE(sales.sales_amount, 0) > 0
-           THEN ROUND((COALESCE(sales.gross_margin_amount, 0) / sales.sales_amount) * 100, 4)
-           WHEN scope.sale_price > 0
-           THEN ROUND(((scope.sale_price - scope.cost) / scope.sale_price) * 100, 4)
+         GREATEST(
+           COALESCE(sales.net_sales_amount, 0) - COALESCE(returns.net_returned_amount, 0),
+           0
+         ) net_sales_amount,
+         COALESCE(sales.gross_margin_amount, 0)
+           - COALESCE(returns.returned_margin_amount, 0) gross_margin_amount,
+         -- El porcentaje se mide contra la venta sin IVA y neta de devoluciones,
+         -- que es la misma base con la que se calculó el margen.
+         CASE WHEN COALESCE(sales.net_sales_amount, 0) - COALESCE(returns.net_returned_amount, 0) > 0
+           THEN ROUND((
+             (COALESCE(sales.gross_margin_amount, 0) - COALESCE(returns.returned_margin_amount, 0))
+             / (COALESCE(sales.net_sales_amount, 0) - COALESCE(returns.net_returned_amount, 0))
+           ) * 100, 4)
+           -- Sin ventas en la ventana solo queda el margen teórico de lista. El
+           -- precio también es IVA incluido, así que se le quita el impuesto de
+           -- la categoría antes de compararlo con el costo.
+           WHEN scope.net_sale_price > 0
+           THEN ROUND(((scope.net_sale_price - scope.cost) / scope.net_sale_price) * 100, 4)
            ELSE 0
          END gross_margin_percent,
          sales.last_sale_at,
@@ -518,7 +549,8 @@ router.get('/overview', asyncHandler(async (req, res) => {
              AND (plan.branch_id IS NULL OR cr.branch_id = plan.branch_id)
          ), 0) revenue,
          COALESCE((
-           SELECT SUM(si.line_total - (si.unit_cost * si.quantity))
+           -- Mismo criterio que el resto del módulo: el IVA cobrado no es margen.
+           SELECT SUM(si.line_total - si.tax_amount - (si.unit_cost * si.quantity))
            FROM current_plan plan
            JOIN sales s
              ON s.tenant_id = plan.tenant_id
@@ -1123,7 +1155,12 @@ router.get('/campaigns/:campaignId/results', asyncHandler(async (req, res) => {
        SELECT
          COALESCE(SUM(item.quantity), 0) units_sold,
          COALESCE(SUM(item.line_total), 0) sales_amount,
-         COALESCE(SUM(item.line_total - (item.unit_cost * item.quantity)), 0) gross_margin_amount
+         COALESCE(SUM(item.line_total - item.tax_amount), 0) net_sales_amount,
+         -- Igual que en rotación: el IVA cobrado no es margen de la campaña.
+         COALESCE(
+           SUM(item.line_total - item.tax_amount - (item.unit_cost * item.quantity)),
+           0
+         ) gross_margin_amount
        FROM campaign
        JOIN sales sale
          ON sale.tenant_id = campaign.tenant_id
@@ -1151,6 +1188,7 @@ router.get('/campaigns/:campaignId/results', asyncHandler(async (req, res) => {
        (SELECT COUNT(*)::integer FROM product_scope) product_count,
        COALESCE((SELECT units_sold FROM sales_totals), 0) units_sold,
        COALESCE((SELECT sales_amount FROM sales_totals), 0) sales_amount,
+       COALESCE((SELECT net_sales_amount FROM sales_totals), 0) net_sales_amount,
        COALESCE((SELECT gross_margin_amount FROM sales_totals), 0) gross_margin_amount,
        COALESCE((SELECT stock_current FROM stock_totals), 0) stock_current,
        GREATEST(COALESCE((SELECT actual_spend FROM spend), campaign.actual_spend), 0) marketing_spend,
