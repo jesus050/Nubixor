@@ -522,8 +522,8 @@ Actualizado al cierre de la fase C. Los commits van sobre `codex/nubixor-brand-p
 | A-1 Planificadores duplicados al escalar | **Resuelto** | Cerrojo en respaldo y sincronización de rangos |
 | A-2 Kardex sin saldo anterior/resultante | **Resuelto** | Migración 081; movimientos inmutables |
 | A-3 `on_hand` admitía negativos | **Resuelto** | `CHECK` en `inventory_balances` |
-| A-4 Limitación de tasa en memoria | Pendiente | Fase D |
-| A-5 Sin paginación en la API | Pendiente | Fase D |
+| A-4 Limitación de tasa en memoria | **Resuelto** | Contadores en PostgreSQL + límite general de la API |
+| A-5 Sin paginación en la API | **Parcial** | Kardex y rotación paginados; falta auditoría, inventario y ventas |
 | A-6 Acceso sin auditar, sin IP ni dispositivo | **Resuelto** | Origen automático en `metadata` |
 | A-7 El bloqueo por fuerza bruta no ocurría | **Resuelto** | Descubierto al auditar el acceso |
 | M-1 a M-7 | Pendientes | Fase F en su mayoría |
@@ -543,6 +543,17 @@ no tienen un movimiento que lo respalde, así que su kardex arranca en cero.
 Conviene mirar la lista una vez, decidir cuáles son inventario inicial legítimo,
 y registrar el ajuste correspondiente para que a partir de ahí toda diferencia
 signifique algo.
+
+### Respaldos (requisito 20)
+
+Resuelto en la fase D: cada respaldo, verificación y prueba de restauración
+queda registrado, y `npm run backup:status` responde por el estado sin entrar a
+buscar en los registros del servidor. El procedimiento de restauración y el
+simulacro trimestral están en `docs/RESTAURACION.md`.
+
+Sigue pendiente, y está dicho allí explícitamente: las copias viven en el mismo
+servidor que la aplicación, no hay recuperación a un punto en el tiempo, y el
+simulacro es manual.
 
 ### Verificación pendiente
 
