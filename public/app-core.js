@@ -654,6 +654,15 @@ const elements = {
   commercialOpportunityRotation: document.querySelector('#commercialOpportunityRotation'),
   commercialOpportunityPriority: document.querySelector('#commercialOpportunityPriority'),
   commercialOpportunityCampaign: document.querySelector('#commercialOpportunityCampaign'),
+  commercialOpportunityCoverage: document.querySelector('#commercialOpportunityCoverage'),
+  commercialOpportunityPeriod: document.querySelector('#commercialOpportunityPeriod'),
+  commercialCapitalTotal: document.querySelector('#commercialCapitalTotal'),
+  commercialCapitalSummary: document.querySelector('#commercialCapitalSummary'),
+  commercialCapitalGrouping: document.querySelector('#commercialCapitalGrouping'),
+  commercialCapitalList: document.querySelector('#commercialCapitalList'),
+  commercialTransferCount: document.querySelector('#commercialTransferCount'),
+  commercialTransferList: document.querySelector('#commercialTransferList'),
+  commercialTransferState: document.querySelector('#commercialTransferState'),
   commercialOpportunityList: document.querySelector('#commercialOpportunityList'),
   commercialOpportunityState: document.querySelector('#commercialOpportunityState'),
   commercialBudgetCount: document.querySelector('#commercialBudgetCount'),
@@ -1581,6 +1590,8 @@ let commercialPlanningOverview = {
 let commercialPlanningPeople = [];
 let commercialOpportunities = [];
 let commercialOpportunityTotal = 0;
+let commercialCapital = null;
+let commercialTransfers = null;
 let commercialBudgets = [];
 let commercialCampaigns = [];
 let commercialExpenses = [];
@@ -5129,7 +5140,66 @@ function renderCommercialOpportunities() {
   }
 }
 
+// El capital inmovilizado se lee de arriba abajo: primero el total, que es la
+// cifra que importa, y después dónde está repartido.
+function renderCommercialCapital() {
+  const capital = commercialCapital;
+  elements.commercialCapitalList.replaceChildren();
+  if (!capital) {
+    elements.commercialCapitalTotal.textContent = formatCurrency(0);
+    return;
+  }
+  elements.commercialCapitalTotal.textContent = formatCurrency(capital.totals.immobilizedCapital);
+  elements.commercialCapitalSummary.textContent =
+    `${capital.totals.productCount} productos · ${formatQuantity(capital.totals.units)} unidades. `
+    + 'Existencias por costo unitario; no incluye mercancía en tránsito.';
+  const total = Number(capital.totals.immobilizedCapital) || 0;
+  for (const grupo of capital.groups) {
+    const fila = document.createElement('div');
+    fila.className = 'commercial-compact-item';
+    const nombre = document.createElement('strong');
+    nombre.textContent = grupo.group_label;
+    const detalle = document.createElement('span');
+    const porcentaje = total > 0
+      ? Math.round((Number(grupo.immobilized_capital) / total) * 100)
+      : 0;
+    detalle.textContent = `${formatCurrency(grupo.immobilized_capital)} · ${porcentaje}% `
+      + `· ${formatQuantity(grupo.units)} unidades`;
+    fila.append(nombre, detalle);
+    elements.commercialCapitalList.append(fila);
+  }
+}
+
+function renderCommercialTransfers() {
+  const sugerencias = commercialTransfers?.suggestions || [];
+  elements.commercialTransferCount.textContent = String(
+    commercialTransfers?.pagination?.total || 0,
+  );
+  elements.commercialTransferList.replaceChildren();
+  elements.commercialTransferState.hidden = sugerencias.length > 0;
+  for (const sugerencia of sugerencias) {
+    const fila = document.createElement('div');
+    fila.className = 'commercial-compact-item';
+    const titulo = document.createElement('strong');
+    titulo.textContent = `${sugerencia.product_name} · ${sugerencia.sku}`;
+    const movimiento = document.createElement('span');
+    movimiento.textContent =
+      `Mover ${formatQuantity(sugerencia.suggested_quantity)} de ${sugerencia.source_branch_name} `
+      + `a ${sugerencia.destination_branch_name} (${formatCurrency(sugerencia.suggested_value)})`;
+    const motivo = document.createElement('small');
+    const cobertura = sugerencia.destination_coverage_days;
+    motivo.textContent = cobertura === null
+      ? sugerencia.reason
+      : `A ${sugerencia.destination_branch_name} le quedan ~${cobertura} días de inventario; `
+        + `en ${sugerencia.source_branch_name} hay ${formatQuantity(sugerencia.source_available)} sin rotar.`;
+    fila.append(titulo, movimiento, motivo);
+    elements.commercialTransferList.append(fila);
+  }
+}
+
 function renderCommercialPlanning() {
+  renderCommercialCapital();
+  renderCommercialTransfers();
   const overview = commercialPlanningOverview || {};
   const plan = overview.current_plan;
   const canManage = hasAnyPermission('commercial_planning.manage');
@@ -5264,6 +5334,8 @@ async function loadCommercialPlanning() {
     commercialPlanningPeople = [];
     commercialOpportunities = [];
     commercialOpportunityTotal = 0;
+    commercialCapital = null;
+    commercialTransfers = null;
     commercialBudgets = [];
     commercialCampaigns = [];
     commercialExpenses = [];
@@ -5282,8 +5354,19 @@ async function loadCommercialPlanning() {
     if (elements.commercialOpportunityCampaign.value) {
       opportunityParams.set('campaign', elements.commercialOpportunityCampaign.value);
     }
+    if (elements.commercialOpportunityCoverage.value) {
+      opportunityParams.set('coverage', elements.commercialOpportunityCoverage.value);
+    }
+    const periodo = elements.commercialOpportunityPeriod.value;
+    if (periodo) opportunityParams.set('periodDays', periodo);
     const opportunityUrl = `/api/commercial-planning/opportunities${
       opportunityParams.toString() ? `?${opportunityParams}` : ''
+    }`;
+    const capitalUrl = `/api/commercial-planning/immobilized-capital?groupBy=${
+      elements.commercialCapitalGrouping.value || 'category'
+    }`;
+    const transferUrl = `/api/commercial-planning/transfer-suggestions${
+      periodo ? `?periodDays=${periodo}` : ''
     }`;
     let commercialOpportunityPage;
     [
@@ -5293,6 +5376,8 @@ async function loadCommercialPlanning() {
       commercialBudgets,
       commercialCampaigns,
       commercialExpenses,
+      commercialCapital,
+      commercialTransfers,
     ] = await Promise.all([
       getJson('/api/commercial-planning/overview', { headers }),
       getJson('/api/commercial-planning/people', { headers }),
@@ -5300,6 +5385,8 @@ async function loadCommercialPlanning() {
       getJson('/api/commercial-planning/budgets', { headers }),
       getJson('/api/commercial-planning/campaigns', { headers }),
       getJson('/api/commercial-planning/expenses', { headers }),
+      getJson(capitalUrl, { headers }),
+      getJson(transferUrl, { headers }),
     ]);
     // La bandeja llega paginada: se muestra la primera página y el contador
     // dice cuántas oportunidades hay en total, no cuántas cupieron.
@@ -19197,6 +19284,9 @@ elements.commercialInitiativeDialog.addEventListener('click', (event) => {
   elements.commercialOpportunityRotation,
   elements.commercialOpportunityPriority,
   elements.commercialOpportunityCampaign,
+  elements.commercialOpportunityCoverage,
+  elements.commercialOpportunityPeriod,
+  elements.commercialCapitalGrouping,
 ].forEach((select) => {
   select.addEventListener('change', () => {
     loadCommercialPlanning().catch(() => showToast('No fue posible filtrar oportunidades.'));

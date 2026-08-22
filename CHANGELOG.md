@@ -57,6 +57,21 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 - `docs/RESTAURACION.md`: procedimiento de restauración, simulacro trimestral y
   lo que el esquema de respaldo todavía no cubre.
 
+### Añadido en la fase E
+
+- Capital inmovilizado: cuánto dinero hay detenido en existencias, agrupado por
+  categoría, marca, sucursal, bodega o producto.
+- Clasificación por cobertura —agotado, en riesgo, sana, exceso— con umbrales
+  configurables. La rotación por unidades responde cuánto se vendió; la
+  cobertura responde qué se va a acabar y dónde hay dinero quieto.
+- Traslados sugeridos entre sucursales: propone mover lo que sobra donde no rota
+  hacia donde se está acabando, y solo cuando la cantidad justifica el viaje.
+  Ninguna sugerencia se ejecuta sola.
+- El período de análisis se puede pedir por consulta (7, 30, 60, 90 días o el
+  que sea), sin cambiar el ajuste de la empresa.
+- El panel de atención avisa de productos sin una sola venta —con el capital que
+  representan— y de cajas cerradas con diferencia en los últimos siete días.
+
 ### Seguridad
 
 - El aislamiento por empresa dentro de PostgreSQL se extendió a compras, gastos,

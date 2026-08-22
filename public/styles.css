@@ -17702,6 +17702,60 @@ main,
   gap: 9px;
 }
 
+/* Las filas de capital inmovilizado y traslados sugeridos se leen en vertical:
+   qué producto, qué hacer con él, y por qué. La fila de dos columnas que usan
+   los otros paneles dejaba el motivo sin sitio. */
+.commercial-compact-item {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)),
+    #fff;
+  min-width: 0;
+}
+
+.commercial-compact-item strong {
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commercial-compact-item span {
+  color: var(--color-ink);
+  font-size: 0.84rem;
+}
+
+.commercial-compact-item small {
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.commercial-inline-field {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+}
+
+.commercial-inline-field span {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.commercial-plan-note {
+  margin: 0 0 10px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .commercial-compact-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -16,10 +16,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260822-LABEL-CENTER-v3">
+    <link rel="stylesheet" href="./styles.css?v=20260822-INVENTORY-INTELLIGENCE-v4">
     <link rel="stylesheet" href="./brand.css?v=20260813-MOBILE-v129">
     <script src="./vendor/jsbarcode/JsBarcode.all.min.js" defer></script>
-    <script src="./app.js?v=20260822-LABEL-CENTER-v3" defer></script>
+    <script src="./app.js?v=20260822-INVENTORY-INTELLIGENCE-v4" defer></script>
 
   </head>
   <body>
@@ -3379,6 +3379,50 @@
               </article>
             </div>
 
+            <div class="commercial-planning-grid">
+              <article class="commercial-plan-panel">
+                <div class="commercial-plan-heading">
+                  <div>
+                    <p class="eyebrow">Capital inmovilizado</p>
+                    <h3 id="commercialCapitalTotal">$0</h3>
+                  </div>
+                  <label class="commercial-inline-field">
+                    <span>Agrupar por</span>
+                    <select id="commercialCapitalGrouping">
+                      <option value="category">Categoría</option>
+                      <option value="brand">Marca</option>
+                      <option value="branch">Sucursal</option>
+                      <option value="warehouse">Bodega</option>
+                      <option value="product">Producto</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="commercial-plan-note" id="commercialCapitalSummary">
+                  Existencias por costo unitario. No incluye mercancía en tránsito.
+                </p>
+                <div class="commercial-compact-list" id="commercialCapitalList"></div>
+              </article>
+
+              <article class="commercial-plan-panel">
+                <div class="commercial-plan-heading">
+                  <div>
+                    <p class="eyebrow">Traslados sugeridos</p>
+                    <h3>Mercancía quieta en una sucursal y faltando en otra</h3>
+                  </div>
+                  <span id="commercialTransferCount">0</span>
+                </div>
+                <p class="commercial-plan-note">
+                  Ninguna sugerencia se ejecuta sola: el traslado se registra desde
+                  Inventario, con su aprobación y su motivo.
+                </p>
+                <div class="commercial-compact-list" id="commercialTransferList"></div>
+                <div class="data-state compact" id="commercialTransferState">
+                  <strong>Sin traslados sugeridos</strong>
+                  <p>Aparecerán cuando una sucursal tenga de sobra lo que a otra le falta.</p>
+                </div>
+              </article>
+            </div>
+
             <article class="commercial-plan-panel commercial-opportunity-panel">
               <div class="commercial-plan-heading">
                 <div>
@@ -3414,6 +3458,26 @@
                     <option value="">Todas</option>
                     <option value="WITHOUT">Sin campaña</option>
                     <option value="WITH">Con campaña</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Cobertura</span>
+                  <select id="commercialOpportunityCoverage">
+                    <option value="">Toda</option>
+                    <option value="RIESGO">Próximo a agotarse</option>
+                    <option value="EXCESO">Exceso de inventario</option>
+                    <option value="SIN_VENTAS">Sin ventas en el período</option>
+                    <option value="SANA">Cobertura sana</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Período</span>
+                  <select id="commercialOpportunityPeriod">
+                    <option value="">Configurado</option>
+                    <option value="7">7 días</option>
+                    <option value="30">30 días</option>
+                    <option value="60">60 días</option>
+                    <option value="90">90 días</option>
                   </select>
                 </label>
               </div>
