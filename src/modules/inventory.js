@@ -5,6 +5,7 @@ import { requireTenant } from '../middleware.js';
 import { writeAudit } from '../audit.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
+import { paginatedQuery, paginatedResponse, parsePagination } from '../shared/pagination.js';
 
 const router = Router();
 const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -486,7 +487,10 @@ router.get('/kardex', asyncHandler(async (req, res) => {
       'INVALID_KARDEX_PERIOD',
     );
   }
-  const result = await query(
+  // Antes cortaba en 500 movimientos sin decirlo. Un kardex truncado en
+  // silencio es peor que uno paginado: el que lo mira cree que vio todo.
+  const pagination = parsePagination(req);
+  const page = paginatedQuery(
     `WITH ordered AS (
        SELECT movement.id, movement.product_id, movement.warehouse_id,
               movement.movement_type, movement.quantity, movement.unit_cost,
@@ -519,9 +523,7 @@ router.get('/kardex', asyncHandler(async (req, res) => {
      SELECT *
      FROM ordered
      WHERE ($4::date IS NULL OR created_at >= $4::date)
-       AND ($5::date IS NULL OR created_at < ($5::date + INTERVAL '1 day'))
-     ORDER BY created_at DESC, id DESC
-     LIMIT 500`,
+       AND ($5::date IS NULL OR created_at < ($5::date + INTERVAL '1 day'))`,
     [
       req.context.tenantId,
       productId,
@@ -530,8 +532,11 @@ router.get('/kardex', asyncHandler(async (req, res) => {
       dateTo,
       req.context.branchId,
     ],
+    pagination,
+    'created_at DESC, id DESC',
   );
-  res.json(result.rows);
+  const result = await query(page.text, page.values);
+  res.json(paginatedResponse(result, pagination, 'movements'));
 }));
 
 // El kardex y el saldo deberían contar lo mismo. Cuando no coinciden es que

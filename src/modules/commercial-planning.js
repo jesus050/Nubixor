@@ -4,6 +4,7 @@ import { requireAnyPermission, requirePermission } from '../authorization.js';
 import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
 import { AppError } from '../shared/errors.js';
+import { paginatedQuery, paginatedResponse, parsePagination } from '../shared/pagination.js';
 import { writeAudit } from '../audit.js';
 
 const router = Router();
@@ -478,12 +479,17 @@ function rotationQuery({ opportunitiesOnly = false } = {}) {
          OR stock_on_hand >= high_stock_units
          OR commercial_priority IN ('HIGH','URGENT')
        )` : ''}
-     ORDER BY
-       CASE commercial_priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
-       CASE rotation_class WHEN 'NONE' THEN 0 WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
-       stock_on_hand DESC,
-       product_name`;
+`;
 }
+
+// El orden lo aplica la paginación en la consulta externa, no aquí dentro: el
+// orden de un CTE no está garantizado y recortar fuera lo que se ordenó dentro
+// puede devolver páginas que no encajan.
+const ROTATION_ORDER = `
+  CASE commercial_priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+  CASE rotation_class WHEN 'NONE' THEN 0 WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+  stock_on_hand DESC,
+  product_name`;
 
 async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
   const filters = buildRotationFilters(req);
@@ -496,7 +502,11 @@ async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
   if (filters.campaign && !['WITH', 'WITHOUT'].includes(filters.campaign.toUpperCase())) {
     throw new AppError('El filtro de campaña no es válido.', 422, 'INVALID_CAMPAIGN_FILTER');
   }
-  const result = await query(rotationQuery({ opportunitiesOnly }), [
+  // La consulta recorría el catálogo entero sin límite. En una empresa con
+  // miles de referencias eso es una respuesta que nadie lee completa y una
+  // consulta que se degrada sola con el tiempo.
+  const pagination = parsePagination(req);
+  const page = paginatedQuery(rotationQuery({ opportunitiesOnly }), [
     req.context.tenantId,
     filters.branchId,
     filters.warehouseId,
@@ -510,8 +520,9 @@ async function loadRotationRows(req, { opportunitiesOnly = false } = {}) {
     filters.seasonId,
     filters.maxMargin,
     filters.daysWithoutSale,
-  ]);
-  return result.rows;
+  ], pagination, ROTATION_ORDER);
+  const result = await query(page.text, page.values);
+  return paginatedResponse(result, pagination, 'products');
 }
 
 router.get('/overview', asyncHandler(async (req, res) => {

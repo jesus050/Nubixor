@@ -1549,6 +1549,7 @@ let commercialPlanningOverview = {
 };
 let commercialPlanningPeople = [];
 let commercialOpportunities = [];
+let commercialOpportunityTotal = 0;
 let commercialBudgets = [];
 let commercialCampaigns = [];
 let commercialExpenses = [];
@@ -5032,7 +5033,7 @@ function renderCommercialMarketing() {
 
 function renderCommercialOpportunities() {
   elements.commercialOpportunityList.replaceChildren();
-  elements.commercialOpportunityCount.textContent = String(commercialOpportunities.length);
+  elements.commercialOpportunityCount.textContent = String(commercialOpportunityTotal);
   elements.commercialOpportunityState.hidden = Boolean(commercialOpportunities.length);
   if (!commercialOpportunities.length) return;
   for (const opportunity of commercialOpportunities.slice(0, 20)) {
@@ -5231,6 +5232,7 @@ async function loadCommercialPlanning() {
       )) {
     commercialPlanningPeople = [];
     commercialOpportunities = [];
+    commercialOpportunityTotal = 0;
     commercialBudgets = [];
     commercialCampaigns = [];
     commercialExpenses = [];
@@ -5252,10 +5254,11 @@ async function loadCommercialPlanning() {
     const opportunityUrl = `/api/commercial-planning/opportunities${
       opportunityParams.toString() ? `?${opportunityParams}` : ''
     }`;
+    let commercialOpportunityPage;
     [
       commercialPlanningOverview,
       commercialPlanningPeople,
-      commercialOpportunities,
+      commercialOpportunityPage,
       commercialBudgets,
       commercialCampaigns,
       commercialExpenses,
@@ -5267,6 +5270,10 @@ async function loadCommercialPlanning() {
       getJson('/api/commercial-planning/campaigns', { headers }),
       getJson('/api/commercial-planning/expenses', { headers }),
     ]);
+    // La bandeja llega paginada: se muestra la primera página y el contador
+    // dice cuántas oportunidades hay en total, no cuántas cupieron.
+    commercialOpportunities = commercialOpportunityPage.products;
+    commercialOpportunityTotal = commercialOpportunityPage.pagination.total;
     elements.commercialPlanningState.classList.remove('error');
     renderCommercialPlanning();
     return commercialPlanningOverview;
@@ -10613,9 +10620,10 @@ async function loadKardex(event) {
     if (elements.kardexDateTo.value) {
       params.set('dateTo', elements.kardexDateTo.value);
     }
-    const records = await getJson(`/api/inventory/kardex?${params}`, {
+    const pagina = await getJson(`/api/inventory/kardex?${params}`, {
       headers: { 'x-tenant-id': activeTenantId },
     });
+    const records = pagina.movements;
     elements.kardexTableBody.replaceChildren();
     records.forEach((record) => {
       const row = document.createElement('tr');
@@ -10635,11 +10643,19 @@ async function loadKardex(event) {
       );
       elements.kardexTableBody.append(row);
     });
-    elements.kardexState.hidden = records.length > 0;
+    const { total, totalPages, page } = pagina.pagination;
+    elements.kardexState.hidden = records.length > 0 && totalPages === 1;
     if (!records.length) {
       elements.kardexState.querySelector('strong').textContent = 'Sin movimientos';
       elements.kardexState.querySelector('p').textContent =
         'No hay registros para los filtros seleccionados.';
+    } else if (totalPages > 1) {
+      // El kardex ya no se corta en silencio: si hay más, se dice cuántos y se
+      // sugiere el filtro, que es la forma útil de llegar a lo que se busca.
+      elements.kardexState.querySelector('strong').textContent =
+        `Mostrando ${records.length} de ${total} movimientos`;
+      elements.kardexState.querySelector('p').textContent =
+        `Página ${page} de ${totalPages}. Acota por producto, bodega o fechas para ver menos.`;
     }
   } catch (error) {
     elements.kardexTableBody.replaceChildren();
