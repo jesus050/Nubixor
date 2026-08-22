@@ -16,9 +16,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260821-CASH-CLOSING-v1">
+    <link rel="stylesheet" href="./styles.css?v=20260821-DASHBOARD-v1">
     <link rel="stylesheet" href="./brand.css?v=20260813-MOBILE-v129">
-    <script src="./app.js?v=20260821-CASH-CLOSING-v1" defer></script>
+    <script src="./app.js?v=20260821-DASHBOARD-v1" defer></script>
 
   </head>
   <body>
@@ -442,6 +442,17 @@
             <div class="onboarding-steps" id="onboardingSteps"></div>
           </section>
 
+          <section class="section app-view dashboard-attention" data-view="inicio"
+            id="attentionCenter" aria-labelledby="attentionTitle" hidden>
+            <div class="section-heading dashboard-heading">
+              <div>
+                <p class="eyebrow">Requiere una decisión</p>
+                <h2 id="attentionTitle">Pendientes de hoy.</h2>
+              </div>
+              <p id="attentionSummary">Turnos sin cerrar, rechazos de la DIAN, existencias bajas y cartera vencida.</p>
+            </div>
+            <div class="attention-grid" id="attentionGrid"></div>
+          </section>
           <section class="section app-view" id="resumen" data-view="inicio" aria-labelledby="summaryTitle">
             <div class="section-heading dashboard-heading">
               <div>
@@ -568,6 +579,49 @@
                   <span class="metric-icon rose" aria-hidden="true">S</span>
                   <div><span>Sucursales</span><strong id="branchCount">—</strong><small id="branchDetail">Consultando API</small></div>
                 </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="section app-view dashboard-trend" data-view="inicio"
+            id="trendCenter" aria-labelledby="trendTitle">
+            <div class="section-heading dashboard-heading">
+              <div>
+                <p class="eyebrow">Tendencia</p>
+                <h2 id="trendTitle">Cómo viene el negocio.</h2>
+              </div>
+              <div class="trend-switch" role="group" aria-label="Rango de la tendencia">
+                <button class="trend-range is-active" id="trendDailyButton" type="button"
+                  aria-pressed="true">30 días</button>
+                <button class="trend-range" id="trendMonthlyButton" type="button"
+                  aria-pressed="false">12 meses</button>
+              </div>
+            </div>
+
+            <div class="trend-compare" id="trendCompare"></div>
+
+            <figure class="trend-chart-wrap">
+              <div class="trend-chart" id="trendChart" role="img"
+                aria-labelledby="trendChartCaption"></div>
+              <figcaption id="trendChartCaption">Ventas completadas por día.</figcaption>
+            </figure>
+
+            <div class="trend-branches">
+              <div class="data-state-heading">
+                <span>Ventas por sucursal</span>
+                <strong id="trendBranchCount">0</strong>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th>Sucursal</th><th>Ventas hoy</th><th>Hoy</th><th>Mes</th>
+                  </tr></thead>
+                  <tbody id="trendBranchBody"></tbody>
+                </table>
+              </div>
+              <div class="data-state compact" id="trendBranchState" hidden>
+                <div><strong>Sin ventas registradas</strong>
+                  <p>Las sucursales aparecen aquí cuando tengan movimiento.</p></div>
               </div>
             </div>
           </section>
