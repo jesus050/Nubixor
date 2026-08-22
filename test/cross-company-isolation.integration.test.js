@@ -15,7 +15,7 @@ const digest = (value) => createHash('sha256').update(value).digest('hex');
 
 // Rutas montadas antes del guardián de sesión, y las que verifican membresía
 // contra el dueño del recurso en lugar de la empresa activa.
-const OUT_OF_SCOPE = ['/api/health', '/api/auth', ...SELF_GUARDED_API_PREFIXES];
+const OUT_OF_SCOPE = ['/api/health', '/api/version', '/api/auth', ...SELF_GUARDED_API_PREFIXES];
 
 function mountPath(layer) {
   if (layer.regexp?.fast_slash) return '';

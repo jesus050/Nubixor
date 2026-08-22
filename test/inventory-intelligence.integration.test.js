@@ -5,12 +5,14 @@
 import 'dotenv/config';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
+import { bootstrapTenantAccess } from '../src/authorization.js';
 
 const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || null;
+const digest = (value) => createHash('sha256').update(value).digest('hex');
 
 test('la inteligencia de inventario responde con números que cuadran', {
   skip: !connectionString,
@@ -18,15 +20,38 @@ test('la inteligencia de inventario responde con números que cuadran', {
   const pool = new pg.Pool({ connectionString });
   const ids = {
     tenant: randomUUID(),
+    user: randomUUID(),
     branchA: randomUUID(), branchB: randomUUID(),
     warehouseA: randomUUID(), warehouseB: randomUUID(),
     registerB: randomUUID(), sessionB: randomUUID(),
     tax: randomUUID(), category: randomUUID(),
     product: randomUUID(), quieto: randomUUID(),
   };
+  const token = randomBytes(32).toString('base64url');
 
   try {
     await pool.query('INSERT INTO tenants(id, legal_name) VALUES($1,$2)', [ids.tenant, 'Empresa con dos sucursales']);
+    await pool.query(
+      `INSERT INTO users(id, email, full_name, status)
+       VALUES($1,$2,'Propietario de prueba','ACTIVE')`,
+      [ids.user, `inventario-${ids.user}@example.test`],
+    );
+    const access = await pool.connect();
+    try {
+      await access.query('BEGIN');
+      await bootstrapTenantAccess(access, { tenantId: ids.tenant, ownerUserId: ids.user });
+      await access.query('COMMIT');
+    } catch (error) {
+      await access.query('ROLLBACK');
+      throw error;
+    } finally {
+      access.release();
+    }
+    await pool.query(
+      `INSERT INTO auth_sessions(user_id, token_hash, csrf_token_hash, expires_at, active_tenant_id)
+       VALUES($1,$2,$3,now() + interval '1 hour',$4)`,
+      [ids.user, digest(token), digest(randomUUID()), ids.tenant],
+    );
     for (const [id, nombre, codigo] of [
       [ids.branchA, 'Norte', 'NORTE'],
       [ids.branchB, 'Centro', 'CENTRO'],
@@ -93,7 +118,11 @@ test('la inteligencia de inventario responde con números que cuadran', {
       [ids.tenant],
     );
 
-    const app = createApp({ security: false, moduleGates: false });
+    const app = createApp();
+    const tenantRequest = (path) => request(app)
+      .get(path)
+      .set('Cookie', `megasuite_session=${token}`)
+      .set('x-tenant-id', ids.tenant);
     // Centro vende 30 unidades en el período: rota, y le quedan 2.
     await pool.query(
       `INSERT INTO sales(id, tenant_id, cash_session_id, warehouse_id, payment_method,
@@ -114,9 +143,7 @@ test('la inteligencia de inventario responde con números que cuadran', {
     );
 
     await t.test('el capital inmovilizado suma existencias por costo', async () => {
-      const respuesta = await request(app)
-        .get('/api/commercial-planning/immobilized-capital?groupBy=category')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/commercial-planning/immobilized-capital?groupBy=category');
       assert.equal(respuesta.status, 200);
       // 82 unidades a 50.000 (4.100.000) + 10 a 20.000 (200.000).
       assert.equal(Number(respuesta.body.totals.immobilizedCapital), 4300000);
@@ -127,9 +154,7 @@ test('la inteligencia de inventario responde con números que cuadran', {
     });
 
     await t.test('agrupar por sucursal separa el dinero de cada una', async () => {
-      const respuesta = await request(app)
-        .get('/api/commercial-planning/immobilized-capital?groupBy=branch')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/commercial-planning/immobilized-capital?groupBy=branch');
       const norte = respuesta.body.groups.find((g) => g.group_label === 'Norte');
       const centro = respuesta.body.groups.find((g) => g.group_label === 'Centro');
       assert.equal(Number(norte.immobilized_capital), 4200000);
@@ -137,17 +162,13 @@ test('la inteligencia de inventario responde con números que cuadran', {
     });
 
     await t.test('rechaza agrupamientos que no existen', async () => {
-      const respuesta = await request(app)
-        .get('/api/commercial-planning/immobilized-capital?groupBy=lo-que-sea')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/commercial-planning/immobilized-capital?groupBy=lo-que-sea');
       assert.equal(respuesta.status, 422);
       assert.equal(respuesta.body.code, 'INVALID_CAPITAL_GROUPING');
     });
 
     await t.test('sugiere mover del que no rota al que se está quedando sin', async () => {
-      const respuesta = await request(app)
-        .get('/api/commercial-planning/transfer-suggestions')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/commercial-planning/transfer-suggestions');
       assert.equal(respuesta.status, 200);
       const sugerencia = respuesta.body.suggestions
         .find((fila) => fila.product_id === ids.product);
@@ -175,9 +196,7 @@ test('la inteligencia de inventario responde con números que cuadran', {
     });
 
     await t.test('el riesgo de agotamiento mide días, no unidades', async () => {
-      const respuesta = await request(app)
-        .get('/api/commercial-planning/stockout-risk')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/commercial-planning/stockout-risk');
       assert.equal(respuesta.status, 200);
       const enRiesgo = respuesta.body.products.find((fila) => fila.product_id === ids.product);
       assert.ok(enRiesgo, 'el producto que rota y casi se acaba debe aparecer');
@@ -191,23 +210,17 @@ test('la inteligencia de inventario responde con números que cuadran', {
     });
 
     await t.test('el período de análisis se puede cambiar por petición', async () => {
-      const corta = await request(app)
-        .get('/api/commercial-planning/rotation?periodDays=7')
-        .set('x-tenant-id', ids.tenant);
+      const corta = await tenantRequest('/api/commercial-planning/rotation?periodDays=7');
       assert.equal(corta.status, 200);
       assert.equal(corta.body.products[0].analysis_period_days, 7);
 
-      const invalida = await request(app)
-        .get('/api/commercial-planning/rotation?periodDays=0')
-        .set('x-tenant-id', ids.tenant);
+      const invalida = await tenantRequest('/api/commercial-planning/rotation?periodDays=0');
       assert.equal(invalida.status, 422);
       assert.equal(invalida.body.code, 'INVALID_ANALYSIS_PERIOD');
     });
 
     await t.test('el panel avisa del capital detenido y de las diferencias', async () => {
-      const respuesta = await request(app)
-        .get('/api/dashboard/attention')
-        .set('x-tenant-id', ids.tenant);
+      const respuesta = await tenantRequest('/api/dashboard/attention');
       assert.equal(respuesta.status, 200);
       assert.equal(respuesta.body.stagnantProducts.total, 1);
       assert.equal(Number(respuesta.body.stagnantProducts.immobilizedCapital), 200000);
