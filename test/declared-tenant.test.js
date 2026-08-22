@@ -31,9 +31,11 @@ test('declara la empresa vendedora y devuelve la activa al terminar', async () =
 
   assert.equal(resultado, 'asiento');
   assert.deepEqual(client.sentencias, [
-    `SET LOCAL app.tenant_id = '${EMPRESA_VENDEDORA}'`,
+    `SET LOCAL app.tenant_id = '${EMPRESA_VENDEDORA}'; `
+      + `SET LOCAL app.tenant_ids = '${EMPRESA_VENDEDORA}'`,
     'INSERT INTO journal_entries(...)',
-    `SET LOCAL app.tenant_id = '${EMPRESA_ACTIVA}'`,
+    `SET LOCAL app.tenant_id = '${EMPRESA_ACTIVA}'; `
+      + `SET LOCAL app.tenant_ids = '${EMPRESA_ACTIVA}'`,
   ]);
 });
 
@@ -46,9 +48,9 @@ test('restaura la empresa activa aunque el trabajo falle', async () => {
       })),
     /el asiento no cuadra/,
   );
-  assert.equal(
+  assert.match(
     client.sentencias.at(-1),
-    `SET LOCAL app.tenant_id = '${EMPRESA_ACTIVA}'`,
+    new RegExp(`SET LOCAL app\\.tenant_id = '${EMPRESA_ACTIVA}'`),
     'la empresa activa debe quedar declarada aunque el tramo falle',
   );
 });
@@ -59,7 +61,10 @@ test('sin empresa previa deja la conexión sin empresa declarada', async () => {
     withDeclaredTenant(client, EMPRESA_VENDEDORA, async () => null));
   // La cadena vacía deja app_tenant_scope() en NULL: ninguna política devuelve
   // filas, que es el lado seguro del error.
-  assert.equal(client.sentencias.at(-1), "SET LOCAL app.tenant_id = ''");
+  assert.equal(
+    client.sentencias.at(-1),
+    "SET LOCAL app.tenant_id = ''; SET LOCAL app.tenant_ids = ''",
+  );
 });
 
 test('rechaza un identificador que no sea el de una empresa', async () => {

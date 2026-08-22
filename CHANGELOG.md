@@ -25,10 +25,14 @@ Todos los cambios relevantes de MegaSuite se documentan en este archivo.
 ### Seguridad
 
 - El aislamiento por empresa dentro de PostgreSQL se extendió a compras, gastos,
-  nómina, conteos físicos, lotes, reservas y series. El catálogo compartido de
-  la caja multiempresa sigue fuera a propósito: necesita que la conexión declare
-  un conjunto de empresas, y eso está pendiente de decisión (ver
-  `docs/AUDITORIA_FASE_A.md` §9).
+  nómina, conteos físicos, lotes, reservas y series.
+- El catálogo compartido —productos, saldos y movimientos de inventario— también
+  quedó protegido. Como la caja multiempresa atiende a varias empresas en la
+  misma petición, la conexión ya no declara una empresa sino el conjunto que esa
+  petición puede tocar: la activa, más las que comparten la caja. La lista la
+  calcula siempre el servidor desde la configuración de la caja y la membresía
+  del usuario. Sin ampliación explícita el conjunto es la empresa activa, así
+  que ninguna consulta existente cambia de comportamiento.
 
 ### Añadido
 

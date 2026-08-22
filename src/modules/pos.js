@@ -2,6 +2,7 @@ import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import QRCode from 'qrcode';
 import { query, withDeclaredTenant, withTransaction } from '../db.js';
+import { widenTenantScope } from '../tenant-context.js';
 import { config } from '../config.js';
 import { requireTenant } from '../middleware.js';
 import { asyncHandler } from '../shared/async-handler.js';
@@ -56,6 +57,29 @@ async function findSaleByIdempotencyKey(runQuery, tenantId, idempotencyKey) {
     [tenantId, idempotencyKey],
   );
   return existing.rows[0]?.id || null;
+}
+
+// Las empresas que atiende una caja compartida. Salen de la configuración de la
+// caja cruzada con la membresía activa del usuario: nada de esto lo elige el
+// navegador. Mientras dure la petición, el catálogo y las existencias de esas
+// empresas quedan dentro del alcance; el resto del sistema sigue viendo solo la
+// empresa activa.
+async function widenScopeToRegisterCompanies(req, cashSessionId) {
+  const companies = await query(
+    `SELECT crc.company_id
+     FROM cash_sessions session
+     JOIN cash_register_companies crc
+       ON crc.cash_register_id = session.cash_register_id
+      AND crc.active = TRUE
+     JOIN tenant_users membership
+       ON membership.tenant_id = crc.company_id
+      AND membership.user_id = $2
+      AND membership.status = 'ACTIVE'
+     WHERE session.id = $1 AND session.tenant_id = $3`,
+    [cashSessionId, req.context.userId, req.context.tenantId],
+  );
+  if (!companies.rowCount) return [];
+  return widenTenantScope(companies.rows.map((row) => row.company_id));
 }
 
 function isIdempotencyConflict(error, indexName) {
@@ -772,6 +796,7 @@ router.get('/shared-catalog', asyncHandler(async (req, res) => {
   if (customerId && (typeof customerId !== 'string' || !UUID_PATTERN.test(customerId))) {
     return res.status(422).json({ error: 'El cliente no es válido.' });
   }
+  await widenScopeToRegisterCompanies(req, cashSessionId);
   const result = await query(
     `SELECT p.id, p.sku, p.name, p.barcode, p.sale_price, p.tax_review_status,
             p.product_kind, p.parent_product_id, p.variant_attributes,
@@ -1331,6 +1356,10 @@ router.post('/sales/grouped', asyncHandler(async (req, res) => {
       quantity: (current?.quantity || 0) + Number(item.quantity),
     });
   }
+
+  // El cobro descuenta existencias de cada empresa vendedora, así que el alcance
+  // se amplía antes de abrir la transacción: dentro ya no se puede cambiar.
+  await widenScopeToRegisterCompanies(req, cashSessionId);
 
   const registerGroupedSale = async () => withTransaction(async (client) => {
     const session = await client.query(

@@ -480,7 +480,21 @@ del usuario". Sigue bloqueando la fuga hacia empresas ajenas —que es el riesgo
 real— pero no separa entre las empresas del propio usuario. Además añade un
 `EXISTS` sobre `tenant_users` a cada fila evaluada.
 
-**Recomendación: opción A**, aplicada por tandas y empezando por las tablas que
+**Decisión tomada: opción A.** Implementada en `src/tenant-context.js`
+(`widenTenantScope`, `tenantScopeIds`), `src/db.js` (la conexión declara
+`app.tenant_ids` además de `app.tenant_id`) y la migración 080
+(`app_tenant_scope_set()`). Las rutas compartidas del punto de venta
+—`/shared-catalog` y `/sales/grouped`— amplían el alcance con las empresas que
+atiende la caja, calculadas desde `cash_register_companies` cruzado con la
+membresía activa del usuario. Sin ampliación explícita, el conjunto es
+exactamente la empresa activa, así que ninguna consulta existente cambia.
+
+Cubiertas hasta ahora: `products`, `inventory_balances`, `inventory_movements`.
+Pendientes: `sales`, `sale_items` y `customers`, que exigen revisar antes el
+cierre de caja compartida (lee ventas de varias empresas para dar el corte por
+empresa).
+
+*Recomendación original, conservada como registro:* opción A, aplicada por tandas y empezando por las tablas que
 no participan del catálogo compartido (`purchases`, `business_expenses`,
 `payroll_*`, `inventory_counts`, `inventory_lots`, `inventory_reservations`),
 donde el alcance es siempre la empresa activa y el riesgo de romper algo es
