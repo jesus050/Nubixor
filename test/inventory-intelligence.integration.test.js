@@ -196,7 +196,7 @@ test('la inteligencia de inventario responde con números que cuadran', {
     });
 
     await t.test('el riesgo de agotamiento mide días, no unidades', async () => {
-      const respuesta = await tenantRequest('/api/commercial-planning/stockout-risk');
+      const respuesta = await tenantRequest(`/api/commercial-planning/stockout-risk?branchId=${ids.branchB}`);
       assert.equal(respuesta.status, 200);
       const enRiesgo = respuesta.body.products.find((fila) => fila.product_id === ids.product);
       assert.ok(enRiesgo, 'el producto que rota y casi se acaba debe aparecer');
