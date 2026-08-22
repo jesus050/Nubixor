@@ -16,10 +16,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260822-LABEL-EDITOR-v2">
+    <link rel="stylesheet" href="./styles.css?v=20260822-LABEL-CENTER-v3">
     <link rel="stylesheet" href="./brand.css?v=20260813-MOBILE-v129">
     <script src="./vendor/jsbarcode/JsBarcode.all.min.js" defer></script>
-    <script src="./app.js?v=20260822-LABEL-EDITOR-v2" defer></script>
+    <script src="./app.js?v=20260822-LABEL-CENTER-v3" defer></script>
 
   </head>
   <body>
@@ -202,6 +202,9 @@
               </a>
               <a class="nav-item" href="#productos" data-view-link="productos">
                 <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4"/><path d="M13 2 3 12v7a2 2 0 0 0 2 2h7l10-10V4a2 2 0 0 0-2-2z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> Catálogo
+              </a>
+              <a class="nav-item" href="#etiquetas" data-view-link="etiquetas">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M7 7h10M7 11h10M7 15h5"/><path d="M14 15h3"/></svg> Etiquetas
               </a>
             </div>
           </div>
@@ -1220,6 +1223,36 @@
               </div>
             </div>
             </div>
+          </section>
+
+          <section class="section labels-section app-view" id="etiquetas"
+            data-view="etiquetas" aria-labelledby="labelsTitle" hidden>
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Centro de impresión</p>
+                <h2 id="labelsTitle">Etiquetas</h2>
+                <p>Busca productos del catálogo, arma una cola de impresión y reutiliza el diseño guardado de tu empresa.</p>
+              </div>
+              <div class="heading-actions">
+                <button class="secondary-button" id="openLabelsDesignButton" type="button">Configurar diseño</button>
+                <button class="primary-button" id="printSelectedLabelsButton" type="button" disabled>Imprimir selección</button>
+              </div>
+            </div>
+            <div class="labels-source-grid">
+              <section class="inventory-panel labels-search-panel">
+                <div class="inventory-panel-heading"><div><p class="eyebrow">Catálogo</p><h3>Agregar productos</h3></div></div>
+                <label class="labels-search-field"><span>Busca por nombre, SKU o código de barras</span><input id="labelsProductSearch" type="search" autocomplete="off" placeholder="Ej. abánico, 200052..., SKU-001"></label>
+                <div class="labels-search-results" id="labelsProductResults"></div>
+                <p class="labels-search-hint" id="labelsProductHint">Escribe al menos dos caracteres para encontrar productos de la empresa activa.</p>
+              </section>
+              <section class="inventory-panel labels-queue-panel">
+                <div class="inventory-panel-heading"><div><p class="eyebrow">Cola de impresión</p><h3>Productos seleccionados</h3></div><span id="labelsQueueCount">0 etiquetas</span></div>
+                <div class="labels-queue-list" id="labelsQueueList"></div>
+                <div class="data-state compact-state" id="labelsQueueEmpty"><span class="data-state-symbol" aria-hidden="true">▥</span><strong>Tu cola está vacía</strong><p>Agrega productos desde Catálogo o entra a un lote aprobado desde Logística.</p></div>
+                <button class="sync-link" id="clearLabelsQueueButton" type="button" hidden>Limpiar selección</button>
+              </section>
+            </div>
+            <section class="labels-sources-note"><strong>También puedes imprimir desde Logística.</strong> Los lotes aprobados conservan su trazabilidad y cantidad recibida; esta vista sirve para reimpresiones, cambios de precio y etiquetas de cualquier producto del catálogo.</section>
           </section>
 
           <section class="section logistics-section app-view" id="logistica"

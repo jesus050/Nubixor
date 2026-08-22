@@ -6478,6 +6478,27 @@ footer {
 
 .logistics-label-editor-actions button { min-width: 0; }
 
+.labels-section > .section-heading > div:first-child > p:last-child { max-width: 700px; color: var(--muted, #667085); }
+.labels-source-grid { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 18px; align-items: start; }
+.labels-search-panel, .labels-queue-panel { min-height: 420px; }
+.labels-search-field { display: grid; gap: 7px; margin: 14px 0; color: #475467; font-size: 13px; font-weight: 750; }
+.labels-search-field input { width: 100%; }
+.labels-search-results, .labels-queue-list { display: grid; gap: 9px; }
+.labels-product-row, .labels-queue-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #dfe5f1; border-radius: 13px; background: #fff; }
+.labels-product-row > div, .labels-queue-row > div { min-width: 0; display: grid; gap: 3px; }
+.labels-product-row strong, .labels-queue-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #101828; }
+.labels-product-row small, .labels-queue-row small, .labels-search-hint { color: #667085; font-size: 12px; }
+.labels-queue-row { align-items: end; }
+.labels-queue-actions { display: flex; align-items: center; gap: 7px; }
+.labels-queue-actions input { width: 68px; min-width: 68px; padding: 7px; text-align: center; }
+.labels-queue-actions button { color: #b42318; background: transparent; border: 0; font: inherit; font-weight: 800; cursor: pointer; }
+.labels-search-hint { margin: 14px 0 0; line-height: 1.45; }
+.labels-sources-note { margin-top: 18px; padding: 14px 16px; border: 1px solid #b6e4ff; border-radius: 14px; background: #f0f9ff; color: #175c84; }
+
+@media (max-width: 900px) {
+  .labels-source-grid { grid-template-columns: 1fr; }
+}
+
 .logistics-label-workspace {
   display: grid;
   gap: 18px;

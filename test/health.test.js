@@ -82,6 +82,9 @@ test('GET / sirve la interfaz local', async () => {
   assert.match(response.text, /Productos por impulsar/);
   assert.match(response.text, /Nueva iniciativa/);
   assert.match(response.text, /data-view="inventario"/);
+  assert.match(response.text, /data-view="etiquetas"/);
+  assert.match(response.text, /Centro de impresión/);
+  assert.match(response.text, /Imprimir selección/);
   assert.match(response.text, /data-view="logistica"/);
   assert.match(response.text, /data-tenant-module-link="LOGISTICS"/);
   assert.match(response.text, /Módulo opcional/);

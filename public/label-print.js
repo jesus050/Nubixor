@@ -84,7 +84,7 @@ function renderJob() {
 
 function notifyPrinted() {
   if (!printingRequested || !job) return;
-  if (job.previewOnly) {
+  if (job.previewOnly || !job.trackPrinting) {
     window.localStorage.removeItem(storageKey);
     printingRequested = false;
     return;
@@ -107,7 +107,7 @@ document.querySelector('#startPrint').addEventListener('click', () => {
   window.print();
 });
 document.querySelector('#closePrintWindow').addEventListener('click', () => {
-  if (job?.previewOnly) window.localStorage.removeItem(storageKey);
+  if (job?.previewOnly || !job?.trackPrinting) window.localStorage.removeItem(storageKey);
   window.close();
 });
 window.addEventListener('afterprint', notifyPrinted);

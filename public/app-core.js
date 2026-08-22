@@ -351,6 +351,15 @@ const elements = {
   logisticsLabelEmpty: document.querySelector('#logisticsLabelEmpty'),
   logisticsLabelProductList: document.querySelector('#logisticsLabelProductList'),
   printLogisticsBatchLabels: document.querySelector('#printLogisticsBatchLabels'),
+  labelsProductSearch: document.querySelector('#labelsProductSearch'),
+  labelsProductResults: document.querySelector('#labelsProductResults'),
+  labelsProductHint: document.querySelector('#labelsProductHint'),
+  labelsQueueList: document.querySelector('#labelsQueueList'),
+  labelsQueueCount: document.querySelector('#labelsQueueCount'),
+  labelsQueueEmpty: document.querySelector('#labelsQueueEmpty'),
+  clearLabelsQueueButton: document.querySelector('#clearLabelsQueueButton'),
+  printSelectedLabelsButton: document.querySelector('#printSelectedLabelsButton'),
+  openLabelsDesignButton: document.querySelector('#openLabelsDesignButton'),
   logisticsBatchDialog: document.querySelector('#logisticsBatchDialog'),
   logisticsBatchForm: document.querySelector('#logisticsBatchForm'),
   logisticsBatchBranchId: document.querySelector('#logisticsBatchBranchId'),
@@ -1661,6 +1670,9 @@ let logisticsOverview = {
 };
 let selectedLogisticsBatch = null;
 let logisticsLabelBatchId = null;
+let labelsQueue = [];
+let labelsSearchTimer = null;
+let labelsSearchSequence = 0;
 let payrollEmployees = [];
 let payrollPeriods = [];
 let selectedPayrollEmployee = null;
@@ -1940,12 +1952,12 @@ function updateLogisticsLabelPreview() {
     settings.textAlign === 'left' ? 'flex-start' : settings.textAlign === 'right' ? 'flex-end' : 'center';
   elements.logisticsLabelPreviewCompany.textContent =
     company?.trade_name || company?.legal_name || 'Mi empresa';
-  const sampleItem = selectedLogisticsBatch?.items?.[0];
+  const sampleItem = labelsQueue[0] || selectedLogisticsBatch?.items?.[0];
   const sampleBarcode = sampleItem?.barcode || sampleItem?.sku || '2000526749610';
   elements.logisticsLabelPreviewProduct.textContent =
-    sampleItem?.product_name || 'Nombre completo del producto';
+    sampleItem?.productName || sampleItem?.product_name || 'Nombre completo del producto';
   elements.logisticsLabelPreviewPrice.textContent = formatCurrency(
-    sampleItem?.approved_price || sampleItem?.proposed_price || 49900,
+    sampleItem?.price || sampleItem?.approved_price || sampleItem?.proposed_price || 49900,
   );
   elements.logisticsLabelPreviewSku.textContent = sampleItem?.sku || 'SKU-0001';
   elements.logisticsLabelPreviewCompany.hidden = !settings.showCompany;
@@ -2148,7 +2160,7 @@ function logisticsLabelJobItems(itemId = null) {
     });
 }
 
-function createLogisticsLabelPrintJob({ items, previewOnly = false }) {
+function createLogisticsLabelPrintJob({ items, previewOnly = false, batch = null }) {
   const settings = readLogisticsLabelSettings();
   const settingsError = logisticsLabelSettingsError(settings);
   if (settingsError) {
@@ -2159,12 +2171,13 @@ function createLogisticsLabelPrintJob({ items, previewOnly = false }) {
     `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const company = getActiveCompany();
   window.localStorage.setItem(`nubixor.label-job.${jobId}`, JSON.stringify({
-    batchId: previewOnly ? null : selectedLogisticsBatch.batch.id,
-    batchNumber: previewOnly ? 'Prueba de diseño' : selectedLogisticsBatch.batch.batch_number,
+    batchId: previewOnly ? null : batch?.id || null,
+    batchNumber: previewOnly ? 'Prueba de diseño' : batch?.batch_number || 'Catálogo',
     companyName: company?.trade_name || company?.legal_name || 'Mi empresa',
     settings,
     items,
     previewOnly,
+    trackPrinting: Boolean(batch?.id) && !previewOnly,
   }));
   const printWindow = window.open(
     `/label-print.html?job=${encodeURIComponent(jobId)}`,
@@ -2185,7 +2198,7 @@ function openLogisticsLabelPrint(itemId = null) {
     showToast('El trabajo supera 10.000 etiquetas. Divide la impresión en partes.');
     return;
   }
-  createLogisticsLabelPrintJob({ items });
+  createLogisticsLabelPrintJob({ items, batch: selectedLogisticsBatch?.batch });
 }
 
 function openLogisticsLabelTestPrint() {
@@ -2201,6 +2214,121 @@ function openLogisticsLabelTestPrint() {
       quantity: 1,
     }],
   });
+}
+
+function labelCatalogItem(product) {
+  return {
+    productId: product.id,
+    itemId: null,
+    productName: product.name,
+    sku: product.sku || '',
+    barcode: product.barcode || product.sku || '',
+    price: Number(product.sale_price || 0),
+    quantity: 1,
+  };
+}
+
+function renderLabelsQueue() {
+  elements.labelsQueueList.replaceChildren();
+  const total = labelsQueue.reduce((sum, item) => sum + item.quantity, 0);
+  elements.labelsQueueCount.textContent = `${total} ${total === 1 ? 'etiqueta' : 'etiquetas'}`;
+  elements.labelsQueueEmpty.hidden = labelsQueue.length > 0;
+  elements.clearLabelsQueueButton.hidden = labelsQueue.length === 0;
+  elements.printSelectedLabelsButton.disabled = labelsQueue.length === 0;
+  labelsQueue.forEach((item) => {
+    const row = document.createElement('article');
+    row.className = 'labels-queue-row';
+    const copy = document.createElement('div');
+    const name = document.createElement('strong');
+    name.textContent = item.productName;
+    const meta = document.createElement('small');
+    meta.textContent = [item.sku, item.barcode, formatCurrency(item.price)].filter(Boolean).join(' · ');
+    copy.append(name, meta);
+    const actions = document.createElement('div');
+    actions.className = 'labels-queue-actions';
+    const quantity = document.createElement('input');
+    quantity.type = 'number'; quantity.min = '1'; quantity.max = '10000'; quantity.value = String(item.quantity);
+    quantity.setAttribute('aria-label', `Copias para ${item.productName}`);
+    quantity.addEventListener('change', () => {
+      item.quantity = Math.max(1, Math.min(10000, Math.trunc(Number(quantity.value) || 1)));
+      renderLabelsQueue();
+    });
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => {
+      labelsQueue = labelsQueue.filter((entry) => entry.productId !== item.productId);
+      renderLabelsQueue();
+      updateLogisticsLabelPreview();
+    });
+    actions.append(quantity, remove);
+    row.append(copy, actions);
+    elements.labelsQueueList.append(row);
+  });
+}
+
+function renderLabelsProductResults(products = []) {
+  elements.labelsProductResults.replaceChildren();
+  products.forEach((product) => {
+    const row = document.createElement('article');
+    row.className = 'labels-product-row';
+    const copy = document.createElement('div');
+    const name = document.createElement('strong'); name.textContent = product.name;
+    const meta = document.createElement('small');
+    meta.textContent = [product.sku, product.barcode, formatCurrency(product.sale_price || 0)].filter(Boolean).join(' · ');
+    copy.append(name, meta);
+    const add = document.createElement('button');
+    add.type = 'button'; add.className = 'secondary-button compact';
+    const selected = labelsQueue.some((item) => item.productId === product.id);
+    add.textContent = selected ? 'Agregado' : 'Agregar'; add.disabled = selected;
+    add.addEventListener('click', () => {
+      labelsQueue.push(labelCatalogItem(product));
+      renderLabelsQueue();
+      updateLogisticsLabelPreview();
+      renderLabelsProductResults(products);
+    });
+    row.append(copy, add);
+    elements.labelsProductResults.append(row);
+  });
+}
+
+function scheduleLabelsProductSearch() {
+  clearTimeout(labelsSearchTimer);
+  const query = elements.labelsProductSearch.value.trim();
+  elements.labelsProductResults.replaceChildren();
+  if (query.length < 2) {
+    elements.labelsProductHint.textContent = 'Escribe al menos dos caracteres para encontrar productos de la empresa activa.';
+    return;
+  }
+  const sequence = ++labelsSearchSequence;
+  elements.labelsProductHint.textContent = 'Buscando productos…';
+  labelsSearchTimer = setTimeout(async () => {
+    try {
+      const payload = await getJson(`/api/products/lookup?q=${encodeURIComponent(query)}`, {
+        headers: { 'x-tenant-id': activeTenantId },
+      });
+      if (sequence !== labelsSearchSequence) return;
+      const products = payload.products || [];
+      renderLabelsProductResults(products);
+      elements.labelsProductHint.textContent = products.length
+        ? `${products.length} producto${products.length === 1 ? '' : 's'} encontrado${products.length === 1 ? '' : 's'}.`
+        : 'No encontramos productos con esa búsqueda.';
+    } catch (error) {
+      if (sequence !== labelsSearchSequence) return;
+      elements.labelsProductHint.textContent = error.message;
+    }
+  }, 220);
+}
+
+function printLabelsQueue() {
+  if (!labelsQueue.length) return;
+  const total = labelsQueue.reduce((sum, item) => sum + item.quantity, 0);
+  if (total > 10000) { showToast('La selección supera 10.000 etiquetas. Divide la impresión en partes.'); return; }
+  createLogisticsLabelPrintJob({ items: labelsQueue });
+}
+
+function openLabelsDesign() {
+  showView('logistica');
+  selectInventoryPanel('labels');
 }
 
 async function saveLogisticsLabelConfiguration() {
@@ -15231,6 +15359,7 @@ const availableViews = new Set([
   'terceros',
   'bodegas',
   'inventario',
+  'etiquetas',
   'logistica',
   'productos',
   'compras',
@@ -15260,6 +15389,7 @@ const viewTitles = {
   terceros: 'Terceros',
   bodegas: 'Bodegas',
   inventario: 'Inventario',
+  etiquetas: 'Etiquetas',
   logistica: 'Logística',
   productos: 'Catálogo',
   compras: 'Compras',
@@ -15305,6 +15435,10 @@ function showView(requestedView, { scroll = true } = {}) {
   document.title = `Nubixor — ${viewTitles[view]}`;
   if (view === 'inventario') {
     selectInventoryPanel(requestedView === 'conteos' ? 'counts' : 'stock');
+  }
+  if (view === 'etiquetas') {
+    if (!elements.logisticsLabelWidth.value) syncLogisticsLabelSettings();
+    renderLabelsQueue();
   }
   if (view === 'logistica') {
     selectInventoryPanel('flow');
@@ -18104,11 +18238,21 @@ elements.saveLogisticsLabelSettings.addEventListener(
   saveLogisticsLabelConfiguration,
 );
 elements.testLogisticsLabelPrint.addEventListener('click', openLogisticsLabelTestPrint);
+elements.labelsProductSearch.addEventListener('input', scheduleLabelsProductSearch);
+elements.clearLabelsQueueButton.addEventListener('click', () => {
+  labelsQueue = [];
+  renderLabelsQueue();
+  updateLogisticsLabelPreview();
+});
+elements.printSelectedLabelsButton.addEventListener('click', printLabelsQueue);
+elements.openLabelsDesignButton.addEventListener('click', openLabelsDesign);
 window.addEventListener('message', (event) => {
   if (event.origin !== window.location.origin ||
       event.data?.type !== 'nubixor:labels-printed') return;
-  markLogisticsLabelsPrinted(event.data.batchId, event.data.items)
-    .catch((error) => showToast(error.message));
+  if (event.data.batchId) {
+    markLogisticsLabelsPrinted(event.data.batchId, event.data.items)
+      .catch((error) => showToast(error.message));
+  }
   try {
     window.localStorage.removeItem(`nubixor.label-job.${event.data.jobId}`);
   } catch {
