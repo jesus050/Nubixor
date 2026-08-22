@@ -150,9 +150,28 @@ test('PostgreSQL aísla la contabilidad entre empresas aunque falte el filtro', 
     if (restringido) await restringido.end();
     const limpieza = await admin.connect();
     try {
+      // Crear un cliente dispara filas en otras tablas, así que enumerar a mano
+      // se rompe en cuanto aparece un disparador nuevo. Se deduce del esquema
+      // qué tablas pertenecen a la empresa y se borra sin orden entre ellas.
       await sinAislamiento(limpieza, async () => {
-        await limpieza.query('DELETE FROM ar_invoices WHERE tenant_id = ANY($1)', [[propia, ajena]]);
-        await limpieza.query('DELETE FROM customers WHERE tenant_id = ANY($1)', [[propia, ajena]]);
+        await limpieza.query("SET LOCAL session_replication_role = 'replica'");
+        const propias = await limpieza.query(`
+          SELECT columns.table_name, columns.column_name
+          FROM information_schema.columns columns
+          JOIN information_schema.tables tables
+            ON tables.table_schema = columns.table_schema
+           AND tables.table_name = columns.table_name
+          WHERE columns.table_schema = 'public'
+            AND tables.table_type = 'BASE TABLE'
+            AND columns.column_name IN ('tenant_id', 'company_id')
+            AND columns.data_type = 'uuid'
+        `);
+        for (const fila of propias.rows) {
+          await limpieza.query(
+            `DELETE FROM "${fila.table_name}" WHERE "${fila.column_name}" = ANY($1)`,
+            [[propia, ajena]],
+          );
+        }
         await limpieza.query('DELETE FROM tenants WHERE id = ANY($1)', [[propia, ajena]]);
       });
       for (const tabla of TABLAS_DE_PRUEBA) {
